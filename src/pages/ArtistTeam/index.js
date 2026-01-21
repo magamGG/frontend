@@ -1,0 +1,1 @@
+export { ArtistTeamPage } from './ArtistTeamPage';

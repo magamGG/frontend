@@ -1,0 +1,1 @@
+export { ArtistCalendarPage } from './ArtistCalendarPage';

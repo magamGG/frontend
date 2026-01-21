@@ -1,0 +1,1 @@
+export { ArtistProjectsPage } from './ArtistProjectsPage';

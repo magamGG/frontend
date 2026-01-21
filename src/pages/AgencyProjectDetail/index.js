@@ -1,0 +1,1 @@
+export { AgencyProjectDetailPage } from './AgencyProjectDetailPage';

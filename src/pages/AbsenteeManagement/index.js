@@ -1,0 +1,1 @@
+export { AbsenteeManagementPage } from './AbsenteeManagementPage';

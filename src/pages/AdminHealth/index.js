@@ -1,0 +1,1 @@
+export { AdminHealthPage } from './AdminHealthPage';

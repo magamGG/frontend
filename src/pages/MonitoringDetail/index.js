@@ -1,0 +1,1 @@
+export { MonitoringDetailPage } from './MonitoringDetailPage';
