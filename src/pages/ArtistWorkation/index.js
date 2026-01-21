@@ -1,0 +1,1 @@
+export { ArtistWorkationPage } from './ArtistWorkationPage';

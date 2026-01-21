@@ -1,0 +1,1 @@
+export { SurveyListManagementPage } from './SurveyListManagementPage';

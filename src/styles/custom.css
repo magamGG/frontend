@@ -1,0 +1,141 @@
+/* Custom Design System Colors - Version 2.0 */
+:root {
+  /* Primary Colors - Serialization */
+  --color-serialization-bg: #E8F5E9;
+  --color-serialization-text: #2E7D32;
+  --color-serialization: #4CAF50;
+  
+  /* Warning Colors - Deadline */
+  --color-deadline-bg: #FFF3E0;
+  --color-deadline-text: #E65100;
+  --color-deadline: #FF9800;
+  
+  /* Workcation Colors */
+  --color-workcation-bg: #F3E5F5;
+  --color-workcation-text: #6A1B9A;
+  --color-workcation: #9C27B0;
+  
+  /* Hiatus/Paused Colors */
+  --color-hiatus-bg: #F5F5F5;
+  --color-hiatus-text: #616161;
+  --color-hiatus: #9E9E9E;
+  
+  /* Status Colors */
+  --color-urgent: #E65100;
+  --color-info: #2196F3;
+  --color-success: #2E7D32;
+}
+
+/* Date Input Calendar Icon Styling */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(29%) sepia(8%) saturate(1464%) hue-rotate(171deg) brightness(95%) contrast(88%);
+  cursor: pointer;
+  opacity: 0.8;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+/* For Firefox */
+input[type="date"]::-moz-calendar-picker-indicator {
+  filter: invert(29%) sepia(8%) saturate(1464%) hue-rotate(171deg) brightness(95%) contrast(88%);
+  cursor: pointer;
+  opacity: 0.8;
+}
+
+input[type="date"]::-moz-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+/* Badge Styles */
+.badge-serialization {
+  background-color: var(--color-serialization-bg);
+  color: var(--color-serialization-text);
+}
+
+.badge-deadline {
+  background-color: var(--color-deadline-bg);
+  color: var(--color-deadline-text);
+}
+
+.badge-workcation {
+  background-color: var(--color-workcation-bg);
+  color: var(--color-workcation-text);
+}
+
+.badge-hiatus {
+  background-color: var(--color-hiatus-bg);
+  color: var(--color-hiatus-text);
+}
+
+/* Calendar Cell Styles */
+.calendar-serialization {
+  background-color: var(--color-serialization-bg);
+  border-left: 3px solid var(--color-serialization);
+}
+
+.calendar-deadline {
+  background-color: var(--color-deadline-bg);
+  border-left: 3px solid var(--color-deadline);
+}
+
+.calendar-workcation {
+  background-color: var(--color-workcation-bg);
+  border-left: 3px solid var(--color-workcation);
+}
+
+.calendar-hiatus {
+  background-color: var(--color-hiatus-bg);
+  border-left: 3px solid var(--color-hiatus);
+}
+
+/* Text Colors */
+.text-serialization {
+  color: var(--color-serialization-text);
+}
+
+.text-deadline {
+  color: var(--color-deadline-text);
+}
+
+.text-workcation {
+  color: var(--color-workcation-text);
+}
+
+.text-hiatus {
+  color: var(--color-hiatus-text);
+}
+
+/* Step Indicator */
+.step-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.step-circle {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.step-circle.active {
+  background-color: #2196F3;
+  color: white;
+}
+
+.step-circle.completed {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.step-circle.inactive {
+  background-color: #E0E0E0;
+  color: #9E9E9E;
+}

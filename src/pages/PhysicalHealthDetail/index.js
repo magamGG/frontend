@@ -1,0 +1,1 @@
+export { PhysicalHealthDetailPage } from './PhysicalHealthDetailPage';
