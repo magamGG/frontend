@@ -10,34 +10,34 @@ import { HTML5Backend } from 'react-dnd-html5-backend';
 import { ProjectProvider } from '@/contexts/ProjectContext';
 
 // Import artist pages
-import { ArtistDashboardPage } from '@/pages/ArtistDashboard';
-import { ArtistProjectsPage } from '@/pages/ArtistProjects';
-import { ArtistCalendarPage } from '@/pages/ArtistCalendar';
-import { ArtistWorkationPage } from '@/pages/ArtistWorkation';
-import { ArtistTeamPage } from '@/pages/ArtistTeam';
-import { ArtistHealthPage } from '@/pages/ArtistHealth';
+import { ArtistDashboardPage } from '@/pages/artist/ArtistDashboard';
+import { ArtistProjectsPage } from '@/pages/artist/ArtistProjects';
+import { ArtistCalendarPage } from '@/pages/artist/ArtistCalendar';
+import { ArtistWorkationPage } from '@/pages/artist/ArtistWorkation';
+import { ArtistTeamPage } from '@/pages/artist/ArtistTeam';
+import { ArtistHealthPage } from '@/pages/artist/ArtistHealth';
 import { AttendancePage } from '@/pages/Attendance';
 
 // Import admin pages
-import { AdminDashboardPage } from '@/pages/AdminDashboard';
-import { AdminProjectsPage } from '@/pages/AdminProjects';
-import { AdminCalendarPage } from '@/pages/AdminCalendar';
-import { AdminTeamPage } from '@/pages/AdminTeam';
-import { AdminHealthPage } from '@/pages/AdminHealth';
-import { AdminPersonalHealthPage } from '@/pages/AdminPersonalHealth';
-import { AdminAbsenteePage } from '@/pages/AdminAbsentee';
-import { AdminMyPage } from '@/pages/AdminMyPage';
-import { AdminWorkcationPage } from '@/pages/AdminWorkcation';
+import { AdminDashboardPage } from '@/pages/admin/AdminDashboard';
+import { AdminProjectsPage } from '@/pages/admin/AdminProjects';
+import { AdminCalendarPage } from '@/pages/admin/AdminCalendar';
+import { AdminTeamPage } from '@/pages/admin/AdminTeam';
+import { AdminHealthPage } from '@/pages/admin/AdminHealth';
+import { AdminPersonalHealthPage } from '@/pages/admin/AdminPersonalHealth';
+import { AdminAbsenteePage } from '@/pages/admin/AdminAbsentee';
+import { AdminMyPage } from '@/pages/admin/AdminMyPage';
+import { AdminWorkcationPage } from '@/pages/admin/AdminWorkcation';
 
 // Import agency pages
-import { AgencyDashboardPage } from '@/pages/AgencyDashboard';
-import { AgencyProjectsPage } from '@/pages/AgencyProjects';
-import { AgencyTeamPage } from '@/pages/AgencyTeam';
-import { AgencyApprovalsPage } from '@/pages/AgencyApprovals';
-import { AgencyWorkcationPage } from '@/pages/AgencyWorkcation';
-import { AgencyMyPage } from '@/pages/AgencyMyPage';
-import { AgencyHealthPage } from '@/pages/AgencyHealth';
-import { AgencyAssignmentPage } from '@/pages/AgencyAssignment';
+import { AgencyDashboardPage } from '@/pages/agency/AgencyDashboard';
+import { AgencyProjectsPage } from '@/pages/agency/AgencyProjects';
+import { AgencyTeamPage } from '@/pages/agency/AgencyTeam';
+import { AgencyApprovalsPage } from '@/pages/agency/AgencyApprovals';
+import { AgencyWorkcationPage } from '@/pages/agency/AgencyWorkcation';
+import { AgencyMyPage } from '@/pages/agency/AgencyMyPage';
+import { AgencyHealthPage } from '@/pages/agency/AgencyHealth';
+import { AgencyAssignmentPage } from '@/pages/agency/AgencyAssignment';
 
 /**
  * @typedef {'login' | 'signup' | 'forgot-password' | 'dashboard' | 'join-request'} AuthView

@@ -13,7 +13,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
-import { AgencyProjectDetailPage } from '@/pages/AgencyProjectDetail';
+import { AgencyProjectDetailPage } from '@/pages/agency/AgencyProjectDetail';
 import { toast } from 'sonner';
 import {
   AgencyProjectsRoot,
