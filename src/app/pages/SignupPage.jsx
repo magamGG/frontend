@@ -106,7 +106,7 @@ export function SignupPage({ onSignup, onBackToLogin }) {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     if (!selectedRole) {
       alert('역할을 선택해주세요.');

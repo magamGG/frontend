@@ -37,10 +37,10 @@ function PaginationItem({ ...props }) {
   return <li data-slot="pagination-item" {...props} />;
 }
 
-
-} & Pick<React.ComponentProps, "size"> &
-  React.ComponentProps;
-
+/**
+ * @param {Object} props
+ * @param {string} [props.size]
+ */
 function PaginationLink({
   className,
   isActive,

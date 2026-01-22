@@ -138,12 +138,12 @@ export function AdminHealthPage() {
   ];
 
   // 설문 목록 데이터
-  const mentalSurveys: SurveyItem[] = [
+  const mentalSurveys = [
     { id, title: '일일 간이 체크', category: '정신건강분류', status: '사용 중' },
     { id, title: '정기 심층 검사', category: '정신건강분류', status: '사용 중' },
   ];
 
-  const physicalSurveys: SurveyItem[] = [
+  const physicalSurveys = [
     { id, title: '일일 간이 체크', category: '신체건강분류', status: '사용 중' },
     { id, title: '정기 심층 검사', category: '신체건강분류', status: '사용 중' },
   ];

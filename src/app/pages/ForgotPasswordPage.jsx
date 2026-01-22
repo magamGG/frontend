@@ -19,19 +19,19 @@ export function ForgotPasswordPage({ onBackToLogin }) {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  const handleSendEmail = (e: React.FormEvent) => {
+  const handleSendEmail = (e) => {
     e.preventDefault();
     // Mock: Send verification email
     setStep('verify');
   };
 
-  const handleVerifyCode = (e: React.FormEvent) => {
+  const handleVerifyCode = (e) => {
     e.preventDefault();
     // Mock: Verify code
     setStep('reset');
   };
 
-  const handleResetPassword = (e: React.FormEvent) => {
+  const handleResetPassword = (e) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
       alert('비밀번호가 일치하지 않습니다.');

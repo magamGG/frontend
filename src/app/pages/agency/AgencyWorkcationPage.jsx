@@ -33,9 +33,9 @@ export function AgencyWorkcationPage() {
   };
 
   // Get role display name
-  const getRoleDisplay = (role, customRole?: string) => {
+  const getRoleDisplay = (role, customRole) => {
     if (role === 'assist' && customRole) return customRole;
-    const roleMap: { [key: string]: string } = {
+    const roleMap = {
       story: '스토리',
       line: '라인',
       coloring: '컬러링',

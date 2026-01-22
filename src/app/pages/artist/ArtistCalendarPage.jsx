@@ -29,14 +29,14 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
   ];
 
   // 작업 단계로 색상 가져오기
-  const getWorkStageColor = (stage?: string) => {
+  const getWorkStageColor = (stage) => {
     if (!stage) return null;
     const stageInfo = workStages.find(s => s.value === stage);
     return stageInfo ? stageInfo.color : null;
   };
 
   // 작업 단계로 라벨 가져오기
-  const getWorkStageLabel = (stage?: string) => {
+  const getWorkStageLabel = (stage) => {
     if (!stage) return '';
     const stageInfo = workStages.find(s => s.value === stage);
     return stageInfo ? stageInfo.label : '';
@@ -368,7 +368,7 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
   };
 
   const handleAddEvent = () => {
-    const event: Event = {
+    const event = {
       id: Date.now().toString(),
       date: parseInt(newEvent.startDate.split('-')[2]) || 1,
       title: newEvent.title,

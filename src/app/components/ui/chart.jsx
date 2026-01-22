@@ -67,7 +67,12 @@ function ChartContainer({
   );
 }
 
-const ChartStyle = ({ id, config }: { id: string; config) => {
+/**
+ * @param {Object} props
+ * @param {string} props.id
+ * @param {Object} props.config
+ */
+const ChartStyle = ({ id, config }) => {
   const colorConfig = Object.entries(config).filter(
     ([, config]) => config.theme || config.color,
   );
