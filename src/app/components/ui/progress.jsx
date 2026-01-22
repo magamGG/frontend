@@ -5,11 +5,6 @@ import * as ProgressPrimitive from "@radix-ui/react-progress";
 
 import { cn } from "./utils";
 
-/**
- * Progress component
- * @param {Object} props
- * @param {number} [props.value] - Progress value (0-100)
- */
 function Progress({
   className,
   value,

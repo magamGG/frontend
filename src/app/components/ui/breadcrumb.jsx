@@ -4,16 +4,10 @@ import { ChevronRight, MoreHorizontal } from "lucide-react";
 
 import { cn } from "./utils";
 
-/**
- * Breadcrumb component
- */
 function Breadcrumb({ ...props }) {
   return <nav aria-label="breadcrumb" data-slot="breadcrumb" {...props} />;
 }
 
-/**
- * BreadcrumbList component
- */
 function BreadcrumbList({ className, ...props }) {
   return (
     <ol
@@ -27,9 +21,6 @@ function BreadcrumbList({ className, ...props }) {
   );
 }
 
-/**
- * BreadcrumbItem component
- */
 function BreadcrumbItem({ className, ...props }) {
   return (
     <li
@@ -40,11 +31,6 @@ function BreadcrumbItem({ className, ...props }) {
   );
 }
 
-/**
- * BreadcrumbLink component
- * @param {Object} props
- * @param {boolean} [props.asChild] - Render as child component
- */
 function BreadcrumbLink({
   asChild,
   className,
@@ -61,9 +47,6 @@ function BreadcrumbLink({
   );
 }
 
-/**
- * BreadcrumbPage component
- */
 function BreadcrumbPage({ className, ...props }) {
   return (
     <span
@@ -77,9 +60,6 @@ function BreadcrumbPage({ className, ...props }) {
   );
 }
 
-/**
- * BreadcrumbSeparator component
- */
 function BreadcrumbSeparator({
   children,
   className,
@@ -98,9 +78,6 @@ function BreadcrumbSeparator({
   );
 }
 
-/**
- * BreadcrumbEllipsis component
- */
 function BreadcrumbEllipsis({
   className,
   ...props

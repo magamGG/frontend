@@ -7,11 +7,12 @@ import { Label } from '@/app/components/ui/label';
 import { toast } from 'sonner';
 import { motion } from 'motion/react';
 
+
+
 /**
- * AdminMyPage component
  * @param {Object} props
- * @param {Function} props.onClose - Callback to close the page
- * @param {Function} props.onLogout - Callback to logout
+ * @param {Function} props.onClose
+ * @param {Function} props.onLogout
  */
 export function AdminMyPage({ onClose, onLogout }) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -42,7 +43,7 @@ export function AdminMyPage({ onClose, onLogout }) {
 
   const handleSaveProfile = () => {
     const userData = {
-      name: userName,
+      name,
       email,
       phone,
       location,
@@ -72,10 +73,6 @@ export function AdminMyPage({ onClose, onLogout }) {
     onLogout();
   };
 
-  /**
-   * Handle copying company code
-   * @param {string} code - Company code to copy
-   */
   const handleCopyCode = (code) => {
     // Try modern clipboard API first
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -93,10 +90,6 @@ export function AdminMyPage({ onClose, onLogout }) {
     }
   };
 
-  /**
-   * Fallback method to copy code
-   * @param {string} code - Company code to copy
-   */
   const fallbackCopyCode = (code) => {
     const textArea = document.createElement('textarea');
     textArea.value = code;
@@ -115,10 +108,6 @@ export function AdminMyPage({ onClose, onLogout }) {
     document.body.removeChild(textArea);
   };
 
-  /**
-   * Handle image type selection
-   * @param {string} type - Image type: 'background' or 'profile'
-   */
   const handleImageTypeSelect = (type) => {
     setIsImageSelectModalOpen(false);
     
@@ -126,13 +115,13 @@ export function AdminMyPage({ onClose, onLogout }) {
     input.type = 'file';
     input.accept = 'image/*';
     input.onchange = (e) => {
-      const file = e.target.files?.[0];
+      const file = (e.target).files?.[0];
       if (file) {
         const reader = new FileReader();
         reader.onloadend = () => {
           const newImage = reader.result;
           const savedUserData = localStorage.getItem('managerUserData');
-          const userData = savedUserData ? JSON.parse(savedUserData) : {};
+          const userData = savedUserData ? JSON.parse(savedUserData) {};
           
           if (type === 'background') {
             setBackgroundImage(newImage);
@@ -155,9 +144,9 @@ export function AdminMyPage({ onClose, onLogout }) {
   return (
     <div className="fixed inset-0 z-50 bg-background flex items-center justify-center p-8 overflow-auto">
       <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 20 }}
+        initial={{ opacity, y: 20 }}
+        animate={{ opacity, y: 0 }}
+        exit={{ opacity, y: 20 }}
         transition={{ duration: 0.3 }}
         className="w-full max-w-5xl bg-white rounded-3xl shadow-2xl overflow-hidden"
       >

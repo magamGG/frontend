@@ -6,13 +6,12 @@ import { Calendar, User, Clock, CheckCircle2, XCircle, Plus, AlignLeft } from 'l
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-/**
- * AbsenteeManagementPage component
- */
+
+
 export function AbsenteeManagementPage() {
   const [absenceRequests, setAbsenceRequests] = useState([
     {
-      id: 1,
+      id,
       name: '박채색',
       role: '채색 담당',
       reason: '휴재',
@@ -23,7 +22,7 @@ export function AbsenteeManagementPage() {
       description: '개인 건강 관리를 위한 일시 중단'
     },
     {
-      id: 2,
+      id,
       name: '최스토리',
       role: '스토리 작가',
       reason: '긴급 휴재',
@@ -39,19 +38,16 @@ export function AbsenteeManagementPage() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [newRequest, setNewRequest] = useState({
-    reason: 'break',
-    startDate: '',
-    endDate: '',
-    projects: '',
-    description: '',
+    reason: 'break'-break' | 'workation' | 'sick-leave',
+    startDate,
+    endDate,
+    projects,
+    description,
   });
 
-  /**
-   * Handle request submission
-   */
   const handleRequestSubmit = () => {
     // 임시로 작가 본인 이름 사용
-    const request = {
+    const request: AbsenceRequest = {
       id: Date.now(),
       name: '김작가',
       role: '작가',
@@ -70,31 +66,27 @@ export function AbsenteeManagementPage() {
     setAbsenceRequests([...absenceRequests, request]);
     setIsRequestModalOpen(false);
     setNewRequest({
-      reason: 'break',
-      startDate: '',
-      endDate: '',
-      projects: '',
-      description: '',
+      reason,
+      startDate,
+      endDate,
+      projects,
+      description,
     });
     toast.success('근태 신청이 완료되었습니다.');
   };
 
-  const handleApprove = (id: number) => {
+  const handleApprove = (id) => {
     setAbsenceRequests(absenceRequests.map(req => 
       req.id === id ? { ...req, status: '승인됨' } : req
     ));
     toast.success('근태가 승인되었습니다.');
   };
 
-  const handleReject = (id: number) => {
+  const handleReject = (id) => {
     setAbsenceRequests(absenceRequests.filter(req => req.id !== id));
     toast.error('근태가 거부되었습니다.');
   };
 
-  /**
-   * Open detail modal for a request
-   * @param {Object} request - Absence request object
-   */
   const openDetailModal = (request) => {
     setSelectedRequest(request);
     setIsDetailModalOpen(true);
@@ -242,7 +234,7 @@ export function AbsenteeManagementPage() {
             <label className="text-sm font-medium text-foreground mb-1 block">사유</label>
             <select
               value={newRequest.reason}
-              onChange={(e) => setNewRequest({ ...newRequest, reason: e.target.value })}
+              onChange={(e) => setNewRequest({ ...newRequest, reason: e.target.value)}
               className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring outline-none text-sm bg-background text-foreground"
             >
               <option value="break">휴재</option>

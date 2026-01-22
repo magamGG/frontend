@@ -1,1 +1,1 @@
-export { AbsenteeManagementPage as AdminAbsenteePage } from '@/app/pages/AbsenteeManagementPage';
+export { AbsenteeManagementPage@/app/pages/AbsenteeManagementPage';

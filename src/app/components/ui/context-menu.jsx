@@ -6,51 +6,45 @@ import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react";
 
 import { cn } from "./utils";
 
-/**
- * ContextMenu component
- */
-function ContextMenu({ ...props }) {
+function ContextMenu({
+  ...props
+}) {
   return <ContextMenuPrimitive.Root data-slot="context-menu" {...props} />;
 }
 
-/**
- * ContextMenuTrigger component
- */
-function ContextMenuTrigger({ ...props }) {
+function ContextMenuTrigger({
+  ...props
+}) {
   return (
     <ContextMenuPrimitive.Trigger data-slot="context-menu-trigger" {...props} />
   );
 }
 
-/**
- * ContextMenuGroup component
- */
-function ContextMenuGroup({ ...props }) {
+function ContextMenuGroup({
+  ...props
+}) {
   return (
     <ContextMenuPrimitive.Group data-slot="context-menu-group" {...props} />
   );
 }
 
-/**
- * ContextMenuPortal component
- */
-function ContextMenuPortal({ ...props }) {
+function ContextMenuPortal({
+  ...props
+}) {
   return (
     <ContextMenuPrimitive.Portal data-slot="context-menu-portal" {...props} />
   );
 }
 
-/**
- * ContextMenuSub component
- */
-function ContextMenuSub({ ...props }) {
+function ContextMenuSub({
+  ...props
+}) {
   return <ContextMenuPrimitive.Sub data-slot="context-menu-sub" {...props} />;
 }
 
-/**
- * ContextMenuRadioGroup component
- */
-function ContextMenuRadioGroup({ ...props }) {
+function ContextMenuRadioGroup({
+  ...props
+}) {
   return (
     <ContextMenuPrimitive.RadioGroup
       data-slot="context-menu-radio-group"
@@ -59,11 +53,6 @@ function ContextMenuRadioGroup({ ...props }) {
   );
 }
 
-/**
- * ContextMenuSubTrigger component
- * @param {Object} props
- * @param {boolean} [props.inset] - Inset style
- */
 function ContextMenuSubTrigger({
   className,
   inset,
@@ -86,9 +75,6 @@ function ContextMenuSubTrigger({
   );
 }
 
-/**
- * ContextMenuSubContent component
- */
 function ContextMenuSubContent({
   className,
   ...props
@@ -105,9 +91,6 @@ function ContextMenuSubContent({
   );
 }
 
-/**
- * ContextMenuContent component
- */
 function ContextMenuContent({
   className,
   ...props
@@ -126,12 +109,6 @@ function ContextMenuContent({
   );
 }
 
-/**
- * ContextMenuItem component
- * @param {Object} props
- * @param {boolean} [props.inset] - Inset style
- * @param {string} [props.variant] - Variant (default, destructive)
- */
 function ContextMenuItem({
   className,
   inset,
@@ -152,9 +129,6 @@ function ContextMenuItem({
   );
 }
 
-/**
- * ContextMenuCheckboxItem component
- */
 function ContextMenuCheckboxItem({
   className,
   children,
@@ -181,9 +155,6 @@ function ContextMenuCheckboxItem({
   );
 }
 
-/**
- * ContextMenuRadioItem component
- */
 function ContextMenuRadioItem({
   className,
   children,
@@ -208,11 +179,6 @@ function ContextMenuRadioItem({
   );
 }
 
-/**
- * ContextMenuLabel component
- * @param {Object} props
- * @param {boolean} [props.inset] - Inset style
- */
 function ContextMenuLabel({
   className,
   inset,
@@ -231,9 +197,6 @@ function ContextMenuLabel({
   );
 }
 
-/**
- * ContextMenuSeparator component
- */
 function ContextMenuSeparator({
   className,
   ...props
@@ -247,9 +210,6 @@ function ContextMenuSeparator({
   );
 }
 
-/**
- * ContextMenuShortcut component
- */
 function ContextMenuShortcut({
   className,
   ...props

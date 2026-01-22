@@ -14,40 +14,37 @@ import {
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { useState } from 'react';
 
-/**
- * AgencyDashboardPage component
- */
 export function AgencyDashboardPage() {
   const [selectedSection, setSelectedSection] = useState(null);
 
   // Mock data for metrics
   const metrics = [
     { 
-      id: 1, 
+      id, 
       label: '평균 마감 준수율', 
       value: '87.5%', 
       change: '+5.2%',
-      icon: Target,
+      icon,
       color: 'text-green-600',
       bgColor: 'bg-green-50',
       iconBgColor: 'bg-green-100'
     },
     { 
-      id: 2, 
+      id, 
       label: '활동 작가', 
       value: '24명', 
       change: '+3명',
-      icon: Users,
+      icon,
       color: 'text-blue-600',
       bgColor: 'bg-blue-50',
       iconBgColor: 'bg-blue-100'
     },
     { 
-      id: 3, 
+      id, 
       label: '진행 프로젝트', 
       value: '18개', 
       change: '+2개',
-      icon: Briefcase,
+      icon,
       color: 'text-purple-600',
       bgColor: 'bg-purple-50',
       iconBgColor: 'bg-purple-100'
@@ -56,42 +53,42 @@ export function AgencyDashboardPage() {
 
   // Mock data for deadline compliance trend (line chart)
   const complianceData = [
-    { month: '1월', rate: 78 },
-    { month: '2월', rate: 82 },
-    { month: '3월', rate: 85 },
-    { month: '4월', rate: 83 },
-    { month: '5월', rate: 86 },
+    { month: '1월', rate,
+    { month: '2월', rate,
+    { month: '3월', rate,
+    { month: '4월', rate,
+    { month: '5월', rate,
     { month: '6월', rate: 87.5 },
   ];
 
   // Mock data for artist distribution by project (bar chart)
   const artistDistributionData = [
-    { name: '로맨스 판타지', artists: 5 },
-    { name: '액션 웹툰', artists: 4 },
-    { name: 'SF 드라마', artists: 3 },
-    { name: '일상 코미디', artists: 6 },
-    { name: '스릴러', artists: 2 },
+    { name: '로맨스 판타지', artists,
+    { name: '액션 웹툰', artists,
+    { name: 'SF 드라마', artists,
+    { name: '일상 코미디', artists,
+    { name: '스릴러', artists,
   ];
 
   // Mock data for attendance (pie chart)
   const attendanceData = [
-    { name: '출근', value: 18, color: '#00ACC1' }, // 청록색
-    { name: '재택근무', value: 3, color: '#FF9800' }, // 오렌지색
-    { name: '휴재', value: 2, color: '#757575' }, // 회색
-    { name: '워케이션', value: 1, color: '#9C27B0' }, // 보라색
+    { name: '출근', value, color: '#00ACC1' }, // 청록색
+    { name: '재택근무', value, color: '#FF9800' }, // 오렌지색
+    { name: '휴재', value, color: '#757575' }, // 회색
+    { name: '워케이션', value, color: '#9C27B0' }, // 보라색
   ];
 
   // Mock data for approval requests pie chart
   const approvalData = [
-    { name: '휴재', value: 2, color: '#757575' }, // 회색
-    { name: '계약', value: 2, color: '#9C27B0' }, // 보라색
-    { name: '신청', value: 1, color: '#00ACC1' }, // 청록색
+    { name: '휴재', value, color: '#757575' }, // 회색
+    { name: '계약', value, color: '#9C27B0' }, // 보라색
+    { name: '신청', value, color: '#00ACC1' }, // 청록색
   ];
 
   // Mock data for pending requests
   const pendingRequests = [
     { 
-      id: 1, 
+      id, 
       type: '휴가', 
       requester: '김담당자', 
       role: '담당자',
@@ -101,7 +98,7 @@ export function AgencyDashboardPage() {
     },
   ];
 
-  const getRequestTypeColor = (type: string) => {
+  const getRequestTypeColor = (type) => {
     switch (type) {
       case '휴가':
         return 'bg-blue-500';
@@ -114,11 +111,11 @@ export function AgencyDashboardPage() {
     }
   };
 
-  const formatCurrency = (value: number) => {
+  const formatCurrency = (value) => {
     return `₩${value}M`;
   };
 
-  const formatViews = (value: number) => {
+  const formatViews = (value) => {
     return `${(value / 10000).toFixed(0)}만`;
   };
 
@@ -174,7 +171,7 @@ export function AgencyDashboardPage() {
                     contentStyle={{ 
                       backgroundColor: '#ffffff',
                       border: '1px solid #e2e8f0',
-                      borderRadius: '8px',
+                      borderRadius,
                       fontSize: '12px'
                     }}
                   />
@@ -227,7 +224,7 @@ export function AgencyDashboardPage() {
                     contentStyle={{ 
                       backgroundColor: '#ffffff',
                       border: '1px solid #e2e8f0',
-                      borderRadius: '8px',
+                      borderRadius,
                       fontSize: '12px'
                     }}
                   />

@@ -30,11 +30,7 @@ export function AdminDashboardPage() {
   const [healthCheckCompleted, setHealthCheckCompleted] = useState(false);
   const [currentAttendanceType, setCurrentAttendanceType] = useState('워케이션');
   
-  /**
-   * Get status color based on attendance type
-   * @param {string} status - Attendance status
-   * @returns {string} CSS class for background color
-   */
+  // 근태 상태별 색상 반환
   const getStatusColor = (status) => {
     switch (status) {
       case '워케이션':
@@ -50,11 +46,7 @@ export function AdminDashboardPage() {
     }
   };
 
-  /**
-   * Get status text color based on attendance type
-   * @param {string} status - Attendance status
-   * @returns {string} CSS class for text color
-   */
+  // 근태 상태별 텍스트 색상 반환
   const getStatusTextColor = (status) => {
     switch (status) {
       case '워케이션':
@@ -71,10 +63,10 @@ export function AdminDashboardPage() {
   };
   
   const [healthSurvey, setHealthSurvey] = useState({
-    condition: 'normal',
-    sleepHours: '',
-    discomfortLevel: 0,
-    notes: '',
+    condition,
+    sleepHours,
+    discomfortLevel,
+    notes,
   });
 
   // localStorage에서 현재 근태 상태 확인
@@ -110,56 +102,56 @@ export function AdminDashboardPage() {
 
   // Mock data for artists currently working
   const workingArtists = [
-    { id: 1, name: '김작가', project: '로맨스 판타지', startTime: '09:30', status: '작업중' },
-    { id: 2, name: '이작가', project: '액션 웹툰', startTime: '10:00', status: '작업중' },
-    { id: 3, name: '박작가', project: '일상 코미디', startTime: '09:15', status: '작업중' },
-    { id: 4, name: '최작가', project: 'SF 드라마', startTime: '10:30', status: '작업중' },
-    { id: 5, name: '정작가', project: '스릴러 미스터리', startTime: '09:00', status: '작업중' },
-    { id: 6, name: '강작가', project: '학원 로맨스', startTime: '10:15', status: '작업중' },
-    { id: 7, name: '조작가', project: '판타지 액션', startTime: '09:45', status: '작업중' },
-    { id: 8, name: '윤작가', project: '일상 드라마', startTime: '10:45', status: '작업중' },
-    { id: 9, name: '장작가', project: '무협 판타지', startTime: '09:20', status: '작업중' },
-    { id: 10, name: '임작가', project: '현대 로맨스', startTime: '11:00', status: '작업중' },
-    { id: 11, name: '한작가', project: '호러 스릴러', startTime: '09:50', status: '작업중' },
-    { id: 12, name: '오작가', project: '역사 드라마', startTime: '10:20', status: '작업중' },
-    { id: 13, name: '서작가', project: '스포츠 드라마', startTime: '09:35', status: '작업중' },
-    { id: 14, name: '신작가', project: '음악 로맨스', startTime: '11:15', status: '작업중' },
+    { id, name: '김작가', project: '로맨스 판타지', startTime: '09, status: '작업중' },
+    { id, name: '이작가', project: '액션 웹툰', startTime: '10, status: '작업중' },
+    { id, name: '박작가', project: '일상 코미디', startTime: '09, status: '작업중' },
+    { id, name: '최작가', project: 'SF 드라마', startTime: '10, status: '작업중' },
+    { id, name: '정작가', project: '스릴러 미스터리', startTime: '09, status: '작업중' },
+    { id, name: '강작가', project: '학원 로맨스', startTime: '10, status: '작업중' },
+    { id, name: '조작가', project: '판타지 액션', startTime: '09, status: '작업중' },
+    { id, name: '윤작가', project: '일상 드라마', startTime: '10, status: '작업중' },
+    { id, name: '장작가', project: '무협 판타지', startTime: '09, status: '작업중' },
+    { id, name: '임작가', project: '현대 로맨스', startTime: '11, status: '작업중' },
+    { id, name: '한작가', project: '호러 스릴러', startTime: '09, status: '작업중' },
+    { id, name: '오작가', project: '역사 드라마', startTime: '10, status: '작업중' },
+    { id, name: '서작가', project: '스포츠 드라마', startTime: '09, status: '작업중' },
+    { id, name: '신작가', project: '음악 로맨스', startTime: '11, status: '작업중' },
   ];
 
   // Mock data for managed projects
   const managedProjects = [
-    { id: 1, name: '로맨스 판타지', artist: '김작가', status: '정상', progress: 85, deadline: '1월 25일' },
-    { id: 2, name: '액션 웹툰', artist: '이작가', status: '주의', progress: 65, deadline: '1월 20일' },
-    { id: 3, name: '일상 코미디', artist: '박작가', status: '정상', progress: 90, deadline: '1월 30일' },
-    { id: 4, name: 'SF 드라마', artist: '최작가', status: '정상', progress: 75, deadline: '1월 28일' },
+    { id, name: '로맨스 판타지', artist: '김작가', status: '정상', progress, deadline: '1월 25일' },
+    { id, name: '액션 웹툰', artist: '이작가', status: '주의', progress, deadline: '1월 20일' },
+    { id, name: '일상 코미디', artist: '박작가', status: '정상', progress, deadline: '1월 30일' },
+    { id, name: 'SF 드라마', artist: '최작가', status: '정상', progress, deadline: '1월 28일' },
   ];
 
   // Mock data for attendance (pie chart)
   const attendanceData = [
-    { name: '출근', value: 18, color: '#00ACC1' }, // 청록색
-    { name: '재택근무', value: 3, color: '#FF9800' }, // 오렌지색
-    { name: '휴가', value: 2, color: '#757575' }, // 회색
-    { name: '워케이션', value: 1, color: '#9C27B0' }, // 보라색
+    { name: '출근', value, color: '#00ACC1' }, // 청록색
+    { name: '재택근무', value, color: '#FF9800' }, // 오렌지색
+    { name: '휴가', value, color: '#757575' }, // 회색
+    { name: '워케이션', value, color: '#9C27B0' }, // 보라색
   ];
 
   // Mock data for deadline urgency (bar chart)
   const deadlineData = [
-    { name: '오늘', count: 2 },
-    { name: '내일', count: 3 },
-    { name: '2일 후', count: 1 },
-    { name: '3일 후', count: 4 },
-    { name: '4일 후', count: 2 },
+    { name: '오늘', count,
+    { name: '내일', count,
+    { name: '2일 후', count,
+    { name: '3일 후', count,
+    { name: '4일 후', count,
   ];
 
   // Mock data for weekly attendance schedule
   const weeklyAttendance = [
-    { id: 1, name: '김작가', type: '워케이션', date: '1월 16일 ~ 1월 18일', status: '승인' },
-    { id: 2, name: '이작가', type: '휴가', date: '1월 17일 ~ 1월 19일', status: '승인' },
-    { id: 3, name: '박작가', type: '재택근무', date: '1월 15일', status: '승인' },
-    { id: 4, name: '정작가', type: '워케이션', date: '1월 20일 ~ 1월 22일', status: '대기' },
+    { id, name: '김작가', type: '워케이션', date: '1월 16일 ~ 1월 18일', status: '승인' },
+    { id, name: '이작가', type: '휴가', date: '1월 17일 ~ 1월 19일', status: '승인' },
+    { id, name: '박작가', type: '재택근무', date: '1월 15일', status: '승인' },
+    { id, name: '정작가', type: '워케이션', date: '1월 20일 ~ 1월 22일', status: '대기' },
   ];
 
-  const getAttendanceTypeColor = (type: string) => {
+  const getAttendanceTypeColor = (type) => {
     switch (type) {
       case '워케이션':
         return 'bg-[#9C27B0]'; // 보라색
@@ -174,7 +166,7 @@ export function AdminDashboardPage() {
     }
   };
 
-  const getAttendanceStatusColor = (status: string) => {
+  const getAttendanceStatusColor = (status) => {
     switch (status) {
       case '승인':
         return 'bg-green-500';
@@ -268,7 +260,7 @@ export function AdminDashboardPage() {
               <label className="text-sm font-medium text-foreground mb-2 block">현재 상태 선택</label>
               <select
                 value={currentAttendanceType || ''}
-                onChange={(e) => setCurrentAttendanceType(e.target.value || null)}
+                onChange={(e) => setCurrentAttendanceType(e.target.value)}
                 className="w-full px-4 py-2.5 border-2 border-border rounded-lg bg-background text-foreground font-medium focus:ring-2 focus:ring-primary focus:border-primary outline-none"
               >
                 <option value="">선택하세요</option>
@@ -424,7 +416,7 @@ export function AdminDashboardPage() {
                   contentStyle={{ 
                     backgroundColor: '#ffffff',
                     border: '1px solid #e2e8f0',
-                    borderRadius: '8px',
+                    borderRadius,
                     fontSize: '12px'
                   }}
                 />
@@ -582,15 +574,15 @@ export function AdminDashboardPage() {
             </label>
             <div className="grid grid-cols-4 gap-2">
               {[
-                { value: 'tired', label: '피곤함' },
-                { value: 'normal', label: '보통' },
-                { value: 'good', label: '좋음' },
-                { value: 'excellent', label: '최상' },
+                { value, label: '피곤함' },
+                { value, label: '보통' },
+                { value, label: '좋음' },
+                { value, label: '최상' },
               ].map((option) => (
                 <button
                   key={option.value}
                   type="button"
-                  onClick={() => setHealthSurvey({ ...healthSurvey, condition: option.value })}
+                  onClick={() => setHealthSurvey({ ...healthSurvey, condition: option.value)}
                   className={`py-3 px-4 rounded-lg border-2 text-sm font-medium transition-all ${
                     healthSurvey.condition === option.value
                       ? 'border-primary bg-primary/10 text-primary'

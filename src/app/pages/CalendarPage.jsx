@@ -6,9 +6,8 @@ import { ChevronLeft, ChevronRight, Plus, AlignLeft, Palette } from 'lucide-reac
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-/**
- * CalendarPage component
- */
+
+
 export function CalendarPage() {
   const daysOfWeek = ['일', '월', '화', '수', '목', '금', '토'];
   const currentMonth = '2026년 1월';
@@ -26,18 +25,18 @@ export function CalendarPage() {
     project: 'all',
     color: '#6E8FB3',
     description: '',
-    workType: 'none',
+    workType: '',
   });
 
   // 모든 일정 데이터
   const [allEvents, setAllEvents] = useState([
-    { id: '1', date: 5, title: '에피소드 42 마감', workType: 'serialization', project: '내 웹툰', description: '최종 검수 필요', color: '#EF4444' },
-    { id: '2', date: 8, title: '에피소드 43 스케치 완료', workType: 'serialization', project: '내 웹툰', color: '#F59E0B' },
-    { id: '3', date: 12, title: '팀 미팅', workType: 'none', project: '전체', color: '#3B82F6' },
-    { id: '4', date: 15, title: '휴재', workType: 'break', project: '전체', color: '#6E8FB3' },
-    { id: '5', date: 20, title: '신작 기획안 제출', workType: 'none', project: '신작', color: '#EF4444' },
-    { id: '6', date: 18, title: '전체 회의', workType: 'none', project: '전체', color: '#3B82F6' },
-    { id: '7', date: 22, title: '워크숍', workType: 'none', project: '전체', color: '#10B981' },
+    { id: 1, date: 15, title: '에피소드 42 마감', workType: '마감', project: '내 웹툰', description: '최종 검수 필요', color: '#EF4444' },
+    { id: 2, date: 18, title: '에피소드 43 스케치 완료', workType: '작업', project: '내 웹툰', color: '#F59E0B' },
+    { id: 3, date: 20, title: '팀 미팅', workType: '회의', project: '전체', color: '#3B82F6' },
+    { id: 4, date: 22, title: '휴재', workType: '휴재', project: '전체', color: '#6E8FB3' },
+    { id: 5, date: 25, title: '신작 기획안 제출', workType: '제출', project: '신작', color: '#EF4444' },
+    { id: 6, date: 28, title: '전체 회의', workType: '회의', project: '전체', color: '#3B82F6' },
+    { id: 7, date: 30, title: '워크숍', workType: '행사', project: '전체', color: '#10B981' },
   ]);
 
   // 필터링된 일정
@@ -55,10 +54,6 @@ export function CalendarPage() {
     .sort((a, b) => a.date - b.date)
     .slice(0, 5);
 
-  /**
-   * Handle date click
-   * @param {number} day - Day number
-   */
   const handleDateClick = (day) => {
     const dayEvents = filteredEvents.filter(e => e.date === day);
     if (dayEvents.length > 0) {
@@ -67,9 +62,6 @@ export function CalendarPage() {
     }
   };
 
-  /**
-   * Handle adding a new event
-   */
   const handleAddEvent = () => {
     const event = {
       id: Date.now().toString(),
@@ -83,13 +75,13 @@ export function CalendarPage() {
     setAllEvents([...allEvents, event]);
     setIsAddModalOpen(false);
     setNewEvent({
-      title: '',
-      startDate: '',
-      endDate: '',
-      project: 'all',
+      title,
+      startDate,
+      endDate,
+      project,
       color: '#6E8FB3',
-      description: '',
-      workType: 'none',
+      description,
+      workType,
     });
     toast.success('일정이 추가되었습니다.');
   };
@@ -98,15 +90,14 @@ export function CalendarPage() {
     if (!editingEvent) return;
     
     const updatedEvents = allEvents.map(e => 
-      e.id === editingEvent.id ? editingEvent : e
-    );
+      e.id === editingEvent.id ? editingEvent);
     setAllEvents(updatedEvents);
     setIsEditModalOpen(false);
     setEditingEvent(null);
     toast.success('일정이 수정되었습니다.');
   };
 
-  const handleDeleteEvent = (eventId: string) => {
+  const handleDeleteEvent = (eventId) => {
     setAllEvents(allEvents.filter(e => e.id !== eventId));
     setSelectedDate(null);
     toast.success('일정이 삭제되었습니다.');
@@ -175,12 +166,12 @@ export function CalendarPage() {
                   {/* Calendar dates grid */}
                   <div className="grid grid-cols-7 grid-rows-5 gap-2 flex-1">
                     {/* Empty cells before first day */}
-                    {Array.from({ length: 3 }).map((_, i) => (
+                    {Array.from({ length).map((_, i) => (
                       <div key={`empty-${i}`} className="w-full h-full" />
                     ))}
 
                     {/* Days */}
-                    {Array.from({ length: 31 }).map((_, i) => {
+                    {Array.from({ length).map((_, i) => {
                       const day = i + 1;
                       const isToday = day === 13;
                       const dayEvents = filteredEvents.filter(e => e.date === day);
@@ -220,7 +211,7 @@ export function CalendarPage() {
                     })}
 
                     {/* Empty cells after last day */}
-                    {Array.from({ length: 3 }).map((_, i) => (
+                    {Array.from({ length).map((_, i) => (
                       <div key={`empty-end-${i}`} className="w-full h-full" />
                     ))}
                   </div>
@@ -327,7 +318,7 @@ export function CalendarPage() {
             <label className="text-sm font-medium text-foreground mb-1 block">유형</label>
             <select
               value={newEvent.type}
-              onChange={(e) => setNewEvent({ ...newEvent, type: e.target.value })}
+              onChange={(e) => setNewEvent({ ...newEvent, type: e.target.value)}
               className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring outline-none text-sm bg-background text-foreground"
             >
               <option value="event">이벤트</option>
@@ -342,7 +333,7 @@ export function CalendarPage() {
             <label className="text-sm font-medium text-foreground mb-1 block">작업 유형</label>
             <select
               value={newEvent.workType}
-              onChange={(e) => setNewEvent({ ...newEvent, workType: e.target.value })}
+              onChange={(e) => setNewEvent({ ...newEvent, workType: e.target.value)}
               className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring outline-none text-sm bg-background text-foreground"
             >
               <option value="none">없음</option>
@@ -358,7 +349,7 @@ export function CalendarPage() {
             <label className="text-sm font-medium text-foreground mb-1 block">작품</label>
             <select
               value={newEvent.project}
-              onChange={(e) => setNewEvent({ ...newEvent, project: e.target.value })}
+              onChange={(e) => setNewEvent({ ...newEvent, project: e.target.value)}
               className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring outline-none text-sm bg-background text-foreground"
             >
               <option value="all">전체</option>
@@ -455,7 +446,7 @@ export function CalendarPage() {
               <label className="text-sm font-medium text-foreground mb-1 block">유형</label>
               <select
                 value={editingEvent.type}
-                onChange={(e) => setEditingEvent({ ...editingEvent, type: e.target.value })}
+                onChange={(e) => setEditingEvent({ ...editingEvent, type: e.target.value)}
                 className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring outline-none text-sm bg-background text-foreground"
               >
                 <option value="event">이벤트</option>
@@ -470,7 +461,7 @@ export function CalendarPage() {
               <label className="text-sm font-medium text-foreground mb-1 block">작업 유형</label>
               <select
                 value={editingEvent.workType}
-                onChange={(e) => setEditingEvent({ ...editingEvent, workType: e.target.value })}
+                onChange={(e) => setEditingEvent({ ...editingEvent, workType: e.target.value)}
                 className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring outline-none text-sm bg-background text-foreground"
               >
                 <option value="none">없음</option>

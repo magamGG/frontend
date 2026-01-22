@@ -6,41 +6,34 @@ import { Input } from '@/app/components/ui/input';
 import { ArrowLeft, Search, Calendar, Clock, Bell } from 'lucide-react';
 import { toast } from 'sonner';
 
-interface UnscreenedPerson {
-  id: number;
-  name: string;
-  date: string;
-  missedType: '정신건강' | '신체건강' | '둘 다';
-  lastCheckDate: string;
-  team: string;
-  position: string;
-  daysOverdue: number;
-}
 
-interface UnscreenedDetailPageProps {
-  onBack: () => void;
-}
 
-export function UnscreenedDetailPage({ onBack }: UnscreenedDetailPageProps) {
+
+
+/**
+ * @param {Object} props
+ * @param {Function} props.onBack
+ */
+export function UnscreenedDetailPage({ onBack }) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterType, setFilterType] = useState<'전체' | '정신건강' | '신체건강' | '둘 다'>('전체');
+  const [filterType, setFilterType] = useState('전체');
 
   // 미검진 인원 전체 데이터
-  const [unscreenedData] = useState<UnscreenedPerson[]>([
-    { id: 1, name: '송도동', date: '2026.01.12', missedType: '정신건강', lastCheckDate: '2025.12.15', team: '웹툰팀', position: '작가', daysOverdue: 7 },
-    { id: 2, name: '박아시', date: '2026.01.11', missedType: '신체건강', lastCheckDate: '2025.12.20', team: '웹툰팀', position: '작가', daysOverdue: 5 },
-    { id: 3, name: '이직가', date: '2026.01.10', missedType: '둘 다', lastCheckDate: '2025.12.10', team: '웹툰팀', position: '어시스턴트', daysOverdue: 9 },
-    { id: 4, name: '최소연', date: '2026.01.13', missedType: '정신건강', lastCheckDate: '2025.12.18', team: '기획팀', position: '매니저', daysOverdue: 6 },
-    { id: 5, name: '김작가', date: '2026.01.14', missedType: '신체건강', lastCheckDate: '2025.12.25', team: '웹툰팀', position: '작가', daysOverdue: 4 },
-    { id: 6, name: '정원화', date: '2026.01.09', missedType: '둘 다', lastCheckDate: '2025.12.05', team: '웹툰팀', position: '작가', daysOverdue: 14 },
-    { id: 7, name: '한민수', date: '2026.01.15', missedType: '정신건강', lastCheckDate: '2025.12.28', team: '기획팀', position: '담당자', daysOverdue: 3 },
-    { id: 8, name: '윤서진', date: '2026.01.08', missedType: '신체건강', lastCheckDate: '2025.12.12', team: '웹툰팀', position: '작가', daysOverdue: 11 },
-    { id: 9, name: '강태희', date: '2026.01.16', missedType: '둘 다', lastCheckDate: '2025.12.30', team: '웹툰팀', position: '어시스턴트', daysOverdue: 2 },
-    { id: 10, name: '조민아', date: '2026.01.07', missedType: '정신건강', lastCheckDate: '2025.12.08', team: '기획팀', position: '매니저', daysOverdue: 12 },
+  const [unscreenedData] = useState([
+    { id, name: '송도동', date: '2026.01.12', missedType: '정신건강', lastCheckDate: '2025.12.15', team: '웹툰팀', position: '작가', daysOverdue,
+    { id, name: '박아시', date: '2026.01.11', missedType: '신체건강', lastCheckDate: '2025.12.20', team: '웹툰팀', position: '작가', daysOverdue,
+    { id, name: '이직가', date: '2026.01.10', missedType: '둘 다', lastCheckDate: '2025.12.10', team: '웹툰팀', position: '어시스턴트', daysOverdue,
+    { id, name: '최소연', date: '2026.01.13', missedType: '정신건강', lastCheckDate: '2025.12.18', team: '기획팀', position: '매니저', daysOverdue,
+    { id, name: '김작가', date: '2026.01.14', missedType: '신체건강', lastCheckDate: '2025.12.25', team: '웹툰팀', position: '작가', daysOverdue,
+    { id, name: '정원화', date: '2026.01.09', missedType: '둘 다', lastCheckDate: '2025.12.05', team: '웹툰팀', position: '작가', daysOverdue,
+    { id, name: '한민수', date: '2026.01.15', missedType: '정신건강', lastCheckDate: '2025.12.28', team: '기획팀', position: '담당자', daysOverdue,
+    { id, name: '윤서진', date: '2026.01.08', missedType: '신체건강', lastCheckDate: '2025.12.12', team: '웹툰팀', position: '작가', daysOverdue,
+    { id, name: '강태희', date: '2026.01.16', missedType: '둘 다', lastCheckDate: '2025.12.30', team: '웹툰팀', position: '어시스턴트', daysOverdue,
+    { id, name: '조민아', date: '2026.01.07', missedType: '정신건강', lastCheckDate: '2025.12.08', team: '기획팀', position: '매니저', daysOverdue,
   ]);
 
   // 유형별 배지 색상
-  const getTypeBadgeClass = (type: string) => {
+  const getTypeBadgeClass = (type) => {
     switch (type) {
       case '둘 다':
         return 'bg-red-100 text-red-600';
@@ -54,7 +47,7 @@ export function UnscreenedDetailPage({ onBack }: UnscreenedDetailPageProps) {
   };
 
   // 유형 표시 텍스트
-  const getTypeDisplayText = (type: string) => {
+  const getTypeDisplayText = (type) => {
     return type === '둘 다' ? '전체' : type;
   };
 
@@ -68,7 +61,7 @@ export function UnscreenedDetailPage({ onBack }: UnscreenedDetailPageProps) {
     .sort((a, b) => b.daysOverdue - a.daysOverdue);
 
   // 알람 발송 핸들러
-  const handleSendAlarm = (personName: string) => {
+  const handleSendAlarm = (personName) => {
     toast.success(`${personName}님에게 검진 알림을 발송했습니다.`);
   };
 

@@ -6,26 +6,23 @@ import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react";
 
 import { cn } from "./utils";
 
-/**
- * DropdownMenu component
- */
-function DropdownMenu({ ...props }) {
+function DropdownMenu({
+  ...props
+}) {
   return <DropdownMenuPrimitive.Root data-slot="dropdown-menu" {...props} />;
 }
 
-/**
- * DropdownMenuPortal component
- */
-function DropdownMenuPortal({ ...props }) {
+function DropdownMenuPortal({
+  ...props
+}) {
   return (
     <DropdownMenuPrimitive.Portal data-slot="dropdown-menu-portal" {...props} />
   );
 }
 
-/**
- * DropdownMenuTrigger component
- */
-function DropdownMenuTrigger({ ...props }) {
+function DropdownMenuTrigger({
+  ...props
+}) {
   return (
     <DropdownMenuPrimitive.Trigger
       data-slot="dropdown-menu-trigger"
@@ -34,11 +31,6 @@ function DropdownMenuTrigger({ ...props }) {
   );
 }
 
-/**
- * DropdownMenuContent component
- * @param {Object} props
- * @param {number} [props.sideOffset] - Side offset
- */
 function DropdownMenuContent({
   className,
   sideOffset = 4,
@@ -59,21 +51,14 @@ function DropdownMenuContent({
   );
 }
 
-/**
- * DropdownMenuGroup component
- */
-function DropdownMenuGroup({ ...props }) {
+function DropdownMenuGroup({
+  ...props
+}) {
   return (
     <DropdownMenuPrimitive.Group data-slot="dropdown-menu-group" {...props} />
   );
 }
 
-/**
- * DropdownMenuItem component
- * @param {Object} props
- * @param {boolean} [props.inset] - Inset style
- * @param {string} [props.variant] - Variant (default, destructive)
- */
 function DropdownMenuItem({
   className,
   inset,
@@ -94,9 +79,6 @@ function DropdownMenuItem({
   );
 }
 
-/**
- * DropdownMenuCheckboxItem component
- */
 function DropdownMenuCheckboxItem({
   className,
   children,
@@ -123,10 +105,9 @@ function DropdownMenuCheckboxItem({
   );
 }
 
-/**
- * DropdownMenuRadioGroup component
- */
-function DropdownMenuRadioGroup({ ...props }) {
+function DropdownMenuRadioGroup({
+  ...props
+}) {
   return (
     <DropdownMenuPrimitive.RadioGroup
       data-slot="dropdown-menu-radio-group"
@@ -135,9 +116,6 @@ function DropdownMenuRadioGroup({ ...props }) {
   );
 }
 
-/**
- * DropdownMenuRadioItem component
- */
 function DropdownMenuRadioItem({
   className,
   children,
@@ -162,11 +140,6 @@ function DropdownMenuRadioItem({
   );
 }
 
-/**
- * DropdownMenuLabel component
- * @param {Object} props
- * @param {boolean} [props.inset] - Inset style
- */
 function DropdownMenuLabel({
   className,
   inset,
@@ -185,9 +158,6 @@ function DropdownMenuLabel({
   );
 }
 
-/**
- * DropdownMenuSeparator component
- */
 function DropdownMenuSeparator({
   className,
   ...props
@@ -201,9 +171,6 @@ function DropdownMenuSeparator({
   );
 }
 
-/**
- * DropdownMenuShortcut component
- */
 function DropdownMenuShortcut({
   className,
   ...props
@@ -220,18 +187,12 @@ function DropdownMenuShortcut({
   );
 }
 
-/**
- * DropdownMenuSub component
- */
-function DropdownMenuSub({ ...props }) {
+function DropdownMenuSub({
+  ...props
+}) {
   return <DropdownMenuPrimitive.Sub data-slot="dropdown-menu-sub" {...props} />;
 }
 
-/**
- * DropdownMenuSubTrigger component
- * @param {Object} props
- * @param {boolean} [props.inset] - Inset style
- */
 function DropdownMenuSubTrigger({
   className,
   inset,
@@ -254,9 +215,6 @@ function DropdownMenuSubTrigger({
   );
 }
 
-/**
- * DropdownMenuSubContent component
- */
 function DropdownMenuSubContent({
   className,
   ...props

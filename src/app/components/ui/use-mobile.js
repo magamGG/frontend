@@ -2,12 +2,10 @@ import * as React from "react";
 
 const MOBILE_BREAKPOINT = 768;
 
-/**
- * Hook to detect if the current viewport is mobile size
- * @returns {boolean} True if viewport width is less than MOBILE_BREAKPOINT
- */
 export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState(undefined);
+  const [isMobile, setIsMobile] = React.useState(
+    undefined,
+  );
 
   React.useEffect(() => {
     const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);

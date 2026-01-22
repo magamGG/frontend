@@ -6,17 +6,22 @@ import { ChevronLeft, ChevronRight, Calendar, Clock, ArrowRight, Trash2 } from '
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-/**
- * AdminCalendarPage component
- */
+[];
+  }[];
+  attendance: {
+    date: number;
+    type: 'break' | 'workation';
+  }[];
+}
+
 export function AdminCalendarPage() {
   const daysOfWeek = ['일', '월', '화', '수', '목', '금', '토'];
   
   // 작가 목록 데이터 (ㄱ 순서대로 정렬)
   const artists = [
-    { id: 'artist1', name: '김작가', projects: ['나의 히어로', '별빛 아래서'] },
-    { id: 'artist2', name: '나작가', projects: ['러브 스토리'] },
-    { id: 'artist3', name: '박작가', projects: ['판타지 월드'] },
+    { id, name: '김작가', projects: ['나의 히어로', '별빛 아래서'] },
+    { id, name: '나작가', projects: ['러브 스토리'] },
+    { id, name: '박작가', projects: ['판타지 월드'] },
   ];
 
   // 필터 상태 (기본값: 전체 선택)
@@ -26,95 +31,95 @@ export function AdminCalendarPage() {
   // 메모 상태 (작가별, 날짜별)
   const [adminNotes, setAdminNotes] = useState({
     artist1: [
-      { date: 10, note: 'EP.42 마감 확인 필요' },
+      { date, note: 'EP.42 마감 확인 필요' },
     ],
-    artist2: [],
-    artist3: [],
+    artist2,
+    artist3,
   });
   const [currentNote, setCurrentNote] = useState('');
-  const [selectedDate, setSelectedDate] = useState<number | null>(null);
+  const [selectedDate, setSelectedDate] = useState(null);
   const [isDayDetailModalOpen, setIsDayDetailModalOpen] = useState(false);
   
   // 더보기 모달 상태
   const [isUpcomingModalOpen, setIsUpcomingModalOpen] = useState(false);
-  const [upcomingModalType, setUpcomingModalType] = useState<'schedule' | 'deadline'>('schedule');
+  const [upcomingModalType, setUpcomingModalType] = useState('schedule');
 
   // 작가별 일정 데이터 (예시)
   const artistSchedules: ArtistSchedule[] = [
     {
-      artistId: 'artist1',
+      artistId,
       artistName: '김작가',
       projects: [
         {
-          id: 'project1',
+          id,
           title: '나의 히어로',
           episodes: [
-            { date: 5, episode: 'EP.42', stage: '검수', stageColor: '#F87171', startDate: 5, endDate: 5 },
-            { date: 6, episode: 'EP.43', stage: '콘티', stageColor: '#FCD34D', startDate: 6, endDate: 7 },
-            { date: 7, episode: 'EP.43', stage: '콘티', stageColor: '#FCD34D', startDate: 6, endDate: 7 },
-            { date: 14, episode: 'EP.43', stage: '선화', stageColor: '#60A5FA', startDate: 14, endDate: 15 },
-            { date: 15, episode: 'EP.43', stage: '선화', stageColor: '#60A5FA', startDate: 14, endDate: 15 },
-            { date: 16, episode: 'EP.43', stage: '채색', stageColor: '#F472B6', startDate: 16, endDate: 18 },
-            { date: 17, episode: 'EP.43', stage: '채색', stageColor: '#F472B6', startDate: 16, endDate: 18 },
-            { date: 18, episode: 'EP.43', stage: '채색', stageColor: '#F472B6', startDate: 16, endDate: 18 },
+            { date, episode: 'EP.42', stage: '검수', stageColor: '#F87171', startDate, endDate,
+            { date, episode: 'EP.43', stage: '콘티', stageColor: '#FCD34D', startDate, endDate,
+            { date, episode: 'EP.43', stage: '콘티', stageColor: '#FCD34D', startDate, endDate,
+            { date, episode: 'EP.43', stage: '선화', stageColor: '#60A5FA', startDate, endDate,
+            { date, episode: 'EP.43', stage: '선화', stageColor: '#60A5FA', startDate, endDate,
+            { date, episode: 'EP.43', stage: '채색', stageColor: '#F472B6', startDate, endDate,
+            { date, episode: 'EP.43', stage: '채색', stageColor: '#F472B6', startDate, endDate,
+            { date, episode: 'EP.43', stage: '채색', stageColor: '#F472B6', startDate, endDate,
           ],
         },
         {
-          id: 'project2',
+          id,
           title: '별빛 아래서',
           episodes: [
-            { date: 21, episode: 'EP.01', stage: '콘티', stageColor: '#8B5CF6', startDate: 21, endDate: 22 },
-            { date: 22, episode: 'EP.01', stage: '콘티', stageColor: '#8B5CF6', startDate: 21, endDate: 22 },
+            { date, episode: 'EP.01', stage: '콘티', stageColor: '#8B5CF6', startDate, endDate,
+            { date, episode: 'EP.01', stage: '콘티', stageColor: '#8B5CF6', startDate, endDate,
           ],
         },
       ],
       attendance: [
-        { date: 10, type: 'break' },
-        { date: 11, type: 'break' },
-        { date: 12, type: 'break' },
+        { date, type,
+        { date, type,
+        { date, type,
       ],
     },
     {
-      artistId: 'artist2',
+      artistId,
       artistName: '나작가',
       projects: [
         {
-          id: 'project3',
+          id,
           title: '러브 스토리',
           episodes: [
-            { date: 8, episode: 'EP.10', stage: '배경', stageColor: '#34D399', startDate: 8, endDate: 9 },
-            { date: 9, episode: 'EP.10', stage: '배경', stageColor: '#34D399', startDate: 8, endDate: 9 },
+            { date, episode: 'EP.10', stage: '배경', stageColor: '#34D399', startDate, endDate,
+            { date, episode: 'EP.10', stage: '배경', stageColor: '#34D399', startDate, endDate,
           ],
         },
       ],
       attendance: [
-        { date: 20, type: 'workation' },
-        { date: 21, type: 'workation' },
-        { date: 22, type: 'workation' },
+        { date, type,
+        { date, type,
+        { date, type,
       ],
     },
     {
-      artistId: 'artist3',
+      artistId,
       artistName: '박작가',
       projects: [
         {
-          id: 'project4',
+          id,
           title: '판타지 월드',
           episodes: [
-            { date: 25, episode: 'EP.05', stage: '스케치', stageColor: '#A78BFA', startDate: 25, endDate: 26 },
-            { date: 26, episode: 'EP.05', stage: '스케치', stageColor: '#A78BFA', startDate: 25, endDate: 26 },
+            { date, episode: 'EP.05', stage: '스케치', stageColor: '#A78BFA', startDate, endDate,
+            { date, episode: 'EP.05', stage: '스케치', stageColor: '#A78BFA', startDate, endDate,
           ],
         },
       ],
       attendance: [
-        { date: 13, type: 'workation' },
-        { date: 27, type: 'break' },
+        { date, type,
+        { date, type,
       ],
     },
   ];
 
   // 웹툰 제목 자르기 (4글자 초과 시)
-  const truncateProjectName = (name: string) => {
+  const truncateProjectName = (name) => {
     if (name.length > 4) {
       return name.substring(0, 4) + '...';
     }
@@ -163,7 +168,7 @@ export function AdminCalendarPage() {
   const filteredSchedule = getFilteredSchedule();
 
   // 근태 데이터 가져오기
-  const getAttendanceForDate = (day: number) => {
+  const getAttendanceForDate = (day) => {
     // 전체 작가 선택 시에는 근태 표시 안 함
     if (selectedArtist === 'all') return null;
     
@@ -175,7 +180,7 @@ export function AdminCalendarPage() {
   };
 
   // 근태 배경색
-  const getAttendanceBackgroundColor = (type: string | null) => {
+  const getAttendanceBackgroundColor = (type) => {
     if (!type) return '';
     
     switch (type) {
@@ -199,7 +204,7 @@ export function AdminCalendarPage() {
   ];
 
   // 날짜 클릭 핸들러
-  const handleDateClick = (day: number) => {
+  const handleDateClick = (day) => {
     setSelectedDate(day);
     const dayNote = adminNotes[selectedArtist]?.find(n => n.date === day);
     setCurrentNote(dayNote?.note || '');
@@ -214,9 +219,9 @@ export function AdminCalendarPage() {
     if (currentNote.trim()) {
       const updatedNotes = [...(adminNotes[selectedArtist] || [])];
       if (existingNoteIndex >= 0) {
-        updatedNotes[existingNoteIndex] = { date: selectedDate, note: currentNote };
+        updatedNotes[existingNoteIndex] = { date, note: currentNote };
       } else {
-        updatedNotes.push({ date: selectedDate, note: currentNote });
+        updatedNotes.push({ date, note);
       }
       setAdminNotes({ ...adminNotes, [selectedArtist]: updatedNotes });
       toast.success('메모가 저장되었습니다.');
@@ -230,7 +235,7 @@ export function AdminCalendarPage() {
   };
 
   // 메모 삭제 핸들러
-  const handleDeleteNote = (artistId: string, date: number) => {
+  const handleDeleteNote = (artistId, date) => {
     const updatedNotes = adminNotes[artistId].filter(n => n.date !== date);
     setAdminNotes({ ...adminNotes, [artistId]: updatedNotes });
     toast.success('메모가 삭제되었습니다.');
@@ -320,12 +325,12 @@ export function AdminCalendarPage() {
                   {/* Calendar dates grid */}
                   <div className="grid grid-cols-7 grid-rows-5 flex-1 border-l border-t border-border">
                     {/* Empty cells before first day */}
-                    {Array.from({ length: 3 }).map((_, i) => (
+                    {Array.from({ length).map((_, i) => (
                       <div key={`empty-${i}`} className="w-full h-full border-r border-b border-border" />
                     ))}
 
                     {/* Days */}
-                    {Array.from({ length: 31 }).map((_, i) => {
+                    {Array.from({ length).map((_, i) => {
                       const day = i + 1;
                       const isToday = day === 13;
                       const dayEvents = filteredSchedule.filter(e => e.date === day);
@@ -412,11 +417,11 @@ export function AdminCalendarPage() {
                                   style={{ 
                                     backgroundColor: event.stageColor,
                                     color: '#FFFFFF',
-                                    width: barWidth,
+                                    width,
                                     position: daySpan > 1 ? 'absolute' : 'relative',
-                                    left: daySpan > 1 ? 0 : undefined,
-                                    top: daySpan > 1 ? `${idx * 28 + (dayNote ? 32 : 0)}px` : undefined,
-                                    zIndex: daySpan > 1 ? 10 : 1,
+                                    left: daySpan > 1 ? 0,
+                                    top: daySpan > 1 ? `${idx * 28 + (dayNote ? 32)}px` : undefined,
+                                    zIndex: daySpan > 1 ? 10,
                                   }}
                                 >
                                   <span className="truncate flex-1 flex items-center gap-1">
@@ -434,7 +439,7 @@ export function AdminCalendarPage() {
                             
                             {/* 진행 중인 작업은 공간만 차지 (보이지 않음) */}
                             {ongoingEvents.slice(0, 3).map((_, idx) => (
-                              <div key={`ongoing-${idx}`} className="text-xs py-1.5" style={{ height: '28px', visibility: 'hidden' }}>
+                              <div key={`ongoing-${idx}`} className="text-xs py-1.5" style={{ height, visibility: 'hidden' }}>
                                 &nbsp;
                               </div>
                             ))}
@@ -450,7 +455,7 @@ export function AdminCalendarPage() {
                     })}
 
                     {/* Empty cells after last day */}
-                    {Array.from({ length: 3 }).map((_, i) => (
+                    {Array.from({ length).map((_, i) => (
                       <div key={`empty-end-${i}`} className="w-full h-full border-r border-b border-border" />
                     ))}
                   </div>

@@ -6,9 +6,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { CheckCircle, Calendar, Clock, FileText, AlertCircle, Activity } from 'lucide-react';
 import { toast } from 'sonner';
 
-/**
- * ArtistHealthPage component
- */
 export function ArtistHealthPage() {
   const [isMentalSelfCheckOpen, setIsMentalSelfCheckOpen] = useState(false);
   const [isPhysicalSelfCheckOpen, setIsPhysicalSelfCheckOpen] = useState(false);
@@ -25,24 +22,24 @@ export function ArtistHealthPage() {
   const [nextCheckupDate] = useState({
     mentalCheckup: '2026.01.25',
     physicalCheckup: '2026.02.01',
-    daysUntilMental: 7,
-    daysUntilPhysical: 14,
+    daysUntilMental,
+    daysUntilPhysical,
   });
 
   // 심층 검진 검사 데이터 - 상태로 변경
   const [deepCheckupData, setDeepCheckupData] = useState({
     mental: {
       lastCheckDate: '2026.01.15',
-      score: 8,
+      score,
       status: '주의',
-      isCompleted: true,
+      isCompleted,
       nextCheckDate: '2026.01.25',
     },
     physical: {
-      lastCheckDate: '',
-      score: 0,
+      lastCheckDate,
+      score,
       status: '미완료',
-      isCompleted: false,  // 신체 건강 미완료로 변경
+      isCompleted,  // 신체 건강 미완료로 변경
       nextCheckDate: '2026.02.01',
     },
   });
@@ -96,10 +93,10 @@ export function ArtistHealthPage() {
     setDeepCheckupData({
       ...deepCheckupData,
       physical: {
-        lastCheckDate: formattedDate,
-        score: finalScore,
-        status: status,
-        isCompleted: true,
+        lastCheckDate,
+        score,
+        status,
+        isCompleted,
         nextCheckDate: deepCheckupData.physical.nextCheckDate,
       },
     });
@@ -109,11 +106,7 @@ export function ArtistHealthPage() {
     setPhysicalDeepAnswers([0, 0, 0, 0]);
   };
 
-  /**
-   * Get badge class for status
-   * @param {string} status - Status string
-   * @returns {string} CSS class for badge
-   */
+  // 상태별 배지 색상
   const getStatusBadgeClass = (status) => {
     switch (status) {
       case '위험':
@@ -483,7 +476,7 @@ export function ArtistHealthPage() {
                 { q: '1. 오늘 손목 또는 손가락 통증은 어느 정도였나요?', desc: '0 (전혀 없음) ~ 10 (매우 심함)' },
                 { q: '2. 오늘 목이나 어깨 결림은 어느 정도였나요?', desc: '0 (전혀 없음) ~ 10 (매우 심함)' },
                 { q: '3. 오늘 허리 또는 허리 주변 불편감이 있었나요?', desc: '0 (전혀 없음) ~ 10 (매우 심함)' },
-                { q: '4. 전날 수면 시간은 어느 정도였나요?', desc: '시간', time: true },
+                { q: '4. 전날 수면 시간은 어느 정도였나요?', desc: '시간', time,
               ].map((item, index) => (
                 <div key={index} className="space-y-2">
                   <p className="text-sm text-[#1F2328] font-medium">{item.q}</p>

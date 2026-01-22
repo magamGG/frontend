@@ -1,39 +1,33 @@
 "use client";
 
 import * as React from "react";
-import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
+import * as Radix-uiReact-alert-dialogPrimitive from "@radix-ui/react-alert-dialog";
 
 import { cn } from "./utils";
 import { buttonVariants } from "./button";
 
-/**
- * AlertDialog component
- */
-function AlertDialog({ ...props }) {
+function AlertDialog({
+  ...props
+}) {
   return <AlertDialogPrimitive.Root data-slot="alert-dialog" {...props} />;
 }
 
-/**
- * AlertDialogTrigger component
- */
-function AlertDialogTrigger({ ...props }) {
+function AlertDialogTrigger({
+  ...props
+}) {
   return (
     <AlertDialogPrimitive.Trigger data-slot="alert-dialog-trigger" {...props} />
   );
 }
 
-/**
- * AlertDialogPortal component
- */
-function AlertDialogPortal({ ...props }) {
+function AlertDialogPortal({
+  ...props
+}) {
   return (
     <AlertDialogPrimitive.Portal data-slot="alert-dialog-portal" {...props} />
   );
 }
 
-/**
- * AlertDialogOverlay component
- */
 function AlertDialogOverlay({
   className,
   ...props
@@ -50,15 +44,12 @@ function AlertDialogOverlay({
   );
 }
 
-/**
- * AlertDialogContent component
- */
 function AlertDialogContent({
   className,
   ...props
 }) {
   return (
-    <AlertDialogPortal>
+    
       <AlertDialogOverlay />
       <AlertDialogPrimitive.Content
         data-slot="alert-dialog-content"
@@ -72,9 +63,6 @@ function AlertDialogContent({
   );
 }
 
-/**
- * AlertDialogHeader component
- */
 function AlertDialogHeader({
   className,
   ...props
@@ -88,9 +76,6 @@ function AlertDialogHeader({
   );
 }
 
-/**
- * AlertDialogFooter component
- */
 function AlertDialogFooter({
   className,
   ...props
@@ -107,9 +92,6 @@ function AlertDialogFooter({
   );
 }
 
-/**
- * AlertDialogTitle component
- */
 function AlertDialogTitle({
   className,
   ...props
@@ -123,9 +105,6 @@ function AlertDialogTitle({
   );
 }
 
-/**
- * AlertDialogDescription component
- */
 function AlertDialogDescription({
   className,
   ...props
@@ -139,9 +118,6 @@ function AlertDialogDescription({
   );
 }
 
-/**
- * AlertDialogAction component
- */
 function AlertDialogAction({
   className,
   ...props
@@ -154,16 +130,13 @@ function AlertDialogAction({
   );
 }
 
-/**
- * AlertDialogCancel component
- */
 function AlertDialogCancel({
   className,
   ...props
 }) {
   return (
     <AlertDialogPrimitive.Cancel
-      className={cn(buttonVariants({ variant: "outline" }), className)}
+      className={cn(buttonVariants({ variant), className)}
       {...props}
     />
   );

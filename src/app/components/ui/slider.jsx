@@ -5,14 +5,6 @@ import * as SliderPrimitive from "@radix-ui/react-slider";
 
 import { cn } from "./utils";
 
-/**
- * Slider component
- * @param {Object} props
- * @param {number|number[]} [props.defaultValue] - Default value
- * @param {number|number[]} [props.value] - Current value
- * @param {number} [props.min] - Minimum value
- * @param {number} [props.max] - Maximum value
- */
 function Slider({
   className,
   defaultValue,
@@ -26,8 +18,7 @@ function Slider({
       Array.isArray(value)
         ? value
         : Array.isArray(defaultValue)
-          ? defaultValue
-          : [min, max],
+          ? defaultValue, max],
     [value, defaultValue, min, max],
   );
 

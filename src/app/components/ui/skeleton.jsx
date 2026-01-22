@@ -1,9 +1,5 @@
-import * as React from "react";
 import { cn } from "./utils";
 
-/**
- * Skeleton component
- */
 function Skeleton({ className, ...props }) {
   return (
     <div

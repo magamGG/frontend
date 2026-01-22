@@ -7,15 +7,27 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import { cn } from "./utils";
 import { Button } from "./button";
 
-/**
- * CarouselContext value
- */
+
+
+
+
+
+
+  plugins?: CarouselPlugin;
+  orientation?: "horizontal" | "vertical";
+  setApi?: (api) => void;
+};
+
+
+  api: ReturnType[1];
+  scrollPrev: () => void;
+  scrollNext: () => void;
+  canScrollPrev: boolean;
+  canScrollNext: boolean;
+} & CarouselProps;
+
 const CarouselContext = React.createContext(null);
 
-/**
- * useCarousel hook
- * @returns {Object} Carousel context value
- */
 function useCarousel() {
   const context = React.useContext(CarouselContext);
 
@@ -26,14 +38,6 @@ function useCarousel() {
   return context;
 }
 
-/**
- * Carousel component
- * @param {Object} props
- * @param {string} [props.orientation] - Orientation (horizontal, vertical)
- * @param {Object} [props.opts] - Carousel options
- * @param {Function} [props.setApi] - Set API callback
- * @param {Array} [props.plugins] - Carousel plugins
- */
 function Carousel({
   orientation = "horizontal",
   opts,
@@ -42,7 +46,7 @@ function Carousel({
   className,
   children,
   ...props
-}) {
+} & CarouselProps) {
   const [carouselRef, api] = useEmblaCarousel(
     {
       ...opts,
@@ -100,10 +104,10 @@ function Carousel({
     <CarouselContext.Provider
       value={{
         carouselRef,
-        api: api,
+        api,
         opts,
         orientation:
-          orientation || (opts?.axis === "y" ? "vertical" : "horizontal"),
+          orientation || (opts?.axis === "y" ? "vertical" ),
         scrollPrev,
         scrollNext,
         canScrollPrev,
@@ -124,9 +128,6 @@ function Carousel({
   );
 }
 
-/**
- * CarouselContent component
- */
 function CarouselContent({ className, ...props }) {
   const { carouselRef, orientation } = useCarousel();
 
@@ -148,9 +149,6 @@ function CarouselContent({ className, ...props }) {
   );
 }
 
-/**
- * CarouselItem component
- */
 function CarouselItem({ className, ...props }) {
   const { orientation } = useCarousel();
 
@@ -169,12 +167,6 @@ function CarouselItem({ className, ...props }) {
   );
 }
 
-/**
- * CarouselPrevious component
- * @param {Object} props
- * @param {string} [props.variant] - Button variant
- * @param {string} [props.size] - Button size
- */
 function CarouselPrevious({
   className,
   variant = "outline",
@@ -205,12 +197,6 @@ function CarouselPrevious({
   );
 }
 
-/**
- * CarouselNext component
- * @param {Object} props
- * @param {string} [props.variant] - Button variant
- * @param {string} [props.size] - Button size
- */
 function CarouselNext({
   className,
   variant = "outline",

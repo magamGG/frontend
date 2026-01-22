@@ -6,9 +6,6 @@ import { CheckIcon } from "lucide-react";
 
 import { cn } from "./utils";
 
-/**
- * Checkbox component
- */
 function Checkbox({
   className,
   ...props

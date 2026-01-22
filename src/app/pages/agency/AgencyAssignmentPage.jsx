@@ -14,9 +14,10 @@ import {
   Briefcase
 } from 'lucide-react';
 
-/**
- * AgencyAssignmentPage component
- */
+
+
+
+
 export function AgencyAssignmentPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedManager, setSelectedManager] = useState(null);
@@ -24,81 +25,74 @@ export function AgencyAssignmentPage() {
 
   // 담당자 목록
   const [managers, setManagers] = useState([
-    { id: 1, name: '김담당자', email: 'kim@agency.com', position: '시니어 매니저', assignedArtists: 5 },
-    { id: 2, name: '이담당자', email: 'lee@agency.com', position: '매니저', assignedArtists: 3 },
-    { id: 3, name: '박담당자', email: 'park@agency.com', position: '주니어 매니저', assignedArtists: 2 },
-    { id: 4, name: '최담당자', email: 'choi@agency.com', position: '매니저', assignedArtists: 4 },
-    { id: 5, name: '정담당자', email: 'jung@agency.com', position: '시니어 매니저', assignedArtists: 6 },
+    { id, name: '김담당자', email: 'kim@agency.com', position: '시니어 매니저', assignedArtists,
+    { id, name: '이담당자', email: 'lee@agency.com', position: '매니저', assignedArtists,
+    { id, name: '박담당자', email: 'park@agency.com', position: '주니어 매니저', assignedArtists,
+    { id, name: '최담당자', email: 'choi@agency.com', position: '매니저', assignedArtists,
+    { id, name: '정담당자', email: 'jung@agency.com', position: '시니어 매니저', assignedArtists,
   ]);
 
   // 작가 목록
-  const [artists, setArtists] = useState<Artist[]>([
+  const [artists, setArtists] = useState([
     {
-      id: 1,
+      id,
       name: '김작가',
       email: 'kim.artist@agency.com',
       phone: '010-1111-2222',
-      projects: 2,
+      projects,
       status: '활동중',
-      assignedManager: managers[0]
-    },
+      assignedManager,
     {
-      id: 2,
+      id,
       name: '이작가',
       email: 'lee.artist@agency.com',
       phone: '010-2222-3333',
-      projects: 3,
+      projects,
       status: '활동중',
-      assignedManager: managers[1]
-    },
+      assignedManager,
     {
-      id: 3,
+      id,
       name: '박작가',
       email: 'park.artist@agency.com',
       phone: '010-3333-4444',
-      projects: 1,
+      projects,
       status: '활동중',
-      assignedManager: managers[2]
-    },
+      assignedManager,
     {
-      id: 4,
+      id,
       name: '최작가',
       email: 'choi.artist@agency.com',
       phone: '010-4444-5555',
-      projects: 0,
+      projects,
       status: '신인',
-      assignedManager: undefined
-    },
+      assignedManager,
     {
-      id: 5,
+      id,
       name: '정작가',
       email: 'jung.artist@agency.com',
       phone: '010-5555-6666',
-      projects: 2,
+      projects,
       status: '휴식',
-      assignedManager: managers[0]
-    },
+      assignedManager,
     {
-      id: 6,
+      id,
       name: '한작가',
       email: 'han.artist@agency.com',
       phone: '010-6666-7777',
-      projects: 4,
+      projects,
       status: '활동중',
-      assignedManager: managers[1]
-    },
+      assignedManager,
     {
-      id: 7,
+      id,
       name: '강작가',
       email: 'kang.artist@agency.com',
       phone: '010-7777-8888',
-      projects: 1,
+      projects,
       status: '신인',
-      assignedManager: undefined
-    },
+      assignedManager,
   ]);
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status) => {
     switch (status) {
       case '활동중':
         return 'bg-green-100 text-green-700';
@@ -111,7 +105,7 @@ export function AgencyAssignmentPage() {
     }
   };
 
-  const handleAssignArtist = (artistId: number) => {
+  const handleAssignArtist = (artistId) => {
     if (!selectedManager) return;
 
     setArtists(prev => prev.map(artist =>
@@ -129,7 +123,7 @@ export function AgencyAssignmentPage() {
     toast.success(`${artists.find(a => a.id === artistId)?.name}를 ${selectedManager.name}에게 배정했습니다.`);
   };
 
-  const handleUnassignArtist = (artistId: number) => {
+  const handleUnassignArtist = (artistId) => {
     const artist = artists.find(a => a.id === artistId);
     if (!artist || !artist.assignedManager || !selectedManager) return;
 
@@ -148,7 +142,7 @@ export function AgencyAssignmentPage() {
     toast.success(`${artist.name}의 담당자 배정을 해제했습니다.`);
   };
 
-  const openAssignModal = (manager: Manager) => {
+  const openAssignModal = (manager) => {
     setSelectedManager(manager);
     setIsAssignModalOpen(true);
   };

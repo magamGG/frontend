@@ -3,9 +3,6 @@ import { Button } from '@/app/components/ui/button';
 import { Progress } from '@/app/components/ui/progress';
 import { Heart, Activity, Moon, TrendingUp, AlertTriangle } from 'lucide-react';
 
-/**
- * HealthPage component
- */
 export function HealthPage() {
   return (
     <div className="w-full h-full">

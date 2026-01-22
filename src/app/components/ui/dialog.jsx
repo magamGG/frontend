@@ -6,37 +6,30 @@ import { XIcon } from "lucide-react";
 
 import { cn } from "./utils";
 
-/**
- * Dialog component
- */
-function Dialog({ ...props }) {
+function Dialog({
+  ...props
+}) {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />;
 }
 
-/**
- * DialogTrigger component
- */
-function DialogTrigger({ ...props }) {
+function DialogTrigger({
+  ...props
+}) {
   return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />;
 }
 
-/**
- * DialogPortal component
- */
-function DialogPortal({ ...props }) {
+function DialogPortal({
+  ...props
+}) {
   return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />;
 }
 
-/**
- * DialogClose component
- */
-function DialogClose({ ...props }) {
+function DialogClose({
+  ...props
+}) {
   return <DialogPrimitive.Close data-slot="dialog-close" {...props} />;
 }
 
-/**
- * DialogOverlay component
- */
 const DialogOverlay = React.forwardRef(({ className, ...props }, ref) => {
   return (
     <DialogPrimitive.Overlay
@@ -52,10 +45,11 @@ const DialogOverlay = React.forwardRef(({ className, ...props }, ref) => {
 });
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
-/**
- * DialogContent component
- */
-function DialogContent({ className, children, ...props }) {
+function DialogContent({
+  className,
+  children,
+  ...props
+}) {
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
@@ -77,9 +71,6 @@ function DialogContent({ className, children, ...props }) {
   );
 }
 
-/**
- * DialogHeader component
- */
 function DialogHeader({ className, ...props }) {
   return (
     <div
@@ -90,9 +81,6 @@ function DialogHeader({ className, ...props }) {
   );
 }
 
-/**
- * DialogFooter component
- */
 function DialogFooter({ className, ...props }) {
   return (
     <div
@@ -106,10 +94,10 @@ function DialogFooter({ className, ...props }) {
   );
 }
 
-/**
- * DialogTitle component
- */
-function DialogTitle({ className, ...props }) {
+function DialogTitle({
+  className,
+  ...props
+}) {
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
@@ -119,10 +107,10 @@ function DialogTitle({ className, ...props }) {
   );
 }
 
-/**
- * DialogDescription component
- */
-function DialogDescription({ className, ...props }) {
+function DialogDescription({
+  className,
+  ...props
+}) {
   return (
     <DialogPrimitive.Description
       data-slot="dialog-description"

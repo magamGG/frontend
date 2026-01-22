@@ -1,13 +1,10 @@
 "use client";
 
 import * as React from "react";
-import * as AvatarPrimitive from "@radix-ui/react-avatar";
+import * as Radix-uiReact-avatarPrimitive from "@radix-ui/react-avatar";
 
 import { cn } from "./utils";
 
-/**
- * Avatar component
- */
 function Avatar({
   className,
   ...props
@@ -24,9 +21,6 @@ function Avatar({
   );
 }
 
-/**
- * AvatarImage component
- */
 function AvatarImage({
   className,
   ...props
@@ -40,9 +34,6 @@ function AvatarImage({
   );
 }
 
-/**
- * AvatarFallback component
- */
 function AvatarFallback({
   className,
   ...props

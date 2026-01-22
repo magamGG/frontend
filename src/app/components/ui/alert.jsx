@@ -14,22 +14,16 @@ const alertVariants = cva(
       },
     },
     defaultVariants: {
-      variant: "default",
+      variant,
     },
   },
 );
 
-/**
- * Alert component
- * @param {Object} props
- * @param {string} [props.className] - Additional CSS classes
- * @param {string} [props.variant] - Alert variant (default, destructive)
- */
 function Alert({
   className,
   variant,
   ...props
-}) {
+} & ) {
   return (
     <div
       data-slot="alert"
@@ -40,9 +34,6 @@ function Alert({
   );
 }
 
-/**
- * AlertTitle component
- */
 function AlertTitle({ className, ...props }) {
   return (
     <div
@@ -56,9 +47,6 @@ function AlertTitle({ className, ...props }) {
   );
 }
 
-/**
- * AlertDescription component
- */
 function AlertDescription({
   className,
   ...props

@@ -1,21 +1,23 @@
 import { ArrowLeft } from 'lucide-react';
 
 const highRiskUsers = [
-  { name: '송도동', dept: '개발팀', mentalScore: 85, physicalScore: 92 },
-  { name: '김태양', dept: '개발팀', mentalScore: 88, physicalScore: 78 },
+  { name: '송도동', dept: '개발팀', mentalScore, physicalScore,
+  { name: '김태양', dept: '개발팀', mentalScore, physicalScore,
 ];
 
 const cautionUsers = [
-  { name: '박지훈', dept: '디자인팀', mentalScore: 78, physicalScore: 95 },
-  { name: '한소희', dept: '재무팀', mentalScore: 90, physicalScore: 85 },
-  { name: '최은영', dept: '마케팅팀', mentalScore: 82, physicalScore: 88 },
+  { name: '박지훈', dept: '디자인팀', mentalScore, physicalScore,
+  { name: '한소희', dept: '재무팀', mentalScore, physicalScore,
+  { name: '최은영', dept: '마케팅팀', mentalScore, physicalScore,
 ];
 
-interface RiskAnalysisPageProps {
-  onBack?: () => void;
-}
 
-export function RiskAnalysisPage({ onBack }: RiskAnalysisPageProps) {
+
+/**
+ * @param {Object} props
+ * @param {Function} props.onBack
+ */
+export function RiskAnalysisPage({ onBack }) {
   return (
     <div className="min-h-screen bg-[#F5F7FB] p-8">
       <div className="max-w-7xl mx-auto">

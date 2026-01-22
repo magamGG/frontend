@@ -16,31 +16,20 @@ import {
 } from 'lucide-react';
 import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
 
-/**
- * AgencyProjectDetailPage component
- */
-  startDate: string;
-  dueDate: string;
-  boardId: number;
-  completed?: boolean;
-  comments?: Comment[];
-  assignedTo?: TeamMember | null;
-}
 
-interface KanbanBoard {
-  id: number;
-  title: string;
-  cards: KanbanCard[];
-}
 
-interface WeeklySchedule {
-  date: string;
-  day: string;
-  events: string[];
-}
+
+
+
+
+
+
+
+
+
 
 // 읽기 전용 카드 컴포넌트 (드래그 불가, 편집/삭제 버튼 없음)
-function ReadOnlyCard({ card }: { card: KanbanCard }) {
+function ReadOnlyCard({ card }: { card) {
   const commentCount = card.comments?.length || 0;
 
   return (
@@ -82,7 +71,7 @@ function ReadOnlyCard({ card }: { card: KanbanCard }) {
 }
 
 // 읽기 전용 보드 컴포넌트 (드롭 불가, 추가/삭제 버튼 없음)
-function ReadOnlyBoard({ board }: { board: KanbanBoard }) {
+function ReadOnlyBoard({ board }: { board) {
   return (
     <div className="bg-muted/30 rounded-lg p-4 min-w-[280px] max-w-[280px] flex-shrink-0">
       <div className="flex items-center justify-between mb-4">
@@ -106,9 +95,9 @@ export function AgencyProjectDetailPage({
   onBack: () => void;
 }) {
   // 팀원 데이터
-  const [teamMembers] = useState<TeamMember[]>([
+  const [teamMembers] = useState([
     {
-      id: 1,
+      id,
       name: '김작가',
       role: '메인 작가',
       email: 'kim@example.com',
@@ -117,7 +106,7 @@ export function AgencyProjectDetailPage({
       avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
     },
     {
-      id: 2,
+      id,
       name: '이채색',
       role: '채색 담당',
       email: 'lee@example.com',
@@ -128,41 +117,41 @@ export function AgencyProjectDetailPage({
   ]);
 
   // 칸반 보드 데이터 - localStorage에서 로드 (읽기 전용)
-  const [boards] = useState<KanbanBoard[]>(() => {
+  const [boards] = useState(() => {
     const saved = localStorage.getItem(`kanban_boards_${project.id}`);
     if (saved) {
       return JSON.parse(saved);
     }
     return [
       {
-        id: 1,
+        id,
         title: '할 일',
         cards: [
-          { id: 1, title: '43화 스토리보드', description: '스토리 구성 및 콘티 작업', startDate: '2026-01-15', dueDate: '2026-01-20', boardId: 1, comments: [] },
+          { id, title: '43화 스토리보드', description: '스토리 구성 및 콘티 작업', startDate: '2026-01-15', dueDate: '2026-01-20', boardId, comments,
         ],
       },
       {
-        id: 2,
+        id,
         title: '진행중',
         cards: [
-          { id: 3, title: '42화 채색', description: '메인 씬 채색 작업', startDate: '2026-01-16', dueDate: '2026-01-18', boardId: 2, comments: [] },
+          { id, title: '42화 채색', description: '메인 씬 채색 작업', startDate: '2026-01-16', dueDate: '2026-01-18', boardId, comments,
         ],
       },
       {
-        id: 3,
+        id,
         title: '완료',
         cards: [
-          { id: 4, title: '41화 업로드', description: '네이버 웹툰 업로드 완료', startDate: '2026-01-13', dueDate: '2026-01-14', boardId: 3, comments: [] },
+          { id, title: '41화 업로드', description: '네이버 웹툰 업로드 완료', startDate: '2026-01-13', dueDate: '2026-01-14', boardId, comments,
         ],
       },
     ];
   });
 
   // 주간 일정
-  const [weeklySchedule] = useState<WeeklySchedule[]>([
+  const [weeklySchedule] = useState([
     { date: '1/19', day: '오늘 (월)', events: ['42화 채색 마감', '팀 미팅 3PM'] },
     { date: '1/20', day: '화', events: ['43화 스토리보드 시작'] },
-    { date: '1/21', day: '수', events: [] },
+    { date: '1/21', day: '수', events,
     { date: '1/22', day: '목', events: ['42화 최종 검수'] },
     { date: '1/23', day: '금', events: ['42화 업로드'] },
     { date: '1/24', day: '토', events: ['43화 스토리보드 마감'] },
@@ -171,10 +160,10 @@ export function AgencyProjectDetailPage({
 
   // 모달 상태
   const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
-  const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
+  const [selectedMember, setSelectedMember] = useState(null);
 
   // 상태별 배지 색상
-  const getStatusBadgeColor = (status: string) => {
+  const getStatusBadgeColor = (status) => {
     switch (status) {
       case '출근':
         return 'bg-green-500 hover:bg-green-600';

@@ -6,9 +6,8 @@ import { CheckCircle2, XCircle, Calendar, FileText, Clock, AlertCircle } from 'l
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-/**
- * AttendancePage component
- */
+
+
 export function AttendancePage() {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
@@ -17,69 +16,69 @@ export function AttendancePage() {
   // 근태 신청 데이터
   const [requests, setRequests] = useState([
     {
-      id: 1,
+      id,
       artistName: '김작가',
       type: '휴재',
       startDate: '2026-01-20',
       endDate: '2026-01-22',
-      days: 3,
+      days,
       reason: '개인 사유로 인한 휴재 신청',
       status: '대기',
       requestDate: '2026-01-13',
     },
     {
-      id: 2,
+      id,
       artistName: '이작가',
       type: '워케이션',
       startDate: '2026-01-18',
       endDate: '2026-01-20',
-      days: 3,
+      days,
       reason: '제주도 워케이션, 신작 기획 작업 예정',
       status: '대기',
       requestDate: '2026-01-12',
     },
     {
-      id: 3,
+      id,
       artistName: '박작가',
       type: '재택근무',
       startDate: '2026-01-16',
       endDate: '2026-01-16',
-      days: 1,
+      days,
       reason: '집에서 작업이 필요한 상황',
       status: '대기',
       requestDate: '2026-01-14',
     },
     {
-      id: 4,
+      id,
       artistName: '김작가',
       type: '휴재',
       startDate: '2026-01-10',
       endDate: '2026-01-12',
-      days: 3,
+      days,
       reason: '가족 행사',
       status: '승인',
       requestDate: '2026-01-05',
       processedDate: '2026-01-06',
     },
     {
-      id: 5,
+      id,
       artistName: '최작가',
       type: '워케이션',
       startDate: '2026-01-08',
       endDate: '2026-01-10',
-      days: 3,
+      days,
       reason: '강릉 워케이션',
       status: '승인',
       requestDate: '2026-01-02',
       processedDate: '2026-01-03',
     },
     {
-      id: 6,
+      id,
       artistName: '이작가',
       type: '휴재',
       startDate: '2026-01-05',
       endDate: '2026-01-05',
-      days: 1,
+      days,
       reason: '개인 일정',
       status: '반려',
       requestDate: '2026-01-03',
@@ -99,10 +98,6 @@ export function AttendancePage() {
       return dateB - dateA;
     });
 
-  /**
-   * Handle approving a request
-   * @param {Object} request - Attendance request object
-   */
   const handleApprove = (request) => {
     setRequests(requests.map(r => 
       r.id === request.id 
@@ -112,10 +107,6 @@ export function AttendancePage() {
     toast.success(`${request.artistName}의 ${request.type} 신청이 승인되었습니다.`);
   };
 
-  /**
-   * Handle opening reject modal
-   * @param {Object} request - Attendance request object
-   */
   const handleOpenRejectModal = (request) => {
     setSelectedRequest(request);
     setShowRejectModal(true);
@@ -133,7 +124,7 @@ export function AttendancePage() {
           ? { 
               ...r, 
               status: '반려', 
-              rejectionReason: rejectionReason,
+              rejectionReason,
               processedDate: new Date().toISOString().split('T')[0]
             }
           : r
@@ -146,7 +137,7 @@ export function AttendancePage() {
     setRejectionReason('');
   };
 
-  const getTypeColor = (type: string) => {
+  const getTypeColor = (type) => {
     switch (type) {
       case '워케이션':
         return 'bg-[#9C27B0]'; // 보라색
@@ -161,7 +152,7 @@ export function AttendancePage() {
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status) => {
     switch (status) {
       case '대기':
         return 'bg-yellow-500';
@@ -174,7 +165,7 @@ export function AttendancePage() {
     }
   };
 
-  const formatDate = (dateStr: string) => {
+  const formatDate = (dateStr) => {
     const date = new Date(dateStr);
     return `${date.getMonth() + 1}월 ${date.getDate()}일`;
   };
