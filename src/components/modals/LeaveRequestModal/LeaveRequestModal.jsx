@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogTitle } from '@/app/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/app/components/ui/dialog';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
@@ -31,6 +31,15 @@ import {
  * @typedef {'연차' | '병가' | '워케이션' | '재택근무' | '휴재'} LeaveType
  */
 
+// 현재 날짜를 YYYY-MM-DD 형식으로 반환
+const getCurrentDate = () => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 /**
  * @param {Object} props
  * @param {boolean} props.open
@@ -39,8 +48,8 @@ import {
 export function LeaveRequestModal({ open, onOpenChange }) {
   const [selectedType, setSelectedType] = useState('연차');
   const [leaveCategory, setLeaveCategory] = useState('연차');
-  const [startDate, setStartDate] = useState('2026-01-18');
-  const [endDate, setEndDate] = useState('2026-01-18');
+  const [startDate, setStartDate] = useState(getCurrentDate());
+  const [endDate, setEndDate] = useState(getCurrentDate());
   const [reason, setReason] = useState('');
   const [location, setLocation] = useState('');
   const [selectedProject, setSelectedProject] = useState('선택 안 함');
@@ -142,8 +151,8 @@ export function LeaveRequestModal({ open, onOpenChange }) {
   const resetForm = () => {
     setSelectedType('연차');
     setLeaveCategory('연차');
-    setStartDate('2026-01-18');
-    setEndDate('2026-01-18');
+    setStartDate(getCurrentDate());
+    setEndDate(getCurrentDate());
     setReason('');
     setLocation('');
     setSelectedProject('선택 안 함');
@@ -181,7 +190,9 @@ export function LeaveRequestModal({ open, onOpenChange }) {
       >
         {/* Header */}
         <ModalHeader>
-          <ModalTitle>근태 신청</ModalTitle>
+          <DialogHeader className="p-0 m-0">
+            <DialogTitle className="text-xl font-semibold text-[#1F2328] m-0">근태 신청</DialogTitle>
+          </DialogHeader>
         </ModalHeader>
 
         {/* Content */}
