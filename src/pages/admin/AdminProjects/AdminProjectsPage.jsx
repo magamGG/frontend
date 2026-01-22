@@ -48,6 +48,8 @@ import {
   AdminProjectModalField,
   AdminProjectModalLabel,
   AdminProjectModalInput,
+  AdminProjectModalHelperText,
+  AdminProjectNextSchedulePreview,
   AdminProjectModalSelect,
   AdminProjectModalThumbnailPreview,
   AdminProjectModalThumbnailPreviewLabel,
@@ -71,6 +73,7 @@ export function AdminProjectsPage() {
     platform: '네이버 웹툰',
     genre: '',
     schedule: '',
+    startDate: '',
     thumbnail: '',
     thumbnailFile: null,
   });
@@ -85,6 +88,18 @@ export function AdminProjectsPage() {
       }
     }
   }, [showDetailPage]);
+
+  // 프로젝트 렌더링 시 다음 연재 일정 계산 (렌더링 시점에 계산)
+  const getNextScheduleDate = (project) => {
+    if (project.nextScheduleDate) {
+      return project.nextScheduleDate;
+    }
+    if (project.startDate && project.schedule && !isNaN(project.schedule)) {
+      const nextDate = calculateNextScheduleDate(project.startDate, Number(project.schedule));
+      return nextDate ? formatDate(nextDate) : null;
+    }
+    return null;
+  };
 
   // TODO: Zustand store mapping - 작가 목록
   const [artists] = useState([
@@ -247,6 +262,54 @@ export function AdminProjectsPage() {
     return 0;
   });
 
+  // 다음 연재 일정 계산 함수
+  const calculateNextScheduleDate = (startDate, scheduleDays) => {
+    if (!startDate || !scheduleDays || isNaN(scheduleDays)) {
+      return null;
+    }
+
+    const start = new Date(startDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    start.setHours(0, 0, 0, 0);
+
+    // 시작일부터 오늘까지 경과한 일수 계산
+    const daysDiff = Math.floor((today - start) / (1000 * 60 * 60 * 24));
+    
+    // 다음 연재일 계산 (시작일 + (경과일수 / 주기 + 1) * 주기)
+    const cyclesPassed = Math.floor(daysDiff / scheduleDays);
+    const nextDate = new Date(start);
+    nextDate.setDate(start.getDate() + (cyclesPassed + 1) * scheduleDays);
+
+    // 오늘이 시작일보다 이전이면 시작일 반환
+    if (daysDiff < 0) {
+      return start;
+    }
+
+    return nextDate;
+  };
+
+  // 날짜 포맷팅 함수
+  const formatDate = (date) => {
+    if (!date) return null;
+    const d = new Date(date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // 날짜를 한국어 형식으로 표시
+  const formatDateKorean = (date) => {
+    if (!date) return null;
+    const d = new Date(date);
+    const month = d.getMonth() + 1;
+    const day = d.getDate();
+    const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+    const weekday = weekdays[d.getDay()];
+    return `${month}월 ${day}일 (${weekday})`;
+  };
+
   const handleAddProject = () => {
     if (!newProjectForm.artistId || !newProjectForm.title || !newProjectForm.genre) {
       toast.error('필수 항목을 모두 입력해주세요.');
@@ -259,6 +322,10 @@ export function AdminProjectsPage() {
       return;
     }
 
+    // 다음 연재 일정 계산
+    const scheduleDays = newProjectForm.schedule ? Number(newProjectForm.schedule) : null;
+    const nextScheduleDate = calculateNextScheduleDate(newProjectForm.startDate, scheduleDays);
+
     const newProject = {
       id: Date.now(),
       title: newProjectForm.title,
@@ -269,6 +336,8 @@ export function AdminProjectsPage() {
       deadline: 'D-7',
       genre: newProjectForm.genre,
       schedule: newProjectForm.schedule || '미정',
+      startDate: newProjectForm.startDate || null,
+      nextScheduleDate: nextScheduleDate ? formatDate(nextScheduleDate) : null,
       thumbnail: newProjectForm.thumbnail || 'https://images.unsplash.com/photo-1591788806059-cb6e2f6a2498?w=400',
       artistName: selectedArtist.name,
       artistId: newProjectForm.artistId,
@@ -282,6 +351,7 @@ export function AdminProjectsPage() {
       platform: '네이버 웹툰',
       genre: '',
       schedule: '',
+      startDate: '',
       thumbnail: '',
       thumbnailFile: null,
     });
@@ -472,8 +542,17 @@ export function AdminProjectsPage() {
                     <AdminProjectMetaDivider>•</AdminProjectMetaDivider>
                     <AdminProjectMetaItem>
                       <Calendar className="w-3 h-3" />
-                      {project.schedule}
+                      {project.schedule && !isNaN(project.schedule) ? `${project.schedule}일` : project.schedule || '미정'}
                     </AdminProjectMetaItem>
+                    {getNextScheduleDate(project) && (
+                      <>
+                        <AdminProjectMetaDivider>•</AdminProjectMetaDivider>
+                        <AdminProjectMetaItem>
+                          <Calendar className="w-3 h-3" />
+                          다음: {formatDateKorean(getNextScheduleDate(project))}
+                        </AdminProjectMetaItem>
+                      </>
+                    )}
                   </AdminProjectMeta>
                 </AdminProjectInfo>
                 <AdminProjectStatus>
@@ -549,10 +628,33 @@ export function AdminProjectsPage() {
             </AdminProjectModalSelect>
           </AdminProjectModalField>
 
-          {/* 연재 일정 */}
+          {/* 연재 주기 */}
           <AdminProjectModalField>
-            <AdminProjectModalLabel>연재 일정</AdminProjectModalLabel>
-            <AdminProjectModalInput type="text" value={newProjectForm.schedule} onChange={(e) => setNewProjectForm({ ...newProjectForm, schedule: e.target.value })} placeholder="예: 매주 일요일 오전 10시" />
+            <AdminProjectModalLabel>연재 주기</AdminProjectModalLabel>
+            <AdminProjectModalInput 
+              type="number" 
+              min="1"
+              value={newProjectForm.schedule} 
+              onChange={(e) => setNewProjectForm({ ...newProjectForm, schedule: e.target.value })} 
+              placeholder="예: 7 (일 단위)" 
+            />
+            <AdminProjectModalHelperText>연재 주기를 일 단위로 입력하세요 (예: 7일, 14일 등)</AdminProjectModalHelperText>
+          </AdminProjectModalField>
+
+          {/* 연재 시작일 */}
+          <AdminProjectModalField>
+            <AdminProjectModalLabel>연재 시작일</AdminProjectModalLabel>
+            <AdminProjectModalInput 
+              type="date" 
+              value={newProjectForm.startDate} 
+              onChange={(e) => setNewProjectForm({ ...newProjectForm, startDate: e.target.value })} 
+            />
+            <AdminProjectModalHelperText>연재 시작일을 선택하면 다음 연재 일정이 자동으로 계산됩니다</AdminProjectModalHelperText>
+            {newProjectForm.startDate && newProjectForm.schedule && !isNaN(newProjectForm.schedule) && (
+              <AdminProjectNextSchedulePreview>
+                다음 연재 예정일: {formatDateKorean(calculateNextScheduleDate(newProjectForm.startDate, Number(newProjectForm.schedule)))}
+              </AdminProjectNextSchedulePreview>
+            )}
           </AdminProjectModalField>
 
           {/* 썸네일 */}

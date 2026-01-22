@@ -291,6 +291,22 @@ export const AdminProjectModalInput = styled.input`
   }
 `;
 
+export const AdminProjectModalHelperText = styled.p`
+  font-size: 12px;
+  color: var(--muted-foreground);
+  margin: 0;
+`;
+
+export const AdminProjectNextSchedulePreview = styled.div`
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--primary);
+  margin-top: 4px;
+  padding: 6px 10px;
+  background-color: rgba(var(--primary-rgb), 0.1);
+  border-radius: 4px;
+`;
+
 export const AdminProjectModalSelect = styled.select`
   width: 100%;
   padding: 8px 12px;

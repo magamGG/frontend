@@ -223,7 +223,7 @@ export function Component({ title, count }) {
 
 ### 6.2 전체 페이지 목록 및 진행 상황
 
-#### 📁 인증 페이지 (Auth Pages) - 4개
+#### 📁 인증 페이지 (Auth Pages) - 5개
 | 페이지명 | 원본 경로 | 목표 경로 | 상태 | 비고 |
 |---------|---------|---------|------|------|
 | DashboardPage | `src/app/pages/DashboardPage.tsx` | `src/pages/Dashboard/` | ✅ 완료 | - |
@@ -232,7 +232,7 @@ export function Component({ title, count }) {
 | ForgotPasswordPage | `src/app/pages/ForgotPasswordPage.tsx` | `src/pages/ForgotPassword/` | ✅ 완료 | - |
 | JoinAgencyRequestPage | `src/app/pages/JoinAgencyRequestPage.tsx` | `src/pages/JoinAgencyRequest/` | ✅ 완료 | - |
 
-#### 📁 메인 페이지 (Main Pages) - 7개
+#### 📁 메인 페이지 (Main Pages) - 8개
 | 페이지명 | 원본 경로 | 목표 경로 | 상태 | 비고 |
 |---------|---------|---------|------|------|
 | AttendancePage | `src/app/pages/AttendancePage.tsx` | `src/pages/Attendance/` | ✅ 완료 | - |
@@ -244,44 +244,43 @@ export function Component({ title, count }) {
 | WorkcationPage | `src/app/pages/WorkcationPage.tsx` | `src/pages/Workcation/` | ✅ 완료 | - |
 | AbsenteeManagementPage | `src/app/pages/AbsenteeManagementPage.tsx` | `src/pages/AbsenteeManagement/` | ✅ 완료 | - |
 
-#### 📁 Artist 페이지 (Artist Pages) - 8개
+#### 📁 Artist 페이지 (Artist Pages) - 6개
 | 페이지명 | 원본 경로 | 목표 경로 | 상태 | 비고 |
 |---------|---------|---------|------|------|
-| ArtistDashboardPage | `src/app/pages/artist/ArtistDashboardPage.tsx` | `src/pages/ArtistDashboard/` | ✅ 완료 | - |
-| ArtistProjectsPage | `src/app/pages/artist/ArtistProjectsPage.tsx` | `src/pages/ArtistProjects/` | ✅ 완료 | - |
-| ArtistCalendarPage | `src/app/pages/artist/ArtistCalendarPage.tsx` | `src/pages/ArtistCalendar/` | ✅ 완료 | - |
-| ArtistWorkationPage | `src/app/pages/artist/ArtistWorkationPage.tsx` | `src/pages/ArtistWorkation/` | ✅ 완료 | - |
-| ArtistTeamPage | `src/app/pages/artist/ArtistTeamPage.tsx` | `src/pages/ArtistTeam/` | ✅ 완료 | - |
-| ArtistHealthPage | `src/app/pages/artist/ArtistHealthPage.tsx` | `src/pages/ArtistHealth/` | ✅ 완료 | - |
-| ProjectDetailPage | `src/app/pages/artist/ProjectDetailPage.tsx` | `src/pages/ProjectDetail/` | ✅ 완료 | - |
-| ArtistWorkation Page | `src/app/pages/artist/ArtistWorkation Page.tsx` | - | ✅ 완료 | 파일명 공백 문제 해결됨 |
+| ArtistDashboardPage | `src/app/pages/artist/ArtistDashboardPage.tsx` | `src/pages/artist/ArtistDashboard/` | ✅ 완료 | - |
+| ArtistProjectsPage | `src/app/pages/artist/ArtistProjectsPage.tsx` | `src/pages/artist/ArtistProjects/` | ✅ 완료 | - |
+| ArtistCalendarPage | `src/app/pages/artist/ArtistCalendarPage.tsx` | `src/pages/artist/ArtistCalendar/` | ✅ 완료 | - |
+| ArtistWorkationPage | `src/app/pages/artist/ArtistWorkationPage.tsx` | `src/pages/artist/ArtistWorkation/` | ✅ 완료 | - |
+| ArtistTeamPage | `src/app/pages/artist/ArtistTeamPage.tsx` | `src/pages/artist/ArtistTeam/` | ✅ 완료 | - |
+| ArtistHealthPage | `src/app/pages/artist/ArtistHealthPage.tsx` | `src/pages/artist/ArtistHealth/` | ✅ 완료 | - |
 
 #### 📁 Admin 페이지 (Admin Pages) - 9개
 | 페이지명 | 원본 경로 | 목표 경로 | 상태 | 비고 |
 |---------|---------|---------|------|------|
-| AdminDashboardPage | `src/app/pages/admin/AdminDashboardPage.tsx` | `src/pages/AdminDashboard/` | ✅ 완료 | - |
-| AdminProjectsPage | `src/app/pages/admin/AdminProjectsPage.tsx` | `src/pages/AdminProjects/` | ✅ 완료 | - |
-| AdminCalendarPage | `src/app/pages/admin/AdminCalendarPage.tsx` | `src/pages/AdminCalendar/` | ✅ 완료 | - |
-| AdminTeamPage | `src/app/pages/admin/AdminTeamPage.tsx` | `src/pages/AdminTeam/` | ✅ 완료 | - |
-| AdminHealthPage | `src/app/pages/admin/AdminHealthPage.tsx` | `src/pages/AdminHealth/` | ✅ 완료 | - |
-| AdminPersonalHealthPage | `src/app/pages/admin/AdminPersonalHealthPage.tsx` | `src/pages/AdminPersonalHealth/` | ✅ 완료 | - |
-| AdminAbsenteePage | `src/app/pages/admin/AdminAbsenteePage.tsx` | `src/pages/AdminAbsentee/` | ✅ 완료 | AbsenteeManagementPage re-export |
-| AdminMyPage | `src/app/pages/admin/AdminMyPage.tsx` | `src/pages/AdminMyPage/` | ✅ 완료 | - |
-| AdminWorkcationPage | `src/app/pages/admin/AdminWorkcationPage.tsx` | `src/pages/AdminWorkcation/` | ✅ 완료 | WorkcationPage re-export |
+| AdminDashboardPage | `src/app/pages/admin/AdminDashboardPage.tsx` | `src/pages/admin/AdminDashboard/` | ✅ 완료 | - |
+| AdminProjectsPage | `src/app/pages/admin/AdminProjectsPage.tsx` | `src/pages/admin/AdminProjects/` | ✅ 완료 | - |
+| AdminCalendarPage | `src/app/pages/admin/AdminCalendarPage.tsx` | `src/pages/admin/AdminCalendar/` | ✅ 완료 | - |
+| AdminTeamPage | `src/app/pages/admin/AdminTeamPage.tsx` | `src/pages/admin/AdminTeam/` | ✅ 완료 | - |
+| AdminHealthPage | `src/app/pages/admin/AdminHealthPage.tsx` | `src/pages/admin/AdminHealth/` | ✅ 완료 | - |
+| AdminPersonalHealthPage | `src/app/pages/admin/AdminPersonalHealthPage.tsx` | `src/pages/admin/AdminPersonalHealth/` | ✅ 완료 | - |
+| AdminAbsenteePage | `src/app/pages/admin/AdminAbsenteePage.tsx` | `src/pages/admin/AdminAbsentee/` | ✅ 완료 | AbsenteeManagementPage re-export |
+| AdminMyPage | `src/app/pages/admin/AdminMyPage.tsx` | `src/pages/admin/AdminMyPage/` | ✅ 완료 | - |
+| AdminWorkcationPage | `src/app/pages/admin/AdminWorkcationPage.tsx` | `src/pages/admin/AdminWorkcation/` | ✅ 완료 | WorkcationPage re-export |
 
-#### 📁 Agency 페이지 (Agency Pages) - 10개
+#### 📁 Agency 페이지 (Agency Pages) - 11개
 | 페이지명 | 원본 경로 | 목표 경로 | 상태 | 비고 |
 |---------|---------|---------|------|------|
-| AgencyDashboardPage | `src/app/pages/agency/AgencyDashboardPage.tsx` | `src/pages/AgencyDashboard/` | ✅ 완료 | - |
-| AgencyProjectsPage | `src/app/pages/agency/AgencyProjectsPage.tsx` | `src/pages/AgencyProjects/` | ✅ 완료 | - |
-| AgencyTeamPage | `src/app/pages/agency/AgencyTeamPage.tsx` | `src/pages/AgencyTeam/` | ✅ 완료 | - |
-| AgencyApprovalsPage | `src/app/pages/agency/AgencyApprovalsPage.tsx` | `src/pages/AgencyApprovals/` | ✅ 완료 | - |
-| AgencyWorkcationPage | `src/app/pages/agency/AgencyWorkcationPage.tsx` | `src/pages/AgencyWorkcation/` | ✅ 완료 | - |
-| AgencyMyPage | `src/app/pages/agency/AgencyMyPage.tsx` | `src/pages/AgencyMyPage/` | ✅ 완료 | - |
-| AgencyHealthPage | `src/app/pages/agency/AgencyHealthPage.tsx` | `src/pages/AgencyHealth/` | ✅ 완료 | - |
-| AgencyAssignmentPage | `src/app/pages/agency/AgencyAssignmentPage.tsx` | `src/pages/AgencyAssignment/` | ✅ 완료 | - |
-| AgencyProjectDetailPage | `src/app/pages/agency/AgencyProjectDetailPage.tsx` | `src/pages/AgencyProjectDetail/` | ✅ 완료 | - |
-| AgencyJoinRequestsPage | `src/app/pages/agency/AgencyJoinRequestsPage.tsx` | `src/pages/AgencyJoinRequests/` | ✅ 완료 | - |
+| AgencyDashboardPage | `src/app/pages/agency/AgencyDashboardPage.tsx` | `src/pages/agency/AgencyDashboard/` | ✅ 완료 | - |
+| AgencyProjectsPage | `src/app/pages/agency/AgencyProjectsPage.tsx` | `src/pages/agency/AgencyProjects/` | ✅ 완료 | - |
+| AgencyTeamPage | `src/app/pages/agency/AgencyTeamPage.tsx` | `src/pages/agency/AgencyTeam/` | ✅ 완료 | - |
+| AgencyApprovalsPage | `src/app/pages/agency/AgencyApprovalsPage.tsx` | `src/pages/agency/AgencyApprovals/` | ✅ 완료 | - |
+| AgencyWorkcationPage | `src/app/pages/agency/AgencyWorkcationPage.tsx` | `src/pages/agency/AgencyWorkcation/` | ✅ 완료 | - |
+| AgencyMyPage | `src/app/pages/agency/AgencyMyPage.tsx` | `src/pages/agency/AgencyMyPage/` | ✅ 완료 | - |
+| AgencyHealthPage | `src/app/pages/agency/AgencyHealthPage.tsx` | `src/pages/agency/AgencyHealth/` | ✅ 완료 | - |
+| AgencyAssignmentPage | `src/app/pages/agency/AgencyAssignmentPage.tsx` | `src/pages/agency/AgencyAssignment/` | ✅ 완료 | - |
+| AgencyProjectDetailPage | `src/app/pages/agency/AgencyProjectDetailPage.tsx` | `src/pages/agency/AgencyProjectDetail/` | ✅ 완료 | - |
+| AgencyJoinRequestsPage | `src/app/pages/agency/AgencyJoinRequestsPage.tsx` | `src/pages/agency/AgencyJoinRequests/` | ✅ 완료 | - |
+| AgencyLeaveSettingsPage | - | `src/pages/agency/AgencyLeaveSettings/` | ✅ 완료 | 신규 생성, 가이드 준수 |
 
 #### 📁 Health 하위 페이지 (Health Sub Pages) - 7개
 | 페이지명 | 원본 경로 | 목표 경로 | 상태 | 비고 |
@@ -300,12 +299,21 @@ export function Component({ title, count }) {
 | MasterStyleGuidePage | `src/app/pages/MasterStyleGuidePage.tsx` | `src/pages/MasterStyleGuide/` | ✅ 완료 | 스타일 가이드, 우선순위 낮음 |
 
 ### 6.3 진행률 통계
-- **전체 페이지 수**: 47개
+- **전체 페이지 수**: 47개 (신규 1개 추가: AgencyLeaveSettingsPage)
 - **완료**: 47개 (100%) - `src/pages` 폴더에 변환 완료
 - **원본 파일 남아있음**: 47개 - `src/app/pages` 폴더에 .tsx 파일 존재 (삭제 필요)
 - **진행 중**: 0개 (0%)
 - **대기**: 0개 (0%)
 - **오류**: 0개 (0%)
+
+**페이지 분류**:
+- 인증 페이지: 5개
+- 메인 페이지: 8개
+- Artist 페이지: 6개
+- Admin 페이지: 9개
+- Agency 페이지: 11개
+- Health 하위 페이지: 7개
+- 기타 페이지: 1개
 
 ### 6.3.1 최근 수정 사항
 - **2026-01-13**: 
@@ -317,6 +325,22 @@ export function Component({ title, count }) {
   - 핵심 파일들 상태 확인 완료:
     - `App.jsx`, `main.jsx`, `ProjectContext.jsx`, `FullPageLayout.jsx`는 이미 `.jsx`로 변환 완료
     - TypeScript 문법 사용 없음 (JSDoc 주석만 사용)
+- **2026-01-13 (연차 기능 추가)**:
+  - `AgencyLeaveSettingsPage` 신규 생성 완료
+    - 가이드라인 준수: Logic(.jsx)과 Style(.styled.js) 분리 완료
+    - Tailwind CSS 클래스 제거 및 styled-components 변환 완료
+    - 데스크탑 레이아웃 적용 (max-width: 1200px)
+    - `src/pages/agency/AgencyLeaveSettings/` 구조로 생성
+    - 직원별 연차 설정 및 관리 기능 구현
+    - localStorage를 통한 연차 데이터 저장
+  - `LeaveRequestModal` 기능 개선
+    - 연차 선택 시 남은 연차 표시 기능 추가
+    - 연차 신청 시 사용한 연차 자동 업데이트 기능 추가
+    - `useAuthStore`를 통한 현재 사용자 정보 연동
+    - 신청 일수 초과 시 경고 메시지 표시
+  - `App.jsx` 업데이트
+    - `AgencyLeaveSettingsPage` import 추가
+    - 에이전시 섹션에 "연차 설정" 메뉴 추가 (id: 'leave-settings')
 
 ### 6.4 아직 변환되지 않은 파일 목록
 
@@ -335,7 +359,7 @@ export function Component({ title, count }) {
 | AddTaskModal.tsx | `src/app/components/AddTaskModal.tsx` | `src/components/modals/AddTaskModal/` | ⏳ 대기 | 🟡 중간 |
 | AttendanceListModal.tsx | `src/app/components/modals/AttendanceListModal.tsx` | `src/components/modals/AttendanceListModal/` | ⏳ 대기 | 🟡 중간 |
 | HealthCheckModal.tsx | `src/app/components/modals/HealthCheckModal.tsx` | `src/components/modals/HealthCheckModal/` | ⏳ 대기 | 🟡 중간 |
-| LeaveRequestModal.tsx | `src/app/components/modals/LeaveRequestModal.tsx` | `src/components/modals/LeaveRequestModal/` | ⏳ 대기 | 🟡 중간 |
+| LeaveRequestModal.tsx | `src/app/components/modals/LeaveRequestModal.tsx` | `src/components/modals/LeaveRequestModal/` | ✅ 완료 | 연차 표시 기능 추가 |
 | ProjectListModal.tsx | `src/app/components/modals/ProjectListModal.tsx` | `src/components/modals/ProjectListModal/` | ⏳ 대기 | 🟡 중간 |
 | UniversalHiatusModal.tsx | `src/app/components/modals/UniversalHiatusModal.tsx` | `src/components/modals/UniversalHiatusModal/` | ⏳ 대기 | 🟡 중간 |
 | ImageWithFallback.tsx | `src/app/components/figma/ImageWithFallback.tsx` | `src/components/common/ImageWithFallback/` | ⏳ 대기 | 🟢 낮음 |
@@ -359,21 +383,15 @@ export function Component({ title, count }) {
 | ⚠️ 삭제 필요 | `src/app/pages/**/*.tsx` 파일들은 모두 `src/pages/**/*.jsx`로 변환 완료되었으므로 원본 삭제 필요 |
 | | App.tsx의 import 경로도 모두 `@/pages/`로 수정 필요 |
 
-**App.tsx에서 수정 필요한 import 경로**:
-- ❌ `@/app/pages/artist/ArtistProjectsPage` → ✅ `@/pages/ArtistProjects`
-- ❌ `@/app/pages/artist/ArtistCalendarPage` → ✅ `@/pages/ArtistCalendar`
-- ❌ `@/app/pages/artist/ArtistWorkationPage` → ✅ `@/pages/ArtistWorkation`
-- ❌ `@/app/pages/artist/ArtistTeamPage` → ✅ `@/pages/ArtistTeam`
-- ❌ `@/app/pages/artist/ArtistHealthPage` → ✅ `@/pages/ArtistHealth`
-- ❌ `@/app/components/layout/FullPageLayout` → ✅ `@/components/layout/FullPageLayout`
-- ❌ `@/app/contexts/ProjectContext` → ✅ `@/contexts/ProjectContext`
+**App.jsx import 경로 상태**:
+- ✅ 모든 import 경로가 올바르게 수정됨
+- ✅ `@/pages/...` 경로 사용 중
+- ✅ `@/components/...` 경로 사용 중
+- ✅ `@/contexts/...` 경로 사용 중
+- ✅ `AgencyLeaveSettingsPage` import 추가 완료
 
 ### 6.5 다음 작업 우선순위
 1. **🔴 높음 (즉시 처리)**:
-   - `App.tsx` → `App.jsx` 변환 및 import 경로 수정
-   - `main.tsx` → `main.jsx` 변환
-   - `ProjectContext.tsx` → `ProjectContext.jsx` 변환
-   - `FullPageLayout.tsx` → styled-components 변환
    - `Header.tsx` → styled-components 변환
    - `src/app/pages` 폴더의 모든 원본 .tsx 파일 삭제
 
@@ -386,6 +404,13 @@ export function Component({ title, count }) {
 3. **🟢 낮음 (나중에)**:
    - ImageWithFallback 등 기타 컴포넌트
    - UI 라이브러리 컴포넌트 (필요시에만)
+
+**✅ 완료된 작업**:
+- `App.tsx` → `App.jsx` 변환 및 import 경로 수정 완료
+- `main.tsx` → `main.jsx` 변환 완료
+- `ProjectContext.tsx` → `ProjectContext.jsx` 변환 완료
+- `FullPageLayout.tsx` → styled-components 변환 완료
+- `LeaveRequestModal` 연차 기능 개선 완료
 
 ### 6.6 변환 작업 프로세스 (Conversion Workflow)
 
@@ -439,4 +464,4 @@ export function Component({ title, count }) {
 - [ ] Import 경로 수정 완료
 - [ ] 원본 파일 삭제 완료
 
-**마지막 업데이트**: 2026-01-13
+**마지막 업데이트**: 2026-01-13 (연차 기능 추가 및 가이드 정리 완료)

@@ -334,6 +334,22 @@ export const AgencyProjectModalInput = styled.input`
   }
 `;
 
+export const AgencyProjectModalHelperText = styled.p`
+  font-size: 12px;
+  color: #6e8fb3;
+  margin: 0;
+`;
+
+export const AgencyProjectNextSchedulePreview = styled.div`
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent);
+  margin-top: 4px;
+  padding: 6px 10px;
+  background-color: rgba(110, 143, 179, 0.1);
+  border-radius: 4px;
+`;
+
 export const AgencyProjectModalSelect = styled.select`
   width: 100%;
   padding: 10px 12px;

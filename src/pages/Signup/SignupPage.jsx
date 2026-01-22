@@ -196,17 +196,34 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
+                                    zIndex: 1,
                                   }}
                                 >
                                   <Check size={12} style={{ color: 'var(--primary-foreground)' }} />
                                 </motion.div>
                               )}
                               
-                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', textAlign: 'center' }}>
-                                <div style={{ width: '48px', height: '48px', backgroundColor: role.color, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <div style={{ 
+                                display: 'flex', 
+                                flexDirection: 'column', 
+                                alignItems: 'center', 
+                                gap: '8px', 
+                                textAlign: 'center',
+                                width: '100%',
+                              }}>
+                                <div style={{ 
+                                  width: '48px', 
+                                  height: '48px', 
+                                  backgroundColor: role.color, 
+                                  borderRadius: '8px', 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  justifyContent: 'center',
+                                  flexShrink: 0,
+                                }}>
                                   <RoleIcon size={24} style={{ color: 'white' }} />
                                 </div>
-                                <div>
+                                <div style={{ width: '100%' }}>
                                   <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--foreground)', margin: 0 }}>{role.title}</p>
                                   <p style={{ fontSize: '12px', color: 'var(--muted-foreground)', margin: 0, lineHeight: '1.2' }}>{role.description}</p>
                                 </div>

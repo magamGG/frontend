@@ -38,6 +38,7 @@ import { AgencyWorkcationPage } from '@/pages/agency/AgencyWorkcation';
 import { AgencyMyPage } from '@/pages/agency/AgencyMyPage';
 import { AgencyHealthPage } from '@/pages/agency/AgencyHealth';
 import { AgencyAssignmentPage } from '@/pages/agency/AgencyAssignment';
+import { AgencyLeaveSettingsPage } from '@/pages/agency/AgencyLeaveSettings';
 
 /**
  * @typedef {'login' | 'signup' | 'forgot-password' | 'dashboard' | 'join-request'} AuthView
@@ -202,6 +203,11 @@ export default function App() {
           id: 'assignment',
           title: '할당 관리',
           content: <AgencyAssignmentPage />,
+        },
+        {
+          id: 'leave-settings',
+          title: '연차 설정',
+          content: <AgencyLeaveSettingsPage />,
         },
       ]
     : [

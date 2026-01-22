@@ -5,7 +5,8 @@ import { Label } from '@/app/components/ui/label';
 import { Textarea } from '@/app/components/ui/textarea';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Upload, FileText } from 'lucide-react';
+import { Upload, FileText, Calendar, AlertCircle } from 'lucide-react';
+import useAuthStore from '@/store/authStore';
 import {
   ModalHeader,
   ModalTitle,
@@ -55,6 +56,9 @@ export function LeaveRequestModal({ open, onOpenChange }) {
   const [selectedProject, setSelectedProject] = useState('선택 안 함');
   const [attachedFile, setAttachedFile] = useState(null);
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
+  const [remainingLeave, setRemainingLeave] = useState(null);
+
+  const { getUserName } = useAuthStore();
 
   // Get projects from localStorage
   const [projects, setProjects] = useState([]);
@@ -65,6 +69,32 @@ export function LeaveRequestModal({ open, onOpenChange }) {
       setProjects(data);
     }
   }, []);
+
+  // Get current user's remaining leave
+  useEffect(() => {
+    if (selectedType === '연차') {
+      const userName = getUserName();
+      const employees = JSON.parse(localStorage.getItem('agencyEmployees') || '[]');
+      
+      if (userName && employees.length > 0) {
+        // Find employee by name
+        const employee = employees.find(emp => emp.name === userName);
+        if (employee) {
+          setRemainingLeave(employee.remainingLeave);
+        } else {
+          // If not found, try to get first employee as fallback
+          setRemainingLeave(employees[0]?.remainingLeave || null);
+        }
+      } else if (employees.length > 0) {
+        // Fallback: use first employee
+        setRemainingLeave(employees[0]?.remainingLeave || null);
+      } else {
+        setRemainingLeave(null);
+      }
+    } else {
+      setRemainingLeave(null);
+    }
+  }, [selectedType, getUserName]);
 
   const leaveTypes = ['연차', '병가', '워케이션', '재택근무', '휴재'];
 
@@ -141,6 +171,28 @@ export function LeaveRequestModal({ open, onOpenChange }) {
     // localStorage에 저장
     localStorage.setItem('attendanceData', JSON.stringify([...existingAttendance, newRequestData]));
 
+    // 연차 신청인 경우 사용한 연차 업데이트
+    if (selectedType === '연차') {
+      const userName = getUserName();
+      const employees = JSON.parse(localStorage.getItem('agencyEmployees') || '[]');
+      
+      if (userName && employees.length > 0) {
+        const updatedEmployees = employees.map(emp => {
+          if (emp.name === userName) {
+            const newUsedLeave = emp.usedLeave + days;
+            const newRemainingLeave = emp.totalLeave - newUsedLeave;
+            return {
+              ...emp,
+              usedLeave: newUsedLeave,
+              remainingLeave: newRemainingLeave >= 0 ? newRemainingLeave : 0,
+            };
+          }
+          return emp;
+        });
+        localStorage.setItem('agencyEmployees', JSON.stringify(updatedEmployees));
+      }
+    }
+
     toast.success('근태 신청이 완료되었습니다.');
     
     // 폼 초기화
@@ -209,6 +261,23 @@ export function LeaveRequestModal({ open, onOpenChange }) {
               </TabButton>
             ))}
           </TabContainer>
+
+          {/* 연차 선택 시 남은 연차 표시 */}
+          {selectedType === '연차' && remainingLeave !== null && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Calendar className="w-4 h-4 text-blue-600" />
+                <span className="text-sm font-semibold text-blue-900">남은 연차</span>
+              </div>
+              <p className="text-2xl font-bold text-blue-600">{remainingLeave}일</p>
+              {calculateDays() > remainingLeave && (
+                <div className="mt-2 flex items-start gap-2 text-red-600 text-xs">
+                  <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                  <span>신청하신 일수({calculateDays()}일)가 남은 연차보다 많습니다.</span>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* 신청 기간 */}
           <FormGroup>
