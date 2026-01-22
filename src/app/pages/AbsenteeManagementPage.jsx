@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 export function AbsenteeManagementPage() {
   const [absenceRequests, setAbsenceRequests] = useState([
     {
-      id,
+      id: 1,
       name: '박채색',
       role: '채색 담당',
       reason: '휴재',
@@ -22,7 +22,7 @@ export function AbsenteeManagementPage() {
       description: '개인 건강 관리를 위한 일시 중단'
     },
     {
-      id,
+      id: 2,
       name: '최스토리',
       role: '스토리 작가',
       reason: '긴급 휴재',
@@ -38,16 +38,16 @@ export function AbsenteeManagementPage() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [newRequest, setNewRequest] = useState({
-    reason: 'break'-break' | 'workation' | 'sick-leave',
-    startDate,
-    endDate,
-    projects,
-    description,
+    reason: 'break',
+    startDate: '',
+    endDate: '',
+    projects: '',
+    description: '',
   });
 
   const handleRequestSubmit = () => {
     // 임시로 작가 본인 이름 사용
-    const request: AbsenceRequest = {
+    const request = {
       id: Date.now(),
       name: '김작가',
       role: '작가',
@@ -66,11 +66,11 @@ export function AbsenteeManagementPage() {
     setAbsenceRequests([...absenceRequests, request]);
     setIsRequestModalOpen(false);
     setNewRequest({
-      reason,
-      startDate,
-      endDate,
-      projects,
-      description,
+      reason: 'break',
+      startDate: '',
+      endDate: '',
+      projects: '',
+      description: '',
     });
     toast.success('근태 신청이 완료되었습니다.');
   };

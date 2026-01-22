@@ -158,7 +158,7 @@ export function AgencyTeamPage() {
       return;
     }
 
-    const otherRoles: RoleFilter[] = ['담당자', '작가', '어시스트'];
+    const otherRoles = ['담당자', '작가', '어시스트'];
     let newSelectedRoles = [...selectedRoles.filter(r => r !== '전체')];
 
     if (newSelectedRoles.includes(role)) {
@@ -184,7 +184,7 @@ export function AgencyTeamPage() {
       return;
     }
 
-    const employee: Employee = {
+    const employee = {
       id: employees.length + 1,
       name: '새 직원',
       role: '담당자',

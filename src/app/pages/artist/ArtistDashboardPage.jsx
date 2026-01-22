@@ -204,7 +204,7 @@ export function ArtistDashboardPage() {
   }, []);
 
   // Mock data for deadlines
-  const deadlineProjects: DeadlineProject[] = [
+  const deadlineProjects = [
     { id, name: '에피소드 42 연재', deadline: '오늘 자정', urgent,
     { id, name: '에피소드 43 스케치', deadline: '1월 17일', urgent,
   ];
@@ -292,7 +292,7 @@ export function ArtistDashboardPage() {
         toast.success('메모가 수정되었습니다.');
       } else {
         // 새 메모 추가
-        const newMemo: Memo = {
+        const newMemo = {
           id: Date.now().toString(),
           title: currentMemoTitle || '새 메모',
           content,

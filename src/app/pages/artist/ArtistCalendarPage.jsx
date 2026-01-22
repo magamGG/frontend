@@ -13,7 +13,12 @@ import { LeaveRequestModal } from '@/app/components/modals/LeaveRequestModal';
 
 
 
-export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal }: ArtistCalendarPageProps = {}) {
+/**
+ * @param {Object} [props]
+ * @param {Function} [props.openAttendanceModal]
+ * @param {Function} [props.onCloseAttendanceModal]
+ */
+export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal } = {}) {
   const daysOfWeek = ['일', '월', '화', '수', '목', '금', '토'];
   const currentMonth = '2026년 1월';
   

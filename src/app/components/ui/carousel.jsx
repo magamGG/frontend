@@ -13,18 +13,6 @@ import { Button } from "./button";
 
 
 
-  plugins?: CarouselPlugin;
-  orientation?: "horizontal" | "vertical";
-  setApi?: (api) => void;
-};
-
-
-  api: ReturnType[1];
-  scrollPrev: () => void;
-  scrollNext: () => void;
-  canScrollPrev: boolean;
-  canScrollNext: boolean;
-} & CarouselProps;
 
 const CarouselContext = React.createContext(null);
 
@@ -38,6 +26,15 @@ function useCarousel() {
   return context;
 }
 
+/**
+ * @param {Object} props
+ * @param {"horizontal" | "vertical"} [props.orientation="horizontal"]
+ * @param {Object} [props.opts]
+ * @param {Function} [props.setApi]
+ * @param {Array} [props.plugins]
+ * @param {string} [props.className]
+ * @param {React.ReactNode} [props.children]
+ */
 function Carousel({
   orientation = "horizontal",
   opts,
@@ -46,7 +43,7 @@ function Carousel({
   className,
   children,
   ...props
-} & CarouselProps) {
+}) {
   const [carouselRef, api] = useEmblaCarousel(
     {
       ...opts,

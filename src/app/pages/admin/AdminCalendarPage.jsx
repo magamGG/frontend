@@ -6,14 +6,6 @@ import { ChevronLeft, ChevronRight, Calendar, Clock, ArrowRight, Trash2 } from '
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-[];
-  }[];
-  attendance: {
-    date: number;
-    type: 'break' | 'workation';
-  }[];
-}
-
 export function AdminCalendarPage() {
   const daysOfWeek = ['일', '월', '화', '수', '목', '금', '토'];
   
@@ -45,7 +37,7 @@ export function AdminCalendarPage() {
   const [upcomingModalType, setUpcomingModalType] = useState('schedule');
 
   // 작가별 일정 데이터 (예시)
-  const artistSchedules: ArtistSchedule[] = [
+  const artistSchedules = [
     {
       artistId,
       artistName: '김작가',

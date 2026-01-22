@@ -29,7 +29,11 @@ import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
 
 
 // 읽기 전용 카드 컴포넌트 (드래그 불가, 편집/삭제 버튼 없음)
-function ReadOnlyCard({ card }: { card) {
+/**
+ * @param {Object} props
+ * @param {Object} props.card
+ */
+function ReadOnlyCard({ card }) {
   const commentCount = card.comments?.length || 0;
 
   return (
@@ -71,7 +75,11 @@ function ReadOnlyCard({ card }: { card) {
 }
 
 // 읽기 전용 보드 컴포넌트 (드롭 불가, 추가/삭제 버튼 없음)
-function ReadOnlyBoard({ board }: { board) {
+/**
+ * @param {Object} props
+ * @param {Object} props.board
+ */
+function ReadOnlyBoard({ board }) {
   return (
     <div className="bg-muted/30 rounded-lg p-4 min-w-[280px] max-w-[280px] flex-shrink-0">
       <div className="flex items-center justify-between mb-4">
