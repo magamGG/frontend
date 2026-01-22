@@ -334,9 +334,9 @@ export function AgencyMyPage({ onClose, onLogout }) {
               </div>
             </div>
           </div>
-        </motion.div>
+      </motion.div>
 
-        {/* Edit Profile Modal */}
+      {/* Edit Profile Modal */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
         <DialogContent className="sm:max-w-[500px] bg-white">
           <DialogHeader>
