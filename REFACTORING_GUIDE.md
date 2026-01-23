@@ -341,6 +341,17 @@ export function Component({ title, count }) {
   - `App.jsx` 업데이트
     - `AgencyLeaveSettingsPage` import 추가
     - 에이전시 섹션에 "연차 설정" 메뉴 추가 (id: 'leave-settings')
+- **2026-01-23 (연차 관리 페이지 개선)**:
+  - `AgencyLeaveSettingsPage` → `AgencyLeaveManagementPage`로 기능 확장
+    - 연차 소진 분포도 차트 추가 (Grouped Scatter Plot)
+    - 위험군/적정군/완료군 구분 및 배경색 표시
+    - Season Info 카드 추가 (분기 정보)
+    - 통계 요약 카드 추가
+    - 휴가 독려 알림 기능 추가
+    - 기본 연차 설정 모달 추가
+    - 직원 리스트 모달 추가 (차트 포인트 클릭 시)
+    - 페이지 제목 변경: "연차 설정" → "연차 관리"
+    - `App.jsx` 메뉴 제목 업데이트: "연차 설정" → "연차 관리"
 
 ### 6.4 아직 변환되지 않은 파일 목록
 
@@ -411,6 +422,7 @@ export function Component({ title, count }) {
 - `ProjectContext.tsx` → `ProjectContext.jsx` 변환 완료
 - `FullPageLayout.tsx` → styled-components 변환 완료
 - `LeaveRequestModal` 연차 기능 개선 완료
+- `AgencyLeaveSettingsPage` → 연차 관리 페이지로 확장 완료
 
 ### 6.6 변환 작업 프로세스 (Conversion Workflow)
 
@@ -464,4 +476,4 @@ export function Component({ title, count }) {
 - [ ] Import 경로 수정 완료
 - [ ] 원본 파일 삭제 완료
 
-**마지막 업데이트**: 2026-01-13 (연차 기능 추가 및 가이드 정리 완료)
+**마지막 업데이트**: 2026-01-23 (연차 관리 페이지 개선 완료)
