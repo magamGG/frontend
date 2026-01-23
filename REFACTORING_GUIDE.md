@@ -280,7 +280,7 @@ export function Component({ title, count }) {
 | AgencyAssignmentPage | `src/app/pages/agency/AgencyAssignmentPage.tsx` | `src/pages/agency/AgencyAssignment/` | ✅ 완료 | - |
 | AgencyProjectDetailPage | `src/app/pages/agency/AgencyProjectDetailPage.tsx` | `src/pages/agency/AgencyProjectDetail/` | ✅ 완료 | - |
 | AgencyJoinRequestsPage | `src/app/pages/agency/AgencyJoinRequestsPage.tsx` | `src/pages/agency/AgencyJoinRequests/` | ✅ 완료 | - |
-| AgencyLeaveSettingsPage | - | `src/pages/agency/AgencyLeaveSettings/` | ✅ 완료 | 신규 생성, 가이드 준수 |
+| AgencyLeaveSettingsPage | - | `src/pages/agency/AgencyLeaveSettings/` | ✅ 완료 | 신규 생성, 연차 관리 페이지 (차트 기능 포함) |
 
 #### 📁 Health 하위 페이지 (Health Sub Pages) - 7개
 | 페이지명 | 원본 경로 | 목표 경로 | 상태 | 비고 |
@@ -341,17 +341,39 @@ export function Component({ title, count }) {
   - `App.jsx` 업데이트
     - `AgencyLeaveSettingsPage` import 추가
     - 에이전시 섹션에 "연차 설정" 메뉴 추가 (id: 'leave-settings')
-- **2026-01-23 (연차 관리 페이지 개선)**:
-  - `AgencyLeaveSettingsPage` → `AgencyLeaveManagementPage`로 기능 확장
-    - 연차 소진 분포도 차트 추가 (Grouped Scatter Plot)
-    - 위험군/적정군/완료군 구분 및 배경색 표시
-    - Season Info 카드 추가 (분기 정보)
-    - 통계 요약 카드 추가
-    - 휴가 독려 알림 기능 추가
-    - 기본 연차 설정 모달 추가
-    - 직원 리스트 모달 추가 (차트 포인트 클릭 시)
-    - 페이지 제목 변경: "연차 설정" → "연차 관리"
-    - `App.jsx` 메뉴 제목 업데이트: "연차 설정" → "연차 관리"
+- **2026-01-23 (연차 관리 페이지 생성 및 개선)**:
+  - `AgencyLeaveSettingsPage` 신규 생성 및 기능 확장 완료
+    - **기본 기능**:
+      - Logic(.jsx)과 Style(.styled.js) 분리 완료
+      - Tailwind CSS 클래스 제거 및 styled-components 변환 완료
+      - 데스크탑 레이아웃 적용 (max-width: 1600px)
+      - `src/pages/agency/AgencyLeaveSettings/` 구조로 생성
+      - localStorage를 통한 연차 데이터 저장
+    - **차트 기능 추가**:
+      - 연차 소진 분포도 차트 추가 (Grouped Scatter Plot, Recharts 사용)
+      - 위험군(0~30%)/적정군(30~80%)/완료군(80~100%) 구분
+      - 구간별 배경색 표시 (빨강/초록/노랑)
+      - Y축 정수 표시 (0, 1, 2, 3...)
+      - 차트 포인트 크기 조정 (r=14, 호버 시 r=18)
+      - 차트 포인트 클릭 시 해당 구간 직원 리스트 모달 표시
+      - 평균선 표시 (ReferenceLine)
+      - 커스텀 툴팁 구현
+    - **UI 컴포넌트 추가**:
+      - Season Info 카드 추가 (현재 분기 정보, 연말까지 남은 개월 수)
+      - 통계 요약 카드 추가 (번아웃 위험군, 이탈 위험군, 평균 사용률, 표준 편차)
+      - 휴가 독려 알림 버튼 추가 (번아웃 위험군 카드에 위치)
+      - 기본 연차 설정 모달 추가 (페이지 헤더 버튼으로 열림)
+      - 직원 리스트 모달 추가 (차트 포인트 클릭 시)
+    - **기능 개선**:
+      - 페이지 제목 변경: "연차 설정" → "연차 관리"
+      - 직원 연차 조정 기능 (포상/징계/경력 인정)
+      - 변경 로그 테이블 추가
+      - 연차 조정 모달 개선 (사유별 조정 일수 제한)
+    - **기술 스택**:
+      - Recharts (ComposedChart, Scatter, ReferenceArea, ReferenceLine)
+      - styled-components (모든 스타일 분리)
+      - useMemo를 통한 차트 데이터 계산 최적화
+      - 위험군 분류 로직 구현 (categorizeRiskGroup 함수)
 
 ### 6.4 아직 변환되지 않은 파일 목록
 
@@ -422,7 +444,11 @@ export function Component({ title, count }) {
 - `ProjectContext.tsx` → `ProjectContext.jsx` 변환 완료
 - `FullPageLayout.tsx` → styled-components 변환 완료
 - `LeaveRequestModal` 연차 기능 개선 완료
-- `AgencyLeaveSettingsPage` → 연차 관리 페이지로 확장 완료
+- `AgencyLeaveSettingsPage` 신규 생성 및 연차 관리 페이지로 확장 완료
+  - 차트 기능 포함 (분포도 차트, 위험군 구분, 통계 요약)
+  - 모달 기능 (기본 연차 설정, 직원 리스트)
+  - 연차 조정 기능 (포상/징계/경력 인정)
+  - 변경 로그 기능
 
 ### 6.6 변환 작업 프로세스 (Conversion Workflow)
 
@@ -476,4 +502,4 @@ export function Component({ title, count }) {
 - [ ] Import 경로 수정 완료
 - [ ] 원본 파일 삭제 완료
 
-**마지막 업데이트**: 2026-01-23 (연차 관리 페이지 개선 완료)
+**마지막 업데이트**: 2026-01-23 (연차 관리 페이지 생성 및 차트 기능 추가 완료)
