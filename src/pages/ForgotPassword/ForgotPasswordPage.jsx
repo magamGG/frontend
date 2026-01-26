@@ -3,6 +3,8 @@ import { motion } from 'motion/react';
 import { Card } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Mail, Lock, ArrowLeft, Check } from 'lucide-react';
+import { toast } from 'sonner';
+import { authService } from '@/api';
 import {
   ForgotPasswordRoot,
   BackgroundPattern,
@@ -37,31 +39,77 @@ const stepList = ['email', 'verify', 'reset'];
 
 export function ForgotPasswordPage({ onBackToLogin }) {
   const [step, setStep] = useState(PASSWORD_RESET_STEPS.EMAIL);
-  const [email, setEmail] = useState('');
-  const [verificationCode, setVerificationCode] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [emailInput, setEmailInput] = useState('');
+  const [verificationCodeInput, setVerificationCodeInput] = useState('');
+  const [newPasswordInput, setNewPasswordInput] = useState('');
+  const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSendEmail = (e) => {
+  const handleSendEmail = async (e) => {
     e.preventDefault();
-    // TODO: API 호출로 인증 이메일 전송
-    setStep(PASSWORD_RESET_STEPS.VERIFY);
-  };
-
-  const handleVerifyCode = (e) => {
-    e.preventDefault();
-    // TODO: API 호출로 인증 코드 확인
-    setStep(PASSWORD_RESET_STEPS.RESET);
-  };
-
-  const handleResetPassword = (e) => {
-    e.preventDefault();
-    if (newPassword !== confirmPassword) {
-      alert('비밀번호가 일치하지 않습니다.');
+    if (!emailInput) {
+      toast.error('이메일을 입력해주세요.');
       return;
     }
-    // TODO: API 호출로 비밀번호 재설정
-    setStep(PASSWORD_RESET_STEPS.SUCCESS);
+
+    setIsLoading(true);
+    try {
+      await authService.forgotPassword(emailInput);
+      toast.success('인증 코드가 이메일로 전송되었습니다.');
+      setStep(PASSWORD_RESET_STEPS.VERIFY);
+    } catch (error) {
+      const errorMessage = error?.message || '이메일 전송에 실패했습니다. 다시 시도해주세요.';
+      toast.error(errorMessage);
+      console.error('Forgot password error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerifyCode = async (e) => {
+    e.preventDefault();
+    if (!verificationCodeInput) {
+      toast.error('인증 코드를 입력해주세요.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await authService.verifyCode(emailInput, verificationCodeInput);
+      toast.success('인증 코드가 확인되었습니다.');
+      setStep(PASSWORD_RESET_STEPS.RESET);
+    } catch (error) {
+      const errorMessage = error?.message || '인증 코드 확인에 실패했습니다. 다시 시도해주세요.';
+      toast.error(errorMessage);
+      console.error('Verify code error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    if (newPasswordInput !== confirmPasswordInput) {
+      toast.error('비밀번호가 일치하지 않습니다.');
+      return;
+    }
+    if (!newPasswordInput || newPasswordInput.length < 8) {
+      toast.error('비밀번호는 8자 이상이어야 합니다.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await authService.resetPassword(emailInput, verificationCodeInput, newPasswordInput);
+      toast.success('비밀번호가 재설정되었습니다.');
+      setStep(PASSWORD_RESET_STEPS.SUCCESS);
+    } catch (error) {
+      const errorMessage = error?.message || '비밀번호 재설정에 실패했습니다. 다시 시도해주세요.';
+      toast.error(errorMessage);
+      console.error('Reset password error:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const getStepDescription = () => {
@@ -168,16 +216,17 @@ export function ForgotPasswordPage({ onBackToLogin }) {
                         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5" style={{ color: 'var(--muted-foreground)' }} />
                         <InputField
                           type="email"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
+                          value={emailInput}
+                          onChange={(e) => setEmailInput(e.target.value)}
+                          disabled={isLoading}
                           placeholder="kim.artist@example.com"
                           required
                         />
                       </InputWrapper>
                     </InputGroup>
 
-                    <Button type="submit" style={{ width: '100%', padding: '24px', fontSize: '16px', fontWeight: 600 }}>
-                      인증 코드 전송
+                    <Button type="submit" style={{ width: '100%', padding: '24px', fontSize: '16px', fontWeight: 600 }} disabled={isLoading}>
+                      {isLoading ? '전송 중...' : '인증 코드 전송'}
                     </Button>
                   </FormSection>
                 )}
@@ -188,8 +237,9 @@ export function ForgotPasswordPage({ onBackToLogin }) {
                       <InputLabel>인증 코드</InputLabel>
                       <VerificationCodeInput
                         type="text"
-                        value={verificationCode}
-                        onChange={(e) => setVerificationCode(e.target.value)}
+                        value={verificationCodeInput}
+                        onChange={(e) => setVerificationCodeInput(e.target.value)}
+                        disabled={isLoading}
                         placeholder="6자리 인증 코드"
                         maxLength={6}
                         large
@@ -197,19 +247,20 @@ export function ForgotPasswordPage({ onBackToLogin }) {
                         required
                       />
                       <p style={{ fontSize: '12px', color: 'var(--muted-foreground)', textAlign: 'center', margin: 0 }}>
-                        {email}로 전송된 인증 코드를 입력해주세요
+                        {emailInput}로 전송된 인증 코드를 입력해주세요
                       </p>
                     </InputGroup>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      <Button type="submit" style={{ width: '100%', padding: '24px', fontSize: '16px', fontWeight: 600 }}>
-                        인증 확인
+                      <Button type="submit" style={{ width: '100%', padding: '24px', fontSize: '16px', fontWeight: 600 }} disabled={isLoading}>
+                        {isLoading ? '확인 중...' : '인증 확인'}
                       </Button>
                       <Button
                         type="button"
                         variant="outline"
                         style={{ width: '100%', padding: '12px' }}
                         onClick={handleSendEmail}
+                        disabled={isLoading}
                       >
                         인증 코드 재전송
                       </Button>
@@ -225,8 +276,9 @@ export function ForgotPasswordPage({ onBackToLogin }) {
                         <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5" style={{ color: 'var(--muted-foreground)' }} />
                         <InputField
                           type="password"
-                          value={newPassword}
-                          onChange={(e) => setNewPassword(e.target.value)}
+                          value={newPasswordInput}
+                          onChange={(e) => setNewPasswordInput(e.target.value)}
+                          disabled={isLoading}
                           placeholder="••••••••"
                           required
                         />
@@ -239,16 +291,17 @@ export function ForgotPasswordPage({ onBackToLogin }) {
                         <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5" style={{ color: 'var(--muted-foreground)' }} />
                         <InputField
                           type="password"
-                          value={confirmPassword}
-                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          value={confirmPasswordInput}
+                          onChange={(e) => setConfirmPasswordInput(e.target.value)}
+                          disabled={isLoading}
                           placeholder="••••••••"
                           required
                         />
                       </InputWrapper>
                     </InputGroup>
 
-                    <Button type="submit" style={{ width: '100%', padding: '24px', fontSize: '16px', fontWeight: 600 }}>
-                      비밀번호 변경
+                    <Button type="submit" style={{ width: '100%', padding: '24px', fontSize: '16px', fontWeight: 600 }} disabled={isLoading}>
+                      {isLoading ? '변경 중...' : '비밀번호 변경'}
                     </Button>
                   </FormSection>
                 )}

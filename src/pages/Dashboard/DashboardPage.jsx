@@ -184,9 +184,14 @@ export function DashboardPage() {
     setCurrentStatus(status);
   };
 
-  const handleCheckIn = () => {
-    setCheckedIn(!checkedIn);
-    // TODO: API 호출로 출근 체크
+  const handleCheckIn = async () => {
+    try {
+      // TODO: 실제 출근 체크 API 호출
+      // await attendanceService.checkIn({ status: currentStatus });
+      setCheckedIn(!checkedIn);
+    } catch (error) {
+      console.error('Check-in error:', error);
+    }
   };
 
   return (

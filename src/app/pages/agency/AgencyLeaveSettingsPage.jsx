@@ -7,8 +7,6 @@ import { Label } from '@/app/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
 import { Textarea } from '@/app/components/ui/textarea';
 import { toast } from 'sonner';
-import { leaveService } from '@/api';
-import useAuthStore from '@/store/authStore';
 import { 
   Calendar,
   Edit2,
@@ -156,7 +154,7 @@ import {
   EmployeeListModalCloseButtonFooter,
 } from './AgencyLeaveSettingsPage.styled';
 
-// 회사 연차 정책 초기값 가져오기
+// TODO: Zustand store mapping - 회사 연차 정책
 const getInitialCompanyPolicy = () => {
   const stored = localStorage.getItem('agencyLeavePolicy');
   if (stored) {
@@ -167,7 +165,7 @@ const getInitialCompanyPolicy = () => {
   };
 };
 
-// 직원 목록 초기값 가져오기
+// TODO: Zustand store mapping - 직원 목록
 const getInitialEmployees = () => {
   const stored = localStorage.getItem('agencyEmployees');
   if (stored) {
@@ -227,7 +225,7 @@ const getInitialEmployees = () => {
   ];
 };
 
-// 연차 변경 로그 초기값 가져오기
+// TODO: Zustand store mapping - 연차 변경 로그
 const getInitialLeaveLogs = () => {
   const stored = localStorage.getItem('agencyLeaveLogs');
   if (stored) {
@@ -450,20 +448,18 @@ const CustomTooltip = ({ active, payload }) => {
 
 export function AgencyLeaveSettingsPage() {
   const [companyPolicy, setCompanyPolicy] = useState(getInitialCompanyPolicy);
-  const [employeeList, setEmployeeList] = useState(getInitialEmployees);
-  const [leaveLogList, setLeaveLogList] = useState(getInitialLeaveLogs);
-  const [searchQueryInput, setSearchQueryInput] = useState('');
-  const [selectedEmployeeData, setSelectedEmployeeData] = useState(null);
+  const [employees, setEmployees] = useState(getInitialEmployees);
+  const [leaveLogs, setLeaveLogs] = useState(getInitialLeaveLogs);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
   const [adjustFormData, setAdjustFormData] = useState({
     adjustment: 0,
     reason: '',
     note: '',
   });
-  const [selectedBinData, setSelectedBinData] = useState(null);
+  const [selectedBin, setSelectedBin] = useState(null);
   const [isPolicyModalOpen, setIsPolicyModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const currentUser = useAuthStore((state) => state.user);
 
   const currentMonth = new Date().getMonth() + 1;
   const expectedUsageRate = getExpectedUsageRate(currentMonth);
@@ -491,66 +487,35 @@ export function AgencyLeaveSettingsPage() {
 
   const seasonInfo = getSeasonInfo();
 
-  // 초기 데이터 로드
+  // localStorage 저장
   useEffect(() => {
-    const loadLeaveData = async () => {
-      setIsLoading(true);
-      try {
-        // TODO: 실제 API 호출로 변경
-        // const leaveSettingsData = await leaveService.getLeaveSettings();
-        // const employeeListData = await leaveService.getLeaveStatistics();
-        // setCompanyPolicy(leaveSettingsData);
-        // setEmployeeList(employeeListData.employees || []);
-        
-        // 임시: localStorage에서 로드 (API 연동 전까지)
-        const storedEmployees = localStorage.getItem('agencyEmployees');
-        const storedPolicy = localStorage.getItem('agencyLeavePolicy');
-        if (storedEmployees) {
-          setEmployeeList(JSON.parse(storedEmployees));
-        }
-        if (storedPolicy) {
-          setCompanyPolicy(JSON.parse(storedPolicy));
-        }
-      } catch (error) {
-        console.error('Failed to load leave data:', error);
-        toast.error('연차 데이터를 불러오는데 실패했습니다.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadLeaveData();
-  }, []);
-
-  // 데이터 변경 시 localStorage 저장 (API 연동 전까지 임시)
-  useEffect(() => {
-    localStorage.setItem('agencyEmployees', JSON.stringify(employeeList));
-  }, [employeeList]);
+    localStorage.setItem('agencyEmployees', JSON.stringify(employees));
+  }, [employees]);
 
   useEffect(() => {
     localStorage.setItem('agencyLeavePolicy', JSON.stringify(companyPolicy));
   }, [companyPolicy]);
 
   useEffect(() => {
-    localStorage.setItem('agencyLeaveLogs', JSON.stringify(leaveLogList));
-  }, [leaveLogList]);
+    localStorage.setItem('agencyLeaveLogs', JSON.stringify(leaveLogs));
+  }, [leaveLogs]);
 
   // 위험군별 통계 계산
   const calculateRiskStats = () => {
-    const riskGroupStats = {
+    const riskGroups = {
       위험군: { count: 0, employees: [] },
       적정군: { count: 0, employees: [] },
       완료군: { count: 0, employees: [] },
     };
 
-    employeeList.forEach((employee) => {
-      if (!employee) return;
-      const category = categorizeRiskGroup(employee, currentMonth);
-      riskGroupStats[category.group].count++;
-      riskGroupStats[category.group].employees.push(employee);
+    employees.forEach(emp => {
+      if (!emp) return;
+      const category = categorizeRiskGroup(emp, currentMonth);
+      riskGroups[category.group].count++;
+      riskGroups[category.group].employees.push(emp);
     });
 
-    return riskGroupStats;
+    return riskGroups;
   };
 
   const riskStats = calculateRiskStats();
@@ -558,20 +523,20 @@ export function AgencyLeaveSettingsPage() {
   // 연차 소진 분포도 차트 데이터 (Dashboard.md에서 변환)
   const { distributionChartData, distributionMean, distributionStdDev, maxYValue } = useMemo(() => {
     // 1. 개별 통계 분석
-    const analyzedEmployeeList = employeeList.map((employee) => {
-      const usagePercentage = calculateUsageRate(employee);
-      const category = categorizeRiskGroup(employee, currentMonth);
+    const analyzed = employees.map(emp => {
+      const percentage = calculateUsageRate(emp);
+      const category = categorizeRiskGroup(emp, currentMonth);
       return {
-        ...employee,
-        usagePercentage,
+        ...emp,
+        usagePercentage: percentage,
         category: category.group, // 위험군, 적정군, 완료군
         categoryColor: category.color, // 색상
       };
     });
 
-    const sum = analyzedEmployeeList.reduce((acc, curr) => acc + curr.usagePercentage, 0);
-    const avg = sum / (analyzedEmployeeList.length || 1);
-    const variance = analyzedEmployeeList.reduce((acc, curr) => acc + Math.pow(curr.usagePercentage - avg, 2), 0) / analyzedEmployeeList.length;
+    const sum = analyzed.reduce((acc, curr) => acc + curr.usagePercentage, 0);
+    const avg = sum / (analyzed.length || 1);
+    const variance = analyzed.reduce((acc, curr) => acc + Math.pow(curr.usagePercentage - avg, 2), 0) / analyzed.length;
     const sd = Math.sqrt(variance);
 
     // 2. 5% 구간별로 데이터 그룹화
@@ -584,7 +549,7 @@ export function AgencyLeaveSettingsPage() {
       const mid = (min + max) / 2;
       
       // 해당 구간의 직원 필터링
-      const employeesInBin = analyzedEmployeeList.filter((employee) => employee.usagePercentage >= min && employee.usagePercentage < max);
+      const inBin = analyzed.filter(e => e.usagePercentage >= min && e.usagePercentage < max);
       
       // 구간의 대표 위험 카테고리 결정 (구간 중간값 기준)
       // 위험군: 0~30% → 빨간색, 적정군: 30~80% → 초록색, 완료군: 80~100% → 노란색
@@ -599,15 +564,15 @@ export function AgencyLeaveSettingsPage() {
 
       bins.push({
         x: mid, // 구간 중간값
-        y: employeesInBin.length, // 인원 수
+        y: inBin.length, // 인원 수
         rangeLabel: `${min}% - ${max}%`,
-        employees: employeesInBin.map((employee) => ({ name: employee.name, role: employee.position || '직무 없음' })),
+        employees: inBin.map(e => ({ name: e.name, role: e.position || '직무 없음' })),
         riskCategory: mid < 30 ? '위험군' : mid >= 80 ? '완료군' : '적정군',
         fill: fillColor,
       });
     }
 
-    const maxBinCount = Math.max(...bins.map((bin) => bin.y), 1); // 최소값 1로 설정
+    const maxBinCount = Math.max(...bins.map(b => b.y), 1); // 최소값 1로 설정
 
     return { 
       distributionChartData: bins, 
@@ -616,43 +581,35 @@ export function AgencyLeaveSettingsPage() {
       maxCount: maxBinCount,
       maxYValue: maxBinCount
     };
-  }, [employeeList, currentMonth]);
+  }, [employees, currentMonth]);
 
   // 위험군 통계 계산 (차트와 동일한 로직 사용)
   const distributionStats = useMemo(() => {
-    const analyzedEmployeeList = employeeList.map((employee) => {
-      const category = categorizeRiskGroup(employee, currentMonth);
+    const analyzed = employees.map(e => {
+      const category = categorizeRiskGroup(e, currentMonth);
       return category.group; // '위험군', '적정군', '완료군'
     });
-    const burnoutRiskCount = analyzedEmployeeList.filter((category) => category === '위험군').length;
-    const turnoverRiskCount = analyzedEmployeeList.filter((category) => category === '완료군').length;
+    const 위험군 = analyzed.filter(c => c === '위험군').length;
+    const 완료군 = analyzed.filter(c => c === '완료군').length;
     return { 
-      burnout: burnoutRiskCount, // 번아웃 위험군 (사용 저조) = 위험군
-      turnover: turnoverRiskCount // 이탈 위험군 (과다 사용) = 완료군
+      burnout: 위험군, // 번아웃 위험군 (사용 저조) = 위험군
+      turnover: 완료군 // 이탈 위험군 (과다 사용) = 완료군
     };
-  }, [employeeList, currentMonth]);
+  }, [employees, currentMonth]);
 
   // 정책 저장
-  const handleSavePolicy = async () => {
+  const handleSavePolicy = () => {
     if (companyPolicy.defaultLeave < 0) {
       toast.error('기본 연차 수는 0 이상이어야 합니다.');
       return;
     }
-    
-    try {
-      // TODO: 실제 API 호출로 변경
-      // await leaveService.updateLeaveSettings(companyPolicy);
-      localStorage.setItem('agencyLeavePolicy', JSON.stringify(companyPolicy));
-      toast.success('회사 연차 정책이 저장되었습니다.');
-    } catch (error) {
-      console.error('Failed to save policy:', error);
-      toast.error('정책 저장에 실패했습니다.');
-    }
+    localStorage.setItem('agencyLeavePolicy', JSON.stringify(companyPolicy));
+    toast.success('회사 연차 정책이 저장되었습니다.');
   };
 
   // 연차 조정 모달 열기
-  const handleOpenAdjustModal = (employeeData) => {
-    setSelectedEmployeeData(employeeData);
+  const handleOpenAdjustModal = (employee) => {
+    setSelectedEmployee(employee);
     setAdjustFormData({
       adjustment: 0,
       reason: '',
@@ -662,7 +619,7 @@ export function AgencyLeaveSettingsPage() {
   };
 
   // 연차 조정 저장
-  const handleSaveAdjustment = async () => {
+  const handleSaveAdjustment = () => {
     if (!adjustFormData.reason) {
       toast.error('사유를 선택해주세요.');
       return;
@@ -685,93 +642,72 @@ export function AgencyLeaveSettingsPage() {
       return;
     }
 
-    const newTotalLeave = selectedEmployeeData.totalLeave + adjustFormData.adjustment;
+    const newTotalLeave = selectedEmployee.totalLeave + adjustFormData.adjustment;
     if (newTotalLeave < 0) {
       toast.error('총 연차는 0 이상이어야 합니다.');
       return;
     }
 
-    const newRemainingLeave = newTotalLeave - selectedEmployeeData.usedLeave;
+    const newRemainingLeave = newTotalLeave - selectedEmployee.usedLeave;
 
-    try {
-      // TODO: 실제 API 호출로 변경
-      // await leaveService.adjustLeave(selectedEmployeeData.id, {
-      //   adjustment: adjustFormData.adjustment,
-      //   reason: adjustFormData.reason,
-      //   note: adjustFormData.note,
-      // });
+    // 직원 데이터 업데이트
+    const updatedEmployees = employees.map(emp =>
+      emp.id === selectedEmployee.id
+        ? {
+            ...emp,
+            totalLeave: newTotalLeave,
+            remainingLeave: newRemainingLeave >= 0 ? newRemainingLeave : 0,
+            adjustmentDetails: adjustFormData.reason,
+          }
+        : emp
+    );
+    setEmployees(updatedEmployees);
 
-      // 직원 데이터 업데이트
-      const updatedEmployeeList = employeeList.map((employee) =>
-        employee.id === selectedEmployeeData.id
-          ? {
-              ...employee,
-              totalLeave: newTotalLeave,
-              remainingLeave: newRemainingLeave >= 0 ? newRemainingLeave : 0,
-              adjustmentDetails: adjustFormData.reason,
-            }
-          : employee
-      );
-      setEmployeeList(updatedEmployeeList);
+    // 로그 추가
+    const newLog = {
+      id: Date.now(),
+      date: new Date().toLocaleString('ko-KR', { 
+        year: 'numeric', 
+        month: '2-digit', 
+        day: '2-digit', 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      }),
+      target: selectedEmployee.name,
+      type: adjustFormData.reason === '포상' ? '포상' : adjustFormData.reason === '징계' ? '징계' : '경력인정',
+      changedDays: Math.abs(adjustFormData.adjustment),
+      reason: adjustFormData.note || adjustFormData.reason,
+      processor: '최관리자', // TODO: 실제 사용자 정보로 교체
+    };
+    setLeaveLogs([newLog, ...leaveLogs]);
 
-      // 로그 추가
-      const newLogEntry = {
-        id: Date.now(),
-        date: new Date().toLocaleString('ko-KR', { 
-          year: 'numeric', 
-          month: '2-digit', 
-          day: '2-digit', 
-          hour: '2-digit', 
-          minute: '2-digit' 
-        }),
-        target: selectedEmployeeData.name,
-        type: adjustFormData.reason === '포상' ? '포상' : adjustFormData.reason === '징계' ? '징계' : '경력인정',
-        changedDays: Math.abs(adjustFormData.adjustment),
-        reason: adjustFormData.note || adjustFormData.reason,
-        processor: currentUser?.user_name || '관리자',
-      };
-      setLeaveLogList([newLogEntry, ...leaveLogList]);
-
-      toast.success(`${selectedEmployeeData.name}님의 연차가 조정되었습니다.`);
-      setIsAdjustModalOpen(false);
-      setSelectedEmployeeData(null);
-    } catch (error) {
-      console.error('Failed to adjust leave:', error);
-      toast.error('연차 조정에 실패했습니다.');
-    }
+    toast.success(`${selectedEmployee.name}님의 연차가 조정되었습니다.`);
+    setIsAdjustModalOpen(false);
+    setSelectedEmployee(null);
   };
 
   // 필터링된 직원 목록
-  const filteredEmployeeList = employeeList.filter((employee) => {
-    if (!employee) return false;
-    const employeeName = employee.name || '';
-    const employeePosition = employee.position || '';
-    const searchQueryLower = searchQueryInput.toLowerCase();
-    return employeeName.toLowerCase().includes(searchQueryLower) || employeePosition.toLowerCase().includes(searchQueryLower);
+  const filteredEmployees = employees.filter(emp => {
+    if (!emp) return false;
+    const name = emp.name || '';
+    const position = emp.position || '';
+    const query = searchQuery.toLowerCase();
+    return name.toLowerCase().includes(query) || position.toLowerCase().includes(query);
   });
 
   // 휴가 독려 알림 보내기 (번아웃 위험군에게)
-  const handleSendEncouragement = async () => {
-    const burnoutRiskEmployeeList = riskStats.위험군.employees
-      .filter((employee) => employee && employee.name)
-      .map((employee) => employee.id);
+  const handleSendEncouragement = () => {
+    const riskEmployees = riskStats.위험군.employees
+      .filter(emp => emp && emp.name)
+      .map(emp => emp.name);
     
-    if (burnoutRiskEmployeeList.length === 0) {
+    if (riskEmployees.length === 0) {
       toast.info('번아웃 위험군이 없습니다.');
       return;
     }
     
-    try {
-      // TODO: 실제 알림 전송 API 호출
-      // await leaveService.sendEncouragementNotification(burnoutRiskEmployeeList);
-      const employeeNameList = riskStats.위험군.employees
-        .filter((employee) => employee && employee.name)
-        .map((employee) => employee.name);
-      toast.success(`휴가 독려 알림이 ${burnoutRiskEmployeeList.length}명에게 전송되었습니다. (${employeeNameList.join(', ')})`);
-    } catch (error) {
-      console.error('Failed to send encouragement notification:', error);
-      toast.error('알림 전송에 실패했습니다.');
-    }
+    // TODO: 실제 알림 전송 API 호출
+    toast.success(`휴가 독려 알림이 ${riskEmployees.length}명에게 전송되었습니다. (${riskEmployees.join(', ')})`);
   };
 
   return (
@@ -816,7 +752,7 @@ export function AgencyLeaveSettingsPage() {
                 <DistributionChartHeaderContent>
                   <DistributionChartTitle>연차 소진 분포도 (Grouped Scatter)</DistributionChartTitle>
                   <DistributionChartDescription>
-                    전체 인원({employeeList.length}명)을 5% 구간별로 그룹화하여 분포를 시각화했습니다.<br/>
+                    전체 인원({employees.length}명)을 5% 구간별로 그룹화하여 분포를 시각화했습니다.<br/>
                     <span style={{ fontSize: theme.fonts.size.xs, color: 'var(--muted-foreground)' }}>
                       포인트를 클릭하면 해당 구간의 전체 직원 리스트를 확인할 수 있습니다.
                     </span>
@@ -924,7 +860,7 @@ export function AgencyLeaveSettingsPage() {
                       data={distributionChartData} 
                       dataKey="y"
                       name="직원 그룹"
-                      onClick={(data) => setSelectedBinData(data.payload)}
+                      onClick={(data) => setSelectedBin(data.payload)}
                       cursor="pointer"
                       shape={(props) => {
                         const { cx, cy, payload } = props;
@@ -1057,8 +993,8 @@ export function AgencyLeaveSettingsPage() {
                 <EmployeeSearchInput
                   type="text"
                   placeholder="직원 이름 또는 직무로 검색..."
-                  value={searchQueryInput}
-                  onChange={(e) => setSearchQueryInput(e.target.value)}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </EmployeeSearchBar>
 
@@ -1073,7 +1009,7 @@ export function AgencyLeaveSettingsPage() {
                   </tr>
                 </EmployeeTableHeader>
                 <tbody>
-                  {filteredEmployeeList.map((employee) => {
+                  {filteredEmployees.map((employee) => {
                     if (!employee) return null;
                     const usageRate = calculateUsageRate(employee);
                     const category = categorizeRiskGroup(employee, currentMonth);
@@ -1127,27 +1063,27 @@ export function AgencyLeaveSettingsPage() {
                   </tr>
                 </LogTableHeader>
                 <tbody>
-                  {leaveLogList.map((logEntry) => (
-                    <LogTableRow key={logEntry.id}>
-                      <LogTableCell>{logEntry.date}</LogTableCell>
-                      <LogTableCell style={{ fontWeight: 500 }}>{logEntry.target}</LogTableCell>
+                  {leaveLogs.map((log) => (
+                    <LogTableRow key={log.id}>
+                      <LogTableCell>{log.date}</LogTableCell>
+                      <LogTableCell style={{ fontWeight: 500 }}>{log.target}</LogTableCell>
                       <LogTableCell>
                         <span style={{ 
-                          color: logEntry.type === '포상' ? '#22c55e' : logEntry.type === '징계' ? '#ef4444' : '#6E8FB3',
+                          color: log.type === '포상' ? '#22c55e' : log.type === '징계' ? '#ef4444' : '#6E8FB3',
                           fontWeight: 500
                         }}>
-                          {logEntry.type}
+                          {log.type}
                         </span>
                       </LogTableCell>
                       <LogTableCell>
                         <span style={{ 
-                          color: logEntry.changedDays > 0 ? '#22c55e' : '#ef4444',
+                          color: log.changedDays > 0 ? '#22c55e' : '#ef4444',
                           fontWeight: 600
                         }}>
-                          {logEntry.changedDays > 0 ? '+' : ''}{logEntry.changedDays}일
+                          {log.changedDays > 0 ? '+' : ''}{log.changedDays}일
                         </span>
                       </LogTableCell>
-                      <LogTableCell>{logEntry.reason}</LogTableCell>
+                      <LogTableCell>{log.reason}</LogTableCell>
                     </LogTableRow>
                   ))}
                 </tbody>
@@ -1162,7 +1098,7 @@ export function AgencyLeaveSettingsPage() {
             <DialogHeader>
               <DialogTitle>연차 조정</DialogTitle>
               <DialogDescription>
-                {selectedEmployeeData?.name}님의 연차를 조정하세요. (포상, 징계, 경력 인정)
+                {selectedEmployee?.name}님의 연차를 조정하세요. (포상, 징계, 경력 인정)
               </DialogDescription>
             </DialogHeader>
 
@@ -1180,7 +1116,7 @@ export function AgencyLeaveSettingsPage() {
                       if (!adjustFormData.reason) return;
                       
                       const value = parseInt(e.target.value) || 0;
-                      const newTotal = selectedEmployeeData ? selectedEmployeeData.totalLeave + value : 0;
+                      const newTotal = selectedEmployee ? selectedEmployee.totalLeave + value : 0;
                       
                       // 포상/경력인정: 0 이상만 허용
                       if ((adjustFormData.reason === '포상' || adjustFormData.reason === '경력인정') && value < 0) {
@@ -1211,13 +1147,13 @@ export function AgencyLeaveSettingsPage() {
                         ((adjustFormData.reason === '포상' || adjustFormData.reason === '경력인정') && adjustFormData.adjustment <= 0) ||
                         // 징계: 항상 활성화 (0 이하에서만 작동)
                         // 총 연차가 0일 이하로 내려가지 않도록 제한
-                        (selectedEmployeeData && selectedEmployeeData.totalLeave + adjustFormData.adjustment <= 0)
+                        (selectedEmployee && selectedEmployee.totalLeave + adjustFormData.adjustment <= 0)
                       }
                       onClick={() => {
                         if (!adjustFormData.reason) return;
                         
                         const newAdjustment = adjustFormData.adjustment - 1;
-                        const newTotal = selectedEmployeeData ? selectedEmployeeData.totalLeave + newAdjustment : 0;
+                        const newTotal = selectedEmployee ? selectedEmployee.totalLeave + newAdjustment : 0;
                         if (newTotal >= 0) {
                           setAdjustFormData({ ...adjustFormData, adjustment: newAdjustment });
                         }
@@ -1249,7 +1185,7 @@ export function AgencyLeaveSettingsPage() {
                   </div>
                 </div>
                 <ModalFormHelperText>
-                  현재 연차: {selectedEmployeeData?.totalLeave}일 → 조정 후: {selectedEmployeeData ? selectedEmployeeData.totalLeave + adjustFormData.adjustment : 0}일
+                  현재 연차: {selectedEmployee?.totalLeave}일 → 조정 후: {selectedEmployee ? selectedEmployee.totalLeave + adjustFormData.adjustment : 0}일
                 </ModalFormHelperText>
               </ModalFormGroup>
 
@@ -1346,34 +1282,34 @@ export function AgencyLeaveSettingsPage() {
         </Dialog>
 
         {/* 직원 리스트 모달 (Dashboard.md에서 변환) */}
-        {selectedBinData && (
-          <EmployeeListModalOverlay onClick={() => setSelectedBinData(null)}>
+        {selectedBin && (
+          <EmployeeListModalOverlay onClick={() => setSelectedBin(null)}>
             <EmployeeListModal onClick={(e) => e.stopPropagation()}>
               <EmployeeListModalHeader>
                 <EmployeeListModalHeaderContent>
                   <EmployeeListModalTitle>직원 리스트</EmployeeListModalTitle>
                   <EmployeeListModalDescription>
-                    소진율 <span style={{ fontWeight: theme.fonts.weight.bold, color: '#6366f1' }}>{selectedBinData.rangeLabel}</span> 구간 
+                    소진율 <span style={{ fontWeight: theme.fonts.weight.bold, color: '#6366f1' }}>{selectedBin.rangeLabel}</span> 구간 
                     <span style={{ margin: `0 ${theme.spacing[2]}` }}>•</span> 
-                    총 <span style={{ fontWeight: theme.fonts.weight.bold }}>{selectedBinData.employees.length}명</span>
+                    총 <span style={{ fontWeight: theme.fonts.weight.bold }}>{selectedBin.employees.length}명</span>
                   </EmployeeListModalDescription>
                 </EmployeeListModalHeaderContent>
-                <EmployeeListModalCloseButton onClick={() => setSelectedBinData(null)}>
+                <EmployeeListModalCloseButton onClick={() => setSelectedBin(null)}>
                   <X size={24} />
                 </EmployeeListModalCloseButton>
               </EmployeeListModalHeader>
               
               <EmployeeListModalBody>
-                {selectedBinData.employees.length > 0 ? (
+                {selectedBin.employees.length > 0 ? (
                   <EmployeeListGrid>
-                    {selectedBinData.employees.map((employee, index) => (
-                      <EmployeeListItem key={index}>
+                    {selectedBin.employees.map((emp, i) => (
+                      <EmployeeListItem key={i}>
                         <EmployeeListAvatar>
-                          {employee.name.charAt(0)}
+                          {emp.name.charAt(0)}
                         </EmployeeListAvatar>
                         <EmployeeListInfo>
-                          <EmployeeListName>{employee.name}</EmployeeListName>
-                          <EmployeeListRole>{employee.role}</EmployeeListRole>
+                          <EmployeeListName>{emp.name}</EmployeeListName>
+                          <EmployeeListRole>{emp.role}</EmployeeListRole>
                         </EmployeeListInfo>
                       </EmployeeListItem>
                     ))}
@@ -1386,7 +1322,7 @@ export function AgencyLeaveSettingsPage() {
               </EmployeeListModalBody>
               
               <EmployeeListModalFooter>
-                <EmployeeListModalCloseButtonFooter onClick={() => setSelectedBinData(null)}>
+                <EmployeeListModalCloseButtonFooter onClick={() => setSelectedBin(null)}>
                   닫기
                 </EmployeeListModalCloseButtonFooter>
               </EmployeeListModalFooter>

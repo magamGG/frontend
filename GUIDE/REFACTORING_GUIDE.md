@@ -1,5 +1,10 @@
 # 🏗️ Project Refactoring Guidelines: [마감지기 (Deadline Keeper)]
 
+> **최신 업데이트**: 2026-01-26  
+> - API 구조 확장 및 네이밍 컨벤션 정리 완료
+> - 도메인 이름 통일 (ADMIN → MANAGER)
+> - 비즈니스 로직 작성 프롬프트 가이드와 연동 완료
+
 이 문서는 Figma/Anima로 자동 생성된 Raw Code(TS/TSX)를 **프로덕션 레벨의 React 아키텍처**로 리팩토링하기 위한 절대적인 가이드라인입니다.
 모든 AI 에이전트 및 개발자는 아래 규칙을 준수하여 코드를 변환해야 합니다.
 
@@ -82,6 +87,16 @@ Styled Components: PascalCase (e.g., Container, TitleText)
 
 Functions/Variables: camelCase (e.g., handleSearch, authorList)
 
+**변수명 네이밍 규칙**:
+- 모든 변수명은 camelCase 사용 (예: `employeeList`, `searchQueryInput`, `isLoading`)
+- 배열/리스트 변수는 복수형 또는 List 접미사 사용 (예: `employeeList`, `projectList`, `leaveLogList`)
+- 불린 변수는 is/has/can/should 접두사 사용 (예: `isLoading`, `hasPermission`, `canEdit`)
+- 함수명은 동사로 시작 (예: `handleSubmit`, `getEmployeeList`, `calculateRiskStats`)
+- API 관련 함수는 서비스 객체 내에서 명확한 동사 사용 (예: `get`, `create`, `update`, `delete`)
+- 이벤트 핸들러는 `handle` 접두사 사용 (예: `handleClick`, `handleSubmit`)
+- 데이터 가져오기 함수는 `get` 또는 `fetch` 접두사 사용 (예: `getUserData`, `fetchProjectList`)
+- 계산/변환 함수는 `calculate`, `convert`, `transform` 등 사용 (예: `calculateUsageRate`, `convertToDate`)
+
 4. ⚡ 리팩토링 핵심 규칙 (Refactoring Rules)
 Rule 1: 로직과 스타일의 물리적 분리
 Figma 코드는 보통 한 파일에 스타일과 로직이 섞여 있습니다. 이를 반드시 분리하십시오.
@@ -108,6 +123,49 @@ Rule 4: 상태 관리 (Zustand & Mapping)
 하드코딩된 데이터는 제거하고 배열(map) 처리.
 
 데이터 소스는 // TODO: Zustand store mapping 주석으로 표시.
+
+Rule 5: API 호출 구조 (Axios & Services)
+모든 API 호출은 `src/api/services.js`의 서비스 객체를 통해 수행해야 합니다.
+
+**API 서비스 사용 규칙**:
+- 직접 `axios` 또는 `fetch` 호출 금지
+- `src/api/services.js`에 도메인별 서비스 객체 정의 (예: `authService`, `leaveService`, `projectService`, `managerService`)
+- 각 서비스는 RESTful 메서드에 맞는 함수 제공 (get, create, update, delete)
+- API 엔드포인트는 `src/api/config.js`의 `API_ENDPOINTS`에 정의
+- 도메인 이름은 비즈니스 로직 작성 프롬프트 가이드의 도메인 분류 규칙 준수 (MANAGER, ATTENDANCE, MEMBER, AGENCY, HEALTH, PROJECT, CALENDAR)
+- 에러 처리는 axios 인터셉터에서 통일 처리
+- 로딩 상태는 각 페이지/컴포넌트에서 관리 (`isLoading` 상태 사용)
+
+**API 서비스 예시**:
+```javascript
+// ❌ 잘못된 방법
+const response = await axios.post('/api/leave/request', leaveData);
+
+// ✅ 올바른 방법
+import { leaveService } from '@/api';
+const response = await leaveService.requestLeave(leaveData);
+```
+
+**도메인별 서비스 목록 (2026-01-26 최신화)**:
+- `authService`: 인증 관련 (로그인, 로그아웃, 비밀번호 찾기 등)
+- `memberService`: 회원 관련 (회원가입, 프로필 수정 등)
+- `boardService`: 게시판 관련
+- `attendanceService`: 출석/근태 관련 (출근, 퇴근, 이력 조회 등)
+- `leaveService`: 연차/휴가 관련 (신청, 승인, 조정, 통계 등)
+- `projectService`: 프로젝트 관련 (생성, 수정, 칸반 보드 등)
+- `teamService`: 팀 관련 (멤버 조회, 통계 등)
+- `healthService`: 건강 관리 관련 (설문, 검진 등)
+- `workcationService`: 워케이션 관련 (신청, 승인 등)
+- `agencyService`: 에이전시 관련 (가입 요청, 승인 등)
+- `managerService`: 담당자 관련 (대시보드, 통계 등) - **변경: adminService → managerService**
+- `calendarService`: 캘린더 관련 (일정 생성/수정/삭제, 메모 등) - **추가: 2026-01-26**
+
+**변수명 통일 규칙**:
+- API 응답 데이터: `responseData`, `apiResponse` 등 명확한 이름 사용
+- 로컬 상태 변수: `employeeList` (배열), `selectedEmployee` (단일 객체), `isLoading` (불린)
+- 폼 데이터: `formData`, `inputData` 또는 구체적 이름 (`loginFormData`, `leaveRequestData`)
+- 필터링된 데이터: `filteredEmployeeList`, `filteredProjectList` 등
+- 계산된 값: `usageRate`, `totalCount`, `averageValue` 등
 
 ## 5. 📝 작업 프로세스 (Agent Workflow)
 에이전트는 다음 순서로 작업을 수행해야 합니다.
@@ -502,4 +560,63 @@ export function Component({ title, count }) {
 - [ ] Import 경로 수정 완료
 - [ ] 원본 파일 삭제 완료
 
-**마지막 업데이트**: 2026-01-23 (연차 관리 페이지 생성 및 차트 기능 추가 완료)
+**마지막 업데이트**: 2026-01-26 (API 구조 확장, 네이밍 컨벤션 정리, 도메인 이름 통일, CALENDAR API 추가, 주요 페이지 API 서비스 적용 완료)
+
+### 6.9 API 구조 및 네이밍 컨벤션 (2026-01-26 추가, 2026-01-26 업데이트)
+
+#### API 서비스 구조
+- **위치**: `src/api/services.js`
+- **도메인별 서비스**: `authService`, `memberService`, `boardService`, `attendanceService`, `leaveService`, `projectService`, `teamService`, `healthService`, `workcationService`, `agencyService`, `managerService`, `calendarService` (총 12개)
+- **엔드포인트 정의**: `src/api/config.js`의 `API_ENDPOINTS` 객체
+- **도메인 매핑**: 비즈니스 로직 작성 프롬프트 가이드의 도메인 분류 규칙 준수
+  - `CALENDAR`: 캘린더 관련 로직 (일정 추가/수정/삭제, 메모 등) - **추가: calendarService**
+  - `ATTENDANCE`: 근태 관련 로직 (출근/퇴근, 휴가 신청/승인, 워케이션 등)
+  - `MEMBER`: 회원 관련 로직
+  - `AGENCY`: 에이전시 관련 로직
+  - `MANAGER`: 담당자 관련 로직 (담당자 배정, 프로젝트 관리 등) - **변경: ADMIN → MANAGER**
+  - `HEALTH`: 건강 관리 관련 로직
+  - `PROJECT`: 프로젝트 관련 로직
+
+#### 네이밍 통일 사항
+- ✅ 배열/리스트 변수: `employeeList`, `projectList`, `leaveLogList` (복수형 또는 List 접미사)
+- ✅ 단일 객체 변수: `selectedEmployee`, `currentUser`, `companyPolicy` (단수형)
+- ✅ 불린 변수: `isLoading`, `isModalOpen`, `hasPermission` (is/has 접두사)
+- ✅ 검색/필터 변수: `searchQueryInput`, `filteredEmployeeList` (명확한 용도 표시)
+- ✅ 함수명: `handleSubmit`, `getEmployeeList`, `calculateUsageRate` (동사로 시작)
+- ✅ 이벤트 핸들러: `handleOpenModal`, `handleSavePolicy` (handle 접두사)
+- ✅ API 호출: `leaveService.requestLeave()`, `authService.login()` (서비스 객체 사용)
+
+#### 주요 변경 사항
+
+**변수명 통일 (2026-01-26)**:
+- `employees` → `employeeList` (배열 변수명 통일)
+- `selectedEmployee` → `selectedEmployeeData` (명확한 의미)
+- `searchQuery` → `searchQueryInput` (입력값임을 명시)
+- `selectedBin` → `selectedBinData` (데이터 객체임을 명시)
+- `leaveLogs` → `leaveLogList` (배열 변수명 통일)
+- `filteredEmployees` → `filteredEmployeeList` (필터링된 배열임을 명시)
+
+**도메인 이름 통일 (2026-01-26)**:
+- `ADMIN` → `MANAGER` (비즈니스 로직 작성 프롬프트 가이드의 도메인 분류 규칙 준수)
+- `adminService` → `managerService` (서비스 객체 이름 변경)
+- API 엔드포인트: `/api/admin` → `/api/manager` (백엔드 API 경로 변경)
+- 주석: "관리자" → "담당자(관리자)" (용어 통일)
+- **참고**: 비즈니스 로직 작성 프롬프트 가이드(`GUIDE/비즈니스-로직-작성-프롬프트-가이드.md`)의 도메인 분류 규칙에 따라 MANAGER 도메인 사용
+
+**API 구조 개선 (2026-01-26)**:
+- TEAM API 활성화 (주석 해제)
+- CALENDAR API 추가 (calendarService 생성) - **추가: 2026-01-26**
+- 모든 도메인별 서비스 객체 생성 완료 (12개 서비스)
+- RESTful API 구조 준수
+- 도메인 이름이 비즈니스 로직 가이드와 일치하도록 통일
+
+**페이지별 API 서비스 적용 (2026-01-26)**:
+- `SignupPage`: `memberService.register()` 사용, 변수명 통일 (`formData` → `signupFormData`, `customSpecialization` → `customSpecializationInput`)
+- `ForgotPasswordPage`: `authService.forgotPassword()`, `verifyCode()`, `resetPassword()` 사용, 변수명 통일 (`email` → `emailInput`, `verificationCode` → `verificationCodeInput`, `newPassword` → `newPasswordInput`, `confirmPassword` → `confirmPasswordInput`)
+- `JoinAgencyRequestPage`: `agencyService.requestJoinAgency()` 사용, 변수명 통일 (`agencyCode` → `agencyCodeInput`)
+- 모든 페이지에 로딩 상태(`isLoading`) 및 에러 처리 추가
+
+**비즈니스 로직 가이드 연동**:
+- API 도메인 구조는 `GUIDE/비즈니스-로직-작성-프롬프트-가이드.md`의 도메인 분류 규칙을 준수
+- 도메인: CALENDAR, ATTENDANCE, MEMBER, AGENCY, MANAGER, HEALTH, PROJECT
+- LogicID 형식: `BL-{도메인}-{순번}` (예: `BL-MANAGER-001`, `BL-ATTENDANCE-001`)
