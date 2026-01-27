@@ -1,4 +1,7 @@
 import styled from 'styled-components';
+import { Badge } from '@/app/components/ui/badge';
+import { Button } from '@/app/components/ui/button';
+import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
 
 // 전체 페이지 루트 래퍼 (1920px 데스크탑 기준)
 export const AdminProjectsRoot = styled.div`
@@ -337,4 +340,116 @@ export const AdminProjectModalActions = styled.div`
   display: flex;
   gap: 12px;
   padding-top: 16px;
+`;
+
+// 상태별 Badge 스타일 컴포넌트
+export const StatusBadge = styled(Badge)`
+  background-color: ${props => {
+    switch (props.status) {
+      case '연재중':
+        return 'var(--status-serialization)';
+      case '휴재':
+        return 'var(--status-hiatus)';
+      case '완결':
+        return 'var(--status-completed)';
+      default:
+        return 'var(--primary)';
+    }
+  }};
+  color: white;
+  border: none;
+  
+  &:hover {
+    opacity: 0.9;
+  }
+`;
+
+// 필수 표시 스타일
+export const RequiredMark = styled.span`
+  color: var(--destructive);
+`;
+
+// 아이콘 스타일
+export const IconWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${props => props.gap || '4px'};
+`;
+
+// 이미지 스타일
+export const ThumbnailImage = styled(ImageWithFallback)`
+  width: 96px;
+  height: 128px;
+  object-fit: cover;
+  border-radius: var(--radius);
+  border: 2px solid var(--border);
+`;
+
+// Primary Button 스타일
+export const PrimaryButton = styled(Button)`
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  
+  &:hover {
+    background-color: var(--accent);
+  }
+`;
+
+// Filter Button 스타일
+export const FilterButton = styled(Button)`
+  &.active {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+  }
+`;
+
+// Sort Button 스타일
+export const SortButton = styled(Button)`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  
+  .sort-icon {
+    width: 12px;
+    height: 12px;
+  }
+  
+  .sort-indicator {
+    font-size: 12px;
+    margin-left: 4px;
+  }
+`;
+
+// Full Width Button
+export const FullWidthButton = styled(Button)`
+  flex: 1;
+`;
+
+// 아이콘 스타일 컴포넌트
+export const StatIcon = styled.div`
+  width: 16px;
+  height: 16px;
+  color: var(--muted-foreground);
+`;
+
+export const MetaIcon = styled.div`
+  width: 12px;
+  height: 12px;
+`;
+
+export const SortIcon = styled.div`
+  width: 12px;
+  height: 12px;
+`;
+
+export const EmptyIcon = styled.div`
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 12px;
+  opacity: 0.5;
+`;
+
+// Badge 스타일
+export const ArtistBadge = styled(Badge)`
+  font-size: 12px;
 `;

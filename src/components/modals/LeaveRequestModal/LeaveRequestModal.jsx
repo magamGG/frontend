@@ -76,7 +76,7 @@ export function LeaveRequestModal({ open, onOpenChange }) {
 
   // Get current user's remaining leave
   useEffect(() => {
-    if (selectedType === '연차') {
+    if (selectedType === '연차' || selectedType === '반차') {
       const memberName = getMemberName();
       const employees = JSON.parse(localStorage.getItem('agencyEmployees') || '[]');
       
@@ -112,7 +112,18 @@ export function LeaveRequestModal({ open, onOpenChange }) {
     setHalfDayType('선택 안 함');
     setStartTime('');
     setEndTime('');
+    // 반차/반반차 선택 시 날짜를 하루로 제한
+    if (selectedType === '반차') {
+      setEndDate(startDate);
+    }
   }, [selectedType]);
+
+  // 반차/반반차 선택 시 날짜 동기화
+  useEffect(() => {
+    if (selectedType === '반차') {
+      setEndDate(startDate);
+    }
+  }, [startDate, selectedType]);
 
   // Calculate days between dates
   const calculateDays = () => {
@@ -146,10 +157,58 @@ export function LeaveRequestModal({ open, onOpenChange }) {
       return;
     }
 
+    // 과거 날짜 선택 방지
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+    if (start < today) {
+      toast.error('과거 날짜는 선택할 수 없습니다.');
+      return;
+    }
+
+    // 남은 연차 확인 (연차/반차)
+    if ((selectedType === '연차' || selectedType === '반차') && remainingLeave !== null) {
+      const requestedDays = selectedType === '반차' ? 0.5 : calculateDays();
+      if (requestedDays > remainingLeave) {
+        toast.error(`남은 연차(${remainingLeave}일)보다 많은 일수를 신청할 수 없습니다.`);
+        return;
+      }
+    }
+
+    // 반차/반반차 유형 선택 확인
+    if (selectedType === '반차' && halfDayType === '선택 안 함') {
+      toast.error('반차 유형을 선택해주세요.');
+      return;
+    }
+
+    // 반차/반반차 날짜는 하루만 선택 가능
+    if (selectedType === '반차' && startDate !== endDate) {
+      toast.error('반차/반반차는 하루만 선택할 수 있습니다.');
+      return;
+    }
+
     // Validate specific fields based on type
     if (selectedType === '반차' && (!startTime || !endTime)) {
       toast.error('신청 시간을 입력해주세요.');
       return;
+    }
+
+    // 반차/반반차 시간 제한 검증
+    if (selectedType === '반차' && startTime && endTime) {
+      const hours = calculateHours();
+      if (halfDayType === '반차' && hours > 4) {
+        toast.error('반차는 최대 4시간까지 신청할 수 있습니다.');
+        return;
+      }
+      if (halfDayType === '반반차' && hours > 2) {
+        toast.error('반반차는 최대 2시간까지 신청할 수 있습니다.');
+        return;
+      }
+      if (hours <= 0) {
+        toast.error('종료 시간은 시작 시간보다 늦어야 합니다.');
+        return;
+      }
     }
 
     if (selectedType === '워케이션' && !location) {
@@ -304,12 +363,18 @@ export function LeaveRequestModal({ open, onOpenChange }) {
                 <span className="text-sm font-semibold text-blue-900">남은 연차</span>
               </div>
               <p className="text-2xl font-bold text-blue-600">{remainingLeave}일</p>
-              {selectedType === '연차' && calculateDays() > remainingLeave && (
-                <div className="mt-2 flex items-start gap-2 text-red-600 text-xs">
-                  <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                  <span>신청하신 일수({calculateDays()}일)가 남은 연차보다 많습니다.</span>
-                </div>
-              )}
+              {(() => {
+                const requestedDays = selectedType === '반차' ? 0.5 : calculateDays();
+                if (requestedDays > remainingLeave) {
+                  return (
+                    <div className="mt-2 flex items-start gap-2 text-red-600 text-xs">
+                      <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                      <span>신청하신 일수({requestedDays}일)가 남은 연차보다 많습니다.</span>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
             </div>
           )}
 
@@ -362,19 +427,41 @@ export function LeaveRequestModal({ open, onOpenChange }) {
               <Input 
                 type="date" 
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                onChange={(e) => {
+                  const newStartDate = e.target.value;
+                  setStartDate(newStartDate);
+                  // 반차/반반차는 하루만 선택 가능
+                  if (selectedType === '반차') {
+                    setEndDate(newStartDate);
+                  }
+                }}
+                min={getCurrentDate()}
                 className="bg-white border-gray-300"
                 style={{ color: 'var(--foreground)' }}
               />
               <Input 
                 type="date" 
                 value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
+                onChange={(e) => {
+                  const newEndDate = e.target.value;
+                  // 반차/반반차는 하루만 선택 가능
+                  if (selectedType === '반차') {
+                    setEndDate(startDate);
+                    toast.info('반차/반반차는 하루만 선택할 수 있습니다.');
+                    return;
+                  }
+                  setEndDate(newEndDate);
+                }}
+                min={selectedType === '반차' ? startDate : getCurrentDate()}
+                disabled={selectedType === '반차'}
                 className="bg-white border-gray-300"
                 style={{ color: 'var(--foreground)' }}
               />
             </DateGrid>
-            <DaysInfo>총 {selectedType === '반차' ? '1일' : calculateDays() + '일'} 사용 예정</DaysInfo>
+            <DaysInfo>
+              총 {selectedType === '반차' ? '1일' : calculateDays() + '일'} 사용 예정
+              {selectedType === '반차' && ' (반차/반반차는 하루만 선택 가능)'}
+            </DaysInfo>
           </FormGroup>
 
           {/* 신청 시간 (반차 선택시만) */}
@@ -397,7 +484,19 @@ export function LeaveRequestModal({ open, onOpenChange }) {
                   style={{ color: 'var(--foreground)' }}
                 />
               </DateGrid>
-              <DaysInfo>총 {calculateHours()}시간 사용 예정</DaysInfo>
+              <DaysInfo>
+                총 {calculateHours()}시간 사용 예정
+                {halfDayType === '반차' && calculateHours() > 4 && (
+                  <span style={{ color: '#dc2626', marginLeft: '8px' }}>
+                    (반차는 최대 4시간까지 가능)
+                  </span>
+                )}
+                {halfDayType === '반반차' && calculateHours() > 2 && (
+                  <span style={{ color: '#dc2626', marginLeft: '8px' }}>
+                    (반반차는 최대 2시간까지 가능)
+                  </span>
+                )}
+              </DaysInfo>
             </FormGroup>
           )}
 

@@ -317,6 +317,187 @@ export const WorkingArtistMetaValue = styled.span`
 `;
 
 // 그래프 섹션
+// QuickInfoCard 스타일 (작가 대시보드와 동일)
+export const QuickInfoCard = styled.div`
+  padding: 16px;
+  background-color: white;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+`;
+
+export const QuickInfoTitle = styled.h4`
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 0;
+`;
+
+// 신청 현황 카드 헤더
+export const AttendanceRequestCardHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding: 4px 0;
+`;
+
+// 신청 현황 카드 리스트
+export const AttendanceRequestCardList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+// 신청 현황 카드 아이템
+export const AttendanceRequestCardItem = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  background-color: white;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+`;
+
+export const AttendanceRequestCardItemContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+`;
+
+export const AttendanceRequestCardItemTitle = styled.p`
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 0;
+`;
+
+export const AttendanceRequestCardItemDate = styled.p`
+  font-size: 12px;
+  color: var(--muted-foreground);
+  margin: 0;
+`;
+
+export const AttendanceRequestCardItemBadge = styled.div`
+  padding: 4px 12px;
+  border-radius: 9999px;
+  background-color: ${props => props.$statusColor};
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+`;
+
+// 신청 현황 모달 스타일
+export const AttendanceRequestModalContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+`;
+
+export const AttendanceRequestList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 8px;
+`;
+
+export const AttendanceRequestCard = styled.div`
+  padding: 16px;
+  background-color: white;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+`;
+
+export const AttendanceRequestCardContent = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+`;
+
+export const AttendanceRequestStatusBadge = styled.div`
+  padding: 6px 12px;
+  border-radius: 9999px;
+  background-color: ${props => props.$statusColor};
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+`;
+
+export const AttendanceRequestInfo = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+`;
+
+export const AttendanceRequestTypeText = styled.p`
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 0;
+`;
+
+export const AttendanceRequestDateText = styled.p`
+  font-size: 12px;
+  color: var(--muted-foreground);
+  margin: 0;
+`;
+
+export const AttendanceRequestActions = styled.div`
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+`;
+
+export const AttendanceRequestSummary = styled.div`
+  display: flex;
+  justify-content: space-around;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+`;
+
+export const AttendanceRequestSummaryItem = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+`;
+
+export const AttendanceRequestSummaryNumber = styled.div`
+  font-size: 24px;
+  font-weight: 700;
+  color: ${props => props.$color || 'var(--foreground)'};
+`;
+
+export const AttendanceRequestSummaryLabel = styled.p`
+  font-size: 12px;
+  color: var(--muted-foreground);
+  margin: 0;
+`;
+
+// 빈 상태
+export const EmptyState = styled.div`
+  text-align: center;
+  padding: 64px 32px;
+`;
+
+export const EmptyStateIcon = styled.div`
+  margin: 0 auto 12px;
+  opacity: 0.5;
+`;
+
+export const EmptyStateText = styled.p`
+  font-size: 14px;
+  color: var(--muted-foreground);
+  margin: 0;
+`;
+
 export const ChartSection = styled.div`
   display: flex;
   flex-direction: column;
@@ -527,6 +708,41 @@ export const AttendanceScheduleItemDate = styled.p`
   font-size: 12px;
   color: #6e8fb3;
   margin: 0;
+`;
+
+// 경고 박스
+export const WarningBox = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  background-color: color-mix(in srgb, #fbbf24 20%, transparent);
+  border: 1px solid color-mix(in srgb, #fbbf24 40%, transparent);
+  border-radius: 8px;
+`;
+
+export const WarningContent = styled.div`
+  flex: 1;
+`;
+
+export const WarningTitle = styled.p`
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--foreground);
+  margin: 0 0 4px 0;
+`;
+
+export const WarningDescription = styled.p`
+  font-size: 14px;
+  color: var(--muted-foreground);
+  margin: 0;
+`;
+
+export const ModalActions = styled.div`
+  display: flex;
+  gap: 8px;
+  padding-top: 8px;
+  justify-content: flex-end;
 `;
 
 export const AttendanceScheduleWarningBox = styled.div`

@@ -2,7 +2,7 @@ import { Card } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
 import { Modal } from '@/components/common/Modal';
-import { ChevronLeft, ChevronRight, Calendar, Clock, ArrowRight, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, Clock, ArrowRight, Trash2, Save, AlertCircle } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import {
@@ -20,6 +20,7 @@ import {
   AdminCalendarMonthTitle,
   AdminCalendarHeaderRight,
   AdminCalendarLegend,
+  AdminCalendarLegendItem,
   AdminCalendarLegendColor,
   AdminCalendarLegendLabel,
   AdminCalendarGridContainer,
@@ -30,9 +31,7 @@ import {
   AdminCalendarDateNumber,
   AdminCalendarDateEvents,
   AdminCalendarDateMemo,
-  AdminCalendarDateMemoText,
   AdminCalendarEventBar,
-  AdminCalendarEventBarText,
   AdminCalendarMoreEvents,
   AdminCalendarSidebar,
   AdminCalendarSidebarCard,
@@ -73,6 +72,11 @@ import {
   AdminCalendarModalListItemArrow,
   AdminCalendarModalListItemReason,
   AdminCalendarModalEmptyState,
+  AdminEventDetailContainer,
+  AdminEventDetailCard,
+  AdminEventDetailTitle,
+  AdminEventDetailInfo,
+  AdminEventDetailText,
 } from './AdminCalendarPage.styled';
 
 const daysOfWeek = ['일', '월', '화', '수', '목', '금', '토'];
@@ -96,9 +100,18 @@ export function AdminCalendarPage() {
   const [currentNote, setCurrentNote] = useState('');
   const [selectedDate, setSelectedDate] = useState(null);
   const [isDayDetailModalOpen, setIsDayDetailModalOpen] = useState(false);
+  const [isMemoDetailModalOpen, setIsMemoDetailModalOpen] = useState(false);
+  const [isMultipleEventsModalOpen, setIsMultipleEventsModalOpen] = useState(false);
+  const [selectedMemoDate, setSelectedMemoDate] = useState(null);
+  const [selectedDateForMultipleEvents, setSelectedDateForMultipleEvents] = useState(null);
+  const [editingMemoContent, setEditingMemoContent] = useState('');
+  const [showDeleteMemoConfirm, setShowDeleteMemoConfirm] = useState(false);
 
   const [isUpcomingModalOpen, setIsUpcomingModalOpen] = useState(false);
   const [upcomingModalType, setUpcomingModalType] = useState('schedule');
+
+  // 실제 오늘 날짜 계산
+  const currentDay = new Date().getDate();
 
   // TODO: Zustand store mapping - 작가별 일정 데이터
   const artistSchedules = [
@@ -118,6 +131,8 @@ export function AdminCalendarPage() {
             { date: 16, episode: 'EP.43', stage: '채색', stageColor: '#F472B6', startDate: 16, endDate: 18 },
             { date: 17, episode: 'EP.43', stage: '채색', stageColor: '#F472B6', startDate: 16, endDate: 18 },
             { date: 18, episode: 'EP.43', stage: '채색', stageColor: '#F472B6', startDate: 16, endDate: 18 },
+            { date: 21, episode: 'EP.45', stage: '스케치', stageColor: '#F59E0B', startDate: 21, endDate: 21 },
+            { date: 21, episode: 'EP.46', stage: '콘티', stageColor: '#10B981', startDate: 21, endDate: 21 },
           ],
         },
         {
@@ -126,6 +141,13 @@ export function AdminCalendarPage() {
           episodes: [
             { date: 21, episode: 'EP.01', stage: '콘티', stageColor: '#8B5CF6', startDate: 21, endDate: 22 },
             { date: 22, episode: 'EP.01', stage: '콘티', stageColor: '#8B5CF6', startDate: 21, endDate: 22 },
+          ],
+        },
+        {
+          id: 'project5',
+          title: '기타',
+          episodes: [
+            { date: 21, episode: '', stage: '팀 미팅', stageColor: '#3B82F6', startDate: 21, endDate: 21 },
           ],
         },
       ],
@@ -239,8 +261,24 @@ export function AdminCalendarPage() {
   const handleDateClick = (day) => {
     setSelectedDate(day);
     const dayNote = adminNotes[selectedArtist]?.find((n) => n.date === day);
-    setCurrentNote(dayNote?.note || '');
-    setIsDayDetailModalOpen(true);
+    const dayEvents = filteredSchedule.filter((e) => e.date === day);
+    
+    // 메모가 있으면 메모 상세 모달 열기 (삭제 버튼 포함)
+    if (dayNote) {
+      setSelectedMemoDate(day);
+      setEditingMemoContent(dayNote.note);
+      setIsMemoDetailModalOpen(true);
+    } 
+    // 일정이 있으면 일정 상세 모달 열기
+    else if (dayEvents.length > 0) {
+      setCurrentNote('');
+      setIsDayDetailModalOpen(true);
+    }
+    // 둘 다 없으면 메모 생성 모달 열기
+    else {
+      setCurrentNote('');
+      setIsDayDetailModalOpen(true);
+    }
   };
 
   const handleSaveNote = () => {
@@ -263,6 +301,55 @@ export function AdminCalendarPage() {
         toast.success('메모가 삭제되었습니다.');
       }
     }
+  };
+
+  // 메모 클릭 핸들러
+  const handleMemoClick = (date) => {
+    const dayNote = adminNotes[selectedArtist]?.find((n) => n.date === date);
+    if (dayNote) {
+      setSelectedMemoDate(date);
+      setEditingMemoContent(dayNote.note);
+      setIsMemoDetailModalOpen(true);
+    }
+  };
+
+  // 메모 수정 저장
+  const handleSaveMemoEdit = () => {
+    if (selectedMemoDate === null) return;
+
+    const existingNoteIndex = adminNotes[selectedArtist]?.findIndex((n) => n.date === selectedMemoDate) ?? -1;
+    if (editingMemoContent.trim()) {
+      const updatedNotes = [...(adminNotes[selectedArtist] || [])];
+      if (existingNoteIndex >= 0) {
+        updatedNotes[existingNoteIndex] = { date: selectedMemoDate, note: editingMemoContent };
+      } else {
+        updatedNotes.push({ date: selectedMemoDate, note: editingMemoContent });
+      }
+      setAdminNotes({ ...adminNotes, [selectedArtist]: updatedNotes });
+      toast.success('메모가 수정되었습니다.');
+    }
+    setIsMemoDetailModalOpen(false);
+    setSelectedMemoDate(null);
+    setEditingMemoContent('');
+  };
+
+  // 메모 삭제 확인 핸들러
+  const handleDeleteMemoClick = () => {
+    if (selectedMemoDate === null) return;
+    setShowDeleteMemoConfirm(true);
+  };
+
+  // 메모 삭제 실행 핸들러
+  const handleDeleteMemoConfirm = () => {
+    if (selectedMemoDate === null) return;
+
+    const updatedNotes = adminNotes[selectedArtist].filter((n) => n.date !== selectedMemoDate);
+    setAdminNotes({ ...adminNotes, [selectedArtist]: updatedNotes });
+    toast.success('메모가 삭제되었습니다.');
+    setIsMemoDetailModalOpen(false);
+    setSelectedMemoDate(null);
+    setEditingMemoContent('');
+    setShowDeleteMemoConfirm(false);
   };
 
   return (
@@ -323,12 +410,14 @@ export function AdminCalendarPage() {
 
                 <AdminCalendarHeaderRight>
                   <AdminCalendarLegend>
-                    <AdminCalendarLegendColor $bgColor="rgba(156, 39, 176, 0.15)" $borderColor="rgba(156, 39, 176, 0.3)" />
-                    <AdminCalendarLegendLabel>워케이션</AdminCalendarLegendLabel>
-                  </AdminCalendarLegend>
-                  <AdminCalendarLegend>
-                    <AdminCalendarLegendColor $bgColor="rgba(156, 163, 175, 0.25)" $borderColor="rgba(156, 163, 175, 0.4)" />
-                    <AdminCalendarLegendLabel>휴재</AdminCalendarLegendLabel>
+                    <AdminCalendarLegendItem>
+                      <AdminCalendarLegendColor $backgroundColor="rgba(168, 85, 247, 0.15)" $borderColor="rgba(168, 85, 247, 0.3)" />
+                      <AdminCalendarLegendLabel>워케이션</AdminCalendarLegendLabel>
+                    </AdminCalendarLegendItem>
+                    <AdminCalendarLegendItem>
+                      <AdminCalendarLegendColor $backgroundColor="rgba(156, 163, 175, 0.25)" $borderColor="rgba(156, 163, 175, 0.4)" />
+                      <AdminCalendarLegendLabel>휴재</AdminCalendarLegendLabel>
+                    </AdminCalendarLegendItem>
                   </AdminCalendarLegend>
                 </AdminCalendarHeaderRight>
               </AdminCalendarHeader>
@@ -346,23 +435,25 @@ export function AdminCalendarPage() {
                 <AdminCalendarDatesGrid>
                   {/* Empty cells before first day */}
                   {Array.from({ length: 3 }).map((_, i) => (
-                    <div key={`empty-${i}`} style={{ width: '100%', height: '100%', borderRight: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }} />
+                    <div key={`empty-${i}`} />
                   ))}
 
                   {/* Days */}
                   {Array.from({ length: 31 }).map((_, i) => {
                     const day = i + 1;
-                    const isToday = day === 13;
+                    const isToday = day === currentDay;
                     const dayEvents = filteredSchedule.filter((e) => e.date === day);
                     const attendanceType = getAttendanceForDate(day);
                     const dayOfWeek = (day + 2) % 7;
 
+                    // 해당 날짜에 시작하는 작업 또는 주의 시작(일요일)에 이어지는 작업 필터링
                     const startingEvents = dayEvents.filter((e) => {
                       if (!e.startDate || e.startDate === day) return true;
                       if (dayOfWeek === 0 && e.startDate < day && e.endDate && e.endDate >= day) return true;
                       return false;
                     });
 
+                    // 진행 중인 작업 (시작일도 아니고 일요일도 아닌 날)
                     const ongoingEvents = dayEvents.filter((e) => {
                       if (!e.startDate || e.startDate === day) return false;
                       if (dayOfWeek === 0 && e.startDate < day && e.endDate && e.endDate >= day) return false;
@@ -374,61 +465,76 @@ export function AdminCalendarPage() {
                     return (
                       <AdminCalendarDateCell key={day} $isToday={isToday} $attendanceType={attendanceType} onClick={() => handleDateClick(day)}>
                         <AdminCalendarDateNumber $isToday={isToday}>{day}</AdminCalendarDateNumber>
+
                         <AdminCalendarDateEvents>
-                          {/* 메모 표시 */}
-                          {dayNote && (
-                            <AdminCalendarDateMemo>
-                              <span style={{ fontSize: '12px' }}>📝</span>
-                              <AdminCalendarDateMemoText>{dayNote.note}</AdminCalendarDateMemoText>
-                            </AdminCalendarDateMemo>
+                          {/* 3개 이상이면 라벨만 표시, 3개 미만이면 개별 일정 표시 */}
+                          {dayEvents.length >= 3 ? (
+                            <AdminCalendarMoreEvents
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedDateForMultipleEvents(day);
+                                setIsMultipleEventsModalOpen(true);
+                              }}
+                            >
+                              총 {dayEvents.length}개의 작업...
+                            </AdminCalendarMoreEvents>
+                          ) : (
+                            <>
+                              {/* 시작하는 작업만 표시 */}
+                              {startingEvents.slice(0, 2).map((event, idx) => {
+                                const isMultiDay = event.startDate && event.endDate && event.startDate !== event.endDate;
+
+                                const daysUntilSaturday = 6 - dayOfWeek;
+                                const lastDayOfWeek = day + daysUntilSaturday;
+
+                                const displayEndDate = isMultiDay ? Math.min(event.endDate, lastDayOfWeek, 31) : day;
+                                const daySpan = displayEndDate - day + 1;
+
+                                const barWidth = daySpan > 1 ? `calc(${daySpan * 100}% + ${(daySpan - 1) * 2}px)` : '100%';
+                                const truncatedProject = truncateProjectName(event.projectTitle || '');
+                                const displayTitle = `${truncatedProject} ${event.episode} ${event.stage}`;
+
+                                return (
+                                  <AdminCalendarEventBar
+                                    key={idx}
+                                    $color={event.stageColor}
+                                    $width={barWidth}
+                                    $isMultiDay={daySpan > 1}
+                                    $topOffset={idx * 28}
+                                  >
+                                    {displayTitle}
+                                  </AdminCalendarEventBar>
+                                );
+                              })}
+
+                              {/* 진행 중인 작업은 공간만 차지 */}
+                              {ongoingEvents.slice(0, 2).map((_, idx) => (
+                                <div key={`ongoing-${idx}`} style={{ height: '28px', visibility: 'hidden' }}>
+                                  &nbsp;
+                                </div>
+                              ))}
+                            </>
                           )}
-
-                          {/* 시작하는 작업만 표시 */}
-                          {startingEvents.slice(0, 3).map((event, idx) => {
-                            const isMultiDay = event.startDate && event.endDate && event.startDate !== event.endDate;
-                            const daysUntilSaturday = 6 - dayOfWeek;
-                            const lastDayOfWeek = day + daysUntilSaturday;
-                            const displayEndDate = isMultiDay ? Math.min(event.endDate, lastDayOfWeek, 31) : day;
-                            const daySpan = displayEndDate - day + 1;
-                            const continuesNextWeek = isMultiDay && event.endDate > lastDayOfWeek;
-                            const isContinuedFromLastWeek = dayOfWeek === 0 && event.startDate < day;
-                            const barWidth = daySpan > 1 ? `calc(${daySpan * 100}% + ${(daySpan - 1) * 2}px)` : '100%';
-                            const truncatedProject = truncateProjectName(event.projectTitle || '');
-                            const displayTitle = `${truncatedProject} ${event.episode} ${event.stage}`;
-
-                            return (
-                              <AdminCalendarEventBar
-                                key={idx}
-                                $isMultiDay={daySpan > 1}
-                                $width={barWidth}
-                                $color={event.stageColor}
-                                $topOffset={idx * 28 + (dayNote ? 32 : 0)}
-                              >
-                                <AdminCalendarEventBarText>
-                                  {isContinuedFromLastWeek && <ArrowRight className="w-3 h-3 flex-shrink-0" style={{ transform: 'rotate(180deg)' }} />}
-                                  {displayTitle}
-                                </AdminCalendarEventBarText>
-                                {continuesNextWeek && <ArrowRight className="w-3 h-3 flex-shrink-0 ml-1" />}
-                              </AdminCalendarEventBar>
-                            );
-                          })}
-
-                          {/* 진행 중인 작업은 공간만 차지 */}
-                          {ongoingEvents.slice(0, 3).map((_, idx) => (
-                            <div key={`ongoing-${idx}`} style={{ fontSize: '12px', padding: '6px 0', height: '28px', visibility: 'hidden' }}>
-                              &nbsp;
-                            </div>
-                          ))}
-
-                          {dayEvents.length > 3 && <AdminCalendarMoreEvents>+{dayEvents.length - 3}개 더보기</AdminCalendarMoreEvents>}
                         </AdminCalendarDateEvents>
+
+                        {/* 메모 표시 */}
+                        {dayNote && (
+                          <AdminCalendarDateMemo
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMemoClick(day);
+                            }}
+                          >
+                            📝 {dayNote.note}
+                          </AdminCalendarDateMemo>
+                        )}
                       </AdminCalendarDateCell>
                     );
                   })}
 
                   {/* Empty cells after last day */}
                   {Array.from({ length: 3 }).map((_, i) => (
-                    <div key={`empty-end-${i}`} style={{ width: '100%', height: '100%', borderRight: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }} />
+                    <div key={`empty-end-${i}`} />
                   ))}
                 </AdminCalendarDatesGrid>
               </AdminCalendarGridContainer>
@@ -519,12 +625,79 @@ export function AdminCalendarPage() {
         </AdminCalendarLayoutGrid>
       </AdminCalendarBody>
 
-      {/* 날짜 클릭 시 메모 모달 */}
-      <Modal isOpen={isDayDetailModalOpen} onClose={() => setIsDayDetailModalOpen(false)} title={`1월 ${selectedDate}일 - ${artists.find((a) => a.id === selectedArtist)?.name}`} maxWidth="lg">
+      {/* 날짜 클릭 시 캘린더 및 메모 모달 */}
+      <Modal isOpen={isDayDetailModalOpen} onClose={() => setIsDayDetailModalOpen(false)} title={`1월 ${selectedDate}일`} maxWidth="lg">
         {selectedDate !== null && (
-          <AdminCalendarModalForm>
+          <AdminEventDetailContainer>
+            {filteredSchedule.filter((e) => e.date === selectedDate).length > 0 && (
+              <div>
+                <AdminCalendarModalLabel style={{ marginBottom: '8px', display: 'block' }}>캘린더</AdminCalendarModalLabel>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {filteredSchedule
+                    .filter((e) => e.date === selectedDate)
+                    .map((event, idx) => {
+                      const displayColor = event.stageColor || '#6E8FB3';
+                      const displayTitle = `${event.projectTitle} ${event.episode} ${event.stage}`;
+                      
+                      // workType 결정 (stage 기반)
+                      let workType = 'other';
+                      if (event.stage && ['콘티', '스케치', '선화', '채색', '배경', '후보정', '검수'].includes(event.stage)) {
+                        workType = 'serialization';
+                      }
+                      
+                      return (
+                        <AdminEventDetailCard key={idx} $color={displayColor}>
+                          <AdminEventDetailTitle>{displayTitle}</AdminEventDetailTitle>
+                          <AdminEventDetailInfo>
+                            <AdminEventDetailText>
+                              <strong>유형:</strong>{' '}
+                              <Badge
+                                className="text-xs"
+                                variant={
+                                  workType === 'serialization'
+                                    ? 'destructive'
+                                    : workType === 'break'
+                                    ? 'default'
+                                    : 'secondary'
+                                }
+                              >
+                                {workType === 'serialization'
+                                  ? '연재'
+                                  : workType === 'break'
+                                  ? '휴재'
+                                  : '기타'}
+                              </Badge>
+                            </AdminEventDetailText>
+                            {event.projectTitle && (
+                              <AdminEventDetailText>
+                                <strong>작품:</strong> {event.projectTitle}
+                              </AdminEventDetailText>
+                            )}
+                            {event.artistName && (
+                              <AdminEventDetailText>
+                                <strong>작가:</strong> {event.artistName}
+                              </AdminEventDetailText>
+                            )}
+                            {event.episode && (
+                              <AdminEventDetailText>
+                                <strong>에피소드:</strong> {event.episode}
+                              </AdminEventDetailText>
+                            )}
+                            {event.stage && (
+                              <AdminEventDetailText>
+                                <strong>단계:</strong> {event.stage}
+                              </AdminEventDetailText>
+                            )}
+                          </AdminEventDetailInfo>
+                        </AdminEventDetailCard>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
+
             <AdminCalendarModalField>
-              <AdminCalendarModalLabel>담당자 메모</AdminCalendarModalLabel>
+              <AdminCalendarModalLabel>메모</AdminCalendarModalLabel>
               <AdminCalendarModalTextarea
                 placeholder="메모를 입력하세요"
                 value={currentNote}
@@ -546,8 +719,141 @@ export function AdminCalendarPage() {
                 저장
               </Button>
             </AdminCalendarModalActions>
+          </AdminEventDetailContainer>
+        )}
+      </Modal>
+
+      {/* 메모 상세 모달 */}
+      <Modal
+        isOpen={isMemoDetailModalOpen}
+        onClose={() => {
+          setIsMemoDetailModalOpen(false);
+          setSelectedMemoDate(null);
+          setEditingMemoContent('');
+        }}
+        title={`메모 상세 - 1월 ${selectedMemoDate}일 - ${artists.find((a) => a.id === selectedArtist)?.name || '전체'}`}
+        maxWidth="md"
+      >
+        {selectedMemoDate !== null && (
+          <AdminCalendarModalForm>
+            <AdminCalendarModalField>
+              <AdminCalendarModalLabel>메모 내용</AdminCalendarModalLabel>
+              <AdminCalendarModalTextarea
+                value={editingMemoContent}
+                onChange={(e) => setEditingMemoContent(e.target.value)}
+                rows={6}
+              />
+            </AdminCalendarModalField>
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingTop: '8px' }}>
+              <Button variant="outline" onClick={handleDeleteMemoClick} style={{ color: '#dc2626' }}>
+                <Trash2 className="w-4 h-4" style={{ marginRight: '8px' }} />
+                삭제
+              </Button>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsMemoDetailModalOpen(false);
+                    setSelectedMemoDate(null);
+                    setEditingMemoContent('');
+                  }}
+                >
+                  취소
+                </Button>
+                <Button onClick={handleSaveMemoEdit}>
+                  <Save className="w-4 h-4" style={{ marginRight: '8px' }} />
+                  저장
+                </Button>
+              </div>
+            </div>
           </AdminCalendarModalForm>
         )}
+      </Modal>
+
+      {/* 여러 일정 모달 */}
+      <Modal
+        isOpen={isMultipleEventsModalOpen}
+        onClose={() => {
+          setIsMultipleEventsModalOpen(false);
+          setSelectedDateForMultipleEvents(null);
+        }}
+        title={selectedDateForMultipleEvents ? `1월 ${selectedDateForMultipleEvents}일 캘린더` : '캘린더'}
+        maxWidth="lg"
+      >
+        {selectedDateForMultipleEvents !== null && (
+          <AdminEventDetailContainer>
+            {filteredSchedule
+              .filter((e) => e.date === selectedDateForMultipleEvents)
+              .map((event, idx) => {
+                const displayColor = event.stageColor || '#6E8FB3';
+                const displayTitle = `${event.projectTitle} ${event.episode} ${event.stage}`;
+                
+                return (
+                  <AdminEventDetailCard key={idx} $color={displayColor}>
+                    <AdminEventDetailTitle>{displayTitle}</AdminEventDetailTitle>
+                    <AdminEventDetailInfo>
+                      {event.artistName && (
+                        <AdminEventDetailText>
+                          <strong>작가:</strong> {event.artistName}
+                        </AdminEventDetailText>
+                      )}
+                      <AdminEventDetailText>
+                        <strong>작품:</strong> {event.projectTitle}
+                      </AdminEventDetailText>
+                      {event.episode && (
+                        <AdminEventDetailText>
+                          <strong>에피소드:</strong> {event.episode}
+                        </AdminEventDetailText>
+                      )}
+                      {event.stage && (
+                        <AdminEventDetailText>
+                          <strong>단계:</strong> {event.stage}
+                        </AdminEventDetailText>
+                      )}
+                    </AdminEventDetailInfo>
+                  </AdminEventDetailCard>
+                );
+              })}
+          </AdminEventDetailContainer>
+        )}
+      </Modal>
+
+      {/* 메모 삭제 확인 모달 */}
+      <Modal isOpen={showDeleteMemoConfirm} onClose={() => { setShowDeleteMemoConfirm(false); }} title="메모 삭제 확인" maxWidth="sm">
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'flex-start', 
+          gap: '12px', 
+          padding: '16px', 
+          backgroundColor: 'color-mix(in srgb, #fbbf24 20%, transparent)', 
+          border: '1px solid color-mix(in srgb, #fbbf24 40%, transparent)', 
+          borderRadius: '8px' 
+        }}>
+          <AlertCircle className="w-5 h-5" style={{ color: 'var(--destructive)', flexShrink: 0, marginTop: '2px' }} />
+          <div>
+            <p style={{ fontSize: '14px', fontWeight: 500, color: 'var(--foreground)', margin: '0 0 4px 0' }}>
+              정말 메모를 삭제하시겠습니까?
+            </p>
+            <p style={{ fontSize: '14px', color: 'var(--muted-foreground)', margin: 0 }}>
+              삭제한 메모는 복구할 수 없습니다.
+            </p>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '8px', paddingTop: '8px', justifyContent: 'flex-end' }}>
+          <Button
+            variant="outline"
+            onClick={() => { setShowDeleteMemoConfirm(false); }}
+          >
+            취소
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={handleDeleteMemoConfirm}
+          >
+            삭제
+          </Button>
+        </div>
       </Modal>
 
       {/* 더보기 모달 - 일정 조정 & 다가오는 마감 전체 목록 */}

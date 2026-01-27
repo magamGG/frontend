@@ -563,6 +563,44 @@ export const ArtistModalActions = styled.div`
   padding-top: 8px;
 `;
 
+// 경고 박스
+export const WarningBox = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  background-color: color-mix(in srgb, #fbbf24 20%, transparent);
+  border: 1px solid color-mix(in srgb, #fbbf24 40%, transparent);
+  border-radius: 8px;
+`;
+
+export const WarningContent = styled.div`
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+`;
+
+export const WarningTitle = styled.p`
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--foreground);
+  margin: 0 0 4px 0;
+`;
+
+export const WarningDescription = styled.p`
+  font-size: 14px;
+  color: var(--muted-foreground);
+  margin: 0;
+`;
+
+export const ModalActions = styled.div`
+  display: flex;
+  gap: 8px;
+  padding-top: 8px;
+  justify-content: flex-end;
+`;
+
 // 일정 상세 모달 스타일
 export const ArtistEventDetailContainer = styled.div`
   display: flex;

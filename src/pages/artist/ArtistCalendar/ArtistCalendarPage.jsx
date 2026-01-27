@@ -3,7 +3,7 @@ import { Card } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
 import { Modal } from '@/components/common/Modal';
-import { ChevronLeft, ChevronRight, Plus, AlignLeft, Palette, Save, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, AlignLeft, Palette, Save, Trash2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { LeaveRequestModal } from '@/components/modals/LeaveRequestModal';
 import {
@@ -65,6 +65,11 @@ import {
   ArtistColorPickerButton,
   ArtistFormTextarea,
   ArtistModalActions,
+  WarningBox,
+  WarningContent,
+  WarningTitle,
+  WarningDescription,
+  ModalActions,
   ArtistEventDetailContainer,
   ArtistEventDetailCard,
   ArtistEventDetailTitle,
@@ -142,6 +147,7 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isMemoDetailModalOpen, setIsMemoDetailModalOpen] = useState(false);
   const [isMultipleEventsModalOpen, setIsMultipleEventsModalOpen] = useState(false);
+  const [showDeleteMemoConfirm, setShowDeleteMemoConfirm] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedDateForMultipleEvents, setSelectedDateForMultipleEvents] = useState(null);
   const [selectedEventIndex, setSelectedEventIndex] = useState(0);
@@ -369,8 +375,14 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
     setEditingMemoContent('');
   };
 
-  // 메모 삭제
-  const handleDeleteMemo = () => {
+  // 메모 삭제 확인 핸들러
+  const handleDeleteMemoClick = () => {
+    if (selectedMemoDate === null) return;
+    setShowDeleteMemoConfirm(true);
+  };
+
+  // 메모 삭제 실행 핸들러
+  const handleDeleteMemoConfirm = () => {
     if (selectedMemoDate === null) return;
 
     setDayNotes(dayNotes.filter((n) => n.date !== selectedMemoDate));
@@ -378,6 +390,7 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
     setIsMemoDetailModalOpen(false);
     setSelectedMemoDate(null);
     setEditingMemoContent('');
+    setShowDeleteMemoConfirm(false);
   };
 
   return (
@@ -1006,7 +1019,7 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
             </ArtistFormRow>
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingTop: '8px' }}>
-              <Button variant="outline" onClick={handleDeleteMemo} style={{ color: '#dc2626' }}>
+              <Button variant="outline" onClick={handleDeleteMemoClick} style={{ color: '#dc2626' }}>
                 <Trash2 className="w-4 h-4" style={{ marginRight: '8px' }} />
                 삭제
               </Button>
@@ -1089,6 +1102,33 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
               })}
           </ArtistEventDetailContainer>
         )}
+      </Modal>
+
+      {/* 메모 삭제 확인 모달 */}
+      <Modal isOpen={showDeleteMemoConfirm} onClose={() => { setShowDeleteMemoConfirm(false); }} title="메모 삭제 확인" maxWidth="sm">
+        <WarningBox>
+          <WarningContent>
+            <AlertCircle className="w-5 h-5 text-destructive" />
+            <div>
+              <WarningTitle>정말 메모를 삭제하시겠습니까?</WarningTitle>
+              <WarningDescription>삭제한 메모는 복구할 수 없습니다.</WarningDescription>
+            </div>
+          </WarningContent>
+        </WarningBox>
+        <ModalActions>
+          <Button
+            variant="outline"
+            onClick={() => { setShowDeleteMemoConfirm(false); }}
+          >
+            취소
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={handleDeleteMemoConfirm}
+          >
+            삭제
+          </Button>
+        </ModalActions>
       </Modal>
     </ArtistCalendarRoot>
   );

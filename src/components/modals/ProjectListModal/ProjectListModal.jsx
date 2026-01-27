@@ -40,8 +40,9 @@ import {
  * @param {boolean} props.open
  * @param {(open: boolean) => void} props.onOpenChange
  * @param {Project[]} props.projects
+ * @param {(project: Project) => void} [props.onProjectClick]
  */
-export function ProjectListModal({ open, onOpenChange, projects }) {
+export function ProjectListModal({ open, onOpenChange, projects, onProjectClick }) {
   const [searchTerm, setSearchTerm] = useState('');
 
   const getStatusColor = (status) => {
@@ -97,7 +98,16 @@ export function ProjectListModal({ open, onOpenChange, projects }) {
           <ProjectList>
             {filteredProjects.length > 0 ? (
               filteredProjects.map((project) => (
-                <ProjectItem key={project.id}>
+                <ProjectItem 
+                  key={project.id}
+                  onClick={() => {
+                    if (onProjectClick) {
+                      onProjectClick(project);
+                    }
+                    onOpenChange(false);
+                  }}
+                  style={{ cursor: 'pointer' }}
+                >
                   <ProjectHeader>
                     <ProjectInfo>
                       <ProjectTitleGroup>

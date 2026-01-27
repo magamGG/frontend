@@ -405,7 +405,6 @@ export function AgencyTeamPage() {
                     <span className="text-sm text-muted-foreground">참여 프로젝트</span>
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-primary">{employee.participatedProjects.length}개</span>
-                      <ChevronRight className="w-4 h-4 text-primary" />
                     </div>
                   </button>
                 </div>
@@ -555,7 +554,6 @@ export function AgencyTeamPage() {
                   <p className="text-xs text-muted-foreground mb-1">참여 중인 프로젝트</p>
                   <p className="text-lg font-semibold text-foreground">{employee.currentProjects.length}개</p>
                 </EmployeeStats>
-                <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
               </EmployeeCardContent>
             </EmployeeCard>
           ))}

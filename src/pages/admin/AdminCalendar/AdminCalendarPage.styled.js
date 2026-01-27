@@ -111,12 +111,19 @@ export const AdminCalendarHeaderRight = styled.div`
   display: flex;
   align-items: center;
   gap: 12px;
+`;
+
+// 근태 범례
+export const AdminCalendarLegend = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 16px;
   padding: 8px 16px;
   background-color: color-mix(in srgb, var(--muted) 30%, transparent);
   border-radius: 8px;
 `;
 
-export const AdminCalendarLegend = styled.div`
+export const AdminCalendarLegendItem = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
@@ -126,8 +133,8 @@ export const AdminCalendarLegendColor = styled.div`
   width: 16px;
   height: 16px;
   border-radius: 4px;
-  background-color: ${props => props.$bgColor || 'transparent'};
   border: 1px solid ${props => props.$borderColor || 'transparent'};
+  background-color: ${props => props.$backgroundColor || 'transparent'};
 `;
 
 export const AdminCalendarLegendLabel = styled.span`
@@ -176,10 +183,15 @@ export const AdminCalendarDateCell = styled.div`
   height: 100%;
   border-right: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
+  border: ${props => props.$isToday ? '2px solid #22C55E' : '1px solid var(--border)'};
+  border-right: ${props => props.$isToday ? '2px solid #22C55E' : '1px solid var(--border)'};
+  border-bottom: ${props => props.$isToday ? '2px solid #22C55E' : '1px solid var(--border)'};
+  border-top: ${props => props.$isToday ? '2px solid #22C55E' : '1px solid var(--border)'};
+  border-left: ${props => props.$isToday ? '2px solid #22C55E' : '1px solid var(--border)'};
   padding: 8px;
   background-color: ${props => {
-    if (props.$isToday) return 'color-mix(in srgb, var(--primary) 5%, transparent)';
-    if (props.$attendanceType === 'workation') return 'rgba(156, 39, 176, 0.15)';
+    if (props.$isToday) return '#ECFDF5'; // 연한 초록색 배경 (다른 곳에서 사용하지 않는 색)
+    if (props.$attendanceType === 'workation') return 'rgba(168, 85, 247, 0.15)';
     if (props.$attendanceType === 'break') return 'rgba(156, 163, 175, 0.25)';
     return 'transparent';
   }};
@@ -192,7 +204,8 @@ export const AdminCalendarDateCell = styled.div`
 
   &:hover {
     background-color: ${props => {
-      if (props.$attendanceType === 'workation') return 'rgba(156, 39, 176, 0.25)';
+      if (props.$isToday) return '#D1FAE5'; // 호버 시 약간 더 진한 초록색
+      if (props.$attendanceType === 'workation') return 'rgba(168, 85, 247, 0.25)';
       if (props.$attendanceType === 'break') return 'rgba(156, 163, 175, 0.35)';
       return 'color-mix(in srgb, var(--muted) 50%, transparent)';
     }};
@@ -210,7 +223,7 @@ export const AdminCalendarDateNumber = styled.div`
 export const AdminCalendarDateEvents = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   flex: 1;
   overflow: visible;
   position: relative;
@@ -218,58 +231,61 @@ export const AdminCalendarDateEvents = styled.div`
 
 // 메모 표시
 export const AdminCalendarDateMemo = styled.div`
-  background-color: #fef3c7;
-  border: 1px solid #fde68a;
-  border-radius: 4px;
-  padding: 4px 8px;
-  margin-bottom: 4px;
-  display: flex;
-  align-items: flex-start;
-  gap: 4px;
-`;
-
-export const AdminCalendarDateMemoText = styled.span`
   font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background-color: #fef3c7;
   color: #92400e;
-  flex: 1;
+  border: 1px solid #fcd34d;
+  cursor: pointer;
+  margin-top: 4px;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  transition: all 0.2s;
+
+  &:hover {
+    background-color: #fde68a;
+  }
 `;
 
 // 이벤트 바 (다중 날짜)
 export const AdminCalendarEventBar = styled.div`
   font-size: 12px;
-  padding: 6px 8px;
+  padding: 4px 8px;
   border-radius: 4px;
   font-weight: 600;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background-color: ${props => props.$color || '#6E8FB3'};
+  width: ${props => props.$width || '100%'};
   position: ${props => (props.$isMultiDay ? 'absolute' : 'relative')};
   left: ${props => (props.$isMultiDay ? '0' : 'auto')};
   top: ${props => (props.$isMultiDay ? `${props.$topOffset || 0}px` : 'auto')};
   z-index: ${props => (props.$isMultiDay ? 10 : 1)};
-  width: ${props => props.$width || '100%'};
-  background-color: ${props => props.$color || 'var(--primary)'};
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 `;
 
-export const AdminCalendarEventBarText = styled.span`
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-`;
-
+// 더보기 텍스트 (일정 3개 이상일 때)
 export const AdminCalendarMoreEvents = styled.div`
   font-size: 12px;
-  color: var(--muted-foreground);
-  padding: 0 4px;
+  color: white;
+  background-color: #8B5CF6;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: all 0.2s;
+  font-weight: 500;
+
+  &:hover {
+    background-color: #7C3AED;
+  }
 `;
 
 // 사이드바
@@ -571,4 +587,37 @@ export const AdminCalendarModalEmptyState = styled.div`
   padding: 32px;
   background-color: color-mix(in srgb, var(--muted) 20%, transparent);
   border-radius: 8px;
+`;
+
+// 일정 상세 모달 스타일 (작가 캘린더와 동일)
+export const AdminEventDetailContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+`;
+
+export const AdminEventDetailCard = styled.div`
+  padding: 16px;
+  border-radius: 8px;
+  background-color: ${props => `${props.$color}10`};
+  border-left: 4px solid ${props => props.$color};
+`;
+
+export const AdminEventDetailTitle = styled.h3`
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 0 0 8px 0;
+`;
+
+export const AdminEventDetailInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+`;
+
+export const AdminEventDetailText = styled.p`
+  color: var(--muted-foreground);
+  margin: 0;
 `;
