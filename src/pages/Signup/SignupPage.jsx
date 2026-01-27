@@ -118,7 +118,6 @@ export function SignupPage({ onSignup, onBackToLogin }) {
     try {
       // DB 스키마에 MEMBER_ID 필드가 없으므로 MEMBER_EMAIL만 사용
       const memberData = {
-        agencyNo: 1, // TODO: 실제 에이전시 번호로 변경 필요 (NULL 허용)
         memberName: signupFormData.name,
         memberPassword: signupFormData.password,
         memberEmail: signupFormData.email, // UNIQUE, 로그인 ID로 사용
@@ -136,6 +135,19 @@ export function SignupPage({ onSignup, onBackToLogin }) {
           : selectedRole === USER_ROLES.AGENCY ? '에이전시 관리자'
           : '웹툰 작가',
       };
+      
+      // 역할별로 다른 필드 추가
+      if (selectedRole === USER_ROLES.ARTIST) {
+        // 아티스트는 선택적으로 에이전시에 속할 수 있으므로 agencyNo는 null 또는 미전송
+        // 비소속으로 가입하는 경우이므로 agencyNo를 보내지 않음 (null로 처리됨)
+        memberData.agencyNo = null;
+      } else if (selectedRole === USER_ROLES.MANAGER) {
+        // 담당자는 에이전시 코드로 기존 에이전시에 가입
+        memberData.agencyCode = signupFormData.organization; // TODO: 실제 에이전시 코드 입력 필드로 변경 필요
+      } else if (selectedRole === USER_ROLES.AGENCY) {
+        // 에이전시 관리자는 새 에이전시를 생성
+        memberData.agencyName = signupFormData.organization;
+      }
 
       await memberService.register(memberData);
       toast.success('회원가입이 완료되었습니다.');

@@ -51,26 +51,60 @@ export default function App() {
   const [hasAgency, setHasAgency] = useState(true); // Track if user has agency affiliation
 
   /**
-   * @param {UserRole} role
-   * @param {boolean} [affiliated=true]
+   * @param {string} memberRole - 백엔드에서 받은 실제 MEMBER_ROLE 값 (예: "웹툰 작가", "담당자", "에이전시 관리자")
+   * @param {number|null} agencyNo - AGENCY_NO 값 (null일 수 있음)
    */
-  const handleLogin = (role, affiliated = true) => {
-    setUserRole(role);
-    setHasAgency(affiliated);
+  const handleLogin = (memberRole, agencyNo) => {
+    // memberRole이 없으면 기본값 처리
+    if (!memberRole) {
+      console.error('memberRole이 없습니다.');
+      return;
+    }
     
-    if (!affiliated && (role === 'individual' || role === 'manager')) {
-      // If no agency affiliation, go to join request page
-      setAuthView('join-request');
+    // 아티스트/담당자 역할 목록
+    const artistAndManagerRoles = [
+      '웹툰 작가',
+      '웹소설 작가',
+      '어시스트 - 채색',
+      '어시스트 - 조명',
+      '어시스트 - 배경',
+      '어시스트 - 선화',
+      '어시스트- 기타',
+      '담당자'
+    ];
+    
+    // 프론트엔드에서 사용할 역할 타입 매핑
+    let roleType = null;
+    let hasAgency = agencyNo !== null && agencyNo !== undefined;
+    
+    if (memberRole === '에이전시 관리자') {
+      // 에이전시 관리자는 항상 대시보드로 이동
+      roleType = 'agency';
+      setAuthView('dashboard');
+    } else if (artistAndManagerRoles.includes(memberRole)) {
+      // 아티스트/담당자 역할인 경우
+      if (!hasAgency) {
+        // AGENCY_NO가 NULL인 경우 비소속 에이전시 가입 요청 페이지로 이동
+        roleType = memberRole === '담당자' ? 'manager' : 'individual';
+        setAuthView('join-request');
+      } else {
+        // AGENCY_NO가 NULL이 아닌 경우 담당자/아티스트 대시보드로 이동
+        roleType = memberRole === '담당자' ? 'manager' : 'individual';
+        setAuthView('dashboard');
+      }
     } else {
+      // 알 수 없는 역할인 경우 기본값으로 처리
+      roleType = 'individual';
       setAuthView('dashboard');
     }
+    
+    setUserRole(roleType);
+    setHasAgency(hasAgency);
   };
 
   const handleSignup = () => {
-    // After successful signup, redirect to dashboard
-    setUserRole('individual'); // Default role for signup
-    setHasAgency(true);
-    setAuthView('dashboard');
+    // 회원가입 완료 후 로그인 페이지로 리다이렉션
+    setAuthView('login');
   };
 
   const handleLogout = () => {

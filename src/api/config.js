@@ -1,5 +1,9 @@
 // API 기본 설정
-export const API_BASE_URL = 'http://localhost:8888';
+// 개발 환경에서는 프록시를 사용하므로 빈 문자열 (상대 경로)
+// 프로덕션 환경에서는 전체 URL 사용
+export const API_BASE_URL = import.meta.env.PROD 
+  ? 'http://localhost:8888'  // 프로덕션 환경 URL (실제 배포 시 변경 필요)
+  : '';  // 개발 환경에서는 프록시 사용 (상대 경로)
 export const API_TIMEOUT = 10000;
 
 // API 엔드포인트 (가이드 문서 기준)
