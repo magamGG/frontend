@@ -268,7 +268,7 @@ export const ReadOnlyCardComments = styled.div`
   color: var(--muted-foreground);
 `;
 
-// 주간 일정 섹션
+// 주간 캘린더 섹션
 export const WeeklyScheduleSection = styled.div`
   background-color: var(--card);
   color: var(--card-foreground);

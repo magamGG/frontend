@@ -73,7 +73,7 @@ export function AgencyProjectsPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   
   // 필터 상태
-  const [statusFilters, setStatusFilters] = useState(['전체']);
+  const [statusFilter, setStatusFilter] = useState('전체');
   const [selectedManagerFilters, setSelectedManagerFilters] = useState([]);
 
   // 정렬 상태
@@ -236,21 +236,9 @@ export function AgencyProjectsPage() {
     localStorage.setItem('agencyProjectsData', JSON.stringify(projects));
   }, [projects]);
 
-  // 상태 필터 토글
-  const toggleFilter = (filter) => {
-    if (filter === '전체') {
-      setStatusFilters(['전체']);
-    } else {
-      const newFilters = statusFilters.includes(filter)
-        ? statusFilters.filter(f => f !== filter)
-        : [...statusFilters.filter(f => f !== '전체'), filter];
-      
-      if (newFilters.length === 3 && newFilters.includes('연재중') && newFilters.includes('휴재') && newFilters.includes('완결')) {
-        setStatusFilters(['전체']);
-      } else {
-        setStatusFilters(newFilters.length === 0 ? ['전체'] : newFilters);
-      }
-    }
+  // 상태 필터 선택 핸들러 (단일 선택)
+  const handleFilterChange = (filter) => {
+    setStatusFilter(filter);
   };
 
   // 검색 및 필터링된 프로젝트
@@ -260,7 +248,7 @@ export function AgencyProjectsPage() {
       project.artistName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       project.managerName.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const statusMatch = statusFilters.includes('전체') || statusFilters.includes(project.serialStatus);
+    const statusMatch = statusFilter === '전체' || statusFilter === project.serialStatus;
     const managerMatch = selectedManagerFilters.length === 0 || selectedManagerFilters.includes(project.managerId);
     
     return searchMatch && statusMatch && managerMatch;
@@ -591,10 +579,10 @@ export function AgencyProjectsPage() {
                   {['전체', '연재중', '휴재', '완결'].map((filter) => (
                     <Button
                       key={filter}
-                      variant={statusFilters.includes(filter) ? 'default' : 'outline'}
+                      variant={statusFilter === filter ? 'default' : 'outline'}
                       size="sm"
-                      onClick={() => toggleFilter(filter)}
-                      className={statusFilters.includes(filter) ? getStatusBadgeColor(filter === '전체' ? '' : filter) : ''}
+                      onClick={() => handleFilterChange(filter)}
+                      className={statusFilter === filter ? getStatusBadgeColor(filter === '전체' ? '' : filter) : ''}
                     >
                       {filter}
                     </Button>

@@ -362,6 +362,63 @@ export const AttendanceRequestDate = styled.p`
   margin: 0;
 `;
 
+// 신청 현황 카드 헤더 (스크린샷 참고)
+export const AttendanceRequestCardHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding: 4px 0;
+`;
+
+// 신청 현황 카드 리스트
+export const AttendanceRequestCardList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+// 신청 현황 카드 아이템
+export const AttendanceRequestCardItem = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  background-color: white;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+`;
+
+export const AttendanceRequestCardItemContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+`;
+
+export const AttendanceRequestCardItemTitle = styled.p`
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 0;
+`;
+
+export const AttendanceRequestCardItemDate = styled.p`
+  font-size: 12px;
+  color: var(--muted-foreground);
+  margin: 0;
+`;
+
+export const AttendanceRequestCardItemBadge = styled.div`
+  padding: 4px 12px;
+  border-radius: 9999px;
+  background-color: ${props => props.$statusColor};
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+`;
+
 // 오늘 할 일 카드
 export const TasksCard = styled.div`
   padding: 24px;
@@ -381,6 +438,27 @@ export const TasksList = styled.div`
   display: flex;
   flex-direction: column;
   gap: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 4px;
+  
+  /* 스크롤바 스타일링 */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: var(--muted-foreground);
+    border-radius: 3px;
+  }
+  
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--foreground);
+  }
 `;
 
 // 할 일 아이템
@@ -388,7 +466,12 @@ export const TaskItem = styled.div`
   padding: 16px;
   border-radius: 8px;
   border: ${props => props.$isUrgent ? '2px solid color-mix(in srgb, #ef4444 20%, transparent)' : '1px solid var(--border)'};
-  background: ${props => props.$isUrgent ? 'linear-gradient(to right, color-mix(in srgb, #ef4444 10%, transparent), color-mix(in srgb, #f97316 10%, transparent))' : 'color-mix(in srgb, var(--muted) 30%, transparent)'};
+  background: ${props => {
+    if (props.$isCompleted) return 'white';
+    if (props.$isUrgent) return 'linear-gradient(to right, color-mix(in srgb, #ef4444 10%, transparent), color-mix(in srgb, #f97316 10%, transparent))';
+    return 'white';
+  }};
+  position: relative;
 `;
 
 export const TaskItemHeader = styled.div`
@@ -404,11 +487,27 @@ export const TaskProject = styled.p`
   margin: 0;
 `;
 
+export const TaskCompleteButton = styled.button`
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  background-color: ${props => props.$isCompleted ? '#10B981' : '#E5E7EB'};
+  color: ${props => props.$isCompleted ? 'white' : '#6B7280'};
+  
+  &:hover {
+    background-color: ${props => props.$isCompleted ? '#059669' : '#D1D5DB'};
+  }
+`;
+
 export const TaskContent = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
 `;
 
 export const TaskTitle = styled.h4`
@@ -421,12 +520,118 @@ export const TaskTitle = styled.h4`
   transition: all 0.2s;
 `;
 
+export const TaskBadgeContainer = styled.div`
+  margin-bottom: 8px;
+`;
+
+export const TaskBadge = styled.span`
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+  background-color: ${props => {
+    if (props.$badgeColor === 'destructive') return '#F97316';
+    if (props.$badgeColor === 'blue') return '#3B82F6';
+    if (props.$badgeColor === 'purple') return '#8B5CF6';
+    return '#6B7280';
+  }};
+`;
+
 export const TaskDescription = styled.p`
   font-size: 14px;
   color: var(--muted-foreground);
   margin: 0;
   opacity: ${props => props.$isCompleted ? '0.5' : '1'};
   transition: all 0.2s;
+`;
+
+export const TaskViewAllButton = styled.button`
+  width: 100%;
+  margin-top: 16px;
+  padding: 8px;
+  background-color: transparent;
+  border: none;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  &:hover {
+    color: var(--foreground);
+  }
+`;
+
+// 할 일 모달 스타일
+export const TaskModalList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`;
+
+export const TaskModalItem = styled.div`
+  padding: 16px;
+  background-color: #F9FAFB;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+`;
+
+export const TaskModalItemHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+`;
+
+export const TaskModalBadge = styled.span`
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 4px;
+  background-color: #E5E7EB;
+  color: #6B7280;
+  font-size: 12px;
+  font-weight: 500;
+  margin: 0;
+`;
+
+export const TaskModalTitleLabel = styled.p`
+  font-size: 12px;
+  color: var(--muted-foreground);
+  margin: 0 0 4px 0;
+  font-weight: 500;
+`;
+
+export const TaskModalTitle = styled.h4`
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 0 0 12px 0;
+  text-decoration: ${props => props.$isCompleted ? 'line-through' : 'none'};
+  opacity: ${props => props.$isCompleted ? '0.5' : '1'};
+  transition: all 0.2s;
+`;
+
+export const TaskModalDescriptionLabel = styled.p`
+  font-size: 12px;
+  color: var(--muted-foreground);
+  margin: 0 0 4px 0;
+  font-weight: 500;
+`;
+
+export const TaskModalDescription = styled.p`
+  font-size: 14px;
+  color: var(--foreground);
+  margin: 0 0 12px 0;
+  opacity: ${props => props.$isCompleted ? '0.5' : '1'};
+  transition: all 0.2s;
+`;
+
+export const TaskModalMeta = styled.p`
+  font-size: 12px;
+  color: var(--muted-foreground);
+  margin: 0;
 `;
 
 // 메모 섹션
@@ -705,4 +910,95 @@ export const EmptyStateText = styled.p`
   font-size: 14px;
   color: var(--muted-foreground);
   margin: 0;
+`;
+
+// 신청 현황 모달 스타일
+export const AttendanceRequestModalContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+`;
+
+export const AttendanceRequestList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 8px;
+`;
+
+export const AttendanceRequestCard = styled.div`
+  padding: 16px;
+  background-color: white;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+`;
+
+export const AttendanceRequestCardContent = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+`;
+
+export const AttendanceRequestStatusBadge = styled.div`
+  padding: 6px 12px;
+  border-radius: 9999px;
+  background-color: ${props => props.$statusColor};
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+`;
+
+export const AttendanceRequestInfo = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+`;
+
+export const AttendanceRequestTypeText = styled.p`
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--foreground);
+  margin: 0;
+`;
+
+export const AttendanceRequestDateText = styled.p`
+  font-size: 12px;
+  color: var(--muted-foreground);
+  margin: 0;
+`;
+
+export const AttendanceRequestActions = styled.div`
+  display: flex;
+  gap: 8px;
+`;
+
+export const AttendanceRequestSummary = styled.div`
+  display: flex;
+  justify-content: space-around;
+  padding: 20px;
+  background-color: var(--muted);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+`;
+
+export const AttendanceRequestSummaryItem = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+`;
+
+export const AttendanceRequestSummaryNumber = styled.div`
+  font-size: 24px;
+  font-weight: 700;
+  color: ${props => props.$color || 'var(--foreground)'};
+`;
+
+export const AttendanceRequestSummaryLabel = styled.div`
+  font-size: 12px;
+  color: var(--muted-foreground);
 `;

@@ -26,11 +26,12 @@ import {
   LinkButton,
   Divider,
   DividerText,
-  DemoAccountGroup,
-  DemoAccountButton,
-  DemoAccountTextArea,
-  DemoAccountEmail,
   Footer,
+  DemoAccountBar,
+  DemoAccountBarContainer,
+  DemoAccountBarItem,
+  DemoAccountBarIcon,
+  DemoAccountBarLabel,
 } from './LoginPage.styled';
 
 // 사용자 역할 타입 상수
@@ -46,34 +47,33 @@ const demoAccountList = [
   {
     id: USER_ROLE_TYPES.INDIVIDUAL,
     icon: Edit,
-    label: '개인(작가) 계정으로 체험',
+    label: '개인작가',
     email: 'demo@artist.com',
-    borderColor: 'var(--status-workation)',
-    bgColor: 'transparent',
-    hoverBgColor: 'color-mix(in srgb, var(--status-workation) 10%, transparent)',
-    hoverBorderColor: 'var(--status-workation)',
+    color: '#a855f7',
   },
   {
     id: USER_ROLE_TYPES.MANAGER,
     icon: Building,
-    label: '담당자 계정으로 체험',
+    label: '담당자',
     email: 'demo@manager.com',
-    borderColor: 'var(--chart-2)',
-    bgColor: 'transparent',
-    hoverBgColor: 'color-mix(in srgb, var(--chart-2) 10%, transparent)',
-    hoverBorderColor: 'var(--chart-2)',
+    color: '#3b82f6',
   },
   {
     id: USER_ROLE_TYPES.AGENCY,
     icon: Users,
-    label: '에이전시 계정으로 체험',
+    label: '에이전시',
     email: 'demo@agency.com',
-    borderColor: 'var(--chart-2)',
-    bgColor: 'transparent',
-    hoverBgColor: 'color-mix(in srgb, var(--chart-2) 10%, transparent)',
-    hoverBorderColor: 'var(--chart-2)',
+    color: '#22c55e',
+  },
+  {
+    id: 'no-agency',
+    icon: UserPlus,
+    label: '소속없음',
+    email: 'demo@individual.com',
+    color: '#6b7280',
   },
 ];
+
 
 export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
   const [emailInput, setEmailInput] = useState('');
@@ -120,7 +120,7 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
     }
   };
 
-  const handleDemoLogin = (roleType) => {
+  const handleDemoLogin = (account) => {
     // 데모 계정은 로그인 API 호출 없이 바로 로그인 처리
     // roleType을 실제 MEMBER_ROLE 값으로 매핑
     let memberRole = '';
@@ -295,55 +295,6 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
                   <span>Google로 로그인</span>
                 </Button>
 
-                {/* Divider */}
-                <Divider>
-                  <DividerText>데모 계정</DividerText>
-                </Divider>
-
-                {/* Demo Login */}
-                <DemoAccountGroup>
-                  {demoAccountList.map((demoAccount) => {
-                    const DemoAccountIcon = demoAccount.icon;
-                    return (
-                      <DemoAccountButton
-                        key={demoAccount.id}
-                        type="button"
-                        $borderColor={demoAccount.borderColor}
-                        $bgColor={demoAccount.bgColor}
-                        $hoverBgColor={demoAccount.hoverBgColor}
-                        $hoverBorderColor={demoAccount.hoverBorderColor}
-                        onClick={() => handleDemoLogin(demoAccount.id)}
-                        disabled={isLoading}
-                      >
-                        <DemoAccountIcon size={16} />
-                        <DemoAccountTextArea>
-                          <span style={{ fontWeight: 500 }}>{demoAccount.label}</span>
-                          <DemoAccountEmail>{demoAccount.email}</DemoAccountEmail>
-                        </DemoAccountTextArea>
-                      </DemoAccountButton>
-                    );
-                  })}
-                </DemoAccountGroup>
-
-                {/* Divider */}
-                <Divider>
-                  <DividerText>소속이 없으신가요?</DividerText>
-                </Divider>
-
-                {/* No Agency Button */}
-                <DemoAccountButton
-                  type="button"
-                  $borderColor="var(--chart-4)"
-                  $bgColor="transparent"
-                  $hoverBgColor="color-mix(in srgb, var(--chart-4) 10%, transparent)"
-                  $hoverBorderColor="var(--chart-4)"
-                  onClick={handleNoAgencyLogin}
-                  style={{ fontWeight: 500, padding: '16px' }}
-                  disabled={isLoading}
-                >
-                  <UserPlus size={20} />
-                  <span>소속 없는 계정으로 시작하기</span>
-                </DemoAccountButton>
               </LoginCard>
             </Card>
           </motion.div>
@@ -362,6 +313,29 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
           </motion.p>
         </LoginContainer>
       </motion.div>
+
+      {/* 체험 계정 바 (오른쪽 하단) */}
+      <DemoAccountBar>
+        <DemoAccountBarContainer>
+          {demoAccountList.map((account) => {
+            const AccountIcon = account.icon;
+            return (
+              <DemoAccountBarItem
+                key={account.id}
+                onClick={() => handleDemoLogin(account)}
+                $color={account.color}
+                disabled={isLoading}
+                title={account.email}
+              >
+                <DemoAccountBarIcon $color={account.color}>
+                  <AccountIcon size={16} />
+                </DemoAccountBarIcon>
+                <DemoAccountBarLabel>{account.label}</DemoAccountBarLabel>
+              </DemoAccountBarItem>
+            );
+          })}
+        </DemoAccountBarContainer>
+      </DemoAccountBar>
     </LoginRoot>
   );
 }

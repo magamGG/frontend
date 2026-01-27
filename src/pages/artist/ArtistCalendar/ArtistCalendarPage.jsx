@@ -75,7 +75,6 @@ import {
 
 const daysOfWeek = ['일', '월', '화', '수', '목', '금', '토'];
 const currentMonth = '2026년 1월';
-const currentDay = 13; // 오늘 날짜
 
 // 작업 단계 정의
 const WORK_STAGES = [
@@ -114,6 +113,9 @@ const initialEvents = [
   { id: '10', date: 19, title: 'EP.43 배경', workType: 'serialization', workStage: 'background', category: 'work', project: '나의 히어로', episode: 'EP.43', color: '#F59E0B', startDate: 19, endDate: 19 },
   { id: '11', date: 21, title: '신작 콘티', workType: 'serialization', workStage: 'storyboard', category: 'work', project: '별빛 아래서', episode: 'EP.01', description: '신작 기획', color: '#8B5CF6', startDate: 21, endDate: 22 },
   { id: '12', date: 22, title: '신작 콘티', workType: 'serialization', workStage: 'storyboard', category: 'work', project: '별빛 아래서', episode: 'EP.01', description: '신작 기획', color: '#8B5CF6', startDate: 21, endDate: 22 },
+  { id: '15', date: 21, title: 'EP.45 스케치', workType: 'serialization', workStage: 'sketch', category: 'work', project: '나의 히어로', episode: 'EP.45', description: '스케치 작업', color: '#F59E0B', startDate: 21, endDate: 21 },
+  { id: '16', date: 21, title: '팀 미팅', workType: 'other', workStage: '', category: 'personal', project: '', episode: '', description: '주간 팀 미팅', color: '#3B82F6', startDate: 21, endDate: 21 },
+  { id: '17', date: 21, title: 'EP.46 기획', workType: 'serialization', workStage: 'storyboard', category: 'work', project: '나의 히어로', episode: 'EP.46', description: '에피소드 기획', color: '#10B981', startDate: 21, endDate: 21 },
   { id: '13', date: 24, title: 'EP.44 후보정', workType: 'serialization', workStage: 'effects', category: 'work', project: '나의 히어로', episode: 'EP.44', color: '#F59E0B', startDate: 24, endDate: 25 },
   { id: '14', date: 25, title: 'EP.44 후보정', workType: 'serialization', workStage: 'effects', category: 'work', project: '나의 히어로', episode: 'EP.44', color: '#F59E0B', startDate: 24, endDate: 25 },
 ];
@@ -139,11 +141,16 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
   const [isDayDetailModalOpen, setIsDayDetailModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isMemoDetailModalOpen, setIsMemoDetailModalOpen] = useState(false);
+  const [isMultipleEventsModalOpen, setIsMultipleEventsModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedDateForMultipleEvents, setSelectedDateForMultipleEvents] = useState(null);
   const [selectedEventIndex, setSelectedEventIndex] = useState(0);
   const [editingEvent, setEditingEvent] = useState(null);
   const [selectedMemoDate, setSelectedMemoDate] = useState(null);
   const [editingMemoContent, setEditingMemoContent] = useState('');
+  
+  // 실제 오늘 날짜 계산
+  const currentDay = new Date().getDate();
   const [newEvent, setNewEvent] = useState({
     title: '',
     startDate: '',
@@ -313,7 +320,7 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
       workType: 'serialization',
       workStage: '',
     });
-    toast.success('일정이 추가되었습니다.');
+    toast.success('캘린더가 추가되었습니다.');
   };
 
   const handleEditEvent = () => {
@@ -323,13 +330,13 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
     setAllEvents(updatedEvents);
     setIsEditModalOpen(false);
     setEditingEvent(null);
-    toast.success('일정이 수정되었습니다.');
+    toast.success('캘린더가 수정되었습니다.');
   };
 
   const handleDeleteEvent = (eventId) => {
     setAllEvents(allEvents.filter((e) => e.id !== eventId));
     setSelectedDate(null);
-    toast.success('일정이 삭제되었습니다.');
+    toast.success('캘린더가 삭제되었습니다.');
   };
 
   // 메모 클릭 핸들러
@@ -476,51 +483,62 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
                       <ArtistDateNumber $isToday={isToday}>{day}</ArtistDateNumber>
 
                       <ArtistDateEventsArea>
-                        {/* 시작하는 작업만 표시 */}
-                        {startingEvents.slice(0, 3).map((event, idx) => {
-                          const displayColor = getWorkStageColor(event.workStage) || event.color || '#6E8FB3';
-                          const stageLabel = getWorkStageLabel(event.workStage);
+                        {/* 3개 이상이면 라벨만 표시, 3개 미만이면 개별 일정 표시 */}
+                        {dayEvents.length >= 3 ? (
+                          <ArtistDateMoreEvents
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedDateForMultipleEvents(day);
+                              setIsMultipleEventsModalOpen(true);
+                            }}
+                          >
+                            총 {dayEvents.length}개의 작업...
+                          </ArtistDateMoreEvents>
+                        ) : (
+                          <>
+                            {/* 시작하는 작업만 표시 */}
+                            {startingEvents.slice(0, 2).map((event, idx) => {
+                              const displayColor = getWorkStageColor(event.workStage) || event.color || '#6E8FB3';
+                              const stageLabel = getWorkStageLabel(event.workStage);
 
-                          const isMultiDay = event.startDate && event.endDate && event.startDate !== event.endDate;
+                              const isMultiDay = event.startDate && event.endDate && event.startDate !== event.endDate;
 
-                          const daysUntilSaturday = 6 - dayOfWeek;
-                          const lastDayOfWeek = day + daysUntilSaturday;
+                              const daysUntilSaturday = 6 - dayOfWeek;
+                              const lastDayOfWeek = day + daysUntilSaturday;
 
-                          const displayEndDate = isMultiDay ? Math.min(event.endDate, lastDayOfWeek, 31) : day;
-                          const daySpan = displayEndDate - day + 1;
+                              const displayEndDate = isMultiDay ? Math.min(event.endDate, lastDayOfWeek, 31) : day;
+                              const daySpan = displayEndDate - day + 1;
 
-                          const barWidth = daySpan > 1 ? `calc(${daySpan * 100}% + ${(daySpan - 1) * 2}px)` : '100%';
+                              const barWidth = daySpan > 1 ? `calc(${daySpan * 100}% + ${(daySpan - 1) * 2}px)` : '100%';
 
-                          let displayTitle = event.title;
-                          if (event.category === 'work' && event.project) {
-                            const truncatedProject = truncateProjectName(event.project);
-                            const episodePart = event.episode ? ` ${event.episode}` : '';
-                            const stagePart = stageLabel ? ` ${stageLabel}` : '';
-                            displayTitle = `${truncatedProject}${episodePart}${stagePart}`;
-                          }
+                              let displayTitle = event.title;
+                              if (event.category === 'work' && event.project) {
+                                const truncatedProject = truncateProjectName(event.project);
+                                const episodePart = event.episode ? ` ${event.episode}` : '';
+                                const stagePart = stageLabel ? ` ${stageLabel}` : '';
+                                displayTitle = `${truncatedProject}${episodePart}${stagePart}`;
+                              }
 
-                          return (
-                            <ArtistEventBar
-                              key={idx}
-                              $color={displayColor}
-                              $width={barWidth}
-                              $isMultiDay={daySpan > 1}
-                              $topOffset={idx * 28}
-                            >
-                              {displayTitle}
-                            </ArtistEventBar>
-                          );
-                        })}
+                              return (
+                                <ArtistEventBar
+                                  key={idx}
+                                  $color={displayColor}
+                                  $width={barWidth}
+                                  $isMultiDay={daySpan > 1}
+                                  $topOffset={idx * 28}
+                                >
+                                  {displayTitle}
+                                </ArtistEventBar>
+                              );
+                            })}
 
-                        {/* 진행 중인 작업은 공간만 차지 */}
-                        {ongoingEvents.slice(0, 3).map((_, idx) => (
-                          <div key={`ongoing-${idx}`} style={{ height: '28px', visibility: 'hidden' }}>
-                            &nbsp;
-                          </div>
-                        ))}
-
-                        {dayEvents.length > 3 && (
-                          <ArtistDateMoreEvents>+{dayEvents.length - 3}개 더보기</ArtistDateMoreEvents>
+                            {/* 진행 중인 작업은 공간만 차지 */}
+                            {ongoingEvents.slice(0, 2).map((_, idx) => (
+                              <div key={`ongoing-${idx}`} style={{ height: '28px', visibility: 'hidden' }}>
+                                &nbsp;
+                              </div>
+                            ))}
+                          </>
                         )}
                       </ArtistDateEventsArea>
 
@@ -550,7 +568,7 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
           {/* Right Column - Upcoming Events (1/3) */}
           <ArtistUpcomingEventsSidebar>
             <ArtistUpcomingEventsCard>
-              <ArtistUpcomingEventsTitle>다가오는 일정</ArtistUpcomingEventsTitle>
+              <ArtistUpcomingEventsTitle>다가오는 캘린더</ArtistUpcomingEventsTitle>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', flex: 1, minHeight: 0 }}>
                 {/* 작품 관련 일정 */}
                 <ArtistWorkEventsSection>
@@ -637,8 +655,8 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
         </ArtistCalendarLayoutGrid>
       </ArtistCalendarBody>
 
-      {/* 일정 추가 모달 */}
-      <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="일정 추가" maxWidth="xl">
+      {/* 캘린더 추가 모달 */}
+      <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="캘린더 추가" maxWidth="xl">
         <ArtistModalForm>
           <ArtistFormTitleInput
             type="text"
@@ -779,8 +797,8 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
         </ArtistModalForm>
       </Modal>
 
-      {/* 일정 수정 모달 */}
-      <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="일정 수정" maxWidth="xl">
+      {/* 캘린더 수정 모달 */}
+      <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="캘린더 수정" maxWidth="xl">
         {editingEvent && (
           <ArtistModalForm>
             <ArtistFormTitleInput
@@ -885,7 +903,7 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
         )}
       </Modal>
 
-      {/* 날짜 클릭 시 일정 및 메모 모달 */}
+      {/* 날짜 클릭 시 캘린더 및 메모 모달 */}
       <Modal
         isOpen={isDayDetailModalOpen}
         onClose={() => setIsDayDetailModalOpen(false)}
@@ -896,7 +914,7 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
           <ArtistEventDetailContainer>
             {selectedDateEvents.length > 0 && (
               <div>
-                <ArtistFormLabel style={{ marginBottom: '8px', display: 'block' }}>일정</ArtistFormLabel>
+                <ArtistFormLabel style={{ marginBottom: '8px', display: 'block' }}>캘린더</ArtistFormLabel>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {selectedDateEvents.map((event, idx) => (
                     <ArtistEventDetailCard key={idx} $color={event.color || '#6E8FB3'}>
@@ -1015,6 +1033,63 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
 
       {/* 근태 신청 모달 */}
       <LeaveRequestModal open={isAttendanceModalOpen} onOpenChange={setIsAttendanceModalOpen} />
+
+      {/* 캘린더 3개 이상일 때 모달 */}
+      <Modal
+        isOpen={isMultipleEventsModalOpen}
+        onClose={() => {
+          setIsMultipleEventsModalOpen(false);
+          setSelectedDateForMultipleEvents(null);
+        }}
+        title={selectedDateForMultipleEvents ? `1월 ${selectedDateForMultipleEvents}일 캘린더` : '캘린더'}
+        maxWidth="lg"
+      >
+        {selectedDateForMultipleEvents !== null && (
+          <ArtistEventDetailContainer>
+            {filteredEvents
+              .filter((e) => e.date === selectedDateForMultipleEvents)
+              .map((event, idx) => {
+                const displayColor = getWorkStageColor(event.workStage) || event.color || '#6E8FB3';
+                return (
+                  <ArtistEventDetailCard key={idx} $color={displayColor}>
+                    <ArtistEventDetailTitle>{event.title}</ArtistEventDetailTitle>
+                    <ArtistEventDetailInfo>
+                      <ArtistEventDetailText>
+                        <strong>유형:</strong>{' '}
+                        <Badge
+                          className="text-xs"
+                          variant={
+                            event.workType === 'serialization'
+                              ? 'destructive'
+                              : event.workType === 'break'
+                              ? 'default'
+                              : 'secondary'
+                          }
+                        >
+                          {event.workType === 'serialization'
+                            ? '연재'
+                            : event.workType === 'break'
+                            ? '휴재'
+                            : '기타'}
+                        </Badge>
+                      </ArtistEventDetailText>
+                      {event.project && (
+                        <ArtistEventDetailText>
+                          <strong>작품:</strong> {event.project}
+                        </ArtistEventDetailText>
+                      )}
+                      {event.description && (
+                        <ArtistEventDetailText>
+                          <strong>설명:</strong> {event.description}
+                        </ArtistEventDetailText>
+                      )}
+                    </ArtistEventDetailInfo>
+                  </ArtistEventDetailCard>
+                );
+              })}
+          </ArtistEventDetailContainer>
+        )}
+      </Modal>
     </ArtistCalendarRoot>
   );
 }

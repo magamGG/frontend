@@ -157,7 +157,7 @@ export function AgencyProjectDetailPage({ project, onBack }) {
     ];
   });
 
-  // 주간 일정
+  // 주간 캘린더
   const [weeklySchedule] = useState([
     { date: '1/19', day: '오늘 (월)', events: ['42화 채색 마감', '팀 미팅 3PM'] },
     { date: '1/20', day: '화', events: ['43화 스토리보드 시작'] },
@@ -259,10 +259,10 @@ export function AgencyProjectDetailPage({ project, onBack }) {
             </ProjectManagementSection>
           </ContentGridLeft>
 
-          {/* 오른쪽 열: 주간 일정 */}
+          {/* 오른쪽 열: 주간 캘린더 */}
           <ContentGridRight>
             <WeeklyScheduleSection>
-              <WeeklyScheduleTitle>주간 일정</WeeklyScheduleTitle>
+              <WeeklyScheduleTitle>주간 캘린더</WeeklyScheduleTitle>
 
               <WeeklyScheduleList>
                 {weeklySchedule.map((schedule, index) => (
@@ -281,7 +281,7 @@ export function AgencyProjectDetailPage({ project, onBack }) {
                         ))}
                       </WeeklyScheduleEvents>
                     ) : (
-                      <WeeklyScheduleEmptyText>일정 없음</WeeklyScheduleEmptyText>
+                      <WeeklyScheduleEmptyText>캘린더 없음</WeeklyScheduleEmptyText>
                     )}
                   </WeeklyScheduleItem>
                 ))}

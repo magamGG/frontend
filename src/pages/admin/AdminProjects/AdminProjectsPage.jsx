@@ -61,7 +61,7 @@ export function AdminProjectsPage() {
   const [showDetailPage, setShowDetailPage] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  const [statusFilters, setStatusFilters] = useState(['전체']);
+  const [statusFilter, setStatusFilter] = useState('전체');
   const [selectedArtistFilter, setSelectedArtistFilter] = useState(null);
 
   const [sortType, setSortType] = useState(null);
@@ -203,18 +203,13 @@ export function AdminProjectsPage() {
     localStorage.setItem('adminProjectsData', JSON.stringify(projects));
   }, [projects]);
 
-  const toggleFilter = (filter) => {
-    if (filter === '전체') {
-      setStatusFilters(['전체']);
-    } else {
-      const newFilters = statusFilters.includes(filter) ? statusFilters.filter((f) => f !== filter) : [...statusFilters.filter((f) => f !== '전체'), filter];
-
-      setStatusFilters(newFilters.length === 0 ? ['전체'] : newFilters);
-    }
+  // 상태 필터 선택 핸들러 (단일 선택)
+  const handleFilterChange = (filter) => {
+    setStatusFilter(filter);
   };
 
   const filteredProjects = projects.filter((project) => {
-    const statusMatch = statusFilters.includes('전체') || statusFilters.includes(project.serialStatus);
+    const statusMatch = statusFilter === '전체' || statusFilter === project.serialStatus;
     const artistMatch = !selectedArtistFilter || project.artistId === selectedArtistFilter;
 
     return statusMatch && artistMatch;
@@ -486,10 +481,10 @@ export function AdminProjectsPage() {
                   {['전체', '연재중', '휴재', '완결'].map((filter) => (
                     <Button
                       key={filter}
-                      variant={statusFilters.includes(filter) ? 'default' : 'outline'}
+                      variant={statusFilter === filter ? 'default' : 'outline'}
                       size="sm"
-                      onClick={() => toggleFilter(filter)}
-                      className={statusFilters.includes(filter) ? getStatusBadgeColor(filter === '전체' ? '' : filter) : ''}
+                      onClick={() => handleFilterChange(filter)}
+                      className={statusFilter === filter ? getStatusBadgeColor(filter === '전체' ? '' : filter) : ''}
                     >
                       {filter}
                     </Button>

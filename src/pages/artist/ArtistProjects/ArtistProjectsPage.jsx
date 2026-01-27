@@ -103,7 +103,7 @@ const initialProjects = [
 export function ArtistProjectsPage() {
   const [selectedProject, setSelectedProject] = useState(null);
   const [showDetailPage, setShowDetailPage] = useState(false);
-  const [statusFilters, setStatusFilters] = useState(['전체']);
+  const [statusFilter, setStatusFilter] = useState('전체');
   const [projects, setProjects] = useState(initialProjects);
 
   // 페이지 제목 변경을 위한 헤더 업데이트
@@ -134,33 +134,15 @@ export function ArtistProjectsPage() {
     localStorage.setItem('projectsData', JSON.stringify(projects));
   }, [projects]);
 
-  // 필터 토글 핸들러
-  const toggleFilter = (filter) => {
-    if (filter === '전체') {
-      setStatusFilters(['전체']);
-    } else {
-      const newFilters = statusFilters.includes(filter)
-        ? statusFilters.filter((f) => f !== filter)
-        : [...statusFilters.filter((f) => f !== '전체'), filter];
-
-      // 연재중, 휴재, 완결이 모두 선택되면 전체로 변경
-      if (
-        newFilters.length === 3 &&
-        newFilters.includes(PROJECT_SERIAL_STATUS.SERIALIZING) &&
-        newFilters.includes(PROJECT_SERIAL_STATUS.ON_BREAK) &&
-        newFilters.includes(PROJECT_SERIAL_STATUS.COMPLETED)
-      ) {
-        setStatusFilters(['전체']);
-      } else {
-        setStatusFilters(newFilters.length === 0 ? ['전체'] : newFilters);
-      }
-    }
+  // 필터 선택 핸들러 (단일 선택)
+  const handleFilterChange = (filter) => {
+    setStatusFilter(filter);
   };
 
   // 필터링된 프로젝트
   const filteredProjects = projects.filter((project) => {
-    if (statusFilters.includes('전체')) return true;
-    return statusFilters.includes(project.serialStatus);
+    if (statusFilter === '전체') return true;
+    return statusFilter === project.serialStatus;
   });
 
   const handleProjectClick = (project) => {
@@ -256,10 +238,10 @@ export function ArtistProjectsPage() {
               (filter) => (
                 <Button
                   key={filter}
-                  variant={statusFilters.includes(filter) ? 'default' : 'outline'}
+                  variant={statusFilter === filter ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => toggleFilter(filter)}
-                  className={statusFilters.includes(filter) ? getStatusBadgeColor(filter === '전체' ? '' : filter) : ''}
+                  onClick={() => handleFilterChange(filter)}
+                  className={statusFilter === filter ? getStatusBadgeColor(filter === '전체' ? '' : filter) : ''}
                 >
                   {filter}
                 </Button>

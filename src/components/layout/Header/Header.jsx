@@ -96,7 +96,7 @@ export function Header({
     },
     {
       id: 2,
-      title: "일정 알림",
+      title: "캘린더 알림",
       message: "내일 편집자 미팅이 예정되어 있습니다.",
       time: "30분 전",
       isRead: false,
