@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import { Card } from '@/app/components/ui/card';
+import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
-import { Calendar, User, ChevronRight } from 'lucide-react';
+import { Input } from '@/app/components/ui/input';
+import { Label } from '@/app/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/app/components/ui/dialog';
+import { Calendar, User, ChevronRight, Clock, CheckCircle2, FileText, Plus, Edit2, Trash2, X } from 'lucide-react';
+import { toast } from 'sonner';
 import { MentalHealthDetailPage } from '@/pages/MentalHealthDetail';
 import { PhysicalHealthDetailPage } from '@/pages/PhysicalHealthDetail';
 import { RiskAnalysisPage } from '@/pages/RiskAnalysis';
@@ -13,16 +18,15 @@ import {
   AgencyHealthRoot,
   AgencyHealthBody,
   CheckupDateGrid,
-  CheckupDateCard,
-  CheckupDateHeader,
-  CheckupDateInfo,
-  CheckupDateLabel,
-  CheckupDateValue,
-  CheckupDateMeta,
-  DeepCheckupGrid,
-  DeepCheckupCard,
-  DeepCheckupHeader,
-  DeepCheckupTitle,
+  CheckupItem,
+  CheckupItemHeader,
+  CheckupItemInfo,
+  CheckupItemLabel,
+  CheckupItemDate,
+  CheckupItemBadge,
+  CheckupItemMeta,
+  CheckupItemMetaIcon,
+  CheckupItemMetaText,
   DeepCheckupStatus,
   DeepCheckupProgress,
   DeepCheckupProgressBar,
@@ -73,6 +77,12 @@ const initialDeepCheckupData = {
       { id: 7, name: '한민수', date: '2026.01.17', score: 6, status: '정상' },
       { id: 8, name: '윤서진', date: '2026.01.18', score: 9, status: '주의' },
     ].sort((a, b) => b.score - a.score),
+    pendingList: [
+      { id: 9, name: '강태희', daysRemaining: 3 },
+      { id: 10, name: '조민아', daysRemaining: 5 },
+      { id: 11, name: '서준혁', daysRemaining: 6 },
+      { id: 12, name: '임유진', daysRemaining: 7 },
+    ],
   },
   physical: {
     totalEmployees: 12,
@@ -92,26 +102,30 @@ const initialDeepCheckupData = {
       { id: 9, name: '강태희', date: '2026.01.18', score: 6, status: '정상' },
       { id: 10, name: '조민아', date: '2026.01.18', score: 9, status: '주의' },
     ].sort((a, b) => b.score - a.score),
+    pendingList: [
+      { id: 11, name: '서준혁', daysRemaining: 4 },
+      { id: 12, name: '임유진', daysRemaining: 6 },
+    ],
   },
 };
 
 const mentalPieData = [
-  { name: '정상', value: 3, color: 'var(--chart-2)' },
-  { name: '주의', value: 3, color: 'var(--chart-4)' },
-  { name: '위험', value: 2, color: 'var(--destructive)' },
+  { name: '정상', value: 3, color: '#10B981' },
+  { name: '주의', value: 3, color: '#F59E0B' },
+  { name: '위험', value: 2, color: '#EF4444' },
 ];
 
 const physicalPieData = [
-  { name: '정상', value: 6, color: 'var(--chart-2)' },
-  { name: '주의', value: 3, color: 'var(--chart-4)' },
-  { name: '위험', value: 1, color: 'var(--destructive)' },
+  { name: '정상', value: 6, color: '#10B981' },
+  { name: '주의', value: 3, color: '#F59E0B' },
+  { name: '위험', value: 1, color: '#EF4444' },
 ];
 
 const monitoringStatusData = [
-  { name: '정상', value: 5, color: 'var(--chart-2)' },
-  { name: '주의', value: 4, color: 'var(--chart-4)' },
-  { name: '위험', value: 3, color: 'var(--destructive)' },
-  { name: '미검진', value: 4, color: 'var(--muted-foreground)' },
+  { name: '정상', value: 5, color: '#10B981' },
+  { name: '주의', value: 4, color: '#F59E0B' },
+  { name: '위험', value: 3, color: '#EF4444' },
+  { name: '미검진', value: 4, color: '#6B7280' },
 ];
 
 const initialUnscreenedData = [
@@ -121,11 +135,204 @@ const initialUnscreenedData = [
   { id: 4, name: '김희동', team: '', daysOverdue: 1 },
 ].sort((a, b) => b.daysOverdue - a.daysOverdue);
 
+// 설문 데이터
+const initialSurveys = [
+  { 
+    id: '1', 
+    title: '일일 간이 체크', 
+    category: '정신건강', 
+    status: '사용 중', 
+    createdDate: '2025.12.01', 
+    questions: [
+      '오늘 기분은 어떠신가요?',
+      '수면은 충분히 취하셨나요?',
+      '스트레스 수준은 어떠신가요?',
+      '업무에 집중할 수 있었나요?',
+      '다른 사람들과 소통하는 것이 편안했나요?'
+    ]
+  },
+  { 
+    id: '2', 
+    title: '정기 심층 검사', 
+    category: '정신건강', 
+    status: '사용 중', 
+    createdDate: '2025.11.15', 
+    questions: [
+      '지난 2주간 우울감을 느낀 적이 있습니까?',
+      '지난 2주간 불안감을 느낀 적이 있습니까?',
+      '수면 패턴에 변화가 있었습니까?',
+      '식욕에 변화가 있었습니까?',
+      '일상 활동에 흥미를 잃은 적이 있습니까?'
+    ]
+  },
+  { 
+    id: '3', 
+    title: 'PHQ-9 우울증 검사', 
+    category: '정신건강', 
+    status: '사용 중', 
+    createdDate: '2025.10.20', 
+    questions: [
+      '일이나 여가 활동을 하는 데 흥미나 즐거움을 느끼지 못했다',
+      '기분이 가라앉거나, 우울하거나, 희망이 없다고 느꼈다',
+      '잠들기 어렵거나 자주 깨어났다, 혹은 너무 많이 잤다'
+    ]
+  },
+  { 
+    id: '5', 
+    title: '일일 간이 체크', 
+    category: '신체건강', 
+    status: '사용 중', 
+    createdDate: '2025.12.01', 
+    questions: [
+      '오늘 신체적 통증이 있었나요?',
+      '규칙적인 식사를 하셨나요?',
+      '충분한 수분 섭취를 하셨나요?',
+      '눈의 피로를 느끼셨나요?',
+      '어깨나 목에 긴장감을 느끼셨나요?'
+    ]
+  },
+  { 
+    id: '6', 
+    title: '정기 심층 검사', 
+    category: '신체건강', 
+    status: '사용 중', 
+    createdDate: '2025.11.15', 
+    questions: [
+      '지난 한 달간 두통이 있었습니까?',
+      '지난 한 달간 소화 불량이 있었습니까?',
+      '지난 한 달간 근육통이 있었습니까?',
+      '지난 한 달간 시력 변화가 있었습니까?'
+    ]
+  },
+];
+
 export function AgencyHealthPage() {
   const [currentView, setCurrentView] = useState('main');
   const [nextCheckupDate] = useState(initialNextCheckupDate);
   const [deepCheckupData] = useState(initialDeepCheckupData);
   const [unscreenedData] = useState(initialUnscreenedData);
+  const [surveys, setSurveys] = useState(initialSurveys);
+  
+  // 모달 상태
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isQuestionModalOpen, setIsQuestionModalOpen] = useState(false);
+  const [selectedSurvey, setSelectedSurvey] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState('정신건강');
+  
+  // 설문 폼 상태
+  const [formData, setFormData] = useState({
+    title: '',
+    category: '정신건강',
+    status: '사용 중',
+    questions: [],
+  });
+  
+  // 새 문항 입력 상태
+  const [newQuestion, setNewQuestion] = useState('');
+
+  // 설문 필터링
+  const mentalSurveys = surveys.filter(s => s.category === '정신건강');
+  const physicalSurveys = surveys.filter(s => s.category === '신체건강');
+
+  // 설문 추가 핸들러
+  const handleAddSurvey = (category) => {
+    setSelectedCategory(category);
+    setFormData({
+      title: '',
+      category: category,
+      status: '사용 중',
+      questions: [],
+    });
+    setNewQuestion('');
+    setIsAddModalOpen(true);
+  };
+
+  // 설문 수정 핸들러
+  const handleEditSurvey = (survey) => {
+    setSelectedSurvey(survey);
+    setFormData({
+      title: survey.title,
+      category: survey.category,
+      status: survey.status,
+      questions: [...survey.questions],
+    });
+    setNewQuestion('');
+    setIsEditModalOpen(true);
+  };
+
+  // 설문 삭제 핸들러
+  const handleDeleteSurvey = (survey) => {
+    setSurveys(surveys.filter(s => s.id !== survey.id));
+    toast.success('설문이 삭제되었습니다');
+  };
+
+  // 문항 추가 핸들러
+  const handleAddQuestion = () => {
+    if (!newQuestion.trim()) {
+      toast.error('문항 내용을 입력해주세요');
+      return;
+    }
+    setFormData({
+      ...formData,
+      questions: [...formData.questions, newQuestion.trim()],
+    });
+    setNewQuestion('');
+    setIsQuestionModalOpen(false);
+  };
+
+  // 문항 삭제 핸들러
+  const handleRemoveQuestion = (index) => {
+    setFormData({
+      ...formData,
+      questions: formData.questions.filter((_, i) => i !== index),
+    });
+  };
+
+  // 설문 추가 제출
+  const handleAddSubmit = () => {
+    if (!formData.title.trim()) {
+      toast.error('설문 제목을 입력해주세요');
+      return;
+    }
+    if (formData.questions.length === 0) {
+      toast.error('최소 1개 이상의 문항을 추가해주세요');
+      return;
+    }
+
+    const newSurvey = {
+      id: Date.now().toString(),
+      title: formData.title,
+      category: formData.category,
+      status: formData.status,
+      createdDate: new Date().toISOString().split('T')[0].replace(/-/g, '.'),
+      questions: formData.questions,
+    };
+    setSurveys([...surveys, newSurvey]);
+    setIsAddModalOpen(false);
+    toast.success('설문이 추가되었습니다');
+  };
+
+  // 설문 수정 제출
+  const handleEditSubmit = () => {
+    if (!selectedSurvey) return;
+    if (!formData.title.trim()) {
+      toast.error('설문 제목을 입력해주세요');
+      return;
+    }
+    if (formData.questions.length === 0) {
+      toast.error('최소 1개 이상의 문항을 추가해주세요');
+      return;
+    }
+
+    setSurveys(surveys.map(s => 
+      s.id === selectedSurvey.id 
+        ? { ...s, ...formData }
+        : s
+    ));
+    setIsEditModalOpen(false);
+    toast.success('설문이 수정되었습니다');
+  };
 
   // 상세 페이지 표시 조건부 렌더링
   if (currentView === 'mental-detail') {
@@ -155,165 +362,166 @@ export function AgencyHealthPage() {
   return (
     <AgencyHealthRoot>
       <AgencyHealthBody>
-        {/* 상단: 다음 검진 예정일 */}
+        {/* 상단: 검진 예정일 및 심층 검사 */}
         <CheckupDateGrid>
           {/* 정신 건강 검진 예정일 */}
-          <CheckupDateCard>
-            <CheckupDateHeader>
-              <CheckupDateInfo>
-                <CheckupDateLabel>정신 건강 검진 예정일</CheckupDateLabel>
-                <CheckupDateValue>{nextCheckupDate.mentalCheckup}</CheckupDateValue>
-                <CheckupDateMeta>
-                  <Calendar className="w-3.5 h-3.5" />
-                  <span>검진 {nextCheckupDate.daysUntilMental}일 전</span>
-                </CheckupDateMeta>
-              </CheckupDateInfo>
-              <Badge className="bg-purple-500 text-white text-xs px-2.5 py-1 rounded-full">
+          <CheckupItem $bgColor="from-purple-50 to-purple-100/50" $borderColor="border-purple-200">
+            <CheckupItemHeader>
+              <CheckupItemInfo>
+                <CheckupItemLabel $color="#9333EA">정신 건강 검진 예정일</CheckupItemLabel>
+                <CheckupItemDate>{nextCheckupDate.mentalCheckup}</CheckupItemDate>
+              </CheckupItemInfo>
+              <Badge className="text-white text-xs px-2.5 py-1 rounded-full" style={{ backgroundColor: '#9333EA' }}>
                 정신
               </Badge>
-            </CheckupDateHeader>
-          </CheckupDateCard>
+            </CheckupItemHeader>
+            <CheckupItemMeta>
+              <CheckupItemMetaIcon>
+                <Calendar className="w-3.5 h-3.5" />
+              </CheckupItemMetaIcon>
+              <CheckupItemMetaText>검진 {nextCheckupDate.daysUntilMental}일 전</CheckupItemMetaText>
+            </CheckupItemMeta>
+
+            {/* 정신 건강 심층 검사 */}
+            <div className="mt-4 pt-4 border-t" style={{ borderColor: '#E9D5FF' }}>
+              <div className="flex items-center gap-2 mb-3">
+                <FileText className="w-4 h-4" style={{ color: '#9333EA' }} />
+                <h3 className="text-sm font-bold" style={{ color: '#1f2328' }}>정신 건강 심층 검사</h3>
+              </div>
+
+              {/* 검사 현황 */}
+              <DeepCheckupStatus>
+                <div className="flex items-center justify-between text-xs mb-1.5">
+                  <span style={{ color: '#6E8FB3' }}>검사 현황</span>
+                  <span className="font-bold" style={{ color: '#1f2328' }}>{deepCheckupData.mental.completionRate}%</span>
+                </div>
+                <DeepCheckupProgressBar>
+                  <DeepCheckupProgress $color="purple" $width={deepCheckupData.mental.completionRate} />
+                </DeepCheckupProgressBar>
+                <DeepCheckupProgressText>
+                  총 {deepCheckupData.mental.totalEmployees}명, 미완료 {deepCheckupData.mental.pending}명 {deepCheckupData.mental.lastUpdated}
+                </DeepCheckupProgressText>
+              </DeepCheckupStatus>
+
+              {/* 점수 분포 */}
+              <ScoreDistribution>
+                <ScoreDistributionTitle>점수 분포</ScoreDistributionTitle>
+                <div className="flex items-center gap-3">
+                  <PieChartContainer>
+                    <PieChart width={100} height={100}>
+                      <Pie
+                        data={mentalPieData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={28}
+                        outerRadius={42}
+                        paddingAngle={3}
+                        dataKey="value"
+                      >
+                        {mentalPieData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </PieChartContainer>
+                  <LegendContainer>
+                    {mentalPieData.map((item, index) => (
+                      <LegendItem key={index}>
+                        <LegendColor $color={item.color} />
+                        <LegendLabel>{item.name}</LegendLabel>
+                        <LegendValue>{item.value}명</LegendValue>
+                      </LegendItem>
+                    ))}
+                  </LegendContainer>
+                </div>
+              </ScoreDistribution>
+            </div>
+          </CheckupItem>
 
           {/* 신체 건강 검진 예정일 */}
-          <CheckupDateCard>
-            <CheckupDateHeader>
-              <CheckupDateInfo>
-                <CheckupDateLabel>신체 건강 검진 예정일</CheckupDateLabel>
-                <CheckupDateValue>{nextCheckupDate.physicalCheckup}</CheckupDateValue>
-                <CheckupDateMeta>
-                  <Calendar className="w-3.5 h-3.5" />
-                  <span>검진 {nextCheckupDate.daysUntilPhysical}일 전</span>
-                </CheckupDateMeta>
-              </CheckupDateInfo>
-              <Badge className="bg-blue-500 text-white text-xs px-2.5 py-1 rounded-full">
+          <CheckupItem $bgColor="from-blue-50 to-blue-100/50" $borderColor="border-blue-200">
+            <CheckupItemHeader>
+              <CheckupItemInfo>
+                <CheckupItemLabel $color="#2563EB">신체 건강 검진 예정일</CheckupItemLabel>
+                <CheckupItemDate>{nextCheckupDate.physicalCheckup}</CheckupItemDate>
+              </CheckupItemInfo>
+              <Badge className="text-white text-xs px-2.5 py-1 rounded-full" style={{ backgroundColor: '#2563EB' }}>
                 신체
               </Badge>
-            </CheckupDateHeader>
-          </CheckupDateCard>
+            </CheckupItemHeader>
+            <CheckupItemMeta>
+              <CheckupItemMetaIcon>
+                <Calendar className="w-3.5 h-3.5" />
+              </CheckupItemMetaIcon>
+              <CheckupItemMetaText>검진 {nextCheckupDate.daysUntilPhysical}일 전</CheckupItemMetaText>
+            </CheckupItemMeta>
+
+            {/* 신체 건강 심층 검사 */}
+            <div className="mt-4 pt-4 border-t" style={{ borderColor: '#BFDBFE' }}>
+              <div className="flex items-center gap-2 mb-3">
+                <FileText className="w-4 h-4" style={{ color: '#2563EB' }} />
+                <h3 className="text-sm font-bold" style={{ color: '#1f2328' }}>신체 건강 심층 검사</h3>
+              </div>
+
+              {/* 검사 현황 */}
+              <DeepCheckupStatus>
+                <div className="flex items-center justify-between text-xs mb-1.5">
+                  <span style={{ color: '#6E8FB3' }}>검사 현황</span>
+                  <span className="font-bold" style={{ color: '#1f2328' }}>{deepCheckupData.physical.completionRate}%</span>
+                </div>
+                <DeepCheckupProgressBar>
+                  <DeepCheckupProgress $color="blue" $width={deepCheckupData.physical.completionRate} />
+                </DeepCheckupProgressBar>
+                <DeepCheckupProgressText>
+                  총 {deepCheckupData.physical.totalEmployees}명, 미완료 {deepCheckupData.physical.pending}명 {deepCheckupData.physical.lastUpdated}
+                </DeepCheckupProgressText>
+              </DeepCheckupStatus>
+
+              {/* 점수 분포 */}
+              <ScoreDistribution>
+                <ScoreDistributionTitle>점수 분포</ScoreDistributionTitle>
+                <div className="flex items-center gap-3">
+                  <PieChartContainer>
+                    <PieChart width={100} height={100}>
+                      <Pie
+                        data={physicalPieData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={28}
+                        outerRadius={42}
+                        paddingAngle={3}
+                        dataKey="value"
+                      >
+                        {physicalPieData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </PieChartContainer>
+                  <LegendContainer>
+                    {physicalPieData.map((item, index) => (
+                      <LegendItem key={index}>
+                        <LegendColor $color={item.color} />
+                        <LegendLabel>{item.name}</LegendLabel>
+                        <LegendValue>{item.value}명</LegendValue>
+                      </LegendItem>
+                    ))}
+                  </LegendContainer>
+                </div>
+              </ScoreDistribution>
+            </div>
+          </CheckupItem>
         </CheckupDateGrid>
-
-        {/* 중단: 정신/신체 건강 심층 검사 */}
-        <DeepCheckupGrid>
-          {/* 정신 건강 심층 검사 */}
-          <DeepCheckupCard onClick={() => setCurrentView('mental-detail')}>
-            <DeepCheckupHeader>
-              <DeepCheckupTitle>정신 건강 심층 검사</DeepCheckupTitle>
-              <ChevronRight className="w-4 h-4" style={{ color: 'var(--muted-foreground)' }} />
-            </DeepCheckupHeader>
-
-            {/* 검사 현황 */}
-            <DeepCheckupStatus>
-              <div className="flex items-center justify-between text-xs mb-1.5">
-                <span style={{ color: 'var(--muted-foreground)' }}>검사 현황</span>
-                <span className="font-bold" style={{ color: 'var(--foreground)' }}>{deepCheckupData.mental.completionRate}%</span>
-              </div>
-              <DeepCheckupProgressBar>
-                <DeepCheckupProgress $color="purple" $width={deepCheckupData.mental.completionRate} />
-              </DeepCheckupProgressBar>
-              <DeepCheckupProgressText>
-                총 {deepCheckupData.mental.totalEmployees}명, 미완료 {deepCheckupData.mental.pending}명 · {deepCheckupData.mental.lastUpdated}
-              </DeepCheckupProgressText>
-            </DeepCheckupStatus>
-
-            {/* 점수 분포 */}
-            <ScoreDistribution>
-              <ScoreDistributionTitle>점수 분포</ScoreDistributionTitle>
-              <div className="flex items-center gap-3">
-                <PieChartContainer>
-                  <PieChart width={100} height={100}>
-                    <Pie
-                      data={mentalPieData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={28}
-                      outerRadius={42}
-                      paddingAngle={3}
-                      dataKey="value"
-                    >
-                      {mentalPieData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </PieChartContainer>
-                <LegendContainer>
-                  {mentalPieData.map((item, index) => (
-                    <LegendItem key={index}>
-                      <LegendColor $color={item.color} />
-                      <LegendLabel>{item.name}</LegendLabel>
-                      <LegendValue>{item.value}명</LegendValue>
-                    </LegendItem>
-                  ))}
-                </LegendContainer>
-              </div>
-            </ScoreDistribution>
-          </DeepCheckupCard>
-
-          {/* 신체 건강 심층 검사 */}
-          <DeepCheckupCard onClick={() => setCurrentView('physical-detail')}>
-            <DeepCheckupHeader>
-              <DeepCheckupTitle>신체 건강 심층 검사</DeepCheckupTitle>
-              <ChevronRight className="w-4 h-4" style={{ color: 'var(--muted-foreground)' }} />
-            </DeepCheckupHeader>
-
-            {/* 검사 현황 */}
-            <DeepCheckupStatus>
-              <div className="flex items-center justify-between text-xs mb-1.5">
-                <span style={{ color: 'var(--muted-foreground)' }}>검사 현황</span>
-                <span className="font-bold" style={{ color: 'var(--foreground)' }}>{deepCheckupData.physical.completionRate}%</span>
-              </div>
-              <DeepCheckupProgressBar>
-                <DeepCheckupProgress $color="blue" $width={deepCheckupData.physical.completionRate} />
-              </DeepCheckupProgressBar>
-              <DeepCheckupProgressText>
-                총 {deepCheckupData.physical.totalEmployees}명, 미완료 {deepCheckupData.physical.pending}명 · {deepCheckupData.physical.lastUpdated}
-              </DeepCheckupProgressText>
-            </DeepCheckupStatus>
-
-            {/* 점수 분포 */}
-            <ScoreDistribution>
-              <ScoreDistributionTitle>점수 분포</ScoreDistributionTitle>
-              <div className="flex items-center gap-3">
-                <PieChartContainer>
-                  <PieChart width={100} height={100}>
-                    <Pie
-                      data={physicalPieData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={28}
-                      outerRadius={42}
-                      paddingAngle={3}
-                      dataKey="value"
-                    >
-                      {physicalPieData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </PieChartContainer>
-                <LegendContainer>
-                  {physicalPieData.map((item, index) => (
-                    <LegendItem key={index}>
-                      <LegendColor $color={item.color} />
-                      <LegendLabel>{item.name}</LegendLabel>
-                      <LegendValue>{item.value}명</LegendValue>
-                    </LegendItem>
-                  ))}
-                </LegendContainer>
-              </div>
-            </ScoreDistribution>
-          </DeepCheckupCard>
-        </DeepCheckupGrid>
 
         {/* 하단: 검진 모니터링 및 미검진 인원 */}
         <MonitoringGrid>
           {/* 검진 모니터링 */}
           <MonitoringCard onClick={() => setCurrentView('monitoring-detail')}>
             <MonitoringHeader>
-              <h2 className="text-sm font-bold" style={{ color: 'var(--foreground)' }}>검진 모니터링</h2>
-              <ChevronRight className="w-4 h-4" style={{ color: 'var(--muted-foreground)' }} />
+              <h2 className="text-sm font-bold" style={{ color: '#1f2328' }}>검진 모니터링</h2>
+              <ChevronRight className="w-4 h-4" style={{ color: '#6E8FB3' }} />
             </MonitoringHeader>
 
             <div className="flex items-center justify-between gap-4">
@@ -348,15 +556,15 @@ export function AgencyHealthPage() {
             </div>
 
             <MonitoringFooter>
-              <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>검진 인원</span>
+              <span className="text-xs" style={{ color: '#6E8FB3' }}>검진 인원</span>
             </MonitoringFooter>
           </MonitoringCard>
 
           {/* 미검진 인원 집중 관리 */}
           <UnscreenedCard onClick={() => setCurrentView('unscreened-detail')}>
             <UnscreenedHeader>
-              <h2 className="text-sm font-bold" style={{ color: 'var(--foreground)' }}>미검진 인원 집중 관리</h2>
-              <ChevronRight className="w-4 h-4" style={{ color: 'var(--muted-foreground)' }} />
+              <h2 className="text-sm font-bold" style={{ color: '#1f2328' }}>미검진 인원 집중 관리</h2>
+              <ChevronRight className="w-4 h-4" style={{ color: '#6E8FB3' }} />
             </UnscreenedHeader>
 
             <UnscreenedList>
@@ -364,11 +572,11 @@ export function AgencyHealthPage() {
                 <UnscreenedItem key={person.id}>
                   <div className="flex items-center gap-2">
                     <UnscreenedAvatar>
-                      <User className="w-4 h-4" style={{ color: 'var(--muted-foreground)' }} />
+                      <User className="w-4 h-4" style={{ color: '#6B7280' }} />
                     </UnscreenedAvatar>
                     <UnscreenedName>{person.name}</UnscreenedName>
                   </div>
-                  <Badge className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                  <Badge className="text-white text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: '#DC2626' }}>
                     {person.daysOverdue}일 지연
                   </Badge>
                 </UnscreenedItem>
@@ -376,7 +584,363 @@ export function AgencyHealthPage() {
             </UnscreenedList>
           </UnscreenedCard>
         </MonitoringGrid>
+
+        {/* 설문 섹션 */}
+        <div className="grid grid-cols-2 gap-4">
+          {/* 정신건강 설문 */}
+          <Card className="p-5 bg-white border border-[#e2e8f0] rounded-xl shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5" style={{ color: '#6E8FB3' }} />
+                <h3 className="text-sm font-bold" style={{ color: '#1f2328' }}>
+                  정신건강 설문 ({mentalSurveys.length}개)
+                </h3>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleAddSurvey('정신건강')}
+                className="h-8 text-xs border-[#e2e8f0] hover:bg-gray-50"
+              >
+                <Plus className="w-3 h-3 mr-1" />
+                설문 추가
+              </Button>
+            </div>
+            <div className="space-y-2">
+              {mentalSurveys.map((survey) => (
+                <div key={survey.id} className="p-3 bg-[#FAFAFA] rounded-lg border border-[#e2e8f0]">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium" style={{ color: '#1f2328' }}>{survey.title}</span>
+                      <Badge className="text-xs px-2 py-0.5 bg-green-100 text-green-600">
+                        {survey.status}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditSurvey(survey)}
+                        className="h-7 w-7 p-0 text-blue-600 hover:text-blue-700"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteSurvey(survey)}
+                        className="h-7 w-7 p-0 text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="text-xs space-y-0.5" style={{ color: '#6E8FB3' }}>
+                    <div>문항 수: {survey.questions.length}개</div>
+                    <div>생성일: {survey.createdDate}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          {/* 신체건강 설문 */}
+          <Card className="p-5 bg-white border border-[#e2e8f0] rounded-xl shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5" style={{ color: '#6E8FB3' }} />
+                <h3 className="text-sm font-bold" style={{ color: '#1f2328' }}>
+                  신체건강 설문 ({physicalSurveys.length}개)
+                </h3>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleAddSurvey('신체건강')}
+                className="h-8 text-xs border-[#e2e8f0] hover:bg-gray-50"
+              >
+                <Plus className="w-3 h-3 mr-1" />
+                설문 추가
+              </Button>
+            </div>
+            <div className="space-y-2">
+              {physicalSurveys.map((survey) => (
+                <div key={survey.id} className="p-3 bg-[#FAFAFA] rounded-lg border border-[#e2e8f0]">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium" style={{ color: '#1f2328' }}>{survey.title}</span>
+                      <Badge className="text-xs px-2 py-0.5 bg-green-100 text-green-600">
+                        {survey.status}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditSurvey(survey)}
+                        className="h-7 w-7 p-0 text-blue-600 hover:text-blue-700"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteSurvey(survey)}
+                        className="h-7 w-7 p-0 text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="text-xs space-y-0.5" style={{ color: '#6E8FB3' }}>
+                    <div>문항 수: {survey.questions.length}개</div>
+                    <div>생성일: {survey.createdDate}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
       </AgencyHealthBody>
+
+      {/* 설문 추가 모달 */}
+      <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+        <DialogContent className="max-w-md bg-white p-6">
+          <div className="flex items-center justify-between mb-4">
+            <DialogTitle className="text-lg text-[#1F2328] font-bold">설문 추가</DialogTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsAddModalOpen(false)}
+              className="h-6 w-6 p-0"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-sm text-[#1F2328] font-medium mb-2 block">설문 제목</Label>
+              <Input
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="설문 제목을 입력하세요"
+                className="h-9"
+              />
+            </div>
+            <div>
+              <Label className="text-sm text-[#1F2328] font-medium mb-2 block">문항</Label>
+              <Button
+                onClick={() => setIsQuestionModalOpen(true)}
+                className="bg-[#3F4A5A] hover:bg-[#2F3A4A] text-white h-9 w-full"
+              >
+                문항 추가
+              </Button>
+              <div className="space-y-1 mt-2">
+                {formData.questions.map((question, index) => (
+                  <div key={index} className="flex items-center justify-between bg-[#FAFAFA] p-2 rounded-lg">
+                    <span className="text-sm text-[#6E8FB3]">{question}</span>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setNewQuestion(question);
+                          handleRemoveQuestion(index);
+                          setIsQuestionModalOpen(true);
+                        }}
+                        className="h-7 w-7 p-0 text-blue-600 hover:text-blue-700"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveQuestion(index)}
+                        className="h-7 w-7 p-0 text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <Label className="text-sm text-[#1F2328] font-medium mb-2 block">상태</Label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={formData.status === '사용 중' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setFormData({ ...formData, status: '사용 중' })}
+                  className={`h-9 ${formData.status === '사용 중' ? 'bg-[#3F4A5A] hover:bg-[#2F3A4A] text-white' : ''}`}
+                >
+                  사용 중
+                </Button>
+                <Button
+                  type="button"
+                  variant={formData.status === '미사용' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setFormData({ ...formData, status: '미사용' })}
+                  className={`h-9 ${formData.status === '미사용' ? 'bg-[#3F4A5A] hover:bg-[#2F3A4A] text-white' : ''}`}
+                >
+                  미사용
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setIsAddModalOpen(false)} className="h-9 bg-gray-100 hover:bg-gray-200">
+              취소
+            </Button>
+            <Button 
+              onClick={handleAddSubmit} 
+              className="bg-[#3F4A5A] hover:bg-[#2F3A4A] text-white h-9"
+            >
+              추가
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 설문 수정 모달 */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="max-w-md bg-white p-6">
+          <div className="flex items-center justify-between mb-4">
+            <DialogTitle className="text-lg text-[#1F2328] font-bold">설문 수정</DialogTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsEditModalOpen(false)}
+              className="h-6 w-6 p-0"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-sm text-[#1F2328] font-medium mb-2 block">설문 제목</Label>
+              <Input
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="설문 제목을 입력하세요"
+                className="h-9"
+              />
+            </div>
+            <div>
+              <Label className="text-sm text-[#1F2328] font-medium mb-2 block">문항</Label>
+              <div className="space-y-2">
+                {formData.questions.map((question, index) => (
+                  <div key={index} className="flex items-center justify-between bg-[#FAFAFA] p-2 rounded-lg">
+                    <span className="text-sm text-[#6E8FB3]">{question}</span>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setNewQuestion(question);
+                          handleRemoveQuestion(index);
+                          setIsQuestionModalOpen(true);
+                        }}
+                        className="h-7 w-7 p-0 text-blue-600 hover:text-blue-700"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveQuestion(index)}
+                        className="h-7 w-7 p-0 text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                <Button
+                  onClick={() => setIsQuestionModalOpen(true)}
+                  className="bg-[#3F4A5A] hover:bg-[#2F3A4A] text-white h-9 w-full"
+                >
+                  문항 추가
+                </Button>
+              </div>
+            </div>
+            <div>
+              <Label className="text-sm text-[#1F2328] font-medium mb-2 block">상태</Label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={formData.status === '사용 중' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setFormData({ ...formData, status: '사용 중' })}
+                  className={`h-9 ${formData.status === '사용 중' ? 'bg-[#3F4A5A] hover:bg-[#2F3A4A] text-white' : ''}`}
+                >
+                  사용 중
+                </Button>
+                <Button
+                  type="button"
+                  variant={formData.status === '미사용' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setFormData({ ...formData, status: '미사용' })}
+                  className={`h-9 ${formData.status === '미사용' ? 'bg-[#3F4A5A] hover:bg-[#2F3A4A] text-white' : ''}`}
+                >
+                  미사용
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setIsEditModalOpen(false)} className="h-9 bg-gray-100 hover:bg-gray-200">
+              취소
+            </Button>
+            <Button 
+              onClick={handleEditSubmit} 
+              className="bg-[#3F4A5A] hover:bg-[#2F3A4A] text-white h-9"
+            >
+              저장
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 문항 추가 모달 */}
+      <Dialog open={isQuestionModalOpen} onOpenChange={setIsQuestionModalOpen}>
+        <DialogContent className="max-w-sm bg-white p-6">
+          <div className="flex items-center justify-between mb-4">
+            <DialogTitle className="text-lg text-[#1F2328] font-bold">문항 추가</DialogTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsQuestionModalOpen(false)}
+              className="h-6 w-6 p-0"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-sm text-[#1F2328] font-medium mb-2 block">문항 내용</Label>
+              <Input
+                value={newQuestion}
+                onChange={(e) => setNewQuestion(e.target.value)}
+                placeholder="문항의 내용을 입력하세요"
+                className="h-9"
+              />
+            </div>
+          </div>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setIsQuestionModalOpen(false)} className="h-9 bg-gray-100 hover:bg-gray-200">
+              취소
+            </Button>
+            <Button 
+              onClick={handleAddQuestion} 
+              className="bg-[#3F4A5A] hover:bg-[#2F3A4A] text-white h-9"
+            >
+              추가
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AgencyHealthRoot>
   );
 }

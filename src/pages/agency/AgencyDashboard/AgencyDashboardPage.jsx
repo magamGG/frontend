@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Card } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
@@ -10,9 +9,10 @@ import {
   ChevronRight,
   Clock,
   CheckCircle2,
-  Target
+  Target,
+  Activity
 } from 'lucide-react';
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Label } from 'recharts';
 import {
   AgencyDashboardRoot,
   AgencyDashboardBody,
@@ -45,7 +45,6 @@ import {
 } from './AgencyDashboardPage.styled';
 
 export function AgencyDashboardPage() {
-  const [selectedSection, setSelectedSection] = useState(null);
 
   // TODO: Zustand store mapping - 메트릭 데이터
   const metrics = [
@@ -108,12 +107,38 @@ export function AgencyDashboardPage() {
     { name: '워케이션', value: 1, color: '#9C27B0' },
   ];
 
-  // TODO: Zustand store mapping - 승인 대기 데이터
-  const approvalData = [
-    { name: '휴재', value: 2, color: '#757575' },
-    { name: '계약', value: 2, color: '#9C27B0' },
-    { name: '신청', value: 1, color: '#00ACC1' },
+  // TODO: Zustand store mapping - 건강 인원 분포 데이터
+  const healthData = [
+    { name: '위험', value: 2, color: '#EF4444' }, // 빨간색
+    { name: '주의', value: 5, color: '#FF9800' }, // 주황색
+    { name: '정상', value: 15, color: '#10B981' }, // 초록색
   ];
+
+  // 건강 인원 분포 레이블 렌더링 함수
+  const renderHealthLabel = (props) => {
+    const RADIAN = Math.PI / 180;
+    const { cx, cy, midAngle, innerRadius, outerRadius, name, value } = props;
+    const entry = healthData.find(item => item.name === name && item.value === value);
+    const color = entry?.color || '#000';
+    
+    const labelRadius = outerRadius + 30;
+    const x = cx + Math.cos(-midAngle * RADIAN) * labelRadius;
+    const y = cy + Math.sin(-midAngle * RADIAN) * labelRadius;
+    
+    return (
+      <text
+        x={x}
+        y={y}
+        fill={color}
+        textAnchor={x > cx ? 'start' : 'end'}
+        dominantBaseline="central"
+        fontSize={14}
+        fontWeight={500}
+      >
+        {`${name} ${value}명`}
+      </text>
+    );
+  };
 
   return (
     <AgencyDashboardRoot>
@@ -142,7 +167,7 @@ export function AgencyDashboardPage() {
         {/* 그래프 섹션 */}
         <ChartsGrid>
           {/* 평균 마감 준수율 추이 (선 그래프) */}
-          <ChartCard onClick={() => setSelectedSection('revenue')}>
+          <ChartCard>
             <ChartCardHeader>
               <ChartCardIcon>
                 <Target className="w-5 h-5" style={{ color: '#6E8FB3' }} />
@@ -196,7 +221,7 @@ export function AgencyDashboardPage() {
           </ChartCard>
 
           {/* 작품별 아티스트 분포도 (막대 그래프) */}
-          <ChartCard onClick={() => setSelectedSection('distribution')}>
+          <ChartCard>
             <ChartCardHeader>
               <ChartCardIcon>
                 <Users className="w-5 h-5" style={{ color: '#6E8FB3' }} />
@@ -303,13 +328,13 @@ export function AgencyDashboardPage() {
             </PieChartFooter>
           </ChartCard>
 
-          {/* 승인 대기 중인 직원 수 */}
-          <ChartCard onClick={() => setSelectedSection('approvals')}>
+          {/* 건강 인원 분포 */}
+          <ChartCard>
             <ChartCardHeader>
               <ChartCardIcon>
-                <Clock className="w-5 h-5" style={{ color: '#6E8FB3' }} />
+                <Activity className="w-5 h-5" style={{ color: '#6E8FB3' }} />
               </ChartCardIcon>
-              <ChartCardTitle>승인 대기 중인 직원 수</ChartCardTitle>
+              <ChartCardTitle>건강 인원 분포</ChartCardTitle>
             </ChartCardHeader>
 
             <PieChartSection>
@@ -317,16 +342,18 @@ export function AgencyDashboardPage() {
                 <ResponsiveContainer width="100%" height={200}>
                   <PieChart>
                     <Pie
-                      data={approvalData}
+                      data={healthData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={50}
-                      outerRadius={80}
+                      innerRadius={0}
+                      outerRadius={100}
                       fill="#8884d8"
-                      paddingAngle={5}
+                      paddingAngle={2}
                       dataKey="value"
+                      label={renderHealthLabel}
+                      labelLine={false}
                     >
-                      {approvalData.map((entry, index) => (
+                      {healthData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
@@ -336,20 +363,20 @@ export function AgencyDashboardPage() {
               </PieChartContainer>
 
               <PieChartLegend>
-                {approvalData.map((item, index) => (
+                {healthData.map((item, index) => (
                   <PieChartLegendItem key={index}>
                     <PieChartLegendDot style={{ backgroundColor: item.color }} />
                     <PieChartLegendLabel>{item.name}</PieChartLegendLabel>
-                    <PieChartLegendValue>{item.value}건</PieChartLegendValue>
+                    <PieChartLegendValue>{item.value}명</PieChartLegendValue>
                   </PieChartLegendItem>
                 ))}
               </PieChartLegend>
             </PieChartSection>
 
             <PieChartFooter>
-              <PieChartFooterLabel>전체 대기</PieChartFooterLabel>
+              <PieChartFooterLabel>전체 인원</PieChartFooterLabel>
               <PieChartFooterValue>
-                {approvalData.reduce((sum, item) => sum + item.value, 0)}건
+                {healthData.reduce((sum, item) => sum + item.value, 0)}명
               </PieChartFooterValue>
             </PieChartFooter>
           </ChartCard>
