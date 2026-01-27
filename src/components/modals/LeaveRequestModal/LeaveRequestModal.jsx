@@ -49,13 +49,17 @@ const getCurrentDate = () => {
 export function LeaveRequestModal({ open, onOpenChange }) {
   const [selectedType, setSelectedType] = useState('연차');
   const [leaveCategory, setLeaveCategory] = useState('연차');
+  const [halfDayType, setHalfDayType] = useState('선택 안 함'); // 반차 유형 (반차/반반차)
   const [startDate, setStartDate] = useState(getCurrentDate());
   const [endDate, setEndDate] = useState(getCurrentDate());
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
   const [reason, setReason] = useState('');
   const [location, setLocation] = useState('');
   const [selectedProject, setSelectedProject] = useState('선택 안 함');
   const [attachedFile, setAttachedFile] = useState(null);
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
+  const [showHalfDayTypeDropdown, setShowHalfDayTypeDropdown] = useState(false);
   const [remainingLeave, setRemainingLeave] = useState(null);
 
   const { getMemberName } = useAuthStore();
@@ -96,7 +100,7 @@ export function LeaveRequestModal({ open, onOpenChange }) {
     }
   }, [selectedType, getMemberName]);
 
-  const leaveTypes = ['연차', '병가', '워케이션', '재택근무', '휴재'];
+  const leaveTypes = ['연차', '반차', '병가', '워케이션', '재택근무', '휴재'];
 
   const projectOptions = ['선택 안 함', ...projects.map(p => `${p.title} (${p.currentEpisode})`)];
 
@@ -105,6 +109,9 @@ export function LeaveRequestModal({ open, onOpenChange }) {
     setLeaveCategory(selectedType);
     setLocation('');
     setSelectedProject('선택 안 함');
+    setHalfDayType('선택 안 함');
+    setStartTime('');
+    setEndTime('');
   }, [selectedType]);
 
   // Calculate days between dates
@@ -113,6 +120,17 @@ export function LeaveRequestModal({ open, onOpenChange }) {
     const end = new Date(endDate);
     const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     return days;
+  };
+
+  // Calculate hours between times (for 반차)
+  const calculateHours = () => {
+    if (!startTime || !endTime) return 0;
+    const [startHour, startMin] = startTime.split(':').map(Number);
+    const [endHour, endMin] = endTime.split(':').map(Number);
+    const startTotal = startHour * 60 + startMin;
+    const endTotal = endHour * 60 + endMin;
+    const diffMinutes = endTotal - startTotal;
+    return Math.ceil(diffMinutes / 60);
   };
 
   const handleFileUpload = (e) => {
@@ -129,6 +147,11 @@ export function LeaveRequestModal({ open, onOpenChange }) {
     }
 
     // Validate specific fields based on type
+    if (selectedType === '반차' && (!startTime || !endTime)) {
+      toast.error('신청 시간을 입력해주세요.');
+      return;
+    }
+
     if (selectedType === '워케이션' && !location) {
       toast.error('워케이션 장소를 입력해주세요.');
       return;
@@ -146,6 +169,7 @@ export function LeaveRequestModal({ open, onOpenChange }) {
     
     const typeMap = {
       '연차': 'break',
+      '반차': 'break',
       '병가': 'break',
       '워케이션': 'workation',
       '재택근무': 'remote',
@@ -158,7 +182,11 @@ export function LeaveRequestModal({ open, onOpenChange }) {
       typeName: selectedType,
       startDate: startDate,
       endDate: endDate,
-      days: days,
+      days: selectedType === '반차' ? 0.5 : days,
+      hours: selectedType === '반차' ? calculateHours() : undefined,
+      startTime: selectedType === '반차' ? startTime : undefined,
+      endTime: selectedType === '반차' ? endTime : undefined,
+      halfDayType: selectedType === '반차' ? halfDayType : undefined,
       reason: reason,
       location: location || undefined,
       project: selectedProject !== '선택 안 함' ? selectedProject : undefined,
@@ -171,15 +199,16 @@ export function LeaveRequestModal({ open, onOpenChange }) {
     // localStorage에 저장
     localStorage.setItem('attendanceData', JSON.stringify([...existingAttendance, newRequestData]));
 
-    // 연차 신청인 경우 사용한 연차 업데이트
-    if (selectedType === '연차') {
+    // 연차/반차 신청인 경우 사용한 연차 업데이트
+    if (selectedType === '연차' || selectedType === '반차') {
       const memberName = getMemberName();
       const employees = JSON.parse(localStorage.getItem('agencyEmployees') || '[]');
       
       if (memberName && employees.length > 0) {
         const updatedEmployees = employees.map(emp => {
           if (emp.name === memberName) {
-            const newUsedLeave = emp.usedLeave + days;
+            const leaveDays = selectedType === '반차' ? 0.5 : days;
+            const newUsedLeave = emp.usedLeave + leaveDays;
             const newRemainingLeave = emp.totalLeave - newUsedLeave;
             return {
               ...emp,
@@ -203,8 +232,11 @@ export function LeaveRequestModal({ open, onOpenChange }) {
   const resetForm = () => {
     setSelectedType('연차');
     setLeaveCategory('연차');
+    setHalfDayType('선택 안 함');
     setStartDate(getCurrentDate());
     setEndDate(getCurrentDate());
+    setStartTime('');
+    setEndTime('');
     setReason('');
     setLocation('');
     setSelectedProject('선택 안 함');
@@ -221,6 +253,8 @@ export function LeaveRequestModal({ open, onOpenChange }) {
     switch (selectedType) {
       case '연차':
         return '연차는 최소 반차 단위로 신청할 수 있습니다.';
+      case '반차':
+        return '반차 사유 관련 자료가 있다면 첨부할 수 있습니다.';
       case '병가':
         return '병가일 경우 진단서를 첨부할 수 있습니다. (나중에 업로드 가능)';
       case '워케이션':
@@ -262,21 +296,63 @@ export function LeaveRequestModal({ open, onOpenChange }) {
             ))}
           </TabContainer>
 
-          {/* 연차 선택 시 남은 연차 표시 */}
-          {selectedType === '연차' && remainingLeave !== null && (
+          {/* 연차/반차 선택 시 남은 연차 표시 */}
+          {(selectedType === '연차' || selectedType === '반차') && remainingLeave !== null && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
               <div className="flex items-center gap-2 mb-2">
                 <Calendar className="w-4 h-4 text-blue-600" />
                 <span className="text-sm font-semibold text-blue-900">남은 연차</span>
               </div>
               <p className="text-2xl font-bold text-blue-600">{remainingLeave}일</p>
-              {calculateDays() > remainingLeave && (
+              {selectedType === '연차' && calculateDays() > remainingLeave && (
                 <div className="mt-2 flex items-start gap-2 text-red-600 text-xs">
                   <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
                   <span>신청하신 일수({calculateDays()}일)가 남은 연차보다 많습니다.</span>
                 </div>
               )}
             </div>
+          )}
+
+          {/* 반차 유형 선택 (반차 선택시만) */}
+          {selectedType === '반차' && (
+            <FormGroup>
+              <Label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>유형 선택</Label>
+              <div style={{ position: 'relative' }}>
+                <DropdownButton
+                  onClick={() => {
+                    setShowHalfDayTypeDropdown(!showHalfDayTypeDropdown);
+                  }}
+                >
+                  <span>{halfDayType}</span>
+                  <svg
+                    style={{ width: '16px', height: '16px', color: 'var(--muted-foreground)' }}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </DropdownButton>
+                
+                {showHalfDayTypeDropdown && (
+                  <DropdownMenu>
+                    {['선택 안 함', '반차', '반반차'].map((option) => (
+                      <DropdownItem
+                        key={option}
+                        onClick={() => {
+                          setHalfDayType(option);
+                          setShowHalfDayTypeDropdown(false);
+                        }}
+                        $isSelected={halfDayType === option}
+                      >
+                        {option}
+                      </DropdownItem>
+                    ))}
+                  </DropdownMenu>
+                )}
+              </div>
+              <DaysInfo>반차인지 반반차인지 선택하세요.</DaysInfo>
+            </FormGroup>
           )}
 
           {/* 신청 기간 */}
@@ -298,8 +374,32 @@ export function LeaveRequestModal({ open, onOpenChange }) {
                 style={{ color: 'var(--foreground)' }}
               />
             </DateGrid>
-            <DaysInfo>총 {calculateDays()}일 사용 예정</DaysInfo>
+            <DaysInfo>총 {selectedType === '반차' ? '1일' : calculateDays() + '일'} 사용 예정</DaysInfo>
           </FormGroup>
+
+          {/* 신청 시간 (반차 선택시만) */}
+          {selectedType === '반차' && (
+            <FormGroup>
+              <Label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>신청 시간</Label>
+              <DateGrid>
+                <Input 
+                  type="time" 
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  className="bg-white border-gray-300"
+                  style={{ color: 'var(--foreground)' }}
+                />
+                <Input 
+                  type="time" 
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  className="bg-white border-gray-300"
+                  style={{ color: 'var(--foreground)' }}
+                />
+              </DateGrid>
+              <DaysInfo>총 {calculateHours()}시간 사용 예정</DaysInfo>
+            </FormGroup>
+          )}
 
           {/* 워케이션 장소 (워케이션 선택시만) */}
           {selectedType === '워케이션' && (

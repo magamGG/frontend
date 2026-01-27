@@ -113,7 +113,7 @@ export default function App() {
         },
         {
           id: 'calendar',
-          title: '일정',
+          title: '캘린더',
           content: (props) => <ArtistCalendarPage {...props} />,
         },
         {
@@ -224,7 +224,7 @@ export default function App() {
         },
         {
           id: 'individual-calendar',
-          title: '작가 일정',
+          title: '작가 캘린더',
           content: (props) => <ArtistCalendarPage {...props} />,
         },
         {

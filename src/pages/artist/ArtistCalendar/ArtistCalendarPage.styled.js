@@ -139,9 +139,14 @@ export const ArtistDateCell = styled.div`
   height: 100%;
   border-right: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
+  border: ${props => props.$isToday ? '2px solid #22C55E' : '1px solid var(--border)'};
+  border-right: ${props => props.$isToday ? '2px solid #22C55E' : '1px solid var(--border)'};
+  border-bottom: ${props => props.$isToday ? '2px solid #22C55E' : '1px solid var(--border)'};
+  border-top: ${props => props.$isToday ? '2px solid #22C55E' : '1px solid var(--border)'};
+  border-left: ${props => props.$isToday ? '2px solid #22C55E' : '1px solid var(--border)'};
   padding: 8px;
   background-color: ${props => {
-    if (props.$isToday) return 'color-mix(in srgb, var(--primary) 5%, transparent)';
+    if (props.$isToday) return '#ECFDF5'; // 연한 초록색 배경 (다른 곳에서 사용하지 않는 색)
     if (props.$attendanceType === 'workation') return 'rgba(168, 85, 247, 0.15)';
     if (props.$attendanceType === 'break') return 'rgba(156, 163, 175, 0.25)';
     return 'transparent';
@@ -155,6 +160,7 @@ export const ArtistDateCell = styled.div`
 
   &:hover {
     background-color: ${props => {
+      if (props.$isToday) return '#D1FAE5'; // 호버 시 약간 더 진한 초록색
       if (props.$attendanceType === 'workation') return 'rgba(168, 85, 247, 0.25)';
       if (props.$attendanceType === 'break') return 'rgba(156, 163, 175, 0.35)';
       return 'color-mix(in srgb, var(--muted) 50%, transparent)';
@@ -199,11 +205,24 @@ export const ArtistEventBar = styled.div`
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 `;
 
-// 더보기 텍스트
+// 더보기 텍스트 (일정 3개 이상일 때)
 export const ArtistDateMoreEvents = styled.div`
   font-size: 12px;
-  color: var(--muted-foreground);
-  padding: 0 4px;
+  color: white;
+  background-color: #8B5CF6;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: all 0.2s;
+  font-weight: 500;
+
+  &:hover {
+    background-color: #7C3AED;
+  }
 `;
 
 // 메모 표시
