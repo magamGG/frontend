@@ -138,14 +138,17 @@ export function SignupPage({ onSignup, onBackToLogin }) {
       
       // 역할별로 다른 필드 추가
       if (selectedRole === USER_ROLES.ARTIST) {
-        // 아티스트는 선택적으로 에이전시에 속할 수 있으므로 agencyNo는 null 또는 미전송
-        // 비소속으로 가입하는 경우이므로 agencyNo를 보내지 않음 (null로 처리됨)
+        // 아티스트는 선택적으로 에이전시에 속할 수 있으므로 agencyNo는 null (비소속 허용)
         memberData.agencyNo = null;
       } else if (selectedRole === USER_ROLES.MANAGER) {
-        // 담당자는 에이전시 코드로 기존 에이전시에 가입
-        memberData.agencyCode = signupFormData.organization; // TODO: 실제 에이전시 코드 입력 필드로 변경 필요
+        // 담당자는 선택적으로 에이전시 코드로 기존 에이전시에 가입 (비소속 허용)
+        // organization 필드가 비어있지 않으면 에이전시 코드로 처리, 비어있으면 비소속
+        if (signupFormData.organization && signupFormData.organization.trim() !== '') {
+          memberData.agencyCode = signupFormData.organization;
+        }
+        // organization이 비어있으면 agencyCode를 보내지 않아서 비소속으로 가입됨
       } else if (selectedRole === USER_ROLES.AGENCY) {
-        // 에이전시 관리자는 새 에이전시를 생성
+        // 에이전시 관리자는 새 에이전시를 생성 (필수)
         memberData.agencyName = signupFormData.organization;
       }
 
