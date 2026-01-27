@@ -122,16 +122,23 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
 
   const handleDemoLogin = (account) => {
     // 데모 계정은 로그인 API 호출 없이 바로 로그인 처리
-    // roleType을 실제 MEMBER_ROLE 값으로 매핑
+    // account.id를 실제 MEMBER_ROLE 값으로 매핑
     let memberRole = '';
-    let agencyNo = 1; // 데모는 기본적으로 에이전시 소속
+    let agencyNo = null;
     
-    if (roleType === USER_ROLE_TYPES.INDIVIDUAL) {
+    if (account.id === USER_ROLE_TYPES.INDIVIDUAL) {
       memberRole = '웹툰 작가';
-    } else if (roleType === USER_ROLE_TYPES.MANAGER) {
+      agencyNo = 1; // 데모는 기본적으로 에이전시 소속
+    } else if (account.id === USER_ROLE_TYPES.MANAGER) {
       memberRole = '담당자';
-    } else if (roleType === USER_ROLE_TYPES.AGENCY) {
+      agencyNo = 1; // 데모는 기본적으로 에이전시 소속
+    } else if (account.id === USER_ROLE_TYPES.AGENCY) {
       memberRole = '에이전시 관리자';
+      agencyNo = 1; // 에이전시 관리자는 항상 에이전시 소속
+    } else if (account.id === 'no-agency') {
+      // 비소속 계정
+      memberRole = '웹툰 작가';
+      agencyNo = null; // 비소속
     }
     
     login({
@@ -142,18 +149,6 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
       agencyNo: agencyNo,
     });
     onLogin(memberRole, agencyNo);
-  };
-
-  const handleNoAgencyLogin = () => {
-    // 비소속 계정으로 시작하기 - AGENCY_NO가 null인 경우
-    login({
-      token: 'demo-token',
-      memberNo: 0,
-      memberName: '데모 사용자',
-      memberRole: '웹툰 작가',
-      agencyNo: null, // 비소속
-    });
-    onLogin('웹툰 작가', null);
   };
 
   return (
