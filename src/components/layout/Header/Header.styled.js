@@ -31,7 +31,7 @@ export const LogoSection = styled.div`
 export const LogoIcon = styled.div`
   width: 40px;
   height: 40px;
-  background-color: #3F4A5A;
+  background-color: var(--primary);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -47,7 +47,7 @@ export const LogoText = styled.div`
 export const LogoTitle = styled.h1`
   font-size: 18px;
   font-weight: 600;
-  color: #1F2328;
+  color: var(--foreground);
   margin: 0;
   line-height: 1.2;
   white-space: nowrap;
@@ -55,7 +55,7 @@ export const LogoTitle = styled.h1`
 
 export const LogoSubtitle = styled.p`
   font-size: 12px;
-  color: #6E8FB3;
+  color: var(--accent);
   margin: 0;
   line-height: 1.2;
   white-space: nowrap;
@@ -68,7 +68,7 @@ export const CurrentPageTitle = styled.h2`
   transform: translate(-50%, -50%);
   font-size: 20px;
   font-weight: 700;
-  color: #1F2328;
+  color: var(--foreground);
   margin: 0;
   z-index: 1;
   /* 1. 글자가 절대 아래로 떨어지지 않게 강제 고정 */
@@ -96,8 +96,8 @@ export const AttendanceButton = styled.button`
   gap: 8px;
   padding: 8px 16px;
   border-radius: 8px;
-  background-color: #3F4A5A;
-  color: white;
+  background-color: var(--primary);
+  color: var(--primary-foreground);
   transition: all 0.2s;
   border: none;
   cursor: pointer;
@@ -106,7 +106,7 @@ export const AttendanceButton = styled.button`
   font-weight: 500;
 
   &:hover {
-    background-color: #6E8FB3;
+    background-color: var(--accent);
   }
 
   &:active {
@@ -147,7 +147,7 @@ export const NotificationBadge = styled.span`
   right: 6px; /* right-1.5 */
   width: 8px; /* w-2 */
   height: 8px; /* h-2 */
-  background-color: #f97316; /* bg-[#f97316] */
+  background-color: var(--status-deadline);
   border-radius: 50%;
   border: 1px solid white;
 `;
@@ -308,13 +308,13 @@ export const DeleteButton = styled.button`
   right: 16px;
   background: none;
   border: none;
-  color: #d1d5db;
+  color: var(--muted-foreground);
   cursor: pointer;
   padding: 4px;
   transition: color 0.2s;
 
   &:hover {
-    color: #9ca3af;
+    color: var(--foreground);
   }
 `;
 

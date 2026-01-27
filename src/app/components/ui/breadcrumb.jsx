@@ -54,7 +54,8 @@ function BreadcrumbPage({ className, ...props }) {
       role="link"
       aria-disabled="true"
       aria-current="page"
-      className={cn("text-foreground font-normal", className)}
+      className={cn(className)}
+      style={{ color: 'var(--foreground)', fontWeight: '400' }}
       {...props}
     />
   );
@@ -87,7 +88,8 @@ function BreadcrumbEllipsis({
       data-slot="breadcrumb-ellipsis"
       role="presentation"
       aria-hidden="true"
-      className={cn("flex size-9 items-center justify-center", className)}
+      className={cn(className)}
+      style={{ display: 'flex', width: '36px', height: '36px', alignItems: 'center', justifyContent: 'center' }}
       {...props}
     >
       <MoreHorizontal className="size-4" />

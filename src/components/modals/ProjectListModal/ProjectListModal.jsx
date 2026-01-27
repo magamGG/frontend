@@ -70,7 +70,7 @@ export function ProjectListModal({ open, onOpenChange, projects }) {
         aria-describedby={undefined}
       >
         <DialogHeader>
-          <DialogTitle className="text-xl text-[#1F2328]">담당 프로젝트 전체 목록</DialogTitle>
+          <DialogTitle className="text-xl" style={{ color: 'var(--foreground)' }}>담당 프로젝트 전체 목록</DialogTitle>
         </DialogHeader>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '8px 0', flex: 1, overflow: 'hidden' }}>
           {/* 검색 */}
@@ -81,7 +81,13 @@ export function ProjectListModal({ open, onOpenChange, projects }) {
             <Input
               type="text"
               placeholder="프로젝트명 또는 작가명 검색..."
-              className="pl-10 h-9 bg-[#FAFAFA] border-[#DADDE1] text-[#1F2328] text-sm focus:ring-[#6E8FB3]"
+              className="pl-10 h-9 text-sm"
+              style={{ 
+                backgroundColor: 'var(--card)', 
+                borderColor: 'var(--border)', 
+                color: 'var(--foreground)',
+                '--tw-ring-color': 'var(--accent)'
+              }}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -102,7 +108,7 @@ export function ProjectListModal({ open, onOpenChange, projects }) {
                       </ProjectTitleGroup>
                       <ProjectArtist>담당: {project.artist}</ProjectArtist>
                     </ProjectInfo>
-                    <ChevronRight style={{ width: '20px', height: '20px', color: 'rgba(31, 35, 40, 0.4)' }} />
+                    <ChevronRight style={{ width: '20px', height: '20px', color: 'var(--muted-foreground)' }} />
                   </ProjectHeader>
 
                   <ProjectMeta>
@@ -136,13 +142,13 @@ export function ProjectListModal({ open, onOpenChange, projects }) {
                 <StatLabel>전체 프로젝트</StatLabel>
               </StatItem>
               <StatItem>
-                <StatValue style={{ color: '#10b981' }}>
+                <StatValue style={{ color: 'var(--chart-2)' }}>
                   {projects.filter((p) => p.status === '정상').length}
                 </StatValue>
                 <StatLabel>정상</StatLabel>
               </StatItem>
               <StatItem>
-                <StatValue style={{ color: '#eab308' }}>
+                <StatValue style={{ color: 'var(--chart-4)' }}>
                   {projects.filter((p) => p.status === '주의').length}
                 </StatValue>
                 <StatLabel>주의</StatLabel>

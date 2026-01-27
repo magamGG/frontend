@@ -98,7 +98,8 @@ function TableCaption({
   return (
     <caption
       data-slot="table-caption"
-      className={cn("text-muted-foreground mt-4 text-sm", className)}
+      className={cn(className)}
+      style={{ color: 'var(--muted-foreground)', marginTop: '16px', fontSize: '0.875rem' }}
       {...props}
     />
   );

@@ -357,8 +357,8 @@ export function Header({
                                 </NotificationItemTime>
                                 <span
                                   style={{
-                                    background: notification.type === 'warning' ? 'rgb(254, 226, 226)' : notification.type === 'error' ? 'rgb(254, 226, 226)' : notification.type === 'success' ? '#dcfce7' : '#dbeafe',
-                                    color: notification.type === 'warning' ? 'rgb(239, 68, 68)' : notification.type === 'error' ? 'rgb(239, 68, 68)' : notification.type === 'success' ? '#16a34a' : '#3b82f6',
+                                    background: notification.type === 'warning' ? 'color-mix(in srgb, var(--destructive) 10%, transparent)' : notification.type === 'error' ? 'color-mix(in srgb, var(--destructive) 10%, transparent)' : notification.type === 'success' ? 'color-mix(in srgb, var(--chart-2) 10%, transparent)' : 'color-mix(in srgb, var(--chart-2) 10%, transparent)',
+                                    color: notification.type === 'warning' ? 'var(--destructive)' : notification.type === 'error' ? 'var(--destructive)' : notification.type === 'success' ? 'var(--chart-2)' : 'var(--chart-2)',
                                     fontSize: '10px',
                                     padding: '2px 6px',
                                     borderRadius: '4px',

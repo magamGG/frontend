@@ -48,30 +48,30 @@ const demoAccountList = [
     icon: Edit,
     label: '개인(작가) 계정으로 체험',
     email: 'demo@artist.com',
-    borderColor: '#e9d5ff',
+    borderColor: 'var(--status-workation)',
     bgColor: 'transparent',
-    hoverBgColor: '#faf5ff',
-    hoverBorderColor: '#d8b4fe',
+    hoverBgColor: 'color-mix(in srgb, var(--status-workation) 10%, transparent)',
+    hoverBorderColor: 'var(--status-workation)',
   },
   {
     id: USER_ROLE_TYPES.MANAGER,
     icon: Building,
     label: '담당자 계정으로 체험',
     email: 'demo@manager.com',
-    borderColor: '#bfdbfe',
+    borderColor: 'var(--chart-2)',
     bgColor: 'transparent',
-    hoverBgColor: '#eff6ff',
-    hoverBorderColor: '#93c5fd',
+    hoverBgColor: 'color-mix(in srgb, var(--chart-2) 10%, transparent)',
+    hoverBorderColor: 'var(--chart-2)',
   },
   {
     id: USER_ROLE_TYPES.AGENCY,
     icon: Users,
     label: '에이전시 계정으로 체험',
     email: 'demo@agency.com',
-    borderColor: '#bbf7d0',
+    borderColor: 'var(--chart-2)',
     bgColor: 'transparent',
-    hoverBgColor: '#f0fdf4',
-    hoverBorderColor: '#86efac',
+    hoverBgColor: 'color-mix(in srgb, var(--chart-2) 10%, transparent)',
+    hoverBorderColor: 'var(--chart-2)',
   },
 ];
 
@@ -91,17 +91,19 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
 
     setIsLoading(true);
     try {
+      // DB 스키마에 MEMBER_ID 필드가 없으므로 MEMBER_EMAIL을 로그인 ID로 사용
       const response = await authService.login({
-        email: emailInput,
-        password: passwordInput,
+        memberEmail: emailInput, // 이메일을 로그인 ID로 사용
+        memberPassword: passwordInput,
       });
       
-      // 응답 데이터 구조에 맞게 수정 필요 (실제 API 응답 구조에 따라)
+      // 가이드 문서에 따른 응답 데이터 구조
       login({
         token: response.token || response.accessToken,
-        user_id: response.userId || response.user_id,
-        user_name: response.userName || response.user_name || emailInput,
-        role: response.role || USER_ROLE_TYPES.INDIVIDUAL,
+        memberNo: response.memberNo,
+        memberName: response.memberName || emailInput,
+        memberRole: response.memberRole || USER_ROLE_TYPES.INDIVIDUAL,
+        agencyNo: response.agencyNo,
       });
       
       toast.success('로그인에 성공했습니다.');
@@ -119,9 +121,10 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
     // 데모 계정은 로그인 API 호출 없이 바로 로그인 처리
     login({
       token: 'demo-token',
-      user_id: 'demo-user-id',
-      user_name: '데모 사용자',
-      role: roleType,
+      memberNo: 0,
+      memberName: '데모 사용자',
+      memberRole: roleType,
+      agencyNo: 1,
     });
     onLogin(roleType);
   };
@@ -249,7 +252,7 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
                   style={{
                     width: '100%',
                     padding: '12px',
-                    borderColor: '#d1d5db',
+                    borderColor: 'var(--border)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -307,10 +310,10 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
                 {/* No Agency Button */}
                 <DemoAccountButton
                   type="button"
-                  $borderColor="#fed7aa"
+                  $borderColor="var(--chart-4)"
                   $bgColor="transparent"
-                  $hoverBgColor="#fff7ed"
-                  $hoverBorderColor="#fdba74"
+                  $hoverBgColor="color-mix(in srgb, var(--chart-4) 10%, transparent)"
+                  $hoverBorderColor="var(--chart-4)"
                   onClick={handleNoAgencyLogin}
                   style={{ fontWeight: 500, padding: '16px' }}
                   disabled={isLoading}

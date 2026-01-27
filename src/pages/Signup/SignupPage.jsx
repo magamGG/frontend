@@ -42,21 +42,21 @@ const roleList = [
     icon: Edit,
     title: '아티스트',
     description: '작가 및 어시스트',
-    color: '#a855f7',
+    color: 'var(--status-workation)',
   },
   {
     id: USER_ROLES.MANAGER,
     icon: Briefcase,
     title: '담당자',
     description: '프로젝트 매니저/편집자',
-    color: '#3b82f6',
+    color: 'var(--chart-2)',
   },
   {
     id: USER_ROLES.AGENCY,
     icon: Building,
     title: '에이전시',
     description: '제작사/에이전시 운영자',
-    color: '#22c55e',
+    color: 'var(--chart-2)',
   },
 ];
 
@@ -116,14 +116,25 @@ export function SignupPage({ onSignup, onBackToLogin }) {
 
     setIsLoading(true);
     try {
+      // DB 스키마에 MEMBER_ID 필드가 없으므로 MEMBER_EMAIL만 사용
       const memberData = {
-        name: signupFormData.name,
-        email: signupFormData.email,
-        password: signupFormData.password,
-        phone: signupFormData.phone,
-        role: selectedRole,
-        specialization: selectedRole === USER_ROLES.ARTIST ? artistSpecialization : null,
-        organization: signupFormData.organization || null,
+        agencyNo: 1, // TODO: 실제 에이전시 번호로 변경 필요 (NULL 허용)
+        memberName: signupFormData.name,
+        memberPassword: signupFormData.password,
+        memberEmail: signupFormData.email, // UNIQUE, 로그인 ID로 사용
+        memberPhone: signupFormData.phone,
+        memberRole: selectedRole === USER_ROLES.ARTIST 
+          ? (artistSpecialization === 'webtoon-writer' ? '웹툰 작가'
+            : artistSpecialization === 'webnovel-writer' ? '웹소설 작가'
+            : artistSpecialization === 'assistant-coloring' ? '어시스트 - 채색'
+            : artistSpecialization === 'assistant-lighting' ? '어시스트 - 조명'
+            : artistSpecialization === 'assistant-background' ? '어시스트 - 배경'
+            : artistSpecialization === 'assistant-lineart' ? '어시스트 - 선화'
+            : artistSpecialization === 'assistant-other' ? '어시스트- 기타'
+            : '웹툰 작가')
+          : selectedRole === USER_ROLES.MANAGER ? '담당자'
+          : selectedRole === USER_ROLES.AGENCY ? '에이전시 관리자'
+          : '웹툰 작가',
       };
 
       await memberService.register(memberData);
@@ -370,11 +381,9 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                     </InputWrapper>
                   </InputGroup>
 
-                  {(selectedRole === USER_ROLES.AGENCY || selectedRole === USER_ROLES.MANAGER) && (
+                  {selectedRole === USER_ROLES.AGENCY && (
                     <InputGroup>
-                      <InputLabel>
-                        {selectedRole === USER_ROLES.AGENCY ? '에이전시명' : '소속 회사'}
-                      </InputLabel>
+                      <InputLabel>에이전시명</InputLabel>
                       <InputWrapper>
                         <Building className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--muted-foreground)' }} />
                         <InputField
@@ -382,7 +391,7 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                           name="organization"
                           value={signupFormData.organization}
                           onChange={handleInputChange}
-                          placeholder={selectedRole === USER_ROLES.AGENCY ? '스튜디오 마감지기' : '소속 회사/팀'}
+                          placeholder="스튜디오 마감지기"
                         />
                       </InputWrapper>
                     </InputGroup>

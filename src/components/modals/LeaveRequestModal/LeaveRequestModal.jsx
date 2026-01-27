@@ -58,7 +58,7 @@ export function LeaveRequestModal({ open, onOpenChange }) {
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
   const [remainingLeave, setRemainingLeave] = useState(null);
 
-  const { getUserName } = useAuthStore();
+  const { getMemberName } = useAuthStore();
 
   // Get projects from localStorage
   const [projects, setProjects] = useState([]);
@@ -73,12 +73,12 @@ export function LeaveRequestModal({ open, onOpenChange }) {
   // Get current user's remaining leave
   useEffect(() => {
     if (selectedType === '연차') {
-      const userName = getUserName();
+      const memberName = getMemberName();
       const employees = JSON.parse(localStorage.getItem('agencyEmployees') || '[]');
       
-      if (userName && employees.length > 0) {
+      if (memberName && employees.length > 0) {
         // Find employee by name
-        const employee = employees.find(emp => emp.name === userName);
+        const employee = employees.find(emp => emp.name === memberName);
         if (employee) {
           setRemainingLeave(employee.remainingLeave);
         } else {
@@ -94,7 +94,7 @@ export function LeaveRequestModal({ open, onOpenChange }) {
     } else {
       setRemainingLeave(null);
     }
-  }, [selectedType, getUserName]);
+  }, [selectedType, getMemberName]);
 
   const leaveTypes = ['연차', '병가', '워케이션', '재택근무', '휴재'];
 
@@ -173,12 +173,12 @@ export function LeaveRequestModal({ open, onOpenChange }) {
 
     // 연차 신청인 경우 사용한 연차 업데이트
     if (selectedType === '연차') {
-      const userName = getUserName();
+      const memberName = getMemberName();
       const employees = JSON.parse(localStorage.getItem('agencyEmployees') || '[]');
       
-      if (userName && employees.length > 0) {
+      if (memberName && employees.length > 0) {
         const updatedEmployees = employees.map(emp => {
-          if (emp.name === userName) {
+          if (emp.name === memberName) {
             const newUsedLeave = emp.usedLeave + days;
             const newRemainingLeave = emp.totalLeave - newUsedLeave;
             return {
@@ -243,7 +243,7 @@ export function LeaveRequestModal({ open, onOpenChange }) {
         {/* Header */}
         <ModalHeader>
           <DialogHeader className="p-0 m-0">
-            <DialogTitle className="text-xl font-semibold text-[#1F2328] m-0">근태 신청</DialogTitle>
+            <DialogTitle className="text-xl font-semibold m-0" style={{ color: 'var(--foreground)' }}>근태 신청</DialogTitle>
           </DialogHeader>
         </ModalHeader>
 
@@ -281,19 +281,21 @@ export function LeaveRequestModal({ open, onOpenChange }) {
 
           {/* 신청 기간 */}
           <FormGroup>
-            <Label className="text-sm font-medium text-[#1F2328]">신청 기간</Label>
+            <Label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>신청 기간</Label>
             <DateGrid>
               <Input 
                 type="date" 
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="bg-white border-gray-300 text-[#1F2328]"
+                className="bg-white border-gray-300"
+                style={{ color: 'var(--foreground)' }}
               />
               <Input 
                 type="date" 
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="bg-white border-gray-300 text-[#1F2328]"
+                className="bg-white border-gray-300"
+                style={{ color: 'var(--foreground)' }}
               />
             </DateGrid>
             <DaysInfo>총 {calculateDays()}일 사용 예정</DaysInfo>
@@ -302,12 +304,13 @@ export function LeaveRequestModal({ open, onOpenChange }) {
           {/* 워케이션 장소 (워케이션 선택시만) */}
           {selectedType === '워케이션' && (
             <FormGroup>
-              <Label className="text-sm font-medium text-[#1F2328]">워케이션 장소</Label>
+              <Label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>워케이션 장소</Label>
               <Input
                 placeholder="예: 제주, 부산, 해외 등"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                className="bg-white border-gray-300 text-[#1F2328]"
+                className="bg-white border-gray-300"
+                style={{ color: 'var(--foreground)' }}
               />
               <DaysInfo>워케이션을 떠날 입력</DaysInfo>
             </FormGroup>
@@ -316,7 +319,7 @@ export function LeaveRequestModal({ open, onOpenChange }) {
           {/* 작품(선택) (휴재 선택시만) */}
           {selectedType === '휴재' && (
             <FormGroup>
-              <Label className="text-sm font-medium text-[#1F2328]">작품(선택)</Label>
+              <Label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>작품(선택)</Label>
               <div style={{ position: 'relative' }}>
                 <DropdownButton
                   onClick={() => {
@@ -325,7 +328,7 @@ export function LeaveRequestModal({ open, onOpenChange }) {
                 >
                   <span>{selectedProject}</span>
                   <svg
-                    style={{ width: '16px', height: '16px', color: '#9CA3AF' }}
+                    style={{ width: '16px', height: '16px', color: 'var(--muted-foreground)' }}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -357,20 +360,21 @@ export function LeaveRequestModal({ open, onOpenChange }) {
 
           {/* 사유 */}
           <FormGroup>
-            <Label className="text-sm font-medium text-[#1F2328]">사유</Label>
+            <Label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>사유</Label>
             <Textarea 
               placeholder="사유를 입력해 주세요." 
               rows={4}
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              className="bg-white border-gray-300 text-[#1F2328] resize-none"
+              className="bg-white border-gray-300 resize-none"
+              style={{ color: 'var(--foreground)' }}
             />
           </FormGroup>
 
           {/* 첨부 파일 */}
           <FileUploadSection>
             <FileUploadHeader>
-              <Label className="text-sm font-medium text-[#1F2328]">첨부 파일</Label>
+              <Label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>첨부 파일</Label>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <label htmlFor="file-upload">
                   <Button
@@ -403,8 +407,8 @@ export function LeaveRequestModal({ open, onOpenChange }) {
 
             {attachedFile ? (
               <FileInfo>
-                <FileText style={{ width: '16px', height: '16px', color: '#9CA3AF' }} />
-                <span style={{ fontSize: '14px', color: '#4B5563' }}>{attachedFile.name}</span>
+                <FileText style={{ width: '16px', height: '16px', color: 'var(--muted-foreground)' }} />
+                <span style={{ fontSize: '14px', color: 'var(--muted-foreground)' }}>{attachedFile.name}</span>
               </FileInfo>
             ) : (
               <InfoList>

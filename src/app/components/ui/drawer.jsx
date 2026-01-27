@@ -76,7 +76,8 @@ function DrawerHeader({ className, ...props }) {
   return (
     <div
       data-slot="drawer-header"
-      className={cn("flex flex-col gap-1.5 p-4", className)}
+      className={cn(className)}
+      style={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '16px' }}
       {...props}
     />
   );
@@ -112,7 +113,8 @@ function DrawerDescription({
   return (
     <DrawerPrimitive.Description
       data-slot="drawer-description"
-      className={cn("text-muted-foreground text-sm", className)}
+      className={cn(className)}
+      style={{ color: 'var(--muted-foreground)', fontSize: '0.875rem' }}
       {...props}
     />
   );

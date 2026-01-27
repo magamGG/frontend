@@ -7,7 +7,7 @@ export const AgencyProjectsRoot = styled.div`
   display: flex;
   justify-content: center;
   padding: 32px 32px 96px;
-  background-color: #DADDE1;
+  background-color: var(--background);
   overflow-y: auto;
 `;
 
@@ -32,13 +32,13 @@ export const AgencyProjectsHeader = styled.div`
 export const AgencyProjectsTitle = styled.h1`
   font-size: 32px;
   font-weight: 700;
-  color: #1f2328;
+  color: var(--foreground);
   margin: 0 0 8px 0;
 `;
 
 export const AgencyProjectsDescription = styled.p`
   font-size: 14px;
-  color: #5a6067;
+  color: var(--muted-foreground);
   margin: 0;
 `;
 
@@ -59,9 +59,9 @@ export const AgencyProjectsStatsGrid = styled.div`
 
 export const AgencyProjectsStatCard = styled.div`
   padding: 16px;
-  background-color: white;
+  background-color: var(--card);
   border-radius: 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 `;
 
@@ -75,13 +75,13 @@ export const AgencyProjectsStatHeader = styled.div`
 export const AgencyProjectsStatLabel = styled.span`
   font-size: 12px;
   font-weight: 500;
-  color: #5a6067;
+  color: var(--muted-foreground);
 `;
 
 export const AgencyProjectsStatValue = styled.p`
   font-size: 24px;
   font-weight: 700;
-  color: #1f2328;
+  color: var(--foreground);
   margin: 0;
 `;
 
@@ -96,16 +96,16 @@ export const AgencyProjectsSearchIcon = styled.div`
   left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  color: #5a6067;
+  color: var(--muted-foreground);
   pointer-events: none;
 `;
 
 // 필터 카드
 export const AgencyProjectsFilterCard = styled.div`
   padding: 16px;
-  background-color: white;
+  background-color: var(--card);
   border-radius: 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 `;
 
@@ -124,7 +124,7 @@ export const AgencyProjectsFilterRow = styled.div`
 export const AgencyProjectsFilterLabel = styled.span`
   font-size: 14px;
   font-weight: 500;
-  color: #1f2328;
+  color: var(--foreground);
   white-space: nowrap;
 `;
 
@@ -136,7 +136,7 @@ export const AgencyProjectsFilterButtons = styled.div`
 
 export const AgencyProjectsFilterDivider = styled.div`
   width: 100%;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--border);
 `;
 
 export const AgencyProjectsFilterActions = styled.div`
@@ -172,9 +172,9 @@ export const AgencyProjectsList = styled.div`
 // 프로젝트 카드
 export const AgencyProjectCard = styled.div`
   padding: 20px;
-  background-color: white;
+  background-color: var(--card);
   border-radius: 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   cursor: pointer;
   transition: all 0.2s;
@@ -217,13 +217,13 @@ export const AgencyProjectInfoHeader = styled.div`
 export const AgencyProjectTitle = styled.h3`
   font-size: 20px;
   font-weight: 700;
-  color: #1f2328;
+  color: var(--foreground);
   margin: 0;
 `;
 
 export const AgencyProjectGenre = styled.p`
   font-size: 14px;
-  color: #5a6067;
+  color: var(--muted-foreground);
   margin: 0 0 12px 0;
 `;
 
@@ -239,11 +239,11 @@ export const AgencyProjectMetaItem = styled.span`
   display: flex;
   align-items: center;
   gap: 4px;
-  color: #1f2328;
+  color: var(--foreground);
 `;
 
 export const AgencyProjectMetaDivider = styled.span`
-  color: #5a6067;
+  color: var(--muted-foreground);
 `;
 
 export const AgencyProjectStatus = styled.div`
@@ -263,13 +263,13 @@ export const AgencyProjectStatus = styled.div`
 
 export const AgencyProjectStatusText = styled.p`
   font-size: 14px;
-  color: #5a6067;
+  color: var(--muted-foreground);
   margin: 0;
 `;
 
 export const AgencyProjectEpisodeText = styled.p`
   font-size: 12px;
-  color: #5a6067;
+  color: var(--muted-foreground);
   margin: 0;
 `;
 
@@ -284,7 +284,7 @@ export const AgencyProjectsEmpty = styled.div`
 
 export const AgencyProjectsEmptyText = styled.p`
   font-size: 14px;
-  color: #5a6067;
+  color: var(--muted-foreground);
   margin: 0;
 `;
 
@@ -314,16 +314,16 @@ export const AgencyProjectModalField = styled.div`
 export const AgencyProjectModalLabel = styled.label`
   font-size: 14px;
   font-weight: 500;
-  color: #1f2328;
+  color: var(--foreground);
 `;
 
 export const AgencyProjectModalInput = styled.input`
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background-color: white;
-  color: #1f2328;
+  background-color: var(--card);
+  color: var(--foreground);
   font-size: 14px;
   outline: none;
   transition: all 0.2s;
@@ -336,7 +336,7 @@ export const AgencyProjectModalInput = styled.input`
 
 export const AgencyProjectModalHelperText = styled.p`
   font-size: 12px;
-  color: #6e8fb3;
+  color: var(--accent);
   margin: 0;
 `;
 
@@ -353,10 +353,10 @@ export const AgencyProjectNextSchedulePreview = styled.div`
 export const AgencyProjectModalSelect = styled.select`
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background-color: white;
-  color: #1f2328;
+  background-color: var(--card);
+  color: var(--foreground);
   font-size: 14px;
   outline: none;
   transition: all 0.2s;
@@ -373,7 +373,7 @@ export const AgencyProjectModalThumbnailPreview = styled.div`
 
 export const AgencyProjectModalThumbnailPreviewLabel = styled.p`
   font-size: 12px;
-  color: #5a6067;
+  color: var(--muted-foreground);
   margin: 0 0 8px 0;
 `;
 

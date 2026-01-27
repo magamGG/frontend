@@ -52,8 +52,8 @@ export const memberService = {
   },
   
   // 회원 단건 조회
-  getMember: (userId) => {
-    return api.get(API_ENDPOINTS.MEMBERS.DETAIL(userId));
+  getMember: (memberNo) => {
+    return api.get(API_ENDPOINTS.MEMBERS.DETAIL(memberNo));
   },
   
   // 현재 로그인한 회원 정보 조회
@@ -62,8 +62,8 @@ export const memberService = {
   },
   
   // 회원 정보 수정
-  updateMember: (userId, memberData) => {
-    return api.put(API_ENDPOINTS.MEMBERS.DETAIL(userId), memberData);
+  updateMember: (memberNo, memberData) => {
+    return api.put(API_ENDPOINTS.MEMBERS.DETAIL(memberNo), memberData);
   },
   
   // 현재 로그인한 회원 프로필 수정
@@ -72,8 +72,8 @@ export const memberService = {
   },
   
   // 회원 삭제
-  deleteMember: (userId) => {
-    return api.delete(API_ENDPOINTS.MEMBERS.DETAIL(userId));
+  deleteMember: (memberNo) => {
+    return api.delete(API_ENDPOINTS.MEMBERS.DETAIL(memberNo));
   },
 };
 
@@ -131,13 +131,13 @@ export const attendanceService = {
   },
   
   // 출석 이력 조회
-  getHistory: (userId, startDate, endDate) => {
-    return api.get(API_ENDPOINTS.ATTENDANCE.HISTORY(userId, startDate, endDate));
+  getHistory: (memberNo, startDate, endDate) => {
+    return api.get(API_ENDPOINTS.ATTENDANCE.HISTORY(memberNo, startDate, endDate));
   },
   
   // 월별 출석 조회
-  getMonthlyAttendance: (userId, year, month) => {
-    return api.get(API_ENDPOINTS.ATTENDANCE.MONTHLY(userId, year, month));
+  getMonthlyAttendance: (memberNo, year, month) => {
+    return api.get(API_ENDPOINTS.ATTENDANCE.MONTHLY(memberNo, year, month));
   },
 };
 
@@ -149,33 +149,33 @@ export const leaveService = {
   },
   
   // 연차 승인
-  approveLeave: (leaveId) => {
-    return api.post(API_ENDPOINTS.LEAVE.APPROVE(leaveId));
+  approveLeave: (attendanceRequestNo) => {
+    return api.post(API_ENDPOINTS.LEAVE.APPROVE(attendanceRequestNo));
   },
   
   // 연차 거절
-  rejectLeave: (leaveId, reason) => {
-    return api.post(API_ENDPOINTS.LEAVE.REJECT(leaveId), { reason });
+  rejectLeave: (attendanceRequestNo, attendanceRequestRejectReason) => {
+    return api.post(API_ENDPOINTS.LEAVE.REJECT(attendanceRequestNo), { attendanceRequestRejectReason });
   },
   
   // 연차 취소
-  cancelLeave: (leaveId) => {
-    return api.post(API_ENDPOINTS.LEAVE.CANCEL(leaveId));
+  cancelLeave: (attendanceRequestNo) => {
+    return api.post(API_ENDPOINTS.LEAVE.CANCEL(attendanceRequestNo));
   },
   
   // 연차 상세 조회
-  getLeaveDetail: (leaveId) => {
-    return api.get(API_ENDPOINTS.LEAVE.DETAIL(leaveId));
+  getLeaveDetail: (attendanceRequestNo) => {
+    return api.get(API_ENDPOINTS.LEAVE.DETAIL(attendanceRequestNo));
   },
   
   // 연차 목록 조회
-  getLeaveList: (userId, year) => {
-    return api.get(API_ENDPOINTS.LEAVE.LIST(userId, year));
+  getLeaveList: (memberNo, year) => {
+    return api.get(API_ENDPOINTS.LEAVE.LIST(memberNo, year));
   },
   
   // 연차 잔액 조회
-  getLeaveBalance: (userId) => {
-    return api.get(API_ENDPOINTS.LEAVE.BALANCE(userId));
+  getLeaveBalance: (memberNo) => {
+    return api.get(API_ENDPOINTS.LEAVE.BALANCE(memberNo));
   },
   
   // 연차 설정 조회/수정
@@ -188,17 +188,17 @@ export const leaveService = {
   },
   
   // 직원별 연차 설정 조회/수정
-  getEmployeeLeaveSettings: (employeeId) => {
-    return api.get(API_ENDPOINTS.LEAVE.EMPLOYEE_SETTINGS(employeeId));
+  getEmployeeLeaveSettings: (memberNo) => {
+    return api.get(API_ENDPOINTS.LEAVE.EMPLOYEE_SETTINGS(memberNo));
   },
   
-  updateEmployeeLeaveSettings: (employeeId, settingsData) => {
-    return api.put(API_ENDPOINTS.LEAVE.EMPLOYEE_SETTINGS(employeeId), settingsData);
+  updateEmployeeLeaveSettings: (memberNo, settingsData) => {
+    return api.put(API_ENDPOINTS.LEAVE.EMPLOYEE_SETTINGS(memberNo), settingsData);
   },
   
   // 연차 조정
-  adjustLeave: (employeeId, adjustmentData) => {
-    return api.post(API_ENDPOINTS.LEAVE.ADJUST(employeeId), adjustmentData);
+  adjustLeave: (memberNo, adjustmentData) => {
+    return api.post(API_ENDPOINTS.LEAVE.ADJUST(memberNo), adjustmentData);
   },
   
   // 연차 통계 조회
@@ -207,8 +207,8 @@ export const leaveService = {
   },
   
   // 휴가 독려 알림 전송
-  sendEncouragementNotification: (employeeIds) => {
-    return api.post(API_ENDPOINTS.LEAVE.ENCOURAGE_NOTIFICATION, { employeeIds });
+  sendEncouragementNotification: (memberNos) => {
+    return api.post(API_ENDPOINTS.LEAVE.ENCOURAGE_NOTIFICATION, { memberNos });
   },
 };
 
@@ -220,8 +220,8 @@ export const projectService = {
   },
   
   // 프로젝트 상세 조회
-  getProjectDetail: (projectId) => {
-    return api.get(API_ENDPOINTS.PROJECTS.DETAIL(projectId));
+  getProjectDetail: (projectNo) => {
+    return api.get(API_ENDPOINTS.PROJECTS.DETAIL(projectNo));
   },
   
   // 프로젝트 생성
@@ -230,32 +230,32 @@ export const projectService = {
   },
   
   // 프로젝트 수정
-  updateProject: (projectId, projectData) => {
-    return api.put(API_ENDPOINTS.PROJECTS.UPDATE(projectId), projectData);
+  updateProject: (projectNo, projectData) => {
+    return api.put(API_ENDPOINTS.PROJECTS.UPDATE(projectNo), projectData);
   },
   
   // 프로젝트 삭제
-  deleteProject: (projectId) => {
-    return api.delete(API_ENDPOINTS.PROJECTS.DELETE(projectId));
+  deleteProject: (projectNo) => {
+    return api.delete(API_ENDPOINTS.PROJECTS.DELETE(projectNo));
   },
   
   // 프로젝트 할당
-  assignProject: (projectId, assignmentData) => {
-    return api.post(API_ENDPOINTS.PROJECTS.ASSIGN(projectId), assignmentData);
+  assignProject: (projectNo, assignmentData) => {
+    return api.post(API_ENDPOINTS.PROJECTS.ASSIGN(projectNo), assignmentData);
   },
   
   // 프로젝트 피드백 작성
-  createFeedback: (projectId, feedbackData) => {
-    return api.post(API_ENDPOINTS.PROJECTS.FEEDBACK(projectId), feedbackData);
+  createFeedback: (projectNo, feedbackData) => {
+    return api.post(API_ENDPOINTS.PROJECTS.FEEDBACK(projectNo), feedbackData);
   },
   
   // 칸반 보드 조회/수정
-  getKanbanBoard: (projectId) => {
-    return api.get(API_ENDPOINTS.PROJECTS.KANBAN(projectId));
+  getKanbanBoard: (projectNo) => {
+    return api.get(API_ENDPOINTS.PROJECTS.KANBAN(projectNo));
   },
   
-  updateKanbanBoard: (projectId, kanbanData) => {
-    return api.put(API_ENDPOINTS.PROJECTS.KANBAN(projectId), kanbanData);
+  updateKanbanBoard: (projectNo, kanbanData) => {
+    return api.put(API_ENDPOINTS.PROJECTS.KANBAN(projectNo), kanbanData);
   },
 };
 
@@ -267,8 +267,8 @@ export const teamService = {
   },
   
   // 팀 멤버 상세 조회
-  getTeamMemberDetail: (memberId) => {
-    return api.get(API_ENDPOINTS.TEAM.MEMBER_DETAIL(memberId));
+  getTeamMemberDetail: (memberNo) => {
+    return api.get(API_ENDPOINTS.TEAM.MEMBER_DETAIL(memberNo));
   },
   
   // 팀 통계 조회
@@ -285,8 +285,8 @@ export const healthService = {
   },
   
   // 건강 설문 상세 조회
-  getSurveyDetail: (surveyId) => {
-    return api.get(API_ENDPOINTS.HEALTH.SURVEY_DETAIL(surveyId));
+  getSurveyDetail: (healthSurveyNo) => {
+    return api.get(API_ENDPOINTS.HEALTH.SURVEY_DETAIL(healthSurveyNo));
   },
   
   // 건강 설문 목록 조회
@@ -328,13 +328,13 @@ export const workcationService = {
   },
   
   // 워케이션 승인
-  approveWorkcation: (workcationId) => {
-    return api.post(API_ENDPOINTS.WORKCATION.APPROVE(workcationId));
+  approveWorkcation: (attendanceRequestNo) => {
+    return api.post(API_ENDPOINTS.WORKCATION.APPROVE(attendanceRequestNo));
   },
   
   // 워케이션 거절
-  rejectWorkcation: (workcationId, reason) => {
-    return api.post(API_ENDPOINTS.WORKCATION.REJECT(workcationId), { reason });
+  rejectWorkcation: (attendanceRequestNo, attendanceRequestRejectReason) => {
+    return api.post(API_ENDPOINTS.WORKCATION.REJECT(attendanceRequestNo), { attendanceRequestRejectReason });
   },
   
   // 워케이션 목록 조회
@@ -356,13 +356,13 @@ export const agencyService = {
   },
   
   // 에이전시 가입 승인
-  approveJoinRequest: (requestId) => {
-    return api.post(API_ENDPOINTS.AGENCY.APPROVE_JOIN(requestId));
+  approveJoinRequest: (joinRequestNo) => {
+    return api.post(API_ENDPOINTS.AGENCY.APPROVE_JOIN(joinRequestNo));
   },
   
   // 에이전시 가입 거절
-  rejectJoinRequest: (requestId, reason) => {
-    return api.post(API_ENDPOINTS.AGENCY.REJECT_JOIN(requestId), { reason });
+  rejectJoinRequest: (joinRequestNo, reason) => {
+    return api.post(API_ENDPOINTS.AGENCY.REJECT_JOIN(joinRequestNo), { reason });
   },
   
   // 할당 관리 조회
@@ -405,8 +405,8 @@ export const calendarService = {
   },
   
   // 일정 상세 조회
-  getEventDetail: (eventId) => {
-    return api.get(API_ENDPOINTS.CALENDAR.EVENT_DETAIL(eventId));
+  getEventDetail: (calendarEventNo) => {
+    return api.get(API_ENDPOINTS.CALENDAR.EVENT_DETAIL(calendarEventNo));
   },
   
   // 일정 생성
@@ -415,13 +415,13 @@ export const calendarService = {
   },
   
   // 일정 수정
-  updateEvent: (eventId, eventData) => {
-    return api.put(API_ENDPOINTS.CALENDAR.UPDATE_EVENT(eventId), eventData);
+  updateEvent: (calendarEventNo, eventData) => {
+    return api.put(API_ENDPOINTS.CALENDAR.UPDATE_EVENT(calendarEventNo), eventData);
   },
   
   // 일정 삭제
-  deleteEvent: (eventId) => {
-    return api.delete(API_ENDPOINTS.CALENDAR.DELETE_EVENT(eventId));
+  deleteEvent: (calendarEventNo) => {
+    return api.delete(API_ENDPOINTS.CALENDAR.DELETE_EVENT(calendarEventNo));
   },
   
   // 메모 조회

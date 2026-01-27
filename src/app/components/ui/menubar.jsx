@@ -183,7 +183,8 @@ function MenubarSeparator({
   return (
     <MenubarPrimitive.Separator
       data-slot="menubar-separator"
-      className={cn("bg-border -mx-1 my-1 h-px", className)}
+      className={cn(className)}
+      style={{ backgroundColor: 'var(--border)', margin: '4px -4px', height: '1px' }}
       {...props}
     />
   );

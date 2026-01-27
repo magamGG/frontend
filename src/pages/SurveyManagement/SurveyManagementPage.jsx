@@ -54,7 +54,7 @@ export function SurveyManagementPage({ onBack }) {
         <HeaderSection>
           <div className="flex items-center gap-4">
             <BackButton onClick={onBack}>
-              <ArrowLeft className="w-6 h-6 text-[#333333]" />
+              <ArrowLeft className="w-6 h-6" style={{ color: 'var(--foreground)' }} />
             </BackButton>
             <HeaderTitle>설문 관리</HeaderTitle>
           </div>
@@ -117,7 +117,7 @@ export function SurveyManagementPage({ onBack }) {
           {/* Add New Template Card */}
           <AddTemplateCard>
             <AddTemplateIcon>
-              <Plus className="w-6 h-6 text-[#666666]" />
+              <Plus className="w-6 h-6" style={{ color: 'var(--muted-foreground)' }} />
             </AddTemplateIcon>
             <AddTemplateText>새 템플릿 추가</AddTemplateText>
           </AddTemplateCard>
@@ -128,16 +128,16 @@ export function SurveyManagementPage({ onBack }) {
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
         <DialogContent className="sm:max-w-[600px] bg-white" aria-describedby={undefined}>
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-[#333333]">설문 수정</DialogTitle>
+            <DialogTitle className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>설문 수정</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-6 py-4">
             {/* Title Input */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-[#333333]">설문 제목</Label>
+              <Label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>설문 제목</Label>
               <Input
                 placeholder="예: 상반기 정기 설문"
-                className="rounded-lg border-gray-200"
+                className="rounded-lg" style={{ borderColor: 'var(--border)' }}
                 defaultValue="일일 간편 체크"
               />
             </div>
@@ -145,15 +145,15 @@ export function SurveyManagementPage({ onBack }) {
             {/* Type and Status Dropdowns */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-[#333333]">유형</Label>
-                <select className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-[#333333]">
+                <Label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>유형</Label>
+                <select className="w-full px-3 py-2 border rounded-lg bg-white" style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}>
                   <option>정신 건강</option>
                   <option>신체 건강</option>
                 </select>
               </div>
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-[#333333]">상태</Label>
-                <select className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-[#333333]">
+                <Label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>상태</Label>
+                <select className="w-full px-3 py-2 border rounded-lg bg-white" style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}>
                   <option>진행중</option>
                   <option>대기</option>
                   <option>종료</option>
@@ -163,24 +163,24 @@ export function SurveyManagementPage({ onBack }) {
 
             {/* Question Management */}
             <div className="space-y-3">
-              <Label className="text-sm font-medium text-[#333333]">문항 관리</Label>
+              <Label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>문항 관리</Label>
               
               {/* Question Items */}
               <div className="space-y-2">
                 {[1, 2, 3].map((num) => (
-                  <div key={num} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                    <span className="text-sm text-[#666666] flex-1">
+                  <div key={num} className="flex items-center gap-3 p-3 rounded-lg" style={{ backgroundColor: 'var(--muted)' }}>
+                    <span className="text-sm flex-1" style={{ color: 'var(--muted-foreground)' }}>
                       Q{num}. 질문 내용을 입력하세요
                     </span>
-                    <button className="p-1 hover:bg-gray-200 rounded transition-colors">
-                      <Trash2 className="w-4 h-4 text-[#666666]" />
+                    <button className="p-1 rounded transition-colors" style={{ backgroundColor: 'transparent' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--muted)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                      <Trash2 className="w-4 h-4" style={{ color: 'var(--muted-foreground)' }} />
                     </button>
                   </div>
                 ))}
               </div>
 
               {/* Add Question Button */}
-              <button className="text-sm text-[#2962FF] hover:text-[#2962FF]/80 font-medium flex items-center gap-1">
+              <button className="text-sm font-medium flex items-center gap-1" style={{ color: 'var(--chart-2)' }} onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'} onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}>
                 <Plus className="w-4 h-4" />
                 문항 추가
               </button>
@@ -188,7 +188,7 @@ export function SurveyManagementPage({ onBack }) {
           </div>
 
           {/* Footer Actions */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+          <div className="flex justify-end gap-3 pt-4 border-t" style={{ borderColor: 'var(--border)' }}>
             <Button
               variant="outline"
               onClick={() => setIsEditModalOpen(false)}
@@ -198,7 +198,7 @@ export function SurveyManagementPage({ onBack }) {
             </Button>
             <Button
               onClick={() => setIsEditModalOpen(false)}
-              className="rounded-lg bg-[#1F2937] hover:bg-[#1F2937]/90"
+              className="rounded-lg" style={{ backgroundColor: 'var(--foreground)' }} onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'} onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
             >
               저장
             </Button>

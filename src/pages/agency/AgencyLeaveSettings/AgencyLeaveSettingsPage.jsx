@@ -287,14 +287,14 @@ const categorizeRiskGroup = (employee, currentMonth) => {
   if (usageRate < 30) {
     return { 
       group: '위험군', 
-      color: '#ef4444', 
+      color: 'var(--destructive)', 
       description: '번아웃 위험',
       range: '0~30% 사용'
     };
   } else if (usageRate < 80) {
     return { 
       group: '적정군', 
-      color: '#22c55e', 
+      color: 'var(--chart-2)', 
       description: '안정',
       range: '30~80% 사용'
     };
@@ -302,7 +302,7 @@ const categorizeRiskGroup = (employee, currentMonth) => {
     const isEarlyYear = currentMonth <= 6;
     return { 
       group: '완료군', 
-      color: '#f59e0b', 
+      color: 'var(--chart-4)', 
       description: isEarlyYear ? '퇴사 우려/급격한 소진' : '완료',
       range: '80~100% 사용'
     };
@@ -318,9 +318,9 @@ const RiskCategory = {
 
 // 위험 카테고리 색상
 const RISK_COLORS = {
-  [RiskCategory.BURNOUT_RISK]: '#ef4444',
-  [RiskCategory.HEALTHY]: '#22c55e',
-  [RiskCategory.TURNOVER_RISK]: '#ef4444',
+  [RiskCategory.BURNOUT_RISK]: 'var(--destructive)',
+  [RiskCategory.HEALTHY]: 'var(--chart-2)',
+  [RiskCategory.TURNOVER_RISK]: 'var(--destructive)',
 };
 
 // 위험 카테고리 판단 함수 (Dashboard.md에서 변환)
@@ -379,7 +379,7 @@ const CustomTooltip = ({ active, payload }) => {
               <span style={{
                 fontSize: theme.fonts.size.lg,
                 fontWeight: theme.fonts.weight.bold,
-                color: data.riskCategory === '적정군' ? '#22c55e' : data.riskCategory === '완료군' ? '#f59e0b' : '#ef4444',
+                color: data.riskCategory === '적정군' ? 'var(--chart-2)' : data.riskCategory === '완료군' ? 'var(--chart-4)' : 'var(--destructive)',
               }}>
                 {data.y}명
               </span>
@@ -433,9 +433,9 @@ const CustomTooltip = ({ active, payload }) => {
             marginTop: theme.spacing[2],
             fontSize: '10px',
             textAlign: 'center',
-            color: '#6366f1',
+            color: 'var(--chart-2)',
             fontWeight: theme.fonts.weight.medium,
-            background: '#eef2ff',
+            background: 'color-mix(in srgb, var(--chart-2) 10%, transparent)',
             padding: theme.spacing[1],
             borderRadius: theme.borderRadius.md,
           }}>
@@ -588,13 +588,13 @@ export function AgencyLeaveSettingsPage() {
       
       // 구간의 대표 위험 카테고리 결정 (구간 중간값 기준)
       // 위험군: 0~30% → 빨간색, 적정군: 30~80% → 초록색, 완료군: 80~100% → 노란색
-      let fillColor = '#22c55e'; // 기본값: 초록색 (적정군)
+      let fillColor = 'var(--chart-2)'; // 기본값: 초록색 (적정군)
       if (mid < 30) {
-        fillColor = '#ef4444'; // 빨간색 (위험군 - 연차 소진율 낮음)
+        fillColor = 'var(--destructive)'; // 빨간색 (위험군 - 연차 소진율 낮음)
       } else if (mid >= 80) {
-        fillColor = '#f59e0b'; // 노란색 (완료군)
+        fillColor = 'var(--chart-4)'; // 노란색 (완료군)
       } else {
-        fillColor = '#22c55e'; // 초록색 (적정군 - 안정권)
+        fillColor = 'var(--chart-2)'; // 초록색 (적정군 - 안정권)
       }
 
       bins.push({
@@ -695,7 +695,8 @@ export function AgencyLeaveSettingsPage() {
 
     try {
       // TODO: 실제 API 호출로 변경
-      // await leaveService.adjustLeave(selectedEmployeeData.id, {
+      // 가이드 문서에 따른 변수명: memberNo 사용
+      // await leaveService.adjustLeave(selectedEmployeeData.memberNo, {
       //   adjustment: adjustFormData.adjustment,
       //   reason: adjustFormData.reason,
       //   note: adjustFormData.note,
@@ -728,7 +729,7 @@ export function AgencyLeaveSettingsPage() {
         type: adjustFormData.reason === '포상' ? '포상' : adjustFormData.reason === '징계' ? '징계' : '경력인정',
         changedDays: Math.abs(adjustFormData.adjustment),
         reason: adjustFormData.note || adjustFormData.reason,
-        processor: currentUser?.user_name || '관리자',
+        processor: currentUser?.memberName || '관리자',
       };
       setLeaveLogList([newLogEntry, ...leaveLogList]);
 
@@ -752,9 +753,10 @@ export function AgencyLeaveSettingsPage() {
 
   // 휴가 독려 알림 보내기 (번아웃 위험군에게)
   const handleSendEncouragement = async () => {
+    // 가이드 문서에 따른 변수명: memberNos 사용
     const burnoutRiskEmployeeList = riskStats.위험군.employees
       .filter((employee) => employee && employee.name)
-      .map((employee) => employee.id);
+      .map((employee) => employee.memberNo || employee.id); // memberNo 우선, 없으면 id 사용
     
     if (burnoutRiskEmployeeList.length === 0) {
       toast.info('번아웃 위험군이 없습니다.');
@@ -790,16 +792,16 @@ export function AgencyLeaveSettingsPage() {
             size="default" 
             onClick={() => setIsPolicyModalOpen(true)}
             style={{
-              borderColor: '#d4d4d4',
-              backgroundColor: 'white',
+              borderColor: 'var(--border)',
+              backgroundColor: 'var(--card)',
               transition: 'all 0.2s ease'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#f5f5f5';
+              e.currentTarget.style.backgroundColor = 'var(--muted)';
               e.currentTarget.style.opacity = '0.9';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'white';
+              e.currentTarget.style.backgroundColor = 'var(--card)';
               e.currentTarget.style.opacity = '1';
             }}
           >
@@ -823,16 +825,16 @@ export function AgencyLeaveSettingsPage() {
                   </DistributionChartDescription>
                 </DistributionChartHeaderContent>
                 <DistributionChartLegend>
-                  <LegendItem $bgColor="#fee2e2" $borderColor="#fecaca" $textColor="#991b1b">
-                    <LegendDot $color="#ef4444" />
+                  <LegendItem $bgColor="color-mix(in srgb, var(--destructive) 20%, transparent)" $borderColor="color-mix(in srgb, var(--destructive) 30%, transparent)" $textColor="var(--destructive)">
+                    <LegendDot $color="var(--destructive)" />
                     <span>위험군 (0~30%)</span>
                   </LegendItem>
-                  <LegendItem $bgColor="#dcfce7" $borderColor="#bbf7d0" $textColor="#166534">
-                    <LegendDot $color="#22c55e" />
+                  <LegendItem $bgColor="color-mix(in srgb, var(--chart-2) 20%, transparent)" $borderColor="color-mix(in srgb, var(--chart-2) 30%, transparent)" $textColor="var(--chart-2)">
+                    <LegendDot $color="var(--chart-2)" />
                     <span>적정군 (30~80%)</span>
                   </LegendItem>
-                  <LegendItem $bgColor="#fef3c7" $borderColor="#fde68a" $textColor="#92400e">
-                    <LegendDot $color="#f59e0b" />
+                  <LegendItem $bgColor="color-mix(in srgb, var(--chart-4) 20%, transparent)" $borderColor="color-mix(in srgb, var(--chart-4) 30%, transparent)" $textColor="var(--chart-4)">
+                    <LegendDot $color="var(--chart-4)" />
                     <span>완료군 (80~100%)</span>
                   </LegendItem>
                 </DistributionChartLegend>
@@ -857,6 +859,7 @@ export function AgencyLeaveSettingsPage() {
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart margin={{ top: 20, right: 30, left: 10, bottom: 20 }}>
                       {/* 구간별 배경색 - ReferenceArea 사용 */}
+                      {/* ReferenceArea는 Recharts에서 CSS 변수를 직접 사용할 수 없으므로 하드코딩 유지 */}
                       <ReferenceArea 
                         x1={0} 
                         x2={30} 
@@ -888,31 +891,31 @@ export function AgencyLeaveSettingsPage() {
                         ifOverflow="visible"
                       />
                       
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
                     <XAxis 
                       dataKey="x" 
                       type="number" 
                       domain={[0, 100]} 
                       tickCount={11}
-                      label={{ value: '연차 소진율 (%)', position: 'insideBottom', offset: -10, fontSize: 12, fill: '#64748b' }} 
+                      label={{ value: '연차 소진율 (%)', position: 'insideBottom', offset: -10, fontSize: 12, fill: 'var(--muted-foreground)' }} 
                     />
                     <YAxis 
                       dataKey="y"
                       domain={[0, 'dataMax + 1']}
                       allowDecimals={false}
                       tickFormatter={(value) => Math.floor(value)}
-                      label={{ value: '인원 수 (명)', angle: -90, position: 'insideLeft', fontSize: 12, fill: '#64748b' }} 
+                      label={{ value: '인원 수 (명)', angle: -90, position: 'insideLeft', fontSize: 12, fill: 'var(--muted-foreground)' }} 
                     />
-                    <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#cbd5e1', strokeWidth: 1, strokeDasharray: '4 4' }} />
+                    <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'var(--border)', strokeWidth: 1, strokeDasharray: '4 4' }} />
                     
                     {/* 평균선 */}
-                    <ReferenceLine x={distributionMean} stroke="#6366f1" strokeDasharray="3 3" label={{ value: '평균', position: 'top', fill: '#6366f1', fontSize: 12 }} />
+                    <ReferenceLine x={distributionMean} stroke="var(--chart-2)" strokeDasharray="3 3" label={{ value: '평균', position: 'top', fill: 'var(--chart-2)', fontSize: 12 }} />
 
                     {/* 연결선 (트렌드 표시) */}
                     <Line 
                       data={distributionChartData} 
                       dataKey="y" 
-                      stroke="#cbd5e1" 
+                      stroke="var(--border)" 
                       strokeWidth={1} 
                       dot={false} 
                       activeDot={false}
@@ -969,30 +972,30 @@ export function AgencyLeaveSettingsPage() {
 
             {/* 통계 요약 카드 */}
             <StatsGrid>
-              <StatCard $bgColor="#fee2e2" $borderColor="#fecaca">
+              <StatCard $bgColor="color-mix(in srgb, var(--destructive) 20%, transparent)" $borderColor="color-mix(in srgb, var(--destructive) 30%, transparent)">
                 <StatCardHeader>
                   <StatCardIcon>
-                    <AlertTriangle size={20} color="#dc2626" />
+                    <AlertTriangle size={20} color="var(--destructive)" />
                   </StatCardIcon>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flex: 1 }}>
-                    <StatCardTitle $textColor="#991b1b">번아웃 위험군 (사용 저조)</StatCardTitle>
+                    <StatCardTitle $textColor="var(--destructive)">번아웃 위험군 (사용 저조)</StatCardTitle>
                     {distributionStats.burnout > 0 && (
                       <Button 
                         variant="outline" 
                         size="sm" 
                         onClick={handleSendEncouragement}
                         style={{ 
-                          backgroundColor: '#fee2e2',
-                          borderColor: '#fecaca',
-                          color: '#991b1b',
+                          backgroundColor: 'color-mix(in srgb, var(--destructive) 20%, transparent)',
+                          borderColor: 'color-mix(in srgb, var(--destructive) 30%, transparent)',
+                          color: 'var(--destructive)',
                           transition: 'all 0.2s ease'
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = '#fecaca';
+                          e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--destructive) 30%, transparent)';
                           e.currentTarget.style.opacity = '0.9';
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = '#fee2e2';
+                          e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--destructive) 20%, transparent)';
                           e.currentTarget.style.opacity = '1';
                         }}
                       >
@@ -1005,12 +1008,12 @@ export function AgencyLeaveSettingsPage() {
                 <StatCardValue>{distributionStats.burnout}명</StatCardValue>
               </StatCard>
 
-              <StatCard $bgColor="#fee2e2" $borderColor="#fecaca">
+              <StatCard $bgColor="color-mix(in srgb, var(--destructive) 20%, transparent)" $borderColor="color-mix(in srgb, var(--destructive) 30%, transparent)">
                 <StatCardHeader>
                   <StatCardIcon>
-                    <TrendingUp size={20} color="#dc2626" />
+                    <TrendingUp size={20} color="var(--destructive)" />
                   </StatCardIcon>
-                  <StatCardTitle $textColor="#991b1b">이탈 위험군 (과다 사용)</StatCardTitle>
+                  <StatCardTitle $textColor="var(--destructive)">이탈 위험군 (과다 사용)</StatCardTitle>
                 </StatCardHeader>
                 <StatCardValue>{distributionStats.turnover}명</StatCardValue>
               </StatCard>
@@ -1025,7 +1028,7 @@ export function AgencyLeaveSettingsPage() {
                 <StatCardStats>
                   <StatCardStatItem>
                     <StatCardStatLabel>평균 사용률</StatCardStatLabel>
-                    <StatCardStatValue $color="#6366f1">{distributionMean.toFixed(1)}%</StatCardStatValue>
+                    <StatCardStatValue $color="var(--chart-2)">{distributionMean.toFixed(1)}%</StatCardStatValue>
                   </StatCardStatItem>
                   <StatCardDivider />
                   <StatCardStatItem>
@@ -1121,9 +1124,9 @@ export function AgencyLeaveSettingsPage() {
                   <tr>
                     <LogTableHeaderCell>일시</LogTableHeaderCell>
                     <LogTableHeaderCell>대상자</LogTableHeaderCell>
-                    <LogTableHeaderCell>구분</LogTableHeaderCell>
-                    <LogTableHeaderCell>변동</LogTableHeaderCell>
                     <LogTableHeaderCell>사유</LogTableHeaderCell>
+                    <LogTableHeaderCell>변동</LogTableHeaderCell>
+                    <LogTableHeaderCell>상세 메모</LogTableHeaderCell>
                   </tr>
                 </LogTableHeader>
                 <tbody>
@@ -1133,7 +1136,7 @@ export function AgencyLeaveSettingsPage() {
                       <LogTableCell style={{ fontWeight: 500 }}>{logEntry.target}</LogTableCell>
                       <LogTableCell>
                         <span style={{ 
-                          color: logEntry.type === '포상' ? '#22c55e' : logEntry.type === '징계' ? '#ef4444' : '#6E8FB3',
+                          color: logEntry.type === '포상' ? 'var(--chart-2)' : logEntry.type === '징계' ? 'var(--destructive)' : 'var(--accent)',
                           fontWeight: 500
                         }}>
                           {logEntry.type}
@@ -1141,7 +1144,7 @@ export function AgencyLeaveSettingsPage() {
                       </LogTableCell>
                       <LogTableCell>
                         <span style={{ 
-                          color: logEntry.changedDays > 0 ? '#22c55e' : '#ef4444',
+                          color: logEntry.changedDays > 0 ? 'var(--chart-2)' : 'var(--destructive)',
                           fontWeight: 600
                         }}>
                           {logEntry.changedDays > 0 ? '+' : ''}{logEntry.changedDays}일
@@ -1169,7 +1172,7 @@ export function AgencyLeaveSettingsPage() {
             <ModalForm>
               <ModalFormGroup>
                 <ModalFormLabel>
-                  조정 일수 <span style={{ color: '#ef4444' }}>*</span>
+                  조정 일수 <span style={{ color: 'var(--destructive)' }}>*</span>
                 </ModalFormLabel>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                   <ModalFormInput
@@ -1255,7 +1258,7 @@ export function AgencyLeaveSettingsPage() {
 
               <ModalFormGroup>
                 <ModalFormLabel>
-                  사유 <span style={{ color: '#ef4444' }}>*</span>
+                  사유 <span style={{ color: 'var(--destructive)' }}>*</span>
                 </ModalFormLabel>
                 <ModalFormSelect
                   value={adjustFormData.reason}
@@ -1353,7 +1356,7 @@ export function AgencyLeaveSettingsPage() {
                 <EmployeeListModalHeaderContent>
                   <EmployeeListModalTitle>직원 리스트</EmployeeListModalTitle>
                   <EmployeeListModalDescription>
-                    소진율 <span style={{ fontWeight: theme.fonts.weight.bold, color: '#6366f1' }}>{selectedBinData.rangeLabel}</span> 구간 
+                    소진율 <span style={{ fontWeight: theme.fonts.weight.bold, color: 'var(--chart-2)' }}>{selectedBinData.rangeLabel}</span> 구간 
                     <span style={{ margin: `0 ${theme.spacing[2]}` }}>•</span> 
                     총 <span style={{ fontWeight: theme.fonts.weight.bold }}>{selectedBinData.employees.length}명</span>
                   </EmployeeListModalDescription>

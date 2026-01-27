@@ -150,7 +150,7 @@ export function UnscreenedDetailPage({ onBack }) {
           <div className="flex items-center gap-3">
             <FilterSearchContainer>
               <FilterSearchIcon>
-                <Search className="w-4 h-4 text-[#6E8FB3]" />
+                <Search className="w-4 h-4" style={{ color: 'var(--accent)' }} />
               </FilterSearchIcon>
               <Input
                 type="text"
@@ -199,8 +199,8 @@ export function UnscreenedDetailPage({ onBack }) {
                       </TypeBadge>
                     </TableCell>
                     <TableCell $align="center">
-                      <div className="flex items-center justify-center gap-1 text-sm text-[#1F2328]">
-                        <Calendar className="w-3.5 h-3.5 text-[#6E8FB3]" />
+                      <div className="flex items-center justify-center gap-1 text-sm" style={{ color: 'var(--foreground)' }}>
+                        <Calendar className="w-3.5 h-3.5" style={{ color: 'var(--accent)' }} />
                         {person.date}
                       </div>
                     </TableCell>
@@ -234,7 +234,7 @@ export function UnscreenedDetailPage({ onBack }) {
 
           {filteredData.length === 0 && (
             <EmptyState>
-              <p className="text-sm text-[#6E8FB3]">검색 결과가 없습니다.</p>
+              <p className="text-sm" style={{ color: 'var(--accent)' }}>검색 결과가 없습니다.</p>
             </EmptyState>
           )}
         </DataTableCard>

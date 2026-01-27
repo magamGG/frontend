@@ -5,7 +5,7 @@ export const AgencyHealthRoot = styled.div`
   width: 100%;
   min-height: 100vh;
   overflow-y: auto;
-  background-color: #DADDE1;
+  background-color: var(--background);
 `;
 
 // 중앙 정렬 및 최대 폭 설정 (데스크탑 레이아웃 기준)
@@ -52,7 +52,7 @@ export const CheckupDateInfo = styled.div`
 
 export const CheckupDateLabel = styled.div`
   font-size: 0.75rem;
-  color: #9CA3AF;
+  color: var(--muted-foreground);
   margin-bottom: 4px;
 `;
 
@@ -116,7 +116,7 @@ export const DeepCheckupStatus = styled.div`
 
 export const DeepCheckupProgressBar = styled.div`
   width: 100%;
-  background-color: #E5E7EB;
+  background-color: var(--border);
   border-radius: 9999px;
   height: 6px;
   overflow: hidden;
@@ -127,7 +127,7 @@ export const DeepCheckupProgress = styled.div`
   border-radius: 9999px;
   transition: all 0.3s;
   ${props => {
-    const color = props.$color === 'purple' ? '#9333EA' : '#3B82F6';
+    const color = props.$color === 'purple' ? 'var(--status-workation)' : 'var(--chart-2)';
     return `
       background-color: ${color};
       width: ${props.$width}%;
@@ -137,7 +137,7 @@ export const DeepCheckupProgress = styled.div`
 
 export const DeepCheckupProgressText = styled.div`
   font-size: 0.75rem;
-  color: #9CA3AF;
+  color: var(--muted-foreground);
   margin-top: 4px;
 `;
 
@@ -229,7 +229,7 @@ export const MonitoringChartContainer = styled.div`
 export const MonitoringFooter = styled.div`
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid #E5E7EB;
+  border-top: 1px solid var(--border);
   text-align: center;
 `;
 
@@ -273,7 +273,7 @@ export const UnscreenedAvatar = styled.div`
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background-color: #E5E7EB;
+  background-color: var(--border);
   display: flex;
   align-items: center;
   justify-content: center;

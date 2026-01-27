@@ -159,15 +159,15 @@ export const RiskCategoryCards = styled.div`
 
 export const RiskCategoryCard = styled.div`
   background: ${props => {
-    if (props.$color === '#ef4444') return '#fee2e2'; // 은은한 빨간색
-    if (props.$color === '#22c55e') return '#dcfce7'; // 은은한 초록색
-    if (props.$color === '#f59e0b') return '#fef3c7'; // 은은한 노란색
-    return 'white';
+    if (props.$color === 'var(--destructive)' || props.$color?.includes('destructive')) return 'color-mix(in srgb, var(--destructive) 20%, transparent)';
+    if (props.$color === 'var(--chart-2)' || props.$color?.includes('chart-2')) return 'color-mix(in srgb, var(--chart-2) 20%, transparent)';
+    if (props.$color === 'var(--chart-4)' || props.$color?.includes('chart-4')) return 'color-mix(in srgb, var(--chart-4) 20%, transparent)';
+    return 'var(--card)';
   }};
   border: 1px solid ${props => {
-    if (props.$color === '#ef4444') return '#fecaca'; // 빨간색 테두리
-    if (props.$color === '#22c55e') return '#bbf7d0'; // 초록색 테두리
-    if (props.$color === '#f59e0b') return '#fde68a'; // 노란색 테두리
+    if (props.$color === 'var(--destructive)' || props.$color?.includes('destructive')) return 'color-mix(in srgb, var(--destructive) 30%, transparent)';
+    if (props.$color === 'var(--chart-2)' || props.$color?.includes('chart-2')) return 'color-mix(in srgb, var(--chart-2) 30%, transparent)';
+    if (props.$color === 'var(--chart-4)' || props.$color?.includes('chart-4')) return 'color-mix(in srgb, var(--chart-4) 30%, transparent)';
     return 'var(--border)';
   }};
   border-radius: ${theme.borderRadius.xl};
@@ -220,9 +220,9 @@ export const RiskCategoryCardAction = styled.div`
   margin-top: ${theme.spacing[3]};
   padding-top: ${theme.spacing[3]};
   border-top: 1px solid ${props => {
-    if (props.$color === '#ef4444') return '#fecaca'; // 빨간색 구분선
-    if (props.$color === '#22c55e') return '#bbf7d0'; // 초록색 구분선
-    if (props.$color === '#f59e0b') return '#fde68a'; // 노란색 구분선
+    if (props.$color === 'var(--destructive)' || props.$color?.includes('destructive')) return 'color-mix(in srgb, var(--destructive) 30%, transparent)';
+    if (props.$color === 'var(--chart-2)' || props.$color?.includes('chart-2')) return 'color-mix(in srgb, var(--chart-2) 30%, transparent)';
+    if (props.$color === 'var(--chart-4)' || props.$color?.includes('chart-4')) return 'color-mix(in srgb, var(--chart-4) 30%, transparent)';
     return 'var(--border)';
   }};
 `;
@@ -783,19 +783,19 @@ export const BackgroundZone = styled.div`
 
 export const RiskZone = styled(BackgroundZone)`
   width: 30%;
-  background: #fee2e2;
+  background: color-mix(in srgb, var(--destructive) 20%, transparent);
   opacity: 0.6;
 `;
 
 export const HealthyZone = styled(BackgroundZone)`
   width: 50%;
-  background: #dcfce7;
+  background: color-mix(in srgb, var(--chart-2) 20%, transparent);
   opacity: 0.6;
 `;
 
 export const CompleteZone = styled(BackgroundZone)`
   width: 20%;
-  background: #fef3c7;
+  background: color-mix(in srgb, var(--chart-4) 20%, transparent);
   opacity: 0.6;
 `;
 

@@ -96,22 +96,22 @@ const initialDeepCheckupData = {
 };
 
 const mentalPieData = [
-  { name: '정상', value: 3, color: '#10B981' },
-  { name: '주의', value: 3, color: '#F59E0B' },
-  { name: '위험', value: 2, color: '#EF4444' },
+  { name: '정상', value: 3, color: 'var(--chart-2)' },
+  { name: '주의', value: 3, color: 'var(--chart-4)' },
+  { name: '위험', value: 2, color: 'var(--destructive)' },
 ];
 
 const physicalPieData = [
-  { name: '정상', value: 6, color: '#10B981' },
-  { name: '주의', value: 3, color: '#F59E0B' },
-  { name: '위험', value: 1, color: '#EF4444' },
+  { name: '정상', value: 6, color: 'var(--chart-2)' },
+  { name: '주의', value: 3, color: 'var(--chart-4)' },
+  { name: '위험', value: 1, color: 'var(--destructive)' },
 ];
 
 const monitoringStatusData = [
-  { name: '정상', value: 5, color: '#10B981' },
-  { name: '주의', value: 4, color: '#F59E0B' },
-  { name: '위험', value: 3, color: '#EF4444' },
-  { name: '미검진', value: 4, color: '#9CA3AF' },
+  { name: '정상', value: 5, color: 'var(--chart-2)' },
+  { name: '주의', value: 4, color: 'var(--chart-4)' },
+  { name: '위험', value: 3, color: 'var(--destructive)' },
+  { name: '미검진', value: 4, color: 'var(--muted-foreground)' },
 ];
 
 const initialUnscreenedData = [
@@ -198,14 +198,14 @@ export function AgencyHealthPage() {
           <DeepCheckupCard onClick={() => setCurrentView('mental-detail')}>
             <DeepCheckupHeader>
               <DeepCheckupTitle>정신 건강 심층 검사</DeepCheckupTitle>
-              <ChevronRight className="w-4 h-4 text-[#9CA3AF]" />
+              <ChevronRight className="w-4 h-4" style={{ color: 'var(--muted-foreground)' }} />
             </DeepCheckupHeader>
 
             {/* 검사 현황 */}
             <DeepCheckupStatus>
               <div className="flex items-center justify-between text-xs mb-1.5">
-                <span className="text-[#9CA3AF]">검사 현황</span>
-                <span className="font-bold text-[#1F2328]">{deepCheckupData.mental.completionRate}%</span>
+                <span style={{ color: 'var(--muted-foreground)' }}>검사 현황</span>
+                <span className="font-bold" style={{ color: 'var(--foreground)' }}>{deepCheckupData.mental.completionRate}%</span>
               </div>
               <DeepCheckupProgressBar>
                 <DeepCheckupProgress $color="purple" $width={deepCheckupData.mental.completionRate} />
@@ -254,14 +254,14 @@ export function AgencyHealthPage() {
           <DeepCheckupCard onClick={() => setCurrentView('physical-detail')}>
             <DeepCheckupHeader>
               <DeepCheckupTitle>신체 건강 심층 검사</DeepCheckupTitle>
-              <ChevronRight className="w-4 h-4 text-[#9CA3AF]" />
+              <ChevronRight className="w-4 h-4" style={{ color: 'var(--muted-foreground)' }} />
             </DeepCheckupHeader>
 
             {/* 검사 현황 */}
             <DeepCheckupStatus>
               <div className="flex items-center justify-between text-xs mb-1.5">
-                <span className="text-[#9CA3AF]">검사 현황</span>
-                <span className="font-bold text-[#1F2328]">{deepCheckupData.physical.completionRate}%</span>
+                <span style={{ color: 'var(--muted-foreground)' }}>검사 현황</span>
+                <span className="font-bold" style={{ color: 'var(--foreground)' }}>{deepCheckupData.physical.completionRate}%</span>
               </div>
               <DeepCheckupProgressBar>
                 <DeepCheckupProgress $color="blue" $width={deepCheckupData.physical.completionRate} />
@@ -312,8 +312,8 @@ export function AgencyHealthPage() {
           {/* 검진 모니터링 */}
           <MonitoringCard onClick={() => setCurrentView('monitoring-detail')}>
             <MonitoringHeader>
-              <h2 className="text-sm font-bold text-[#1F2328]">검진 모니터링</h2>
-              <ChevronRight className="w-4 h-4 text-[#9CA3AF]" />
+              <h2 className="text-sm font-bold" style={{ color: 'var(--foreground)' }}>검진 모니터링</h2>
+              <ChevronRight className="w-4 h-4" style={{ color: 'var(--muted-foreground)' }} />
             </MonitoringHeader>
 
             <div className="flex items-center justify-between gap-4">
@@ -348,15 +348,15 @@ export function AgencyHealthPage() {
             </div>
 
             <MonitoringFooter>
-              <span className="text-xs text-[#9CA3AF]">검진 인원</span>
+              <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>검진 인원</span>
             </MonitoringFooter>
           </MonitoringCard>
 
           {/* 미검진 인원 집중 관리 */}
           <UnscreenedCard onClick={() => setCurrentView('unscreened-detail')}>
             <UnscreenedHeader>
-              <h2 className="text-sm font-bold text-[#1F2328]">미검진 인원 집중 관리</h2>
-              <ChevronRight className="w-4 h-4 text-[#9CA3AF]" />
+              <h2 className="text-sm font-bold" style={{ color: 'var(--foreground)' }}>미검진 인원 집중 관리</h2>
+              <ChevronRight className="w-4 h-4" style={{ color: 'var(--muted-foreground)' }} />
             </UnscreenedHeader>
 
             <UnscreenedList>
@@ -364,7 +364,7 @@ export function AgencyHealthPage() {
                 <UnscreenedItem key={person.id}>
                   <div className="flex items-center gap-2">
                     <UnscreenedAvatar>
-                      <User className="w-4 h-4 text-[#6B7280]" />
+                      <User className="w-4 h-4" style={{ color: 'var(--muted-foreground)' }} />
                     </UnscreenedAvatar>
                     <UnscreenedName>{person.name}</UnscreenedName>
                   </div>

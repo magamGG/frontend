@@ -11,10 +11,10 @@ const useAuthStore = create(
       
       // Actions
       login: (loginData) => {
-        const { token, user_id, user_name, role } = loginData;
+        const { token, memberNo, memberName, memberRole, agencyNo } = loginData;
         set({
           token,
-          user: { user_id, user_name, role },
+          user: { memberNo, memberName, memberRole, agencyNo },
           isAuthenticated: true,
         });
       },
@@ -45,14 +45,14 @@ const useAuthStore = create(
         return !!token;
       },
       
-      getUserId: () => {
+      getMemberNo: () => {
         const { user } = get();
-        return user?.user_id || null;
+        return user?.memberNo || null;
       },
       
-      getUserName: () => {
+      getMemberName: () => {
         const { user } = get();
-        return user?.user_name || null;
+        return user?.memberName || null;
       },
     }),
     {

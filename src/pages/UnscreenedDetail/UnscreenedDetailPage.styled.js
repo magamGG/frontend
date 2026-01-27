@@ -5,7 +5,7 @@ export const UnscreenedDetailRoot = styled.div`
   width: 100%;
   min-height: 100vh;
   overflow-y: auto;
-  background-color: #DADDE1;
+  background-color: var(--background);
   padding: 24px;
 `;
 
@@ -41,7 +41,7 @@ export const BackButton = styled.button`
 export const HeaderTitle = styled.h1`
   font-size: 1.25rem;
   font-weight: bold;
-  color: #1F2328;
+  color: var(--foreground);
   margin: 0;
 `;
 
@@ -49,7 +49,7 @@ export const BulkAlarmButton = styled.button`
   display: flex;
   align-items: center;
   gap: 8px;
-  background-color: #dc2626;
+  background-color: var(--destructive);
   color: white;
   height: 36px;
   padding: 0 16px;
@@ -59,7 +59,7 @@ export const BulkAlarmButton = styled.button`
   transition: background-color 0.2s;
 
   &:hover {
-    background-color: #b91c1c;
+    background-color: color-mix(in srgb, var(--destructive) 90%, black);
   }
 `;
 
@@ -92,13 +92,13 @@ export const StatisticsLabel = styled.div`
   color: ${props => {
     switch (props.$color) {
       case 'red':
-        return '#dc2626';
+        return 'var(--destructive)';
       case 'purple':
-        return '#9333ea';
+        return 'var(--status-workation)';
       case 'blue':
-        return '#2563eb';
+        return 'var(--chart-2)';
       default:
-        return '#6E8FB3';
+        return 'var(--accent)';
     }
   }};
   margin-bottom: 4px;
@@ -110,13 +110,13 @@ export const StatisticsValue = styled.div`
   color: ${props => {
     switch (props.$color) {
       case 'red':
-        return '#dc2626';
+        return 'var(--destructive)';
       case 'purple':
-        return '#9333ea';
+        return 'var(--status-workation)';
       case 'blue':
-        return '#2563eb';
+        return 'var(--chart-2)';
       default:
-        return '#1F2328';
+        return 'var(--foreground)';
     }
   }};
 `;
@@ -184,7 +184,7 @@ export const Table = styled.table`
 `;
 
 export const TableHead = styled.thead`
-  border-bottom: 1px solid #DADDE1;
+  border-bottom: 1px solid var(--border);
 `;
 
 export const TableHeaderRow = styled.tr``;
@@ -193,7 +193,7 @@ export const TableHeaderCell = styled.th`
   text-align: ${props => props.$align || 'left'};
   font-size: 0.75rem;
   font-weight: 500;
-  color: #6E8FB3;
+  color: var(--accent);
   padding-bottom: 12px;
   padding-right: 16px;
   padding-left: 16px;
@@ -206,18 +206,18 @@ export const TableHeaderCell = styled.th`
 export const TableBody = styled.tbody``;
 
 export const TableRow = styled.tr`
-  border-bottom: 1px solid #DADDE1;
+  border-bottom: 1px solid var(--border);
   transition: background-color 0.2s;
 
   &:hover {
-    background-color: #FAFAFA;
+    background-color: var(--card);
   }
 `;
 
 export const TableCell = styled.td`
   padding: 12px 16px;
   font-size: 0.875rem;
-  color: ${props => props.$fontWeight === 'medium' ? '#1F2328' : '#6E8FB3'};
+  color: ${props => props.$fontWeight === 'medium' ? 'var(--foreground)' : 'var(--accent)'};
   font-weight: ${props => props.$fontWeight === 'medium' ? '500' : 'normal'};
   text-align: ${props => props.$align || 'left'};
 
@@ -235,8 +235,8 @@ export const TypeBadge = styled.span`
 
 export const DelayBadge = styled.span`
   display: inline-block;
-  background-color: #fef2f2;
-  color: #dc2626;
+  background-color: color-mix(in srgb, var(--destructive) 20%, transparent);
+  color: var(--destructive);
   font-size: 0.75rem;
   padding: 4px 12px;
   border-radius: 4px;
@@ -245,7 +245,7 @@ export const DelayBadge = styled.span`
 export const AlarmButton = styled.button`
   height: 28px;
   padding: 0 12px;
-  background-color: #dc2626;
+  background-color: var(--destructive);
   color: white;
   border: none;
   border-radius: 4px;
@@ -256,7 +256,7 @@ export const AlarmButton = styled.button`
   transition: background-color 0.2s;
 
   &:hover {
-    background-color: #b91c1c;
+    background-color: color-mix(in srgb, var(--destructive) 90%, black);
   }
 `;
 

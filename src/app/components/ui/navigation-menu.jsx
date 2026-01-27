@@ -148,7 +148,7 @@ function NavigationMenuIndicator({
       )}
       {...props}
     >
-      <div className="bg-border relative top-[60%] h-2 w-2 rotate-45 rounded-tl-sm shadow-md" />
+      <div style={{ backgroundColor: 'var(--border)', position: 'relative', top: '60%', height: '8px', width: '8px', transform: 'rotate(45deg)', borderTopLeftRadius: '2px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)' }} />
     </NavigationMenuPrimitive.Indicator>
   );
 }

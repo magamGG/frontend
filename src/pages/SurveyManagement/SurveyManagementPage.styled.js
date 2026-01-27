@@ -3,7 +3,7 @@ import styled from 'styled-components';
 // 전체 페이지 루트 래퍼 (1920px 데스크탑 기준)
 export const SurveyManagementRoot = styled.div`
   min-height: 100vh;
-  background-color: #DADDE1;
+  background-color: var(--background);
   padding: 32px;
 `;
 
@@ -41,7 +41,7 @@ export const BackButton = styled.button`
 export const HeaderTitle = styled.h1`
   font-size: 2rem;
   font-weight: bold;
-  color: #333333;
+  color: var(--foreground);
   margin: 0;
 `;
 
@@ -49,7 +49,7 @@ export const HeaderTitle = styled.h1`
 export const TabsContainer = styled.div`
   display: flex;
   gap: 32px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--border);
   margin-bottom: 32px;
 `;
 
@@ -60,13 +60,13 @@ export const TabButton = styled.button`
   font-weight: 500;
   transition: color 0.2s;
   position: relative;
-  color: ${props => props.$active ? '#8E44AD' : '#666666'};
+  color: ${props => props.$active ? 'var(--status-workation)' : 'var(--muted-foreground)'};
   background: none;
   border: none;
   cursor: pointer;
 
   &:hover {
-    color: ${props => props.$active ? '#8E44AD' : '#333333'};
+    color: ${props => props.$active ? 'var(--status-workation)' : 'var(--foreground)'};
   }
 `;
 
@@ -76,7 +76,7 @@ export const TabIndicator = styled.div`
   left: 0;
   right: 0;
   height: 2px;
-  background-color: #8E44AD;
+  background-color: var(--status-workation);
 `;
 
 // 설문 그리드 (데스크탑: 3열)
@@ -104,7 +104,7 @@ export const SurveyCard = styled.div`
 export const SurveyIcon = styled.div`
   width: 48px;
   height: 48px;
-  background-color: #8E44AD;
+  background-color: var(--status-workation);
   border-radius: 12px;
   display: flex;
   align-items: center;
@@ -115,13 +115,13 @@ export const SurveyIcon = styled.div`
 export const SurveyCardTitle = styled.h3`
   font-size: 1.125rem;
   font-weight: bold;
-  color: #333333;
+  color: var(--foreground);
   margin: 0 0 4px 0;
 `;
 
 export const SurveyCardDescription = styled.p`
   font-size: 0.875rem;
-  color: #666666;
+  color: var(--muted-foreground);
   margin: 0 0 12px 0;
 `;
 
@@ -147,7 +147,7 @@ export const SurveyActionButton = styled.button`
   font-size: 0.75rem;
   border: 1px solid var(--border);
   background-color: transparent;
-  color: ${props => props.$danger ? '#dc2626' : 'var(--foreground)'};
+  color: ${props => props.$danger ? 'var(--destructive)' : 'var(--foreground)'};
   cursor: pointer;
   transition: all 0.2s;
   display: flex;
@@ -156,8 +156,8 @@ export const SurveyActionButton = styled.button`
   gap: 4px;
 
   &:hover {
-    background-color: ${props => props.$danger ? '#fef2f2' : 'var(--accent)'};
-    color: ${props => props.$danger ? '#b91c1c' : 'var(--foreground)'};
+    background-color: ${props => props.$danger ? 'color-mix(in srgb, var(--destructive) 20%, transparent)' : 'var(--accent)'};
+    color: ${props => props.$danger ? 'color-mix(in srgb, var(--destructive) 90%, black)' : 'var(--foreground)'};
   }
 `;
 
@@ -166,7 +166,7 @@ export const AddTemplateCard = styled.button`
   background-color: white;
   border-radius: 16px;
   padding: 24px;
-  border: 2px dashed #d1d5db;
+  border: 2px dashed var(--border);
   transition: border-color 0.2s;
   display: flex;
   flex-direction: column;
@@ -177,14 +177,14 @@ export const AddTemplateCard = styled.button`
   background: transparent;
 
   &:hover {
-    border-color: #8E44AD;
+    border-color: var(--status-workation);
   }
 `;
 
 export const AddTemplateIcon = styled.div`
   width: 48px;
   height: 48px;
-  background-color: #f3f4f6;
+  background-color: var(--muted);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -195,6 +195,6 @@ export const AddTemplateIcon = styled.div`
 export const AddTemplateText = styled.p`
   font-size: 0.875rem;
   font-weight: 500;
-  color: #666666;
+  color: var(--muted-foreground);
   margin: 0;
 `;

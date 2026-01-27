@@ -28,7 +28,8 @@ function InputOTPGroup({ className, ...props }) {
   return (
     <div
       data-slot="input-otp-group"
-      className={cn("flex items-center gap-1", className)}
+      className={cn(className)}
+      style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
       {...props}
     />
   );

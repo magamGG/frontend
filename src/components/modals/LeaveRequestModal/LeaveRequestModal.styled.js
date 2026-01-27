@@ -2,13 +2,13 @@ import styled from 'styled-components';
 
 export const ModalHeader = styled.div`
   padding: 20px 24px;
-  border-bottom: 1px solid #E5E7EB;
+  border-bottom: 1px solid var(--border);
 `;
 
 export const ModalTitle = styled.h2`
   font-size: 20px;
   font-weight: 600;
-  color: #1F2328;
+  color: var(--foreground);
   margin: 0;
 `;
 
@@ -36,15 +36,15 @@ export const TabButton = styled.button`
   ${({ $isActive }) =>
     $isActive
       ? `
-    background-color: #3F4A5A;
-    color: white;
+    background-color: var(--primary);
+    color: var(--primary-foreground);
   `
       : `
-    background-color: #F3F4F6;
-    color: #4B5563;
+    background-color: var(--muted);
+    color: var(--muted-foreground);
 
     &:hover {
-      background-color: #E5E7EB;
+      background-color: var(--border);
     }
   `}
 `;
@@ -63,17 +63,17 @@ export const DateGrid = styled.div`
 
 export const DaysInfo = styled.p`
   font-size: 12px;
-  color: #6B7280;
+  color: var(--muted-foreground);
   margin: 0;
 `;
 
 export const DropdownButton = styled.button`
   width: 100%;
   padding: 10px 16px;
-  border: 1px solid #D1D5DB;
+  border: 1px solid var(--border);
   border-radius: 6px;
-  background-color: white;
-  color: #1F2328;
+  background-color: var(--card);
+  color: var(--foreground);
   text-align: left;
   display: flex;
   align-items: center;
@@ -82,7 +82,7 @@ export const DropdownButton = styled.button`
   cursor: pointer;
 
   &:hover {
-    border-color: #9CA3AF;
+    border-color: var(--muted-foreground);
   }
 `;
 
@@ -91,8 +91,8 @@ export const DropdownMenu = styled.div`
   z-index: 50;
   width: 100%;
   margin-top: 4px;
-  background-color: white;
-  border: 1px solid #D1D5DB;
+  background-color: var(--card);
+  border: 1px solid var(--border);
   border-radius: 6px;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
   max-height: 240px;
@@ -107,17 +107,17 @@ export const DropdownItem = styled.button`
   border: none;
   background: none;
   cursor: pointer;
-  color: #1F2328;
+  color: var(--foreground);
 
   ${({ $isSelected }) =>
     $isSelected
       ? `
-    background-color: #3B82F6;
-    color: white;
+    background-color: var(--primary);
+    color: var(--primary-foreground);
   `
       : `
     &:hover {
-      background-color: #EFF6FF;
+      background-color: var(--muted);
     }
   `}
 `;
@@ -139,8 +139,8 @@ export const FileInfo = styled.div`
   align-items: center;
   gap: 8px;
   padding: 12px 16px;
-  background-color: #F9FAFB;
-  border: 1px solid #E5E7EB;
+  background-color: var(--muted);
+  border: 1px solid var(--border);
   border-radius: 6px;
 `;
 
@@ -155,11 +155,11 @@ export const InfoItem = styled.div`
   align-items: flex-start;
   gap: 8px;
   font-size: 12px;
-  color: #6B7280;
+  color: var(--muted-foreground);
 `;
 
 export const InfoBullet = styled.span`
-  color: #9CA3AF;
+  color: var(--muted-foreground);
 `;
 
 export const ModalFooter = styled.div`
@@ -167,5 +167,5 @@ export const ModalFooter = styled.div`
   justify-content: flex-end;
   gap: 12px;
   padding: 16px 24px;
-  border-top: 1px solid #E5E7EB;
+  border-top: 1px solid var(--border);
 `;

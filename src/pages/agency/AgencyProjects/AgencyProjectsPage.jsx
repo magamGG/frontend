@@ -502,21 +502,21 @@ export function AgencyProjectsPage() {
         <AgencyProjectsStatsGrid>
           <AgencyProjectsStatCard>
             <AgencyProjectsStatHeader>
-              <BookOpen className="w-4 h-4" style={{ color: '#5a6067' }} />
+              <BookOpen className="w-4 h-4" style={{ color: 'var(--muted-foreground)' }} />
               <AgencyProjectsStatLabel>전체 프로젝트 수</AgencyProjectsStatLabel>
             </AgencyProjectsStatHeader>
             <AgencyProjectsStatValue>{stats.totalProjects}개</AgencyProjectsStatValue>
           </AgencyProjectsStatCard>
           <AgencyProjectsStatCard>
             <AgencyProjectsStatHeader>
-              <AlertCircle className="w-4 h-4" style={{ color: '#5a6067' }} />
+              <AlertCircle className="w-4 h-4" style={{ color: 'var(--muted-foreground)' }} />
               <AgencyProjectsStatLabel>마감 임박 작품</AgencyProjectsStatLabel>
             </AgencyProjectsStatHeader>
             <AgencyProjectsStatValue>{stats.todayDeadlines}개</AgencyProjectsStatValue>
           </AgencyProjectsStatCard>
           <AgencyProjectsStatCard>
             <AgencyProjectsStatHeader>
-              <BookOpen className="w-4 h-4" style={{ color: '#5a6067' }} />
+              <BookOpen className="w-4 h-4" style={{ color: 'var(--muted-foreground)' }} />
               <AgencyProjectsStatLabel>총 담당자 수</AgencyProjectsStatLabel>
             </AgencyProjectsStatHeader>
             <AgencyProjectsStatValue>{stats.totalManagers}명</AgencyProjectsStatValue>
@@ -703,7 +703,7 @@ export function AgencyProjectsPage() {
           {sortedProjects.length === 0 && (
             <Card className="p-12">
               <AgencyProjectsEmpty>
-                <AlertCircle className="w-12 h-12" style={{ color: '#5a6067', opacity: 0.5 }} />
+                <AlertCircle className="w-12 h-12" style={{ color: 'var(--muted-foreground)', opacity: 0.5 }} />
                 <AgencyProjectsEmptyText>해당 조건의 작품이 없습니다</AgencyProjectsEmptyText>
               </AgencyProjectsEmpty>
             </Card>
@@ -720,7 +720,7 @@ export function AgencyProjectsPage() {
               {/* 담당자 선택 */}
               <AgencyProjectModalField>
                 <AgencyProjectModalLabel>
-                  담당자 선택 <span style={{ color: '#DC2626' }}>*</span>
+                  담당자 선택 <span style={{ color: 'var(--destructive)' }}>*</span>
                 </AgencyProjectModalLabel>
                 <AgencyProjectModalSelect
                   value={newProjectForm.managerId}
@@ -738,7 +738,7 @@ export function AgencyProjectsPage() {
               {/* 작가명 */}
               <AgencyProjectModalField>
                 <AgencyProjectModalLabel>
-                  작가명 <span style={{ color: '#DC2626' }}>*</span>
+                  작가명 <span style={{ color: 'var(--destructive)' }}>*</span>
                 </AgencyProjectModalLabel>
                 <AgencyProjectModalInput
                   type="text"
@@ -751,7 +751,7 @@ export function AgencyProjectsPage() {
               {/* 프로젝트명 */}
               <AgencyProjectModalField>
                 <AgencyProjectModalLabel>
-                  프로젝트명 <span style={{ color: '#DC2626' }}>*</span>
+                  프로젝트명 <span style={{ color: 'var(--destructive)' }}>*</span>
                 </AgencyProjectModalLabel>
                 <AgencyProjectModalInput
                   type="text"
@@ -764,7 +764,7 @@ export function AgencyProjectsPage() {
               {/* 장르 */}
               <AgencyProjectModalField>
                 <AgencyProjectModalLabel>
-                  장르 <span style={{ color: '#DC2626' }}>*</span>
+                  장르 <span style={{ color: 'var(--destructive)' }}>*</span>
                 </AgencyProjectModalLabel>
                 <AgencyProjectModalInput
                   type="text"
@@ -777,7 +777,7 @@ export function AgencyProjectsPage() {
               {/* 플랫폼 선택 */}
               <AgencyProjectModalField>
                 <AgencyProjectModalLabel>
-                  플랫폼 <span style={{ color: '#DC2626' }}>*</span>
+                  플랫폼 <span style={{ color: 'var(--destructive)' }}>*</span>
                 </AgencyProjectModalLabel>
                 <AgencyProjectModalSelect
                   value={newProjectForm.platform}
