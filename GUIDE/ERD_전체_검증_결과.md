@@ -258,18 +258,18 @@
 
 ---
 
-### 18. LEAVE_HISTORY ❌ 프론트엔드 미사용
+### 18. LEAVE_HISTORY ⚠️ 간접 사용 (연차 변경 로그)
 
 | DB 필드 | 프론트엔드 변수 | 상태 |
 |---------|----------------|------|
-| `LEAVE_HISTORY_NO` | `leaveHistoryNo` | ❌ |
+| `LEAVE_HISTORY_NO` | `leaveHistoryNo` | ⚠️ (백엔드에서 생성) |
 | `MEMBER_NO` | `memberNo` | ✅ |
-| `LEAVE_HISTORY_DATE` | `leaveHistoryDate` | ❌ |
-| `LEAVE_HISTORY_TYPE` | `leaveHistoryType` | ❌ |
-| `LEAVE_HISTORY_REASON` | `leaveHistoryReason` | ❌ |
-| `LEAVE_HISTORY_AMOUNT` | `leaveHistoryAmount` | ❌ |
+| `LEAVE_HISTORY_DATE` | `leaveHistoryDate` → `date` | ⚠️ (로그 표시용) |
+| `LEAVE_HISTORY_TYPE` | `leaveHistoryType` → `type` | ⚠️ (로그 표시용) |
+| `LEAVE_HISTORY_REASON` | `leaveHistoryReason` → `reason` | ⚠️ (로그 표시용) |
+| `LEAVE_HISTORY_AMOUNT` | `leaveHistoryAmount` → `changedDays` | ⚠️ (로그 표시용) |
 
-**참고**: 프론트엔드 코드에서 사용되지 않습니다. API 엔드포인트도 없으며, 백엔드에서만 사용되거나 향후 구현 예정인 기능으로 보입니다. 연차 조정(adjustLeave) 기능과 관련이 있을 수 있으나 현재 프론트엔드에서는 직접 사용하지 않습니다.
+**참고**: 연차 변경 로그 기능에서 간접적으로 사용됩니다. `AgencyLeaveSettingsPage.jsx`에서 연차 조정 시 로그를 표시하며, 프론트엔드에서는 로그 데이터를 `date`, `type`, `reason`, `changedDays` 등의 변수명으로 표시하고 있습니다. 현재는 localStorage를 사용하며, 향후 백엔드 API를 통해 `LEAVE_HISTORY` 테이블과 연동할 예정입니다.
 
 ---
 
@@ -332,7 +332,7 @@
 
 ### 확인 완료 테이블 (2개)
 1. ✅ NEW_REQUEST - 에이전시 가입 요청 기능에서 사용 중 (`agencyService.requestJoinAgency`)
-2. ❌ LEAVE_HISTORY - 프론트엔드 미사용 (백엔드 전용 또는 향후 구현 예정)
+2. ⚠️ LEAVE_HISTORY - 연차 변경 로그에서 간접 사용 (`AgencyLeaveSettingsPage.jsx`)
 
 ---
 
@@ -358,6 +358,10 @@
 - ✅ **인증 API**: `memberEmail`, `memberPassword` (DB: `MEMBER_EMAIL`, `MEMBER_PASSWORD`)
 - ✅ **회원 API**: `memberName`, `memberEmail`, `memberPhone`, `memberRole` 등 모든 필드 일치
 - ✅ **연차 API**: `attendanceRequestType`, `attendanceRequestStartDate`, `attendanceRequestEndDate` 등 일치
+- ✅ **출석 API**: `memberNo`, `agencyNo`, `attendanceType` 일치
+- ✅ **프로젝트 API**: `projectName`, `projectStatus`, `projectColor` 등 일치
+- ✅ **캘린더 API**: `memberNo`, `calendarEventName`, `calendarEventStartedAt` 등 일치
+- ✅ **건강 관리 API**: `memberNo`, `healthCondition`, `sleepHours` 등 일치
 - ✅ **에이전시 API**: `agencyCode`, `memberName`, `memberEmail`, `memberPhone` 일치
 - ✅ 모든 요청 변수명이 DB 스키마의 `camelCase` 변환 규칙을 따름
 
@@ -377,6 +381,7 @@
 #### 2. API 서비스 레이어
 - ✅ `src/api/services.js`에서 모든 API 호출이 일관된 변수명 사용
 - ✅ `src/api/config.js`에서 엔드포인트가 RESTful 규칙 준수
+- ✅ 가이드 문서(`프론트엔드_변수명_매핑_가이드.md`)에 명시된 엔드포인트만 사용
 
 ### 🎯 변수명 변환 규칙 준수 확인
 
@@ -421,9 +426,21 @@ SNAKE_CASE → camelCase
 **모든 프론트엔드 API 엔드포인트 및 요청/응답 변수명이 DB 스키마와 일치합니다!**
 
 - ✅ 21개 테이블 중 19개 완전 일치
-- ✅ 2개 테이블 확인 완료 (NEW_REQUEST 사용 중, LEAVE_HISTORY 미사용)
+- ✅ 2개 테이블 확인 완료 (NEW_REQUEST 사용 중, LEAVE_HISTORY 간접 사용)
+- ✅ 가이드 문서(`프론트엔드_변수명_매핑_가이드.md`)에 명시된 엔드포인트만 사용 중
 - ✅ 모든 API 엔드포인트 RESTful 규칙 준수
 - ✅ 모든 변수명 camelCase 변환 규칙 준수
+
+**현재 사용 중인 API 엔드포인트:**
+- 인증: `POST /api/auth/login`
+- 회원: `POST /api/members`, `GET /api/members/me`
+- 출석: `POST /api/attendance/check-in`, `GET /api/attendance/history`
+- 연차: `POST /api/leave/request`, `GET /api/leave/list`, `GET /api/leave/balance`
+- 프로젝트: `POST /api/projects`, `GET /api/projects`, `GET /api/projects/{projectNo}/kanban`
+- 캘린더: `POST /api/calendar/events`, `GET /api/calendar/events`
+- 알림: `GET /api/notifications`
+- 건강: `POST /api/health/survey`, `POST /api/health/daily-check`
+- 에이전시: `POST /api/agency/join-request`
 
 ---
 
