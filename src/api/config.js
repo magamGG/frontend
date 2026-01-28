@@ -60,6 +60,7 @@ export const API_ENDPOINTS = {
   // 에이전시 API
   AGENCY: {
     JOIN_REQUEST: `/api/agency/join-request`, // POST: 에이전시 가입 요청
+    JOIN_REQUESTS: (agencyNo) => `/api/agency/${agencyNo}/join-requests`, // GET: 에이전시 가입 요청 목록 조회
   },
 };
 

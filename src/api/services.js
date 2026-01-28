@@ -111,6 +111,11 @@ export const agencyService = {
   requestJoinAgency: (requestData) => {
     return api.post(API_ENDPOINTS.AGENCY.JOIN_REQUEST, requestData);
   },
+  
+  // 에이전시 가입 요청 목록 조회
+  getJoinRequests: (agencyNo) => {
+    return api.get(API_ENDPOINTS.AGENCY.JOIN_REQUESTS(agencyNo));
+  },
 };
 
 export default {

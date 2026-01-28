@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Card } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Building2, User, Mail, Phone, Key, Send, ArrowLeft, CheckCircle2, Edit } from 'lucide-react';
 import { toast } from 'sonner';
 import { agencyService } from '@/api';
+import useAuthStore from '@/store/authStore';
 import {
   JoinAgencyRequestRoot,
   BackgroundPattern,
@@ -40,17 +41,26 @@ import {
 export function JoinAgencyRequestPage({ onBack, onSuccess }) {
   const [step, setStep] = useState('form');
   const [isLoading, setIsLoading] = useState(false);
+  const user = useAuthStore((state) => state.user);
   
-  // TODO: Zustand store에서 사용자 정보 가져오기
+  // Zustand store에서 사용자 정보 가져오기
   const [userData, setUserData] = useState({
-    name: '김작가',
-    email: 'kim.artist@example.com',
-    phone: '010-1234-5678',
+    name: user?.memberName || '',
+    email: '', // 이메일은 DB에서 가져와야 함
+    phone: '', // 전화번호도 DB에서 가져와야 함
   });
   
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editFormData, setEditFormData] = useState({ ...userData });
   const [agencyCodeInput, setAgencyCodeInput] = useState('');
+  
+  // 사용자 정보 초기화 (실제로는 API로 가져와야 함)
+  useEffect(() => {
+    if (user?.memberName) {
+      setUserData(prev => ({ ...prev, name: user.memberName }));
+      setEditFormData(prev => ({ ...prev, name: user.memberName }));
+    }
+  }, [user]);
 
   const handleEditInputChange = (field, value) => {
     setEditFormData(prev => ({ ...prev, [field]: value }));

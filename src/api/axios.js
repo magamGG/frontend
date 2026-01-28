@@ -11,17 +11,25 @@ const api = axios.create({
   },
 });
 
-// Request 인터셉터 - 토큰 자동 첨부
+// Request 인터셉터 - 토큰 및 회원번호 자동 첨부
 api.interceptors.request.use(
   (config) => {
     try {
       // Zustand store에서 직접 state 가져오기
-      const token = useAuthStore.getState().token;
+      const state = useAuthStore.getState();
+      const token = state.token;
+      const memberNo = state.user?.memberNo;
+      
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
         console.log('토큰 첨부:', token.substring(0, 20) + '...');
       } else {
         console.log('토큰 없음');
+      }
+      
+      // 회원번호가 있으면 헤더에 추가
+      if (memberNo) {
+        config.headers['X-Member-No'] = memberNo.toString();
       }
     } catch (error) {
       console.error('❌ Auth store error:', error);

@@ -4,8 +4,10 @@ import { Badge } from '@/app/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/app/components/ui/dialog';
 import { Textarea } from '@/app/components/ui/textarea';
 import { CheckCircle2, XCircle, Calendar, FileText, Clock, AlertCircle, User, Briefcase } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import { agencyService } from '@/api';
+import useAuthStore from '@/store/authStore';
 import {
   AgencyApprovalsRoot,
   AgencyApprovalsBody,
@@ -30,140 +32,54 @@ import {
   EmptyStateText,
 } from './AgencyApprovalsPage.styled';
 
-// TODO: Zustand store mapping - 승인 요청 목록
-const initialRequests = [
-  {
-    id: 1,
-    type: '휴가',
-    category: 'vacation',
-    requester: '김담당자',
-    role: '시니어 매니저',
-    startDate: '2026-01-20',
-    endDate: '2026-01-22',
-    days: 3,
-    reason: '개인 사유로 인한 휴가 신청',
-    status: '대기',
-    submittedDate: '2026-01-15',
-  },
-  {
-    id: 2,
-    type: '신작',
-    category: 'project',
-    requester: '이담당자',
-    role: '매니저',
-    projectName: '새로운 판타지 웹툰',
-    artist: '신작가',
-    platform: '네이버',
-    reason: '신규 프로젝트 계약 승인 요청',
-    status: '대기',
-    submittedDate: '2026-01-14',
-  },
-  {
-    id: 3,
-    type: '휴가',
-    category: 'vacation',
-    requester: '박담당자',
-    role: '주니어 매니저',
-    startDate: '2026-01-16',
-    endDate: '2026-01-18',
-    days: 3,
-    reason: '건강 검진 및 치료',
-    status: '대기',
-    submittedDate: '2026-01-15',
-  },
-  {
-    id: 4,
-    type: '신작',
-    category: 'project',
-    requester: '최담당자',
-    role: '매니저',
-    projectName: '로맨스 드라마',
-    artist: '유작가',
-    platform: '카카오',
-    reason: '계약 연장 승인 요청 (시즌 2)',
-    status: '대기',
-    submittedDate: '2026-01-13',
-  },
-  {
-    id: 5,
-    type: '가입',
-    category: 'join',
-    requester: '박신입',
-    role: '작가',
-    email: 'newartist@email.com',
-    phone: '010-9999-8888',
-    reason: '신규 작가 가입 신청',
-    status: '대기',
-    submittedDate: '2026-01-12',
-  },
-  {
-    id: 6,
-    type: '가입',
-    category: 'join',
-    requester: '정신입',
-    role: '담당자',
-    email: 'newmanager@email.com',
-    phone: '010-8888-7777',
-    reason: '신규 담당자 가입 신청',
-    status: '대기',
-    submittedDate: '2026-01-11',
-  },
-  {
-    id: 7,
-    type: '휴가',
-    category: 'vacation',
-    requester: '이담당자',
-    role: '매니저',
-    startDate: '2026-01-10',
-    endDate: '2026-01-12',
-    days: 3,
-    reason: '가족 행사',
-    status: '승인',
-    submittedDate: '2026-01-05',
-    processedDate: '2026-01-06',
-  },
-  {
-    id: 8,
-    type: '신작',
-    category: 'project',
-    requester: '김담당자',
-    role: '시니어 매니저',
-    projectName: '액션 만화',
-    artist: '강작가',
-    platform: '레진코믹스',
-    reason: '신규 액션 만화 계약',
-    status: '승인',
-    submittedDate: '2026-01-08',
-    processedDate: '2026-01-09',
-  },
-  {
-    id: 9,
-    type: '가입',
-    category: 'join',
-    requester: '김작가',
-    role: '작가',
-    email: 'rejected@email.com',
-    phone: '010-7777-6666',
-    reason: '신규 작가 가입 신청',
-    status: '반려',
-    submittedDate: '2026-01-05',
-    rejectionReason: '포트폴리오 검토 후 재신청 요망',
-    processedDate: '2026-01-06',
-  },
-];
-
 const CATEGORIES = [
-  { value: 'vacation', label: '휴가', color: '#9C27B0' },
   { value: 'join', label: '가입', color: '#00ACC1' },
-  { value: 'project', label: '신작', color: '#FF9800' },
 ];
 
 export function AgencyApprovalsPage() {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('vacation');
-  const [requests, setRequests] = useState(initialRequests);
+  const [selectedCategory, setSelectedCategory] = useState('join');
+  const [requests, setRequests] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const user = useAuthStore((state) => state.user);
+  
+  // 에이전시 가입 요청 목록 조회
+  useEffect(() => {
+    const fetchJoinRequests = async () => {
+      if (!user?.agencyNo) {
+        return;
+      }
+      
+      setIsLoading(true);
+      try {
+        const response = await agencyService.getJoinRequests(user.agencyNo);
+        // API 응답을 프론트엔드 형식으로 변환
+        const formattedRequests = response.map((req) => ({
+          id: req.newRequestNo,
+          type: '가입',
+          category: 'join',
+          requester: req.memberName,
+          role: req.memberRole,
+          email: req.memberEmail,
+          phone: req.memberPhone,
+          reason: `${req.memberRole} 가입 신청`,
+          status: req.newRequestStatus === '대기' ? '대기' : req.newRequestStatus === '승인' ? '승인' : '반려',
+          submittedDate: req.newRequestDate ? new Date(req.newRequestDate).toISOString().split('T')[0] : '',
+          processedDate: req.newRequestStatus !== '대기' ? req.newRequestDate ? new Date(req.newRequestDate).toISOString().split('T')[0] : '' : null,
+        }));
+        setRequests(formattedRequests);
+      } catch (error) {
+        console.error('에이전시 가입 요청 목록 조회 실패:', error);
+        toast.error('에이전시 가입 요청 목록을 불러오는데 실패했습니다.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchJoinRequests();
+  }, [user?.agencyNo]);
 
   // 카테고리별 필터링
   const filteredRequests = requests.filter(r => r.category === selectedCategory);
@@ -241,6 +157,7 @@ export function AgencyApprovalsPage() {
   };
 
   const formatDate = (dateStr) => {
+    if (!dateStr) return '';
     const date = new Date(dateStr);
     return `${date.getMonth() + 1}월 ${date.getDate()}일`;
   };
@@ -319,7 +236,14 @@ export function AgencyApprovalsPage() {
             </SectionHeader>
 
             <div className="space-y-4">
-              {pendingRequests.length === 0 ? (
+              {isLoading ? (
+                <EmptyStateCard>
+                  <EmptyStateIcon>
+                    <Clock className="w-12 h-12 opacity-50 animate-spin" />
+                  </EmptyStateIcon>
+                  <EmptyStateText>로딩 중...</EmptyStateText>
+                </EmptyStateCard>
+              ) : pendingRequests.length === 0 ? (
                 <EmptyStateCard>
                   <EmptyStateIcon>
                     <FileText className="w-12 h-12 opacity-50" />
