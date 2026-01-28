@@ -84,7 +84,7 @@ const initialRequests = [
     name: '이담당',
     email: 'lee.manager@example.com',
     phone: '010-9876-5432',
-    position: '프로젝트 매니저',
+    position: '담당자',
     userType: 'manager',
     agencyCode: 'AGENCY-2026-001',
     message: '프로젝트 관리 경력 5년차 이담당입니다.',

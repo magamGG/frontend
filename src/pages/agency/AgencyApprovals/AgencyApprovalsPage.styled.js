@@ -6,6 +6,7 @@ export const AgencyApprovalsRoot = styled.div`
   min-height: 100vh;
   overflow-y: auto;
   background-color: var(--background);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 `;
 
 // 중앙 정렬 및 최대 폭 설정 (데스크탑 레이아웃 기준)
@@ -147,12 +148,13 @@ export const SectionBadge = styled.div`
 // 요청 카드
 export const RequestCard = styled.div`
   padding: 20px;
-  background-color: white;
-  border: 2px solid var(--border);
+  background-color: #ffffff;
+  border: 1px solid var(--border);
   border-radius: 8px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 `;
 
 export const RequestCardHeader = styled.div`
@@ -180,7 +182,8 @@ export const RequestCardInfo = styled.div`
 export const RequestCardInfoItem = styled.div`
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
+  color: var(--muted-foreground);
 `;
 
 export const RequestCardActions = styled.div`

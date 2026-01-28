@@ -10,6 +10,7 @@ export const LeaveManagementBody = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${theme.spacing[4]};
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 `;
 
 // 페이지 헤더
@@ -783,19 +784,19 @@ export const BackgroundZone = styled.div`
 
 export const RiskZone = styled(BackgroundZone)`
   width: 30%;
-  background: color-mix(in srgb, var(--destructive) 20%, transparent);
+  background: #FEE2E2;
   opacity: 0.6;
 `;
 
 export const HealthyZone = styled(BackgroundZone)`
   width: 50%;
-  background: color-mix(in srgb, var(--chart-2) 20%, transparent);
+  background: #DCFCE7;
   opacity: 0.6;
 `;
 
 export const CompleteZone = styled(BackgroundZone)`
   width: 20%;
-  background: color-mix(in srgb, var(--chart-4) 20%, transparent);
+  background: #DBEAFE;
   opacity: 0.6;
 `;
 

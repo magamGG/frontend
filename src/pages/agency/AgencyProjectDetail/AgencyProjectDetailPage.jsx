@@ -81,7 +81,19 @@ function ReadOnlyCardComponent({ card }) {
             <Calendar className="w-3 h-3" />
             <span>{card.dueDate}</span>
           </ReadOnlyCardDate>
+          {card.assignedTo && (
+            <ReadOnlyCardAssignee>
+              <Users className="w-3 h-3" />
+              <span>{card.assignedTo.name}</span>
+            </ReadOnlyCardAssignee>
+          )}
         </ReadOnlyCardFooterLeft>
+        {commentCount > 0 && (
+          <ReadOnlyCardComments>
+            <MessageSquare className="w-3 h-3" />
+            <span>{commentCount}</span>
+          </ReadOnlyCardComments>
+        )}
       </ReadOnlyCardFooter>
     </ReadOnlyCard>
   );
@@ -105,7 +117,7 @@ function ReadOnlyBoardComponent({ board }) {
 
 export function AgencyProjectDetailPage({ project, onBack }) {
   // TODO: Zustand store mapping - 팀원 및 프로젝트 데이터
-  const [teamMembers] = useState([
+  const teamMembersData = [
     {
       id: 1,
       name: '김작가',
@@ -124,34 +136,44 @@ export function AgencyProjectDetailPage({ project, onBack }) {
       status: '출근',
       avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
     },
-  ]);
+  ];
+
+  const [teamMembers] = useState(teamMembersData);
 
   // 칸반 보드 데이터 - localStorage에서 로드 (읽기 전용)
   const [boards] = useState(() => {
     const saved = localStorage.getItem(`kanban_boards_${project.id}`);
     if (saved) {
-      return JSON.parse(saved);
+      const parsedBoards = JSON.parse(saved);
+      // 담당자 정보를 팀원 데이터와 매칭
+      return parsedBoards.map(board => ({
+        ...board,
+        cards: board.cards.map(card => ({
+          ...card,
+          assignedTo: card.assignedTo ? teamMembersData.find(m => m.id === card.assignedTo.id || m.name === card.assignedTo.name) : null
+        }))
+      }));
     }
     return [
       {
         id: 1,
         title: '할 일',
         cards: [
-          { id: 1, title: '43화 스토리보드', description: '스토리 구성 및 콘티 작업', startDate: '2026-01-15', dueDate: '2026-01-20', boardId: 1, comments: [] },
+          { id: 1, title: '43화 스토리보드', description: '스토리 구성 및 콘티 작업', startDate: '2026-01-15', dueDate: '2026-01-20', boardId: 1, comments: [], assignedTo: teamMembersData[0], completed: false },
         ],
       },
       {
         id: 2,
         title: '진행중',
         cards: [
-          { id: 3, title: '42화 채색', description: '메인 씬 채색 작업', startDate: '2026-01-16', dueDate: '2026-01-18', boardId: 2, comments: [] },
+          { id: 3, title: '42화 채색', description: '메인 씬 채색 작업', startDate: '2026-01-16', dueDate: '2026-01-18', boardId: 2, comments: [], assignedTo: teamMembersData[1], completed: false },
         ],
       },
       {
         id: 3,
         title: '완료',
         cards: [
-          { id: 4, title: '41화 업로드', description: '네이버 웹툰 업로드 완료', startDate: '2026-01-13', dueDate: '2026-01-14', boardId: 3, comments: [] },
+          { id: 4, title: '41화 업로드', description: '네이버 웹툰 업로드 완료', startDate: '2026-01-13', dueDate: '2026-01-14', boardId: 3, comments: [], assignedTo: teamMembersData[0], completed: true },
         ],
       },
     ];
@@ -224,22 +246,29 @@ export function AgencyProjectDetailPage({ project, onBack }) {
               <ProjectBadges>
                 <Badge className="bg-primary text-sm px-3 py-1">{project.platform}</Badge>
                 <Badge className="bg-green-500 text-sm px-3 py-1">{project.serialStatus}</Badge>
-                <span className="text-sm text-muted-foreground">
-                  현재 {project.currentEpisode}화
-                </span>
               </ProjectBadges>
 
               {/* 팀원 정보 */}
               <ProjectTeamSection>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsTeamModalOpen(true)}
-                  className="ml-2"
-                >
-                  <Users className="w-4 h-4 mr-2" />
-                  팀원 보기 ({teamMembers.length}명)
-                </Button>
+                <ProjectTeamHeader>
+                  <Users className="w-4 h-4" style={{ color: 'var(--muted-foreground)' }} />
+                  <span style={{ color: 'var(--foreground)', fontSize: '0.875rem' }}>
+                    팀원 ({teamMembers.length}명)
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsTeamModalOpen(true)}
+                    style={{ 
+                      marginLeft: '8px',
+                      backgroundColor: 'var(--muted)',
+                      color: 'var(--foreground)',
+                      borderColor: 'var(--border)'
+                    }}
+                  >
+                    팀원 보기
+                  </Button>
+                </ProjectTeamHeader>
               </ProjectTeamSection>
             </ProjectInfo>
           </ProjectHeaderContent>
@@ -249,7 +278,7 @@ export function AgencyProjectDetailPage({ project, onBack }) {
           {/* 왼쪽 열: 프로젝트 관리 (칸반 보드) */}
           <ContentGridLeft>
             <ProjectManagementSection>
-              <ProjectManagementTitle>프로젝트 관리</ProjectManagementTitle>
+              <ProjectManagementTitle>업무 일정 보드</ProjectManagementTitle>
 
               <KanbanBoardsContainer>
                 {boards.map((board) => (

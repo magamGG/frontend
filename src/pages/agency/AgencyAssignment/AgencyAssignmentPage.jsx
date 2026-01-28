@@ -39,11 +39,11 @@ import {
 
 // TODO: Zustand store mapping - 담당자 및 작가 목록
 const initialManagers = [
-  { id: 1, name: '김담당자', email: 'kim@agency.com', position: '시니어 매니저', assignedArtists: 5 },
-  { id: 2, name: '이담당자', email: 'lee@agency.com', position: '매니저', assignedArtists: 3 },
-  { id: 3, name: '박담당자', email: 'park@agency.com', position: '주니어 매니저', assignedArtists: 2 },
-  { id: 4, name: '최담당자', email: 'choi@agency.com', position: '매니저', assignedArtists: 4 },
-  { id: 5, name: '정담당자', email: 'jung@agency.com', position: '시니어 매니저', assignedArtists: 6 },
+  { id: 1, name: '김담당자', email: 'kim@agency.com', position: '담당자', assignedArtists: 5 },
+  { id: 2, name: '이담당자', email: 'lee@agency.com', position: '담당자', assignedArtists: 3 },
+  { id: 3, name: '박담당자', email: 'park@agency.com', position: '담당자', assignedArtists: 2 },
+  { id: 4, name: '최담당자', email: 'choi@agency.com', position: '담당자', assignedArtists: 4 },
+  { id: 5, name: '정담당자', email: 'jung@agency.com', position: '담당자', assignedArtists: 6 },
 ];
 
 const initialArtists = [
@@ -230,9 +230,6 @@ export function AgencyAssignmentPage() {
                       <ManagerPosition>{manager.position}</ManagerPosition>
                     </ManagerInfo>
                   </div>
-                  <ManagerBadge>
-                    {manager.assignedArtists}
-                  </ManagerBadge>
                 </ManagerCardHeader>
 
                 <ManagerDetails>

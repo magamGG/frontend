@@ -10,14 +10,19 @@ import {
   Search,
   Users,
   ChevronRight,
+  ChevronDown,
   Mail,
   Phone,
   Briefcase,
   UserPlus,
   X,
   Edit2,
-  Trash2
+  Trash2,
+  BookOpen,
+  Heart,
+  Calendar
 } from 'lucide-react';
+import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
 import {
   AgencyTeamRoot,
   AgencyTeamBody,
@@ -63,37 +68,64 @@ const initialEmployees = [
     id: 1,
     name: '김담당자',
     role: '담당자',
-    position: '시니어 매니저',
+    position: '담당자',
     email: 'kim@agency.com',
     phone: '010-1234-5678',
     status: '근무중',
     joinDate: '2020-03-15',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
     currentProjects: ['로맨스 판타지', '액션 드라마', '일상 코미디', '미스터리 스릴러'],
-    participatedProjects: ['로맨스 판타지', '액션 드라마', '일상 코미디', '미스터리 스릴러', 'SF 대작', '판타지 모험', '일상 슬라이스']
+    participatedProjects: ['로맨스 판타지', '액션 드라마', '일상 코미디', '미스터리 스릴러', 'SF 대작', '판타지 모험', '일상 슬라이스'],
+    managedArtists: ['김작가', '박작가'], // 담당 작가 목록
+    healthCheck: {
+      date: '2026-01-23',
+      condition: '보통',
+      sleepHours: 7,
+      discomfortLevel: 4,
+      memo: '오늘은 키위가 먹고싶네여...'
+    }
   },
   {
     id: 2,
     name: '이담당자',
     role: '담당자',
-    position: '매니저',
+    position: '담당자',
     email: 'lee@agency.com',
     phone: '010-2345-6789',
     status: '근무중',
     joinDate: '2021-06-20',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
     currentProjects: ['학원물', '로맨스 웹툰', '판타지 액션'],
-    participatedProjects: ['학원물', '로맨스 웹툰', '판타지 액션', '스릴러 웹툰', '코미디 시리즈']
+    participatedProjects: ['학원물', '로맨스 웹툰', '판타지 액션', '스릴러 웹툰', '코미디 시리즈'],
+    managedArtists: ['이작가'],
+    healthCheck: {
+      date: '2026-01-23',
+      condition: '좋음',
+      sleepHours: 8,
+      discomfortLevel: 2,
+      memo: ''
+    }
   },
   {
     id: 3,
     name: '박담당자',
     role: '담당자',
-    position: '주니어 매니저',
+    position: '담당자',
     email: 'park@agency.com',
     phone: '010-3456-7890',
     status: '근무중',
     joinDate: '2023-01-10',
+    avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150',
     currentProjects: ['스포츠 드라마', '청춘 로맨스'],
-    participatedProjects: ['스포츠 드라마', '청춘 로맨스', '학원 코미디']
+    participatedProjects: ['스포츠 드라마', '청춘 로맨스', '학원 코미디'],
+    managedArtists: [],
+    healthCheck: {
+      date: '2026-01-23',
+      condition: '보통',
+      sleepHours: 6,
+      discomfortLevel: 5,
+      memo: ''
+    }
   },
   {
     id: 4,
@@ -104,8 +136,18 @@ const initialEmployees = [
     phone: '010-4567-8901',
     status: '근무중',
     joinDate: '2021-09-05',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
     currentProjects: ['로맨스 판타지', '액션 드라마'],
-    participatedProjects: ['로맨스 판타지', '액션 드라마', 'SF 대작', '미스터리 시리즈', '일상 웹툰']
+    participatedProjects: ['로맨스 판타지', '액션 드라마', 'SF 대작', '미스터리 시리즈', '일상 웹툰'],
+    myWorks: ['로맨스 판타지', '액션 드라마', 'SF 대작'], // 자기 작품
+    serializingWorks: ['로맨스 판타지', '액션 드라마'], // 연재중인 작품
+    healthCheck: {
+      date: '2026-01-23',
+      condition: '보통',
+      sleepHours: 7,
+      discomfortLevel: 4,
+      memo: '오늘은 키위가 먹고싶네여...'
+    }
   },
   {
     id: 5,
@@ -116,8 +158,18 @@ const initialEmployees = [
     phone: '010-5678-9012',
     status: '휴가',
     joinDate: '2019-11-22',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
     currentProjects: ['무협 웹툰', '판타지 로맨스'],
-    participatedProjects: ['무협 웹툰', '판타지 로맨스', '액션 판타지', '역사 드라마', '로맨스 코미디', '스릴러 웹툰']
+    participatedProjects: ['무협 웹툰', '판타지 로맨스', '액션 판타지', '역사 드라마', '로맨스 코미디', '스릴러 웹툰'],
+    myWorks: ['무협 웹툰', '판타지 로맨스', '액션 판타지'],
+    serializingWorks: ['무협 웹툰', '판타지 로맨스'],
+    healthCheck: {
+      date: '2026-01-23',
+      condition: '피곤함',
+      sleepHours: 5,
+      discomfortLevel: 6,
+      memo: ''
+    }
   },
   {
     id: 6,
@@ -128,8 +180,16 @@ const initialEmployees = [
     phone: '010-6789-0123',
     status: '근무중',
     joinDate: '2023-05-15',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
     currentProjects: ['로맨스 판타지', '액션 드라마'],
-    participatedProjects: ['로맨스 판타지', '액션 드라마', 'SF 대작']
+    participatedProjects: ['로맨스 판타지', '액션 드라마', 'SF 대작'],
+    healthCheck: {
+      date: '2026-01-23',
+      condition: '좋음',
+      sleepHours: 8,
+      discomfortLevel: 3,
+      memo: ''
+    }
   },
   {
     id: 7,
@@ -140,8 +200,16 @@ const initialEmployees = [
     phone: '010-7890-1234',
     status: '근무중',
     joinDate: '2023-08-20',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
     currentProjects: ['무협 웹툰', '판타지 로맨스'],
-    participatedProjects: ['무협 웹툰', '판타지 로맨스', '액션 판타지']
+    participatedProjects: ['무협 웹툰', '판타지 로맨스', '액션 판타지'],
+    healthCheck: {
+      date: '2026-01-23',
+      condition: '보통',
+      sleepHours: 7,
+      discomfortLevel: 4,
+      memo: ''
+    }
   },
 ];
 
@@ -149,12 +217,25 @@ const ROLE_FILTERS = ['전체', '담당자', '작가', '어시스트'];
 
 export function AgencyTeamPage() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [expandedEmployees, setExpandedEmployees] = useState(new Set());
   const [selectedRoles, setSelectedRoles] = useState(['전체']);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isProjectListModalOpen, setIsProjectListModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedArtist, setSelectedArtist] = useState(null);
   const [employees, setEmployees] = useState(initialEmployees);
+  
+  // 프로젝트 데이터 (실제로는 Zustand store에서 가져와야 함)
+  const [projects] = useState(() => {
+    const stored = localStorage.getItem('agencyProjectsData');
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  });
 
   // 새 직원 추가 폼 상태
   const [newEmployee, setNewEmployee] = useState({
@@ -232,8 +313,17 @@ export function AgencyTeamPage() {
       phone: '',
       status: '근무중',
       joinDate: new Date().toISOString().split('T')[0],
+      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
       currentProjects: [],
-      participatedProjects: []
+      participatedProjects: [],
+      managedArtists: [],
+      healthCheck: {
+        date: new Date().toISOString().split('T')[0],
+        condition: '보통',
+        sleepHours: 0,
+        discomfortLevel: 0,
+        memo: ''
+      }
     };
 
     setEmployees([...employees, employee]);
@@ -266,6 +356,40 @@ export function AgencyTeamPage() {
     }
   };
 
+  // 접이식 토글 핸들러
+  const toggleEmployee = (employeeId) => {
+    const newExpanded = new Set(expandedEmployees);
+    if (newExpanded.has(employeeId)) {
+      newExpanded.delete(employeeId);
+    } else {
+      newExpanded.add(employeeId);
+    }
+    setExpandedEmployees(newExpanded);
+  };
+
+  // 담당자의 담당 작가 정보 가져오기
+  const getManagedArtists = (managerId) => {
+    const manager = employees.find(m => m.id === managerId);
+    if (!manager || !manager.managedArtists) return [];
+    
+    return employees.filter(emp => 
+      emp.role === '작가' && manager.managedArtists.includes(emp.name)
+    );
+  };
+
+  // 담당자의 담당 작가의 연재중인 작품 가져오기
+  const getManagedArtistsSerializingWorks = (managerId) => {
+    const managedArtists = getManagedArtists(managerId);
+    
+    const works = [];
+    managedArtists.forEach(artist => {
+      if (artist.serializingWorks) {
+        works.push(...artist.serializingWorks);
+      }
+    });
+    return [...new Set(works)]; // 중복 제거
+  };
+
   // Filter employees by search query and role
   const filteredEmployees = employees.filter(employee => {
     const matchesSearch = 
@@ -279,189 +403,6 @@ export function AgencyTeamPage() {
 
     return matchesSearch && matchesRole;
   });
-
-  // 직원 상세 페이지
-  if (selectedEmployee !== null) {
-    const employee = employees.find(e => e.id === selectedEmployee);
-    if (!employee) return null;
-
-    return (
-      <AgencyTeamRoot>
-        <AgencyTeamBody>
-          <BackButtonContainer>
-            <Button 
-              variant="ghost" 
-              onClick={() => setSelectedEmployee(null)}
-              className="bg-background text-foreground hover:bg-muted p-0 h-auto"
-            >
-              ← 목록으로 돌아가기
-            </Button>
-          </BackButtonContainer>
-
-          <EmployeeDetailContainer>
-            {/* Header Card */}
-            <Card className="p-6 bg-white">
-              <EmployeeDetailHeader>
-                <EmployeeDetailHeaderContent>
-                  <EmployeeAvatar>
-                    <Users className="w-8 h-8 text-primary" />
-                  </EmployeeAvatar>
-                  <div>
-                    <EmployeeNameRow>
-                      <EmployeeName>{employee.name}</EmployeeName>
-                      <Badge className={getStatusColor(employee.status)}>
-                        {employee.status}
-                      </Badge>
-                    </EmployeeNameRow>
-                    <EmployeeDetailBadges>
-                      <Badge className={getRoleColor(employee.role)}>
-                        {employee.role}
-                      </Badge>
-                      {employee.position && (
-                        <Badge variant="outline">
-                          {employee.position}
-                        </Badge>
-                      )}
-                    </EmployeeDetailBadges>
-                  </div>
-                </EmployeeDetailHeaderContent>
-              </EmployeeDetailHeader>
-
-              <EmployeeDetailGrid>
-                <EmployeeDetailItem>
-                  <EmployeeDetailLabel>
-                    <Mail className="w-4 h-4 text-muted-foreground" />
-                    이메일
-                  </EmployeeDetailLabel>
-                  <EmployeeDetailValue>{employee.email}</EmployeeDetailValue>
-                </EmployeeDetailItem>
-                <EmployeeDetailItem>
-                  <EmployeeDetailLabel>
-                    <Phone className="w-4 h-4 text-muted-foreground" />
-                    전화번호
-                  </EmployeeDetailLabel>
-                  <EmployeeDetailValue>{employee.phone}</EmployeeDetailValue>
-                </EmployeeDetailItem>
-                <EmployeeDetailItem>
-                  <EmployeeDetailLabel>
-                    <Briefcase className="w-4 h-4 text-muted-foreground" />
-                    참여 중인 프로젝트
-                  </EmployeeDetailLabel>
-                  <EmployeeDetailValue>{employee.currentProjects.length}개</EmployeeDetailValue>
-                </EmployeeDetailItem>
-              </EmployeeDetailGrid>
-            </Card>
-
-            {/* Current Projects */}
-            <Card className="p-6 bg-white">
-              <div className="flex items-center gap-2 mb-4">
-                <Briefcase className="w-5 h-5 text-primary" />
-                <h3 className="text-lg font-semibold text-foreground">현재 참여 중인 프로젝트</h3>
-                <Badge className="bg-primary text-xs ml-2">
-                  {employee.currentProjects.length}개
-                </Badge>
-              </div>
-
-              <ProjectsGrid>
-                {employee.currentProjects.map((project, index) => (
-                  <ProjectCard key={index}>
-                    <ProjectCardContent>
-                      <ProjectIcon>
-                        <Briefcase className="w-5 h-5 text-primary" />
-                      </ProjectIcon>
-                      <span className="font-medium text-foreground">{project}</span>
-                    </ProjectCardContent>
-                  </ProjectCard>
-                ))}
-              </ProjectsGrid>
-
-              {employee.currentProjects.length === 0 && (
-                <EmptyState>
-                  <Briefcase className="w-12 h-12 text-muted-foreground" />
-                  <EmptyStateText>참여 중인 프로젝트가 없습니다</EmptyStateText>
-                </EmptyState>
-              )}
-            </Card>
-
-            {/* Employee Statistics */}
-            <StatisticsGrid>
-              <Card className="p-6 bg-white">
-                <h3 className="text-lg font-semibold text-foreground mb-4">활동 통계</h3>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
-                    <span className="text-sm text-muted-foreground">입사일</span>
-                    <span className="font-semibold text-foreground">{employee.joinDate}</span>
-                  </div>
-                  <div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
-                    <span className="text-sm text-muted-foreground">근속 기간</span>
-                    <span className="font-semibold text-foreground">
-                      {Math.floor((new Date().getTime() - new Date(employee.joinDate).getTime()) / (1000 * 60 * 60 * 24 * 365))}년
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => setIsProjectListModalOpen(true)}
-                    className="w-full flex justify-between items-center p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-all cursor-pointer"
-                  >
-                    <span className="text-sm text-muted-foreground">참여 프로젝트</span>
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-primary">{employee.participatedProjects.length}개</span>
-                      <ChevronRight className="w-4 h-4 text-primary" />
-                    </div>
-                  </button>
-                </div>
-              </Card>
-
-              <Card className="p-6 bg-white">
-                <h3 className="text-lg font-semibold text-foreground mb-4">최근 활동</h3>
-                <div className="space-y-3">
-                  {[
-                    { date: '2026-01-15', activity: '프로젝트 업데이트: 로맨스 판타지' },
-                    { date: '2026-01-14', activity: '회의 참석: 신규 작품 기획' },
-                    { date: '2026-01-13', activity: '작가 미팅 완료' },
-                    { date: '2026-01-12', activity: '계약서 검토 완료' },
-                  ].map((item, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                      <span className="text-sm text-foreground">{item.activity}</span>
-                      <span className="text-xs text-muted-foreground">{item.date}</span>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            </StatisticsGrid>
-          </EmployeeDetailContainer>
-
-          {/* 참여 프로젝트 목록 모달 */}
-          <Dialog open={isProjectListModalOpen} onOpenChange={setIsProjectListModalOpen}>
-            <DialogContent className="sm:max-w-[600px]">
-              <DialogHeader>
-                <DialogTitle>참여 프로젝트 전체 목록</DialogTitle>
-                <DialogDescription>
-                  {employee.name}님이 참여했던 모든 프로젝트 목록입니다.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="max-h-[400px] overflow-y-auto">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {employee.participatedProjects.map((project, index) => (
-                    <div 
-                      key={index}
-                      className="p-4 bg-muted/30 rounded-lg border border-border"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center">
-                          <Briefcase className="w-5 h-5 text-primary" />
-                        </div>
-                        <span className="font-medium text-foreground">{project}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </AgencyTeamBody>
-      </AgencyTeamRoot>
-    );
-  }
 
   return (
     <AgencyTeamRoot>
@@ -516,49 +457,288 @@ export function AgencyTeamPage() {
 
         {/* Employee List Cards */}
         <EmployeeListContainer>
-          {filteredEmployees.map((employee) => (
-            <EmployeeCard 
-              key={employee.id}
-              onClick={() => setSelectedEmployee(employee.id)}
-            >
-              <EmployeeCardContent>
-                <EmployeeAvatar>
-                  <Users className="w-7 h-7 text-primary" />
-                </EmployeeAvatar>
-                <EmployeeInfo>
-                  <EmployeeNameRow>
-                    <EmployeeName>{employee.name}</EmployeeName>
-                    <Badge className={getRoleColor(employee.role)} style={{ fontSize: '11px' }}>
-                      {employee.role}
-                    </Badge>
-                    {employee.position && (
-                      <Badge variant="outline" style={{ fontSize: '10px' }}>
-                        {employee.position}
-                      </Badge>
+          {filteredEmployees.map((employee) => {
+            const isExpanded = expandedEmployees.has(employee.id);
+            return (
+              <div key={employee.id}>
+                <EmployeeCard 
+                  onClick={() => toggleEmployee(employee.id)}
+                >
+                  <EmployeeCardContent>
+                    <EmployeeAvatar>
+                      <Users className="w-7 h-7 text-primary" />
+                    </EmployeeAvatar>
+                    <EmployeeInfo>
+                      <EmployeeNameRow>
+                        <EmployeeName>{employee.name}</EmployeeName>
+                        <Badge className={getRoleColor(employee.role)} style={{ fontSize: '11px' }}>
+                          {employee.role}
+                        </Badge>
+                        {employee.position && (
+                          <Badge variant="outline" style={{ fontSize: '10px' }}>
+                            {employee.position}
+                          </Badge>
+                        )}
+                        <Badge className={getStatusColor(employee.status)} style={{ fontSize: '10px' }}>
+                          {employee.status}
+                        </Badge>
+                      </EmployeeNameRow>
+                      <EmployeeContactInfo>
+                        <div className="flex items-center gap-1">
+                          <Mail className="w-3.5 h-3.5" />
+                          <span>{employee.email}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Phone className="w-3.5 h-3.5" />
+                          <span>{employee.phone}</span>
+                        </div>
+                      </EmployeeContactInfo>
+                    </EmployeeInfo>
+                    <EmployeeStats>
+                      <p className="text-xs text-muted-foreground mb-1">참여 중인 프로젝트</p>
+                      <p className="text-lg font-semibold text-foreground">{employee.currentProjects.length}개</p>
+                    </EmployeeStats>
+                    {isExpanded ? (
+                      <ChevronDown className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                    ) : (
+                      <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
                     )}
-                    <Badge className={getStatusColor(employee.status)} style={{ fontSize: '10px' }}>
-                      {employee.status}
-                    </Badge>
-                  </EmployeeNameRow>
-                  <EmployeeContactInfo>
-                    <div className="flex items-center gap-1">
-                      <Mail className="w-3.5 h-3.5" />
-                      <span>{employee.email}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Phone className="w-3.5 h-3.5" />
-                      <span>{employee.phone}</span>
-                    </div>
-                  </EmployeeContactInfo>
-                </EmployeeInfo>
-                <EmployeeStats>
-                  <p className="text-xs text-muted-foreground mb-1">참여 중인 프로젝트</p>
-                  <p className="text-lg font-semibold text-foreground">{employee.currentProjects.length}개</p>
-                </EmployeeStats>
-                <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-              </EmployeeCardContent>
-            </EmployeeCard>
-          ))}
+                  </EmployeeCardContent>
+                </EmployeeCard>
+                
+                {/* 접이식 내용 */}
+                {isExpanded && (
+                  <Card className="mt-0 p-6 bg-white border-t-0 rounded-t-none" style={{ borderTopLeftRadius: 0, borderTopRightRadius: 0, marginTop: '-1px' }}>
+                    {employee.role === '작가' && (
+                      <div className="grid grid-cols-2 gap-6">
+                        {/* 왼쪽: 작가와 연재중인 작품 */}
+                        <div className="space-y-4">
+                          <div>
+                            <div className="flex items-center gap-2 mb-3">
+                              <BookOpen className="w-4 h-4 text-primary" />
+                              <h3 className="text-base font-semibold text-foreground">내 작품</h3>
+                            </div>
+                            <div className="space-y-2">
+                              {(employee.myWorks || []).map((work, index) => (
+                                <div key={index} className="p-2 bg-muted/30 rounded-lg border border-border">
+                                  <span className="text-sm font-medium text-foreground">{work}</span>
+                                </div>
+                              ))}
+                              {(!employee.myWorks || employee.myWorks.length === 0) && (
+                                <p className="text-sm text-muted-foreground">작품이 없습니다</p>
+                              )}
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="flex items-center gap-2 mb-3">
+                              <Briefcase className="w-4 h-4 text-primary" />
+                              <h3 className="text-base font-semibold text-foreground">연재중인 작품</h3>
+                            </div>
+                            <div className="space-y-2">
+                              {(employee.serializingWorks || []).map((work, index) => (
+                                <div key={index} className="p-2 bg-muted/30 rounded-lg border border-border">
+                                  <span className="text-sm font-medium text-foreground">{work}</span>
+                                </div>
+                              ))}
+                              {(!employee.serializingWorks || employee.serializingWorks.length === 0) && (
+                                <p className="text-sm text-muted-foreground">연재중인 작품이 없습니다</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 오른쪽: 건강검진 결과 */}
+                        {employee.healthCheck && (
+                          <div>
+                            <div className="flex items-center gap-2 mb-3">
+                              <Heart className="w-4 h-4 text-primary" />
+                              <h3 className="text-base font-semibold text-foreground">
+                                {employee.healthCheck.date} 건강 체크 결과
+                              </h3>
+                            </div>
+                            <Card className="p-4 bg-white border border-border">
+                              <div className="space-y-0">
+                                <div className="flex items-center justify-between py-2 border-b border-border">
+                                  <span className="text-sm text-muted-foreground">오늘 컨디션</span>
+                                  <span className="text-sm font-medium text-foreground">{employee.healthCheck.condition}</span>
+                                </div>
+                                <div className="flex items-center justify-between py-2 border-b border-border">
+                                  <span className="text-sm text-muted-foreground">수면 시간</span>
+                                  <span className="text-sm font-medium text-foreground">{employee.healthCheck.sleepHours}시간</span>
+                                </div>
+                                <div className="flex items-center justify-between py-2">
+                                  <span className="text-sm text-muted-foreground">신체 불편함</span>
+                                  <span className="text-sm font-medium text-foreground">{employee.healthCheck.discomfortLevel}</span>
+                                </div>
+                                {employee.healthCheck.memo && (
+                                  <div className="pt-3 mt-3 border-t border-border">
+                                    <p className="text-xs text-muted-foreground mb-2">메모</p>
+                                    <div className="p-3 bg-muted/30 rounded-lg">
+                                      <p className="text-sm text-foreground">{employee.healthCheck.memo}</p>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </Card>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {employee.role === '담당자' && (
+                      <div className="grid grid-cols-2 gap-6">
+                        {/* 왼쪽: 담당 작가와 연재중인 작품 */}
+                        <div className="space-y-4">
+                          <div>
+                            <div className="flex items-center gap-2 mb-3">
+                              <Users className="w-4 h-4 text-primary" />
+                              <h3 className="text-base font-semibold text-foreground">담당 작가</h3>
+                            </div>
+                            <div className="space-y-0 divide-y divide-border border border-border rounded-lg overflow-hidden">
+                              {getManagedArtists(employee.id).map((artist) => (
+                                <div 
+                                  key={artist.id} 
+                                  onClick={() => setSelectedArtist(artist)}
+                                  className="p-3 bg-white hover:bg-muted/30 transition-colors cursor-pointer"
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                                      <Users className="w-6 h-6 text-primary" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-semibold text-foreground">{artist.name}</p>
+                                      <p className="text-xs text-muted-foreground">{artist.position || artist.role}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                              {getManagedArtists(employee.id).length === 0 && (
+                                <div className="p-3">
+                                  <p className="text-sm text-muted-foreground">담당 작가가 없습니다</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="flex items-center gap-2 mb-3">
+                              <Briefcase className="w-4 h-4 text-primary" />
+                              <h3 className="text-base font-semibold text-foreground">담당 작가의 연재중인 작품</h3>
+                            </div>
+                            <div className="space-y-2">
+                              {getManagedArtistsSerializingWorks(employee.id).map((work, index) => (
+                                <div key={index} className="p-2 bg-muted/30 rounded-lg border border-border">
+                                  <span className="text-sm font-medium text-foreground">{work}</span>
+                                </div>
+                              ))}
+                              {getManagedArtistsSerializingWorks(employee.id).length === 0 && (
+                                <p className="text-sm text-muted-foreground">연재중인 작품이 없습니다</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 오른쪽: 건강검진 결과 */}
+                        {employee.healthCheck && (
+                          <div>
+                            <div className="flex items-center gap-2 mb-3">
+                              <Heart className="w-4 h-4 text-primary" />
+                              <h3 className="text-base font-semibold text-foreground">
+                                {employee.healthCheck.date} 건강 체크 결과
+                              </h3>
+                            </div>
+                            <Card className="p-4 bg-white border border-border">
+                              <div className="space-y-0">
+                                <div className="flex items-center justify-between py-2 border-b border-border">
+                                  <span className="text-sm text-muted-foreground">오늘 컨디션</span>
+                                  <span className="text-sm font-medium text-foreground">{employee.healthCheck.condition}</span>
+                                </div>
+                                <div className="flex items-center justify-between py-2 border-b border-border">
+                                  <span className="text-sm text-muted-foreground">수면 시간</span>
+                                  <span className="text-sm font-medium text-foreground">{employee.healthCheck.sleepHours}시간</span>
+                                </div>
+                                <div className="flex items-center justify-between py-2">
+                                  <span className="text-sm text-muted-foreground">신체 불편함</span>
+                                  <span className="text-sm font-medium text-foreground">{employee.healthCheck.discomfortLevel}</span>
+                                </div>
+                                {employee.healthCheck.memo && (
+                                  <div className="pt-3 mt-3 border-t border-border">
+                                    <p className="text-xs text-muted-foreground mb-2">메모</p>
+                                    <div className="p-3 bg-muted/30 rounded-lg">
+                                      <p className="text-sm text-foreground">{employee.healthCheck.memo}</p>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </Card>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {employee.role === '어시스트' && (
+                      <div className="grid grid-cols-2 gap-6">
+                        {/* 왼쪽: 참여중인 작품 */}
+                        <div>
+                          <div className="flex items-center gap-2 mb-3">
+                            <Briefcase className="w-4 h-4 text-primary" />
+                            <h3 className="text-base font-semibold text-foreground">참여중인 작품</h3>
+                          </div>
+                          <div className="space-y-2">
+                            {(employee.currentProjects || []).map((project, index) => (
+                              <div key={index} className="p-2 bg-muted/30 rounded-lg border border-border">
+                                <span className="text-sm font-medium text-foreground">{project}</span>
+                              </div>
+                            ))}
+                            {(!employee.currentProjects || employee.currentProjects.length === 0) && (
+                              <p className="text-sm text-muted-foreground">참여중인 작품이 없습니다</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* 오른쪽: 건강검진 결과 */}
+                        {employee.healthCheck && (
+                          <div>
+                            <div className="flex items-center gap-2 mb-3">
+                              <Heart className="w-4 h-4 text-primary" />
+                              <h3 className="text-base font-semibold text-foreground">
+                                {employee.healthCheck.date} 건강 체크 결과
+                              </h3>
+                            </div>
+                            <Card className="p-4 bg-white border border-border">
+                              <div className="space-y-0">
+                                <div className="flex items-center justify-between py-2 border-b border-border">
+                                  <span className="text-sm text-muted-foreground">오늘 컨디션</span>
+                                  <span className="text-sm font-medium text-foreground">{employee.healthCheck.condition}</span>
+                                </div>
+                                <div className="flex items-center justify-between py-2 border-b border-border">
+                                  <span className="text-sm text-muted-foreground">수면 시간</span>
+                                  <span className="text-sm font-medium text-foreground">{employee.healthCheck.sleepHours}시간</span>
+                                </div>
+                                <div className="flex items-center justify-between py-2">
+                                  <span className="text-sm text-muted-foreground">신체 불편함</span>
+                                  <span className="text-sm font-medium text-foreground">{employee.healthCheck.discomfortLevel}</span>
+                                </div>
+                                {employee.healthCheck.memo && (
+                                  <div className="pt-3 mt-3 border-t border-border">
+                                    <p className="text-xs text-muted-foreground mb-2">메모</p>
+                                    <div className="p-3 bg-muted/30 rounded-lg">
+                                      <p className="text-sm text-foreground">{employee.healthCheck.memo}</p>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </Card>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </Card>
+                )}
+              </div>
+            );
+          })}
         </EmployeeListContainer>
 
         {filteredEmployees.length === 0 && (
@@ -600,6 +780,52 @@ export function AgencyTeamPage() {
               초대 보내기
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 작가 프로필 모달 */}
+      <Dialog open={selectedArtist !== null} onOpenChange={(open) => !open && setSelectedArtist(null)}>
+        <DialogContent className="sm:max-w-[500px]">
+          {selectedArtist && (
+            <div className="space-y-6">
+              {/* 프로필 헤더 */}
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-24 h-24 rounded-full bg-primary/20 flex items-center justify-center">
+                  <Users className="w-12 h-12 text-primary" />
+                </div>
+                <div className="text-center">
+                  <h2 className="text-2xl font-bold text-foreground">{selectedArtist.name}</h2>
+                </div>
+              </div>
+
+              {/* 상세 정보 */}
+              <div className="space-y-3 pt-4 border-t border-border">
+                <div className="flex items-center gap-3">
+                  <Briefcase className="w-5 h-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">직무</p>
+                    <p className="text-sm font-medium text-foreground">{selectedArtist.position || selectedArtist.role}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Mail className="w-5 h-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">이메일</p>
+                    <p className="text-sm font-medium text-foreground">{selectedArtist.email}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Phone className="w-5 h-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">전화번호</p>
+                    <p className="text-sm font-medium text-foreground">{selectedArtist.phone}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
