@@ -91,13 +91,23 @@ export function AgencyApprovalsPage() {
       return dateB - dateA;
     });
 
-  const handleApprove = (request) => {
-    setRequests(requests.map(r => 
-      r.id === request.id 
-        ? { ...r, status: '승인', processedDate: new Date().toISOString().split('T')[0] }
-        : r
-    ));
-    toast.success(`${request.requester}의 ${request.type} 신청이 승인되었습니다.`);
+  const handleApprove = async (request) => {
+    try {
+      // 백엔드 API 호출
+      const response = await agencyService.approveJoinRequest(request.id);
+      console.log('승인 API 응답:', response);
+      
+      // API 성공 시 로컬 상태 업데이트
+      setRequests(requests.map(r => 
+        r.id === request.id 
+          ? { ...r, status: '승인', processedDate: new Date().toISOString().split('T')[0] }
+          : r
+      ));
+      toast.success(`${request.requester}의 ${request.type} 신청이 승인되었습니다.`);
+    } catch (error) {
+      console.error('승인 API 호출 실패:', error);
+      toast.error('승인 처리에 실패했습니다.');
+    }
   };
 
   const handleOpenRejectModal = (request) => {
@@ -105,24 +115,34 @@ export function AgencyApprovalsPage() {
     setShowRejectModal(true);
   };
 
-  const handleReject = () => {
+  const handleReject = async () => {
     if (!rejectionReason.trim()) {
       toast.error('반려 사유를 입력해주세요.');
       return;
     }
 
     if (selectedRequest) {
-      setRequests(requests.map(r => 
-        r.id === selectedRequest.id 
-          ? { 
-              ...r, 
-              status: '반려', 
-              rejectionReason: rejectionReason,
-              processedDate: new Date().toISOString().split('T')[0]
-            }
-          : r
-      ));
-      toast.success(`${selectedRequest.requester}의 ${selectedRequest.type} 신청이 반려되었습니다.`);
+      try {
+        // 백엔드 API 호출
+        const response = await agencyService.rejectJoinRequest(selectedRequest.id, rejectionReason);
+        console.log('거절 API 응답:', response);
+        
+        // API 성공 시 로컬 상태 업데이트
+        setRequests(requests.map(r => 
+          r.id === selectedRequest.id 
+            ? { 
+                ...r, 
+                status: '반려', 
+                rejectionReason: rejectionReason,
+                processedDate: new Date().toISOString().split('T')[0]
+              }
+            : r
+        ));
+        toast.success(`${selectedRequest.requester}의 ${selectedRequest.type} 신청이 반려되었습니다.`);
+      } catch (error) {
+        console.error('거절 API 호출 실패:', error);
+        toast.error('반려 처리에 실패했습니다.');
+      }
     }
 
     setShowRejectModal(false);

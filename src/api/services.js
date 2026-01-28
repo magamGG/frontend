@@ -116,6 +116,16 @@ export const agencyService = {
   getJoinRequests: (agencyNo) => {
     return api.get(API_ENDPOINTS.AGENCY.JOIN_REQUESTS(agencyNo));
   },
+  
+  // 에이전시 가입 요청 승인
+  approveJoinRequest: (newRequestNo) => {
+    return api.post(API_ENDPOINTS.AGENCY.APPROVE_JOIN_REQUEST(newRequestNo));
+  },
+  
+  // 에이전시 가입 요청 거절
+  rejectJoinRequest: (newRequestNo, rejectionReason) => {
+    return api.post(API_ENDPOINTS.AGENCY.REJECT_JOIN_REQUEST(newRequestNo), { rejectionReason });
+  },
 };
 
 export default {

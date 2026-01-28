@@ -61,6 +61,8 @@ export const API_ENDPOINTS = {
   AGENCY: {
     JOIN_REQUEST: `/api/agency/join-request`, // POST: 에이전시 가입 요청
     JOIN_REQUESTS: (agencyNo) => `/api/agency/${agencyNo}/join-requests`, // GET: 에이전시 가입 요청 목록 조회
+    APPROVE_JOIN_REQUEST: (newRequestNo) => `/api/agency/join-requests/${newRequestNo}/approve`, // POST: 가입 요청 승인
+    REJECT_JOIN_REQUEST: (newRequestNo) => `/api/agency/join-requests/${newRequestNo}/reject`, // POST: 가입 요청 거절
   },
 };
 
