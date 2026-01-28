@@ -2,6 +2,8 @@ import { motion, AnimatePresence } from "motion/react";
 import { Bell, Plus, User, X, ChevronRight } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Badge } from "@/app/components/ui/badge";
+import { notificationService } from "@/api/services";
+import { toast } from "sonner";
 import {
   HeaderContainer,
   HeaderContent,
@@ -83,54 +85,87 @@ export function Header({
 }) {
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef(null);
+  const [notifications, setNotifications] = useState([]);
+  const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
 
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      title: "마감 알림",
-      message: "에피소드 42 마감이 오늘입니다.",
-      time: "방금 전",
-      isRead: false,
-      type: "warning",
-      linkedPage: "calendar",
-    },
-    {
-      id: 2,
-      title: "캘린더 알림",
-      message: "내일 편집자 미팅이 예정되어 있습니다.",
-      time: "30분 전",
-      isRead: false,
-      type: "info",
-      linkedPage: "calendar",
-    },
-    {
-      id: 3,
-      title: "승인 완료",
-      message: "워케이션 신청이 승인되었습니다.",
-      time: "2시간 전",
-      isRead: false,
-      type: "success",
-      linkedPage: "attendance",
-    },
-    {
-      id: 4,
-      title: "건강 체크",
-      message: "오늘 건강 설문을 완료하지 않았습니다.",
-      time: "3시간 전",
-      isRead: true,
-      type: "info",
-      linkedPage: "dashboard",
-    },
-    {
-      id: 5,
-      title: "작품 업데이트",
-      message: "새로운 에피소드가 업로드되었습니다.",
-      time: "어제",
-      isRead: true,
-      type: "info",
-      linkedPage: "projects",
-    },
-  ]);
+  // 알림 목록 조회
+  const fetchNotifications = async () => {
+    try {
+      setIsLoadingNotifications(true);
+      const response = await notificationService.getNotifications();
+      
+      // API 응답을 프론트엔드 형식으로 변환
+      const formattedNotifications = response.map((n) => ({
+        id: n.notificationNo,
+        title: n.notificationName || '알림',
+        message: n.notificationText || '',
+        time: formatTimeAgo(n.notificationCreatedAt),
+        isRead: n.isRead,
+        type: getNotificationType(n.notificationType),
+        linkedPage: getLinkedPage(n.notificationType),
+      }));
+      
+      setNotifications(formattedNotifications);
+    } catch (error) {
+      console.error('알림 목록 조회 실패:', error);
+      // 에러 시 빈 배열 유지
+    } finally {
+      setIsLoadingNotifications(false);
+    }
+  };
+
+  // 시간 포맷팅 (몇 분 전, 몇 시간 전 등)
+  const formatTimeAgo = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return '방금 전';
+    if (diffMins < 60) return `${diffMins}분 전`;
+    if (diffHours < 24) return `${diffHours}시간 전`;
+    if (diffDays < 7) return `${diffDays}일 전`;
+    return date.toLocaleDateString();
+  };
+
+  // 알림 타입에 따른 UI 타입 반환
+  const getNotificationType = (type) => {
+    switch (type) {
+      case 'JOIN_REQ':
+        return 'info';
+      case 'LEAVE_REQ':
+        return 'warning';
+      case 'APPROVED':
+        return 'success';
+      case 'REJECTED':
+        return 'error';
+      default:
+        return 'info';
+    }
+  };
+
+  // 알림 타입에 따른 연결 페이지 반환
+  const getLinkedPage = (type) => {
+    switch (type) {
+      case 'JOIN_REQ':
+        return 'approvals';
+      case 'LEAVE_REQ':
+        return 'approvals';
+      case 'APPROVED':
+      case 'REJECTED':
+        return 'dashboard';
+      default:
+        return 'dashboard';
+    }
+  };
+
+  // 컴포넌트 마운트 시 알림 목록 조회
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
 
   const unreadCount = notifications.filter(
     (n) => !n.isRead,
@@ -162,13 +197,21 @@ export function Header({
     };
   }, [showNotifications]);
 
-  const handleNotificationClick = (notification) => {
-    // 읽음 처리
-    setNotifications(
-      notifications.map((n) =>
-        n.id === notification.id ? { ...n, isRead: true } : n,
-      ),
-    );
+  const handleNotificationClick = async (notification) => {
+    // 읽지 않은 알림인 경우에만 API 호출
+    if (!notification.isRead) {
+      try {
+        await notificationService.markAsRead(notification.id);
+        // 로컬 상태 업데이트
+        setNotifications(
+          notifications.map((n) =>
+            n.id === notification.id ? { ...n, isRead: true } : n,
+          ),
+        );
+      } catch (error) {
+        console.error('알림 읽음 처리 실패:', error);
+      }
+    }
 
     // 페이지 이동
     const sectionIndex = sections.findIndex(
@@ -180,15 +223,29 @@ export function Header({
     }
   };
 
-  const markAllAsRead = () => {
-    setNotifications(
-      notifications.map((n) => ({ ...n, isRead: true })),
-    );
+  const markAllAsRead = async () => {
+    try {
+      await notificationService.markAllAsRead();
+      // 로컬 상태 업데이트
+      setNotifications(
+        notifications.map((n) => ({ ...n, isRead: true })),
+      );
+    } catch (error) {
+      console.error('모든 알림 읽음 처리 실패:', error);
+      toast.error('알림 읽음 처리에 실패했습니다.');
+    }
   };
 
-  const deleteNotification = (id, event) => {
+  const deleteNotification = async (id, event) => {
     event.stopPropagation();
-    setNotifications(notifications.filter((n) => n.id !== id));
+    try {
+      await notificationService.deleteNotification(id);
+      // 로컬 상태에서 삭제
+      setNotifications(notifications.filter((n) => n.id !== id));
+    } catch (error) {
+      console.error('알림 삭제 실패:', error);
+      toast.error('알림 삭제에 실패했습니다.');
+    }
   };
 
   const getNotificationBadgeVariant = (type) => {

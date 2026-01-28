@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Upload, FileText, Calendar, AlertCircle } from 'lucide-react';
 import useAuthStore from '@/store/authStore';
+import { leaveService } from '@/api/services';
 import {
   ModalHeader,
   ModalTitle,
@@ -140,7 +141,7 @@ export function LeaveRequestModal({ open, onOpenChange }) {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!startDate || !endDate || !reason) {
       toast.error('모든 필수 항목을 입력해주세요.');
       return;
@@ -157,76 +158,57 @@ export function LeaveRequestModal({ open, onOpenChange }) {
       return;
     }
 
-    // localStorage에서 기존 근태 데이터 가져오기
-    const existingAttendance = JSON.parse(localStorage.getItem('attendanceData') || '[]');
-    
-    // 새 신청 ID 생성
-    const newId = existingAttendance.length > 0 
-      ? Math.max(...existingAttendance.map((r) => r.id), 0) + 1 
-      : 1;
-    
     const days = calculateDays();
     
-    const typeMap = {
-      '연차': 'break',
-      '반차': 'break',
-      '병가': 'break',
-      '워케이션': 'workation',
-      '재택근무': 'remote',
-      '휴재': 'break',
+    // API 요청 데이터 구성 (DB 필드명 기준 camelCase)
+    const requestData = {
+      attendanceRequestType: selectedType,
+      attendanceRequestStartDate: startDate,
+      attendanceRequestEndDate: endDate,
+      attendanceRequestUsingDays: selectedType === '반차' ? 1 : days,
+      attendanceRequestReason: reason,
+      workcationLocation: selectedType === '워케이션' ? location : null,
+      medicalFileUrl: attachedFile?.name || null,
     };
 
-    const newRequestData = {
-      id: newId,
-      type: typeMap[selectedType],
-      typeName: selectedType,
-      startDate: startDate,
-      endDate: endDate,
-      days: selectedType === '반차' ? 0.5 : days,
-      hours: selectedType === '반차' ? calculateHours() : undefined,
-      startTime: selectedType === '반차' ? startTime : undefined,
-      endTime: selectedType === '반차' ? endTime : undefined,
-      halfDayType: selectedType === '반차' ? halfDayType : undefined,
-      reason: reason,
-      location: location || undefined,
-      project: selectedProject !== '선택 안 함' ? selectedProject : undefined,
-      status: 'approved', // 자동 승인으로 설정
-      requestDate: new Date().toISOString().split('T')[0],
-      rejectionReason: '',
-      attachedFile: attachedFile?.name || undefined,
-    };
-
-    // localStorage에 저장
-    localStorage.setItem('attendanceData', JSON.stringify([...existingAttendance, newRequestData]));
-
-    // 연차/반차 신청인 경우 사용한 연차 업데이트
-    if (selectedType === '연차' || selectedType === '반차') {
-      const memberName = getMemberName();
-      const employees = JSON.parse(localStorage.getItem('agencyEmployees') || '[]');
+    try {
+      // API 호출
+      const response = await leaveService.requestLeave(requestData);
       
-      if (memberName && employees.length > 0) {
-        const updatedEmployees = employees.map(emp => {
-          if (emp.name === memberName) {
-            const leaveDays = selectedType === '반차' ? 0.5 : days;
-            const newUsedLeave = emp.usedLeave + leaveDays;
-            const newRemainingLeave = emp.totalLeave - newUsedLeave;
-            return {
-              ...emp,
-              usedLeave: newUsedLeave,
-              remainingLeave: newRemainingLeave >= 0 ? newRemainingLeave : 0,
-            };
-          }
-          return emp;
-        });
-        localStorage.setItem('agencyEmployees', JSON.stringify(updatedEmployees));
+      console.log('근태 신청 API 응답:', response);
+      
+      // 연차/반차 신청인 경우 로컬 스토리지의 연차 정보도 업데이트 (UI 동기화용)
+      if (selectedType === '연차' || selectedType === '반차') {
+        const memberName = getMemberName();
+        const employees = JSON.parse(localStorage.getItem('agencyEmployees') || '[]');
+        
+        if (memberName && employees.length > 0) {
+          const updatedEmployees = employees.map(emp => {
+            if (emp.name === memberName) {
+              const leaveDays = selectedType === '반차' ? 0.5 : days;
+              const newUsedLeave = emp.usedLeave + leaveDays;
+              const newRemainingLeave = emp.totalLeave - newUsedLeave;
+              return {
+                ...emp,
+                usedLeave: newUsedLeave,
+                remainingLeave: newRemainingLeave >= 0 ? newRemainingLeave : 0,
+              };
+            }
+            return emp;
+          });
+          localStorage.setItem('agencyEmployees', JSON.stringify(updatedEmployees));
+        }
       }
-    }
 
-    toast.success('근태 신청이 완료되었습니다.');
-    
-    // 폼 초기화
-    resetForm();
-    onOpenChange(false);
+      toast.success('근태 신청이 완료되었습니다.');
+      
+      // 폼 초기화
+      resetForm();
+      onOpenChange(false);
+    } catch (error) {
+      console.error('근태 신청 실패:', error);
+      toast.error(error.message || '근태 신청에 실패했습니다. 다시 시도해주세요.');
+    }
   };
 
   const resetForm = () => {

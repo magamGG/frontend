@@ -3,10 +3,10 @@ import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/app/components/ui/dialog';
 import { Textarea } from '@/app/components/ui/textarea';
-import { CheckCircle2, XCircle, Calendar, FileText, Clock, AlertCircle, User, Briefcase } from 'lucide-react';
+import { CheckCircle2, XCircle, Calendar, FileText, Clock, AlertCircle, User, Briefcase, MapPin } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { agencyService } from '@/api';
+import { agencyService, leaveService } from '@/api';
 import useAuthStore from '@/store/authStore';
 import {
   AgencyApprovalsRoot,
@@ -34,6 +34,7 @@ import {
 
 const CATEGORIES = [
   { value: 'join', label: '가입', color: '#00ACC1' },
+  { value: 'attendance', label: '근태', color: '#9C27B0' },
 ];
 
 export function AgencyApprovalsPage() {
@@ -45,19 +46,25 @@ export function AgencyApprovalsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const user = useAuthStore((state) => state.user);
   
-  // 에이전시 가입 요청 목록 조회
+  // 에이전시 가입 요청 및 근태 신청 목록 조회
   useEffect(() => {
-    const fetchJoinRequests = async () => {
+    const fetchAllRequests = async () => {
       if (!user?.agencyNo) {
         return;
       }
       
       setIsLoading(true);
       try {
-        const response = await agencyService.getJoinRequests(user.agencyNo);
-        // API 응답을 프론트엔드 형식으로 변환
-        const formattedRequests = response.map((req) => ({
-          id: req.newRequestNo,
+        // 가입 요청과 근태 신청을 병렬로 조회
+        const [joinResponse, attendanceResponse] = await Promise.all([
+          agencyService.getJoinRequests(user.agencyNo),
+          leaveService.getAgencyRequests(user.agencyNo),
+        ]);
+        
+        // 가입 요청 변환
+        const formattedJoinRequests = joinResponse.map((req) => ({
+          id: `join-${req.newRequestNo}`,
+          originalId: req.newRequestNo,
           type: '가입',
           category: 'join',
           requester: req.memberName,
@@ -69,16 +76,39 @@ export function AgencyApprovalsPage() {
           submittedDate: req.newRequestDate ? new Date(req.newRequestDate).toISOString().split('T')[0] : '',
           processedDate: req.newRequestStatus !== '대기' ? req.newRequestDate ? new Date(req.newRequestDate).toISOString().split('T')[0] : '' : null,
         }));
-        setRequests(formattedRequests);
+        
+        // 근태 신청 변환
+        const formattedAttendanceRequests = attendanceResponse.map((req) => ({
+          id: `attendance-${req.attendanceRequestNo}`,
+          originalId: req.attendanceRequestNo,
+          type: req.attendanceRequestType,
+          category: 'attendance',
+          requester: req.memberName,
+          role: '작가', // 기본값
+          startDate: req.attendanceRequestStartDate ? new Date(req.attendanceRequestStartDate).toISOString().split('T')[0] : '',
+          endDate: req.attendanceRequestEndDate ? new Date(req.attendanceRequestEndDate).toISOString().split('T')[0] : '',
+          days: req.attendanceRequestUsingDays,
+          reason: req.attendanceRequestReason || '',
+          workcationLocation: req.workcationLocation,
+          status: req.attendanceRequestStatus === 'PENDING' ? '대기' 
+                : req.attendanceRequestStatus === 'APPROVED' ? '승인' 
+                : req.attendanceRequestStatus === 'REJECTED' ? '반려' : '대기',
+          rejectionReason: req.attendanceRequestRejectReason,
+          submittedDate: req.attendanceRequestCreatedAt ? new Date(req.attendanceRequestCreatedAt).toISOString().split('T')[0] : '',
+          processedDate: req.attendanceRequestUpdatedAt ? new Date(req.attendanceRequestUpdatedAt).toISOString().split('T')[0] : null,
+        }));
+        
+        // 모든 요청 합치기
+        setRequests([...formattedJoinRequests, ...formattedAttendanceRequests]);
       } catch (error) {
-        console.error('에이전시 가입 요청 목록 조회 실패:', error);
-        toast.error('에이전시 가입 요청 목록을 불러오는데 실패했습니다.');
+        console.error('요청 목록 조회 실패:', error);
+        toast.error('요청 목록을 불러오는데 실패했습니다.');
       } finally {
         setIsLoading(false);
       }
     };
     
-    fetchJoinRequests();
+    fetchAllRequests();
   }, [user?.agencyNo]);
 
   // 카테고리별 필터링
@@ -93,11 +123,17 @@ export function AgencyApprovalsPage() {
 
   const handleApprove = async (request) => {
     try {
-      // 백엔드 API 호출
-      const response = await agencyService.approveJoinRequest(request.id);
-      console.log('승인 API 응답:', response);
+      if (request.category === 'join') {
+        // 가입 요청 승인 API 호출
+        const response = await agencyService.approveJoinRequest(request.originalId);
+        console.log('가입 승인 API 응답:', response);
+      } else if (request.category === 'attendance') {
+        // TODO: 근태 승인 API 구현 필요
+        // 현재는 프론트엔드 상태만 업데이트
+        console.log('근태 승인 처리:', request.originalId);
+      }
       
-      // API 성공 시 로컬 상태 업데이트
+      // 로컬 상태 업데이트
       setRequests(requests.map(r => 
         r.id === request.id 
           ? { ...r, status: '승인', processedDate: new Date().toISOString().split('T')[0] }
@@ -123,11 +159,17 @@ export function AgencyApprovalsPage() {
 
     if (selectedRequest) {
       try {
-        // 백엔드 API 호출
-        const response = await agencyService.rejectJoinRequest(selectedRequest.id, rejectionReason);
-        console.log('거절 API 응답:', response);
+        if (selectedRequest.category === 'join') {
+          // 가입 요청 거절 API 호출
+          const response = await agencyService.rejectJoinRequest(selectedRequest.originalId, rejectionReason);
+          console.log('가입 거절 API 응답:', response);
+        } else if (selectedRequest.category === 'attendance') {
+          // TODO: 근태 반려 API 구현 필요
+          // 현재는 프론트엔드 상태만 업데이트
+          console.log('근태 반려 처리:', selectedRequest.originalId);
+        }
         
-        // API 성공 시 로컬 상태 업데이트
+        // 로컬 상태 업데이트
         setRequests(requests.map(r => 
           r.id === selectedRequest.id 
             ? { 
@@ -153,11 +195,20 @@ export function AgencyApprovalsPage() {
   const getTypeColor = (type) => {
     switch (type) {
       case '휴가':
+      case '연차':
+      case '반차':
+      case '휴재':
         return 'bg-[#9C27B0]';
       case '가입':
         return 'bg-[#00ACC1]';
       case '신작':
         return 'bg-[#FF9800]';
+      case '워케이션':
+        return 'bg-[#E91E63]';
+      case '재택근무':
+        return 'bg-[#4CAF50]';
+      case '병가':
+        return 'bg-[#FF5722]';
       default:
         return 'bg-gray-500';
     }
@@ -312,6 +363,24 @@ export function AgencyApprovalsPage() {
                             </>
                           )}
                           
+                          {request.category === 'attendance' && (
+                            <>
+                              <RequestCardInfoItem>
+                                <Calendar className="w-3 h-3" />
+                                <span>
+                                  {formatDate(request.startDate)} ~ {formatDate(request.endDate)} 
+                                  ({request.days}일)
+                                </span>
+                              </RequestCardInfoItem>
+                              {request.workcationLocation && (
+                                <RequestCardInfoItem>
+                                  <MapPin className="w-3 h-3" />
+                                  <span>장소: {request.workcationLocation}</span>
+                                </RequestCardInfoItem>
+                              )}
+                            </>
+                          )}
+                          
                           {request.category === 'project' && (
                             <>
                               <RequestCardInfoItem>
@@ -412,10 +481,17 @@ export function AgencyApprovalsPage() {
                           {request.category === 'join' && (
                             <div>{request.email}</div>
                           )}
+                          {request.category === 'attendance' && (
+                            <div>
+                              {formatDate(request.startDate)} ~ {formatDate(request.endDate)} 
+                              ({request.days}일)
+                              {request.workcationLocation && ` - ${request.workcationLocation}`}
+                            </div>
+                          )}
                           {request.category === 'project' && (
                             <div>{request.projectName} - {request.artist}</div>
                           )}
-                          <div>사유: {request.reason}</div>
+                          {request.reason && <div>사유: {request.reason}</div>}
                           {request.status === '반려' && request.rejectionReason && (
                             <div className="flex items-start gap-1 mt-2 p-2 bg-red-100 rounded border border-red-200">
                               <AlertCircle className="w-3 h-3 text-red-600 mt-0.5 flex-shrink-0" />
