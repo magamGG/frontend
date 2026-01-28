@@ -5,7 +5,7 @@ export const UnscreenedDetailRoot = styled.div`
   width: 100%;
   min-height: 100vh;
   overflow-y: auto;
-  background-color: var(--background);
+  background-color: #f0f2f5;
   padding: 24px;
 `;
 
@@ -49,17 +49,21 @@ export const BulkAlarmButton = styled.button`
   display: flex;
   align-items: center;
   gap: 8px;
-  background-color: var(--destructive);
+  background-color: #EF4444;
   color: white;
   height: 36px;
   padding: 0 16px;
-  border-radius: 4px;
+  border-radius: 8px;
   border: none;
   cursor: pointer;
-  transition: background-color 0.2s;
+  font-size: 0.875rem;
+  font-weight: 500;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s;
 
   &:hover {
-    background-color: color-mix(in srgb, var(--destructive) 90%, black);
+    background-color: #DC2626;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
   }
 `;
 
@@ -67,41 +71,35 @@ export const BulkAlarmButton = styled.button`
 export const StatisticsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
+  gap: 24px;
   margin-bottom: 8px;
 
   @media (max-width: 1024px) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
   }
 
   @media (max-width: 600px) {
     grid-template-columns: 1fr;
+    gap: 16px;
   }
 `;
 
 export const StatisticsCard = styled.div`
   padding: 16px;
-  background-color: white;
+  background-color: #e8eaed;
   border: none;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 `;
 
 export const StatisticsLabel = styled.div`
   font-size: 0.75rem;
-  color: ${props => {
-    switch (props.$color) {
-      case 'red':
-        return 'var(--destructive)';
-      case 'purple':
-        return 'var(--status-workation)';
-      case 'blue':
-        return 'var(--chart-2)';
-      default:
-        return 'var(--accent)';
-    }
-  }};
-  margin-bottom: 4px;
+  color: #1f2328;
+  margin-bottom: 0;
 `;
 
 export const StatisticsValue = styled.div`
@@ -110,13 +108,13 @@ export const StatisticsValue = styled.div`
   color: ${props => {
     switch (props.$color) {
       case 'red':
-        return 'var(--destructive)';
+        return '#EF4444';
       case 'purple':
-        return 'var(--status-workation)';
+        return '#9B8FAA';
       case 'blue':
-        return 'var(--chart-2)';
+        return '#3B82F6';
       default:
-        return 'var(--foreground)';
+        return '#1F2328';
     }
   }};
 `;
@@ -152,17 +150,18 @@ export const FilterButtonGroup = styled.div`
 
 export const FilterButton = styled.button`
   height: 36px;
-  font-size: 0.75rem;
-  padding: 0 12px;
-  border-radius: 4px;
+  font-size: 0.875rem;
+  padding: 0 16px;
+  border-radius: 8px;
   transition: all 0.2s;
   cursor: pointer;
-  border: 1px solid var(--border);
-  background-color: ${props => props.variant === 'default' ? 'var(--primary)' : 'transparent'};
-  color: ${props => props.variant === 'default' ? 'var(--primary-foreground)' : 'var(--foreground)'};
+  border: none;
+  background-color: ${props => props.variant === 'default' ? '#3F4A5A' : '#e8eaed'};
+  color: ${props => props.variant === 'default' ? 'white' : '#1f2328'};
+  font-weight: 500;
 
   &:hover {
-    opacity: 0.8;
+    background-color: ${props => props.variant === 'default' ? '#3F4A5A' : '#d4d8dc'};
   }
 `;
 
@@ -193,7 +192,7 @@ export const TableHeaderCell = styled.th`
   text-align: ${props => props.$align || 'left'};
   font-size: 0.75rem;
   font-weight: 500;
-  color: var(--accent);
+  color: #1f2328;
   padding-bottom: 12px;
   padding-right: 16px;
   padding-left: 16px;
@@ -230,33 +229,37 @@ export const TypeBadge = styled.span`
   display: inline-block;
   font-size: 0.75rem;
   padding: 4px 12px;
-  border-radius: 4px;
+  border-radius: 6px;
+  font-weight: 500;
 `;
 
 export const DelayBadge = styled.span`
   display: inline-block;
-  background-color: color-mix(in srgb, var(--destructive) 20%, transparent);
-  color: var(--destructive);
+  background-color: #EF4444;
+  color: white;
   font-size: 0.75rem;
   padding: 4px 12px;
-  border-radius: 4px;
+  border-radius: 6px;
+  font-weight: 500;
 `;
 
 export const AlarmButton = styled.button`
   height: 28px;
   padding: 0 12px;
-  background-color: var(--destructive);
+  background-color: #EF4444;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 6px;
-  transition: background-color 0.2s;
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition: all 0.2s;
 
   &:hover {
-    background-color: color-mix(in srgb, var(--destructive) 90%, black);
+    background-color: #DC2626;
   }
 `;
 

@@ -1,6 +1,9 @@
 # 🏗️ Project Refactoring Guidelines: [마감지기 (Deadline Keeper)]
 
-> **최신 업데이트**: 2026-01-26  
+> **최신 업데이트**: 2026-01-28  
+> - 담당자 대시보드 및 프로젝트 관리 페이지 UI 개선 완료
+> - 담당자 개인 건강 검사 페이지를 작가 건강 검사 페이지와 통일 완료
+> - 코딩 컨벤션 준수 (인라인 스타일 제거, 이벤트 핸들러 함수 분리)
 > - API 구조 확장 및 네이밍 컨벤션 정리 완료
 > - 도메인 이름 통일 (ADMIN → MANAGER)
 > - 비즈니스 로직 작성 프롬프트 가이드와 연동 완료
@@ -93,9 +96,15 @@ Functions/Variables: camelCase (e.g., handleSearch, authorList)
 - 불린 변수는 is/has/can/should 접두사 사용 (예: `isLoading`, `hasPermission`, `canEdit`)
 - 함수명은 동사로 시작 (예: `handleSubmit`, `getEmployeeList`, `calculateRiskStats`)
 - API 관련 함수는 서비스 객체 내에서 명확한 동사 사용 (예: `get`, `create`, `update`, `delete`)
-- 이벤트 핸들러는 `handle` 접두사 사용 (예: `handleClick`, `handleSubmit`)
+- 이벤트 핸들러는 `handle` 접두사 사용 (예: `handleClick`, `handleSubmit`, `handleProjectClick`)
 - 데이터 가져오기 함수는 `get` 또는 `fetch` 접두사 사용 (예: `getUserData`, `fetchProjectList`)
 - 계산/변환 함수는 `calculate`, `convert`, `transform` 등 사용 (예: `calculateUsageRate`, `convertToDate`)
+
+**스타일링 규칙**:
+- 인라인 스타일(`style={{ ... }}`) 사용 금지, 모든 스타일은 styled-components로 정의
+- 이벤트 핸들러는 인라인으로 작성하지 않고 함수로 분리 (예: `onClick={handleClick}`)
+- 공통 스타일 컴포넌트는 `src/components/common` 또는 각 페이지의 `.styled.js` 파일에 정의
+- 아이콘 스타일도 styled-components로 정의 (예: `ChevronRightIcon`, `SearchIcon`)
 
 4. ⚡ 리팩토링 핵심 규칙 (Refactoring Rules)
 Rule 1: 로직과 스타일의 물리적 분리
@@ -374,6 +383,32 @@ export function Component({ title, count }) {
 - 기타 페이지: 1개
 
 ### 6.3.1 최근 수정 사항
+
+- **2026-01-28 (담당자 대시보드 및 프로젝트 관리 페이지 개선)**:
+  - `AdminDashboardPage` 개선:
+    - 현재 상태 선택 UI 삭제 (AttendanceStatusSelect 관련 컴포넌트 제거)
+    - 담당 프로젝트 현황에서 프로젝트 클릭 시 해당 프로젝트 관리 페이지로 이동 기능 추가
+    - 인라인 스타일 제거 및 이벤트 핸들러 함수 분리 (가이드 준수)
+  - `ProjectListModal` 개선:
+    - 전체보기 모달에서 > 표시(ChevronRight) 클릭 시 프로젝트 관리로 이동 기능 추가
+    - 인라인 스타일 제거 및 `ChevronRightIcon` 스타일 컴포넌트 생성 (가이드 준수)
+    - 인라인 이벤트 핸들러를 `handleProjectClick` 함수로 분리 (가이드 준수)
+  - `AdminProjectsPage` 개선:
+    - 작가 프로젝트 상태 필터 색상 통일 (각 상태별 고유 색상 적용)
+    - 필터 버튼 스타일 개선 (전체: #D0D0D0, 연재중: #3ECF59, 휴재: #FF7F27, 완결: #6A7079)
+  - `AdminPersonalHealthPage` 개선:
+    - 작가 건강 검사 페이지(`ArtistHealthPage`)와 구조 통일
+    - 다음 검진 예정일 카드 구조 통일 (`NextCheckupItem` 사용)
+    - 심층 검진 카드 헤더 구조 통일 (`DeepCheckupHeader` 사용)
+    - 완료 상태 박스 구조 통일 (`CompletedStatusList` 사용)
+    - 결과 상세 박스 구조 통일 (`ResultDetailBox` 사용)
+    - 다음 검진일 박스 구조 통일 (`NextCheckupDateBox` 사용)
+    - 미완료 상태 박스 구조 통일 (`IncompleteStatusBox` 사용)
+    - 모달 구조 통일 (`SurveyModalContent`, `SurveyQuestionList`, `SurveyAnswerButtons` 사용)
+    - 스타일 컴포넌트 통일 (작가 건강 검사 페이지와 동일한 스타일 컴포넌트 사용)
+    - 상태 관리 통일 (답변 초기값을 `null`로 통일, 제출 시 유효성 검사 추가)
+
+- **2026-01-26 (API 구조 확장 및 네이밍 컨벤션 정리)**:
 - **2026-01-13**: 
   - `MyPage.jsx`에서 TypeScript 문법(`interface`, 타입 어노테이션) 제거 완료
     - `interface MyPageProps` → JSDoc 주석으로 변환
@@ -560,7 +595,7 @@ export function Component({ title, count }) {
 - [ ] Import 경로 수정 완료
 - [ ] 원본 파일 삭제 완료
 
-**마지막 업데이트**: 2026-01-26 (API 구조 확장, 네이밍 컨벤션 정리, 도메인 이름 통일, CALENDAR API 추가, 주요 페이지 API 서비스 적용 완료)
+**마지막 업데이트**: 2026-01-28 (담당자 대시보드 및 프로젝트 관리 페이지 UI 개선, 건강 검사 페이지 통일, 코딩 컨벤션 준수)
 
 ### 6.9 API 구조 및 네이밍 컨벤션 (2026-01-26 추가, 2026-01-26 업데이트)
 

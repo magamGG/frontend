@@ -34,9 +34,6 @@ import {
   AttendanceStartDateSub,
   AttendanceStartActions,
   HealthCheckWarning,
-  AttendanceStatusSelect,
-  AttendanceStatusSelectLabel,
-  AttendanceStatusSelectInput,
   AttendanceStatusBox,
   AttendanceStatusBoxContent,
   AttendanceStatusBoxInfo,
@@ -429,19 +426,8 @@ export function AdminDashboardPage({ onNavigateToSection }) {
                     </>
                   )}
                 </Button>
-              </AttendanceStartActions>
-            </AttendanceStartHeader>
-
-            <AttendanceStatusSelect>
-              <AttendanceStatusSelectLabel>현재 상태 선택</AttendanceStatusSelectLabel>
-              <AttendanceStatusSelectInput value={currentAttendanceType || ''} onChange={(e) => setCurrentAttendanceType(e.target.value || null)}>
-                <option value="">선택하세요</option>
-                <option value="출근">🏢 출근</option>
-                <option value="재택근무">🏠 재택근무</option>
-                <option value="휴가">🌴 휴가</option>
-                <option value="워케이션">✈️ 워케이션</option>
-              </AttendanceStatusSelectInput>
-            </AttendanceStatusSelect>
+            </AttendanceStartActions>
+          </AttendanceStartHeader>
 
             {statusBoxProps ? (
               <AttendanceStatusBox $bgColor={statusBoxProps.bgColor} $borderColor={statusBoxProps.borderColor}>
@@ -577,8 +563,22 @@ export function AdminDashboardPage({ onNavigateToSection }) {
             </ProjectsHeader>
 
             <ProjectsList>
-              {managedProjects.map((project) => (
-                <ProjectItem key={project.id}>
+              {managedProjects.map((project) => {
+                // 프로젝트 클릭 핸들러
+                const handleProjectClick = () => {
+                  // 프로젝트 ID를 localStorage에 저장하여 AdminProjectsPage에서 사용
+                  localStorage.setItem('selectedProjectId', project.id.toString());
+                  // 프로젝트 관리 섹션으로 이동 (manager-projects는 인덱스 1)
+                  if (onNavigateToSection) {
+                    onNavigateToSection(1);
+                  }
+                };
+
+                return (
+                  <ProjectItem 
+                    key={project.id}
+                    onClick={handleProjectClick}
+                  >
                   <ProjectItemHeader>
                     <ProjectItemInfo>
                       <ProjectItemTitleRow>
@@ -592,7 +592,8 @@ export function AdminDashboardPage({ onNavigateToSection }) {
                     <span>마감: {project.deadline}</span>
                   </ProjectItemMeta>
                 </ProjectItem>
-              ))}
+                );
+              })}
             </ProjectsList>
 
             <ProjectsInfoBox>

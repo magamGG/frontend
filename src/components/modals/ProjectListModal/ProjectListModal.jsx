@@ -23,6 +23,7 @@ import {
   StatValue,
   StatLabel,
   EmptyMessage,
+  ChevronRightIcon,
 } from './ProjectListModal.styled';
 
 /**
@@ -64,6 +65,15 @@ export function ProjectListModal({ open, onOpenChange, projects, onProjectClick 
       project.artist.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // 프로젝트 클릭 핸들러
+  const handleProjectClick = (project, e) => {
+    e.stopPropagation();
+    if (onProjectClick) {
+      onProjectClick(project);
+    }
+    onOpenChange(false);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
@@ -100,13 +110,6 @@ export function ProjectListModal({ open, onOpenChange, projects, onProjectClick 
               filteredProjects.map((project) => (
                 <ProjectItem 
                   key={project.id}
-                  onClick={() => {
-                    if (onProjectClick) {
-                      onProjectClick(project);
-                    }
-                    onOpenChange(false);
-                  }}
-                  style={{ cursor: 'pointer' }}
                 >
                   <ProjectHeader>
                     <ProjectInfo>
@@ -118,7 +121,9 @@ export function ProjectListModal({ open, onOpenChange, projects, onProjectClick 
                       </ProjectTitleGroup>
                       <ProjectArtist>담당: {project.artist}</ProjectArtist>
                     </ProjectInfo>
-                    <ChevronRight style={{ width: '20px', height: '20px', color: 'var(--muted-foreground)' }} />
+                    <ChevronRightIcon 
+                      onClick={(e) => handleProjectClick(project, e)}
+                    />
                   </ProjectHeader>
 
                   <ProjectMeta>

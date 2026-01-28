@@ -1,4 +1,5 @@
 import styled from 'styled-components';
+import { ChevronRight } from 'lucide-react';
 
 export const SearchContainer = styled.div`
   position: relative;
@@ -30,10 +31,21 @@ export const ProjectItem = styled.div`
   border-radius: 8px;
   border: 1px solid var(--border);
   transition: all 0.2s;
-  cursor: pointer;
 
   &:hover {
     border-color: var(--accent);
+  }
+`;
+
+export const ChevronRightIcon = styled(ChevronRight)`
+  width: 20px;
+  height: 20px;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  flex-shrink: 0;
+  
+  &:hover {
+    color: var(--accent);
   }
 `;
 

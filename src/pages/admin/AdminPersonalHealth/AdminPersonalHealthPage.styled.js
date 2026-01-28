@@ -48,79 +48,45 @@ export const NextCheckupGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 16px;
-
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-  }
 `;
 
-export const CheckupItem = styled.div`
+export const NextCheckupItem = styled.div`
   padding: 16px;
-  background: linear-gradient(to bottom right, ${props => {
-    if (props.$bgColor === 'from-purple-50 to-purple-100/50') return '#F3E8FF, rgba(243, 232, 255, 0.5)';
-    if (props.$bgColor === 'from-blue-50 to-blue-100/50') return '#DBEAFE, rgba(219, 234, 254, 0.5)';
-    return '#F9FAFB, rgba(249, 250, 251, 0.5)';
-  }});
   border-radius: 8px;
-  border: 1px solid ${props => {
-    if (props.$borderColor === 'border-purple-200') return '#E9D5FF';
-    if (props.$borderColor === 'border-blue-200') return '#BFDBFE';
-    return '#E5E7EB';
-  }};
+  border: 1px solid ${props => props.$borderColor || 'var(--border)'};
+  background: ${props => props.$bgGradient || 'transparent'};
 `;
 
-export const CheckupItemHeader = styled.div`
+export const NextCheckupItemHeader = styled.div`
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   margin-bottom: 12px;
 `;
 
-export const CheckupItemInfo = styled.div`
+export const NextCheckupItemContent = styled.div`
   flex: 1;
 `;
 
-export const CheckupItemLabel = styled.div`
+export const NextCheckupItemLabel = styled.div`
   font-size: 12px;
   font-weight: 500;
   color: ${props => props.$color || '#6E8FB3'};
   margin-bottom: 4px;
 `;
 
-export const CheckupItemDate = styled.div`
+export const NextCheckupItemDate = styled.div`
   font-size: 24px;
   font-weight: 700;
   color: #1f2328;
 `;
 
-export const CheckupItemBadge = styled.div`
-  background-color: ${props => props.$bgColor || '#6E8FB3'};
-  color: white;
-  font-size: 12px;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-weight: 500;
-`;
-
-export const CheckupItemMeta = styled.div`
+export const NextCheckupItemMeta = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 12px;
-  color: #6E8FB3;
-`;
-
-export const CheckupItemMetaIcon = styled.div`
-  width: 14px;
-  height: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-`;
-
-export const CheckupItemMetaText = styled.span`
-  font-size: 12px;
-  color: #6E8FB3;
+  color: #6e8fb3;
 `;
 
 // 심층 검진 검사 그리드
@@ -142,30 +108,27 @@ export const DeepCheckupCard = styled.div`
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 `;
 
-export const DeepCheckupCardHeader = styled.div`
+export const DeepCheckupHeader = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
   margin-bottom: 16px;
 `;
 
-export const DeepCheckupCardTitle = styled.h2`
+export const DeepCheckupTitle = styled.h2`
   font-size: 16px;
   font-weight: 700;
   color: #1f2328;
   margin: 0;
 `;
 
-export const DeepCheckupCardIcon = styled.div`
-  color: ${props => props.$color || '#6E8FB3'};
-`;
-
 // 완료 상태 박스
 export const CompletedStatusBox = styled.div`
   padding: 16px;
-  background-color: #F0FDF4;
-  border: 1px solid #86EFAC;
+  background-color: #f0fdf4;
+  border: 1px solid #86efac;
   border-radius: 8px;
+  margin-bottom: 16px;
 `;
 
 export const CompletedStatusHeader = styled.div`
@@ -175,12 +138,19 @@ export const CompletedStatusHeader = styled.div`
   margin-bottom: 12px;
 `;
 
-export const CompletedStatusTitle = styled.span`
+export const CompletedStatusText = styled.span`
+  font-size: 14px;
   font-weight: 700;
-  color: #10B981;
+  color: #16a34a;
 `;
 
-export const CompletedStatusRow = styled.div`
+export const CompletedStatusList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+export const CompletedStatusItem = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -188,7 +158,7 @@ export const CompletedStatusRow = styled.div`
 
 export const CompletedStatusLabel = styled.span`
   font-size: 14px;
-  color: #6E8FB3;
+  color: #6e8fb3;
 `;
 
 export const CompletedStatusValue = styled.span`
@@ -197,115 +167,124 @@ export const CompletedStatusValue = styled.span`
   color: #1f2328;
 `;
 
-// 결과 섹션
-export const ResultSection = styled.div`
+// 결과 상세 박스
+export const ResultDetailBox = styled.div`
   padding: 16px;
   background-color: #fafafa;
   border-radius: 8px;
+  margin-bottom: 16px;
 `;
 
-export const ResultTitle = styled.h3`
+export const ResultDetailTitle = styled.h3`
   font-size: 14px;
   font-weight: 700;
   color: #1f2328;
   margin: 0 0 8px 0;
 `;
 
-export const ResultDescription = styled.p`
+export const ResultDetailText = styled.p`
   font-size: 12px;
-  color: #6E8FB3;
+  color: #6e8fb3;
   line-height: 1.6;
   margin: 0 0 12px 0;
 `;
 
-export const ResultAlertBox = styled.div`
+export const ResultDetailAlert = styled.div`
   padding: 12px;
-  background-color: #FFF7ED;
-  border: 1px solid #FED7AA;
+  background-color: #fff7ed;
+  border: 1px solid #fed7aa;
   border-radius: 8px;
+`;
+
+export const ResultDetailAlertContent = styled.div`
   display: flex;
   align-items: flex-start;
   gap: 8px;
 `;
 
-export const ResultAlertContent = styled.div`
+export const ResultDetailAlertText = styled.div`
   font-size: 12px;
-  color: #6E8FB3;
-  
-  p {
-    margin: 0 0 4px 0;
-    
-    &:last-child {
-      margin-bottom: 0;
-    }
-  }
+  color: #6e8fb3;
 `;
 
-// 다음 검진 박스
-export const NextCheckupBox = styled.div`
+// 다음 검진일 박스
+export const NextCheckupDateBox = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 12px;
-  background-color: #F3E8FF;
-  border: 1px solid #E9D5FF;
+  background-color: ${props => props.$bgColor || '#fafafa'};
+  border: 1px solid ${props => props.$borderColor || 'var(--border)'};
   border-radius: 8px;
+  margin-bottom: 16px;
 `;
 
-export const NextCheckupBoxContent = styled.div`
+export const NextCheckupDateLabel = styled.span`
+  font-size: 14px;
+  color: #1f2328;
   display: flex;
   align-items: center;
   gap: 8px;
 `;
 
-export const NextCheckupBoxLabel = styled.span`
-  font-size: 14px;
-  color: #1f2328;
-`;
-
-export const NextCheckupBoxValue = styled.span`
+export const NextCheckupDateValue = styled.span`
   font-size: 14px;
   font-weight: 500;
-  color: #9333EA;
+  color: ${props => props.$color || '#6e8fb3'};
 `;
 
-// 빈 상태 박스
-export const EmptyStateBox = styled.div`
-  padding: 24px;
-  background-color: #F9FAFB;
-  border: 2px solid #FED7AA;
+// 미완료 상태 박스
+export const IncompleteStatusBox = styled.div`
+  padding: 16px;
+  background-color: ${props => (props.$isWarning ? '#fff7ed' : '#f9fafb')};
+  border: ${props => (props.$isWarning ? '2px solid #fdba74' : '1px solid #e5e7eb')};
   border-radius: 8px;
   text-align: center;
 `;
 
-export const EmptyStateIcon = styled.div`
+export const IncompleteStatusIcon = styled.div`
   margin: 0 auto 12px;
+  color: ${props => (props.$isWarning ? '#f97316' : '#9ca3af')};
 `;
 
-export const EmptyStateText = styled.p`
+export const IncompleteStatusText = styled.p`
   font-size: 14px;
-  color: #6E8FB3;
+  font-weight: ${props => (props.$isWarning ? '600' : '400')};
+  color: ${props => (props.$isWarning ? '#f97316' : '#6e8fb3')};
+  margin: 0 0 8px 0;
+`;
+
+export const IncompleteStatusSubtext = styled.p`
+  font-size: 12px;
+  color: #6e8fb3;
   margin: 0 0 16px 0;
 `;
 
-export const EmptyStateButton = styled.button`
-  padding: 10px 20px;
-  background-color: #9333EA;
-  color: white;
-  font-weight: 600;
-  border-radius: 8px;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-
-  &:hover {
-    opacity: 0.9;
-    transform: translateY(-1px);
-  }
+// 모달 스타일 (Dialog 컴포넌트 내부 스타일)
+export const SurveyModalContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 0;
 `;
 
-// 설문 질문
+export const SurveyDescription = styled.div`
+  font-size: 14px;
+  color: #6e8fb3;
+  line-height: 1.6;
+`;
+
+export const SurveyDivider = styled.div`
+  border-top: 1px solid #dadde1;
+  margin: 16px 0;
+`;
+
+export const SurveyQuestionList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+`;
+
 export const SurveyQuestion = styled.div`
   display: flex;
   flex-direction: column;
@@ -321,11 +300,11 @@ export const SurveyQuestionText = styled.p`
 
 export const SurveyQuestionDesc = styled.p`
   font-size: 12px;
-  color: #6E8FB3;
+  color: #6e8fb3;
   margin: 0;
 `;
 
-export const SurveyAnswerGrid = styled.div`
+export const SurveyAnswerButtons = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
@@ -336,31 +315,37 @@ export const SurveyAnswerButton = styled.button`
   width: 32px;
   height: 32px;
   border-radius: 6px;
-  border: 1px solid ${props => props.$isSelected ? '#3F4A5A' : '#DADDE1'};
-  background-color: ${props => props.$isSelected ? '#3F4A5A' : 'white'};
-  color: ${props => props.$isSelected ? 'white' : '#1F2328'};
+  border: 1px solid ${props => (props.$isSelected ? '#3F4A5A' : '#DADDE1')};
+  background-color: ${props => (props.$isSelected ? '#3F4A5A' : 'white')};
+  color: ${props => (props.$isSelected ? 'white' : '#1F2328')};
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
-  font-size: 14px;
 
   &:hover {
-    border-color: #6E8FB3;
+    border-color: ${props => (props.$isSelected ? '#3F4A5A' : '#6E8FB3')};
   }
 `;
 
 export const SurveyInfoBox = styled.div`
   padding: 12px;
-  background-color: #DBEAFE;
-  border: 1px solid #BFDBFE;
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
   border-radius: 8px;
+`;
+
+export const SurveyInfoText = styled.div`
   font-size: 12px;
-  color: #6E8FB3;
-  
-  p {
-    margin: 0;
-    
-    &:last-child {
-      margin-top: 4px;
-    }
-  }
+  color: #6e8fb3;
+  margin: 0;
+  line-height: 1.5;
+`;
+
+export const SurveyModalActions = styled.div`
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding-top: 16px;
+  border-top: 1px solid #dadde1;
 `;

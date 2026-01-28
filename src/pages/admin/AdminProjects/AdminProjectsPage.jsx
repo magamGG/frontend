@@ -466,7 +466,7 @@ export function AdminProjectsPage() {
               <AdminProjectsFilterLabel>작가:</AdminProjectsFilterLabel>
               <AdminProjectsFilterButtons>
                 <FilterButton 
-                  variant={selectedArtistFilter === null ? 'default' : 'outline'} 
+                  variant="outline"
                   size="sm" 
                   onClick={() => setSelectedArtistFilter(null)}
                   className={selectedArtistFilter === null ? 'active' : ''}
@@ -476,7 +476,7 @@ export function AdminProjectsPage() {
                 {artists.map((artist) => (
                   <FilterButton
                     key={artist.id}
-                    variant={selectedArtistFilter === artist.id ? 'default' : 'outline'}
+                    variant="outline"
                     size="sm"
                     onClick={() => setSelectedArtistFilter(artist.id)}
                     className={selectedArtistFilter === artist.id ? 'active' : ''}
@@ -497,10 +497,11 @@ export function AdminProjectsPage() {
                   {['전체', '연재중', '휴재', '완결'].map((filter) => (
                     <FilterButton
                       key={filter}
-                      variant={statusFilter === filter ? 'default' : 'outline'}
+                      variant="outline"
                       size="sm"
                       onClick={() => handleFilterChange(filter)}
                       className={statusFilter === filter ? 'active' : ''}
+                      $status={filter}
                     >
                       {filter}
                     </FilterButton>

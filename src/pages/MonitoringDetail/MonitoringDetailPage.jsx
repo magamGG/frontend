@@ -122,22 +122,26 @@ export function MonitoringDetailPage({ onBack }) {
 
         {/* 통계 카드 */}
         <StatisticsGrid>
-          <StatisticsCard>
+          <StatisticsCard $hasBorder={true}>
             <StatisticsLabel>전체 인원</StatisticsLabel>
             <StatisticsValue>{stats.total}명</StatisticsValue>
           </StatisticsCard>
           <StatisticsCard>
-            <StatisticsIcon $color="red">
-              <AlertTriangle className="w-3 h-3" />
-            </StatisticsIcon>
-            <StatisticsLabel $color="red">위험</StatisticsLabel>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '8px', width: '100%' }}>
+              <StatisticsIcon $color="red">
+                <AlertTriangle className="w-3 h-3" />
+              </StatisticsIcon>
+              <StatisticsLabel $color="red" style={{ marginBottom: 0 }}>위험</StatisticsLabel>
+            </div>
             <StatisticsValue $color="red">{stats.risk}명</StatisticsValue>
           </StatisticsCard>
           <StatisticsCard>
-            <StatisticsIcon $color="orange">
-              <TrendingUp className="w-3 h-3" />
-            </StatisticsIcon>
-            <StatisticsLabel $color="orange">주의</StatisticsLabel>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '8px', width: '100%' }}>
+              <StatisticsIcon $color="orange">
+                <TrendingUp className="w-3 h-3" />
+              </StatisticsIcon>
+              <StatisticsLabel $color="orange" style={{ marginBottom: 0 }}>주의</StatisticsLabel>
+            </div>
             <StatisticsValue $color="orange">{stats.warning}명</StatisticsValue>
           </StatisticsCard>
           <StatisticsCard>

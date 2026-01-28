@@ -74,7 +74,7 @@ const teamMembers = [
     id: 3,
     name: '박채색',
     role: '채색 담당',
-    status: '휴재',
+    status: '휴가',
     avatar: '박',
     projects: ['내 웹툰'],
     productivity: 78,
@@ -117,7 +117,7 @@ const recentActivities = [
     memberName: '박채색',
     memberAvatar: '박',
     isPrimary: false,
-    action: '휴재를 신청했습니다.',
+    action: '휴가를 신청했습니다.',
     time: '어제',
   },
   {
@@ -134,7 +134,7 @@ export function ArtistTeamPage() {
   // 통계 계산
   const totalMembers = teamMembers.length;
   const workingMembers = teamMembers.filter((m) => m.status === '출근').length;
-  const onLeaveMembers = teamMembers.filter((m) => m.status === '휴재').length;
+  const onLeaveMembers = teamMembers.filter((m) => m.status === '휴가').length;
   const averageProductivity = Math.round(teamMembers.reduce((sum, m) => sum + m.productivity, 0) / teamMembers.length);
 
   return (
@@ -168,7 +168,7 @@ export function ArtistTeamPage() {
           </ArtistTeamOverviewCard>
           <ArtistTeamOverviewCard>
             <ArtistTeamOverviewContent>
-              <ArtistTeamOverviewLabel>휴재</ArtistTeamOverviewLabel>
+              <ArtistTeamOverviewLabel>휴가</ArtistTeamOverviewLabel>
               <ArtistTeamOverviewValueAmber>{onLeaveMembers}명</ArtistTeamOverviewValueAmber>
             </ArtistTeamOverviewContent>
             <ArtistTeamOverviewIcon $bgColor="#d97706">

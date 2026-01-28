@@ -29,7 +29,7 @@ import {
 } from './LeaveRequestModal.styled';
 
 /**
- * @typedef {'연차' | '병가' | '워케이션' | '재택근무' | '휴재'} LeaveType
+ * @typedef {'연차' | '병가' | '워케이션' | '재택근무' | '휴가'} LeaveType
  */
 
 // 현재 날짜를 YYYY-MM-DD 형식으로 반환
@@ -100,7 +100,7 @@ export function LeaveRequestModal({ open, onOpenChange }) {
     }
   }, [selectedType, getMemberName]);
 
-  const leaveTypes = ['연차', '반차', '병가', '워케이션', '재택근무', '휴재'];
+  const leaveTypes = ['연차', '반차', '병가', '워케이션', '재택근무', '휴가'];
 
   const projectOptions = ['선택 안 함', ...projects.map(p => `${p.title} (${p.currentEpisode})`)];
 
@@ -232,7 +232,7 @@ export function LeaveRequestModal({ open, onOpenChange }) {
       '병가': 'break',
       '워케이션': 'workation',
       '재택근무': 'remote',
-      '휴재': 'break',
+      '휴가': 'break',
     };
 
     const newRequestData = {
@@ -320,8 +320,8 @@ export function LeaveRequestModal({ open, onOpenChange }) {
         return '워케이션 관련 제출 자료가 있으면 첨부할 수 있습니다.';
       case '재택근무':
         return '재택근무 관련 공지/승인 자료가 있으면 첨부할 수 있습니다.';
-      case '휴재':
-        return '휴재 사유 관련 자료가 있다면 첨부할 수 있습니다.';
+      case '휴가':
+        return '휴가 사유 관련 자료가 있다면 첨부할 수 있습니다.';
       default:
         return '';
     }
@@ -515,8 +515,8 @@ export function LeaveRequestModal({ open, onOpenChange }) {
             </FormGroup>
           )}
 
-          {/* 작품(선택) (휴재 선택시만) */}
-          {selectedType === '휴재' && (
+          {/* 작품(선택) (휴가 선택시만) */}
+          {selectedType === '휴가' && (
             <FormGroup>
               <Label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>작품(선택)</Label>
               <div style={{ position: 'relative' }}>
@@ -553,7 +553,7 @@ export function LeaveRequestModal({ open, onOpenChange }) {
                   </DropdownMenu>
                 )}
               </div>
-              <DaysInfo>휴재는 특정 작품과 연결할 수 있으요.</DaysInfo>
+              <DaysInfo>휴가는 특정 작품과 연결할 수 있으요.</DaysInfo>
             </FormGroup>
           )}
 

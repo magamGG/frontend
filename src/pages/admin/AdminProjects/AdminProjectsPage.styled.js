@@ -398,8 +398,83 @@ export const PrimaryButton = styled(Button)`
 // Filter Button 스타일
 export const FilterButton = styled(Button)`
   &.active {
-    background-color: var(--primary);
-    color: var(--primary-foreground);
+    background-color: ${props => {
+      switch (props.$status) {
+        case '전체':
+          return '#D0D0D0'; /* Light gray */
+        case '연재중':
+          return '#3ECF59'; /* Bright green */
+        case '휴재':
+          return '#FF7F27'; /* Vibrant orange */
+        case '완결':
+          return '#6A7079'; /* Dark muted gray/blue-gray */
+        default:
+          return '#D0D0D0';
+      }
+    }};
+    color: ${props => {
+      switch (props.$status) {
+        case '전체':
+          return '#333333'; /* Dark gray text */
+        case '연재중':
+        case '휴재':
+        case '완결':
+          return '#FFFFFF'; /* White text */
+        default:
+          return '#333333';
+      }
+    }};
+    border-color: ${props => {
+      switch (props.$status) {
+        case '전체':
+          return '#D0D0D0';
+        case '연재중':
+          return '#3ECF59';
+        case '휴재':
+          return '#FF7F27';
+        case '완결':
+          return '#6A7079';
+        default:
+          return '#D0D0D0';
+      }
+    }};
+    
+    &:hover {
+      background-color: ${props => {
+        switch (props.$status) {
+          case '전체':
+            return '#C0C0C0'; /* Slightly darker gray */
+          case '연재중':
+            return '#35B84D'; /* Slightly darker green */
+          case '휴재':
+            return '#E6701F'; /* Slightly darker orange */
+          case '완결':
+            return '#5A6069'; /* Slightly darker gray */
+          default:
+            return '#C0C0C0';
+        }
+      }};
+      border-color: ${props => {
+        switch (props.$status) {
+          case '전체':
+            return '#C0C0C0';
+          case '연재중':
+            return '#35B84D';
+          case '휴재':
+            return '#E6701F';
+          case '완결':
+            return '#5A6069';
+          default:
+            return '#C0C0C0';
+        }
+      }};
+    }
+  }
+  
+  &:not(.active) {
+    background-color: transparent;
+    color: var(--foreground);
+    border-color: var(--border);
   }
 `;
 
