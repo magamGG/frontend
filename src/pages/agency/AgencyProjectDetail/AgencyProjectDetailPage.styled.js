@@ -6,6 +6,7 @@ export const AgencyProjectDetailRoot = styled.div`
   min-height: 100vh;
   overflow-y: auto;
   background-color: var(--background);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 `;
 
 // 중앙 정렬 및 최대 폭 설정 (데스크탑 레이아웃 기준)
@@ -258,6 +259,10 @@ export const ReadOnlyCardAssignee = styled.div`
   align-items: center;
   gap: 4px;
   font-size: 0.75rem;
+  color: var(--muted-foreground);
+  background-color: var(--muted);
+  padding: 2px 6px;
+  border-radius: 4px;
 `;
 
 export const ReadOnlyCardComments = styled.div`

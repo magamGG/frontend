@@ -14,7 +14,8 @@ import {
   Clock,
   CheckCircle2,
   TrendingUp,
-  FileText
+  FileText,
+  ArrowUpDown
 } from 'lucide-react';
 import { mockWorkcationMembers } from '@/data/mockData';
 import {
@@ -75,16 +76,10 @@ import {
   ProjectsSection,
 } from './AgencyWorkcationPage.styled';
 
-const ROLE_FILTERS = [
-  { value: 'all', label: '전체' },
-  { value: 'story', label: '스토리' },
-  { value: 'line', label: '라인' },
-  { value: 'coloring', label: '컬러링' },
-];
-
 export function AgencyWorkcationPage() {
   const [selectedMember, setSelectedMember] = useState(null);
-  const [filterRole, setFilterRole] = useState('all');
+  const [sortType, setSortType] = useState(null);
+  const [sortOrder, setSortOrder] = useState('asc');
 
   // Calculate days remaining for each member
   const getDaysRemaining = (endDate) => {
@@ -122,10 +117,37 @@ export function AgencyWorkcationPage() {
     }
   };
 
-  // Filter members by role
-  const filteredMembers = filterRole === 'all' 
-    ? mockWorkcationMembers 
-    : mockWorkcationMembers.filter(m => m.role === filterRole);
+  // 정렬 핸들러
+  const handleSort = (type) => {
+    if (sortType === type) {
+      if (sortOrder === 'asc') {
+        setSortOrder('desc');
+      } else {
+        setSortType(null);
+        setSortOrder('asc');
+      }
+    } else {
+      setSortType(type);
+      setSortOrder('asc');
+    }
+  };
+
+  // Sort members
+  const sortedMembers = [...mockWorkcationMembers].sort((a, b) => {
+    if (!sortType) return 0;
+
+    if (sortType === 'alphabetical') {
+      const comparison = a.name.localeCompare(b.name, 'ko');
+      return sortOrder === 'asc' ? comparison : -comparison;
+    } else if (sortType === 'imminent') {
+      // 연재 임박 순서: 마감일이 가까운 순서
+      const aDeadline = a.tasks.length > 0 ? new Date(a.tasks[0].deadline) : new Date('9999-12-31');
+      const bDeadline = b.tasks.length > 0 ? new Date(b.tasks[0].deadline) : new Date('9999-12-31');
+      const comparison = aDeadline - bDeadline;
+      return sortOrder === 'asc' ? comparison : -comparison;
+    }
+    return 0;
+  });
 
   // Calculate statistics
   const stats = {
@@ -140,6 +162,7 @@ export function AgencyWorkcationPage() {
     ),
   };
 
+
   return (
     <AgencyWorkcationRoot>
       <AgencyWorkcationBody>
@@ -149,64 +172,75 @@ export function AgencyWorkcationPage() {
             <HeaderTitle>원격 관리</HeaderTitle>
             <HeaderSubtitle>원격 근무 중인 팀원들의 작업 현황을 관리합니다</HeaderSubtitle>
           </div>
-          <HeaderActions>
-            <FilterButtonGroup>
-              {ROLE_FILTERS.map((filter) => (
-                <Button
-                  key={filter.value}
-                  variant={filterRole === filter.value ? 'default' : 'outline'}
-                  onClick={() => setFilterRole(filter.value)}
-                  className={filterRole === filter.value ? 'bg-[#3F4A5A]' : ''}
-                >
-                  {filter.label}
-                </Button>
-              ))}
-            </FilterButtonGroup>
-          </HeaderActions>
         </HeaderSection>
+
+        {/* 정렬 옵션 */}
+        <div className="mb-4 flex justify-end">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--foreground)', whiteSpace: 'nowrap' }}>정렬:</span>
+            <FilterButtonGroup>
+              <Button
+                variant={sortType === 'alphabetical' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => handleSort('alphabetical')}
+                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+              >
+                가나다순
+                {sortType === 'alphabetical' && (
+                  <>
+                    <ArrowUpDown className="w-3 h-3" />
+                    <span style={{ fontSize: '12px' }}>{sortOrder === 'asc' ? '↑' : '↓'}</span>
+                  </>
+                )}
+              </Button>
+              <Button
+                variant={sortType === 'imminent' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => handleSort('imminent')}
+                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+              >
+                연재 임박
+                {sortType === 'imminent' && (
+                  <>
+                    <ArrowUpDown className="w-3 h-3" />
+                    <span style={{ fontSize: '12px' }}>{sortOrder === 'asc' ? '↑' : '↓'}</span>
+                  </>
+                )}
+              </Button>
+            </FilterButtonGroup>
+          </div>
+        </div>
 
         {/* Statistics Cards */}
         <StatisticsGrid>
           <StatisticsCard>
-            <StatisticsCardContent>
-              <div>
-                <StatisticsLabel>원격 인원</StatisticsLabel>
-                <StatisticsValue>{stats.total}명</StatisticsValue>
-              </div>
-              <StatisticsIcon $color="purple">
-                <MapPin className="w-6 h-6 text-purple-600" />
-              </StatisticsIcon>
-            </StatisticsCardContent>
+            <div className="flex items-center gap-2 mb-2">
+              <MapPin className="w-4 h-4 text-purple-600" />
+              <StatisticsLabel>원격 인원</StatisticsLabel>
+            </div>
+            <p className="text-2xl font-bold text-foreground">{stats.total}명</p>
           </StatisticsCard>
 
           <StatisticsCard>
-            <StatisticsCardContent>
-              <div>
-                <StatisticsLabel>진행 중인 작업</StatisticsLabel>
-                <StatisticsValue>{stats.totalTasks}개</StatisticsValue>
-              </div>
-              <StatisticsIcon $color="green">
-                <Briefcase className="w-6 h-6 text-green-600" />
-              </StatisticsIcon>
-            </StatisticsCardContent>
+            <div className="flex items-center gap-2 mb-2">
+              <Briefcase className="w-4 h-4 text-green-600" />
+              <StatisticsLabel>진행 중인 작업</StatisticsLabel>
+            </div>
+            <p className="text-2xl font-bold text-foreground">{stats.totalTasks}개</p>
           </StatisticsCard>
 
           <StatisticsCard>
-            <StatisticsCardContent>
-              <div>
-                <StatisticsLabel>완료된 작업</StatisticsLabel>
-                <StatisticsValue>{stats.completedTasks}개</StatisticsValue>
-              </div>
-              <StatisticsIcon $color="teal">
-                <CheckCircle2 className="w-6 h-6 text-teal-600" />
-              </StatisticsIcon>
-            </StatisticsCardContent>
+            <div className="flex items-center gap-2 mb-2">
+              <CheckCircle2 className="w-4 h-4 text-teal-600" />
+              <StatisticsLabel>완료된 작업</StatisticsLabel>
+            </div>
+            <p className="text-2xl font-bold text-foreground">{stats.completedTasks}개</p>
           </StatisticsCard>
         </StatisticsGrid>
 
         {/* Workcation Members Grid */}
         <MembersGrid>
-          {filteredMembers.map((member) => {
+          {sortedMembers.map((member) => {
             const daysRemaining = getDaysRemaining(member.endDate);
             const avgProgress = Math.round(
               member.tasks.reduce((acc, t) => acc + t.progress, 0) / member.tasks.length
@@ -252,12 +286,12 @@ export function AgencyWorkcationPage() {
                   {/* Location & Date */}
                   <div className="space-y-2">
                     <MemberCardLocation>
-                      <MapPin className="w-4 h-4 text-[#3F4A5A]" />
-                      <span className="text-sm font-medium">{member.location}</span>
+                      <MapPin className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm font-medium text-foreground">{member.location}</span>
                     </MemberCardLocation>
                     <MemberCardDate>
-                      <Calendar className="w-4 h-4" />
-                      <span className="text-sm">
+                      <Calendar className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">
                         {member.startDate.slice(5)} ~ {member.endDate.slice(5)}
                       </span>
                     </MemberCardDate>
@@ -265,13 +299,13 @@ export function AgencyWorkcationPage() {
 
                   {/* Projects */}
                   <div>
-                    <p className="text-xs text-[#6E8FB3] mb-2">담당 작품</p>
+                    <p className="text-xs text-muted-foreground mb-2">담당 작품</p>
                     <MemberCardProjects>
                       {member.projectNames.map((project, idx) => (
                         <Badge 
                           key={idx}
                           variant="outline" 
-                          className="text-xs border-[#DADDE1] text-[#1F2328]"
+                          className="text-xs border-border text-foreground"
                         >
                           {project}
                         </Badge>
@@ -282,23 +316,23 @@ export function AgencyWorkcationPage() {
                   {/* Progress */}
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs text-[#6E8FB3]">전체 작업 진행률</span>
-                      <span className="text-sm font-semibold text-[#1F2328]">{avgProgress}%</span>
+                      <span className="text-sm text-muted-foreground">전체 작업 진행률</span>
+                      <span className="text-2xl font-bold text-foreground">{avgProgress}%</span>
                     </div>
-                    <Progress value={avgProgress} className="h-2" />
+                    <Progress value={avgProgress} className="h-3" />
                   </div>
 
                   {/* Tasks Summary */}
                   <MemberCardTasks>
                     <div className="flex items-center gap-4 text-sm">
-                      <span className="text-[#6E8FB3]">
-                        작업 <span className="font-semibold text-[#1F2328]">{member.tasks.length}개</span>
+                      <span className="text-muted-foreground">
+                        작업 <span className="font-semibold text-foreground">{member.tasks.length}개</span>
                       </span>
                     </div>
                     <Button 
                       variant="ghost" 
                       size="sm"
-                      className="text-[#3F4A5A] hover:text-[#3F4A5A]/80 hover:bg-[#3F4A5A]/10 transition-transform"
+                      className="text-foreground hover:text-foreground/80 hover:bg-muted transition-transform"
                     >
                       상세보기
                       <ChevronRight className="w-4 h-4 ml-1" />
@@ -311,20 +345,20 @@ export function AgencyWorkcationPage() {
         </MembersGrid>
 
         {/* Empty State */}
-        {filteredMembers.length === 0 && (
+        {sortedMembers.length === 0 && (
           <EmptyStateCard>
             <EmptyStateIcon>
               <MapPin className="w-8 h-8 text-purple-600" />
             </EmptyStateIcon>
             <EmptyStateTitle>워케이션 중인 팀원이 없습니다</EmptyStateTitle>
-            <EmptyStateText>선택한 역할의 워케이션 인원이 없습니다</EmptyStateText>
+            <EmptyStateText>워케이션 중인 인원이 없습니다</EmptyStateText>
           </EmptyStateCard>
         )}
       </AgencyWorkcationBody>
 
       {/* Detail Modal */}
       <Dialog open={!!selectedMember} onOpenChange={() => setSelectedMember(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto modal-scrollbar-transparent" aria-describedby={undefined}>
           {selectedMember && (
             <>
               <DialogHeader>
@@ -333,7 +367,7 @@ export function AgencyWorkcationPage() {
 
               <DetailModalContent>
                 {/* Member Info Card */}
-                <div className="bg-[#3F4A5A] rounded-lg p-6 text-white">
+                <div className="bg-gradient-to-br from-purple-600 to-purple-800 rounded-lg p-6 text-white">
                   <DetailMemberHeader>
                     <DetailMemberInfo>
                       <DetailMemberAvatar>
@@ -402,30 +436,30 @@ export function AgencyWorkcationPage() {
                   <DailyReportCard>
                     <DailyReportHeader>
                       <DailyReportTitle>
-                        <FileText className="w-5 h-5 text-blue-600" />
-                        <h4 className="font-semibold text-[#1F2328]">현재 작업 중인 업무</h4>
+                        <FileText className="w-5 h-5 text-primary" />
+                        <h4 className="font-semibold text-foreground">현재 작업 중인 업무</h4>
                       </DailyReportTitle>
-                      <Badge variant="outline" className="ml-auto text-xs">
+                      <Badge variant="outline" className="ml-auto text-xs bg-white">
                         {selectedMember.dailyReport.lastUpdated}
                       </Badge>
                     </DailyReportHeader>
 
                     <div className="space-y-4">
                       <div>
-                        <p className="text-sm text-[#6E8FB3] mb-2">전체 진행률</p>
+                        <p className="text-sm text-muted-foreground mb-2">전체 진행률</p>
                         <DailyReportProgress>
                           <Progress value={selectedMember.dailyReport.progress} className="flex-1" />
-                          <span className="text-lg font-bold text-[#1F2328]">
+                          <span className="text-lg font-bold text-foreground">
                             {selectedMember.dailyReport.progress}%
                           </span>
                         </DailyReportProgress>
                       </div>
 
                       <div>
-                        <p className="text-sm font-semibold text-[#1F2328] mb-2">완료한 작업</p>
+                        <p className="text-sm font-semibold text-foreground mb-2">완료한 작업</p>
                         <DailyReportTasks>
                           {selectedMember.dailyReport.tasksCompleted.map((task, idx) => (
-                            <li key={idx} className="flex items-center gap-2 text-sm text-[#1F2328]">
+                            <li key={idx} className="flex items-center gap-2 text-sm text-foreground">
                               <CheckCircle2 className="w-4 h-4 text-green-600" />
                               {task}
                             </li>
@@ -438,8 +472,8 @@ export function AgencyWorkcationPage() {
 
                 {/* Tasks List */}
                 <div>
-                  <h4 className="font-semibold text-[#1F2328] mb-4 flex items-center gap-2">
-                    <Briefcase className="w-5 h-5 text-[#6E8FB3]" />
+                  <h4 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+                    <Briefcase className="w-5 h-5 text-muted-foreground" />
                     담당 작업 목록
                   </h4>
                   <TasksList>
@@ -448,7 +482,7 @@ export function AgencyWorkcationPage() {
                         <TaskCardHeader>
                           <div className="flex-1">
                             <TaskCardTitle>
-                              <h5 className="font-semibold text-[#1F2328]">{task.title}</h5>
+                              <h5 className="font-semibold text-foreground">{task.title}</h5>
                               <Badge 
                                 variant="outline" 
                                 className={`text-xs ${getPriorityColor(task.priority)}`}
@@ -458,7 +492,7 @@ export function AgencyWorkcationPage() {
                             </TaskCardTitle>
                             <TaskCardInfo>{task.projectName}</TaskCardInfo>
                           </div>
-                          <div className="flex items-center gap-1 text-sm text-[#6E8FB3]">
+                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
                             <Clock className="w-4 h-4" />
                             <span>{task.deadline}</span>
                           </div>
@@ -466,8 +500,8 @@ export function AgencyWorkcationPage() {
 
                         <TaskCardProgress>
                           <div className="flex items-center justify-between text-sm">
-                            <span className="text-[#6E8FB3]">진행률</span>
-                            <span className="font-semibold text-[#1F2328]">{task.progress}%</span>
+                            <span className="text-muted-foreground">진행률</span>
+                            <span className="font-semibold text-foreground">{task.progress}%</span>
                           </div>
                           <Progress value={task.progress} className="h-2" />
                         </TaskCardProgress>
@@ -485,13 +519,13 @@ export function AgencyWorkcationPage() {
 
                 {/* Projects */}
                 <ProjectsSection>
-                  <h4 className="font-semibold text-[#1F2328] mb-4">참여 작품</h4>
+                  <h4 className="font-semibold text-foreground mb-4">참여 작품</h4>
                   <div className="flex flex-wrap gap-2">
                     {selectedMember.projectNames.map((project, idx) => (
                       <Badge 
                         key={idx}
                         variant="outline"
-                        className="px-4 py-2 text-sm border-[#DADDE1] text-[#1F2328]"
+                        className="px-4 py-2 text-sm border-border text-foreground"
                       >
                         {project}
                       </Badge>
