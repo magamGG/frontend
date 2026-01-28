@@ -88,33 +88,53 @@ export function ArtistHealthPage() {
   const [isMentalDeepCheckOpen, setIsMentalDeepCheckOpen] = useState(false);
   const [isPhysicalDeepCheckOpen, setIsPhysicalDeepCheckOpen] = useState(false);
 
-  const [mentalSelfAnswers, setMentalSelfAnswers] = useState([0, 0, 0, 0]);
-  const [physicalSelfAnswers, setPhysicalSelfAnswers] = useState([0, 0, 0, 0]);
-  const [mentalDeepAnswers, setMentalDeepAnswers] = useState([0, 0, 0, 0]);
-  const [physicalDeepAnswers, setPhysicalDeepAnswers] = useState([0, 0, 0, 0]);
+  const [mentalSelfAnswers, setMentalSelfAnswers] = useState([null, null, null, null]);
+  const [physicalSelfAnswers, setPhysicalSelfAnswers] = useState([null, null, null, null]);
+  const [mentalDeepAnswers, setMentalDeepAnswers] = useState([null, null, null, null]);
+  const [physicalDeepAnswers, setPhysicalDeepAnswers] = useState([null, null, null, null]);
 
   const [nextCheckupDate] = useState(initialNextCheckupDate);
   const [deepCheckupData, setDeepCheckupData] = useState(initialDeepCheckupData);
 
   const handleSubmitMentalSelf = () => {
+    // 모든 문항이 선택되었는지 확인
+    if (mentalSelfAnswers.some(answer => answer === null)) {
+      toast.error('모든 문항에 답변해주세요.');
+      return;
+    }
     toast.success('정신 건강 자가검진이 제출되었습니다.');
     setIsMentalSelfCheckOpen(false);
-    setMentalSelfAnswers([0, 0, 0, 0]);
+    setMentalSelfAnswers([null, null, null, null]);
   };
 
   const handleSubmitPhysicalSelf = () => {
+    // 모든 문항이 선택되었는지 확인
+    if (physicalSelfAnswers.some(answer => answer === null)) {
+      toast.error('모든 문항에 답변해주세요.');
+      return;
+    }
     toast.success('신체 건강 자가검진이 제출되었습니다.');
     setIsPhysicalSelfCheckOpen(false);
-    setPhysicalSelfAnswers([0, 0, 0, 0]);
+    setPhysicalSelfAnswers([null, null, null, null]);
   };
 
   const handleSubmitMentalDeep = () => {
+    // 모든 문항이 선택되었는지 확인
+    if (mentalDeepAnswers.some(answer => answer === null)) {
+      toast.error('모든 문항에 답변해주세요.');
+      return;
+    }
     toast.success('정신 건강 심층 검진이 제출되었습니다.');
     setIsMentalDeepCheckOpen(false);
-    setMentalDeepAnswers([0, 0, 0, 0]);
+    setMentalDeepAnswers([null, null, null, null]);
   };
 
   const handleSubmitPhysicalDeep = () => {
+    // 모든 문항이 선택되었는지 확인
+    if (physicalDeepAnswers.some(answer => answer === null)) {
+      toast.error('모든 문항에 답변해주세요.');
+      return;
+    }
     const totalScore = physicalDeepAnswers.reduce((sum, score) => sum + score, 0);
     const averageScore = Math.round(totalScore / physicalDeepAnswers.length);
     const finalScore = Math.max(7, averageScore);
@@ -142,7 +162,7 @@ export function ArtistHealthPage() {
 
     toast.success('신체 건강 심층 검진이 제출되었습니다.');
     setIsPhysicalDeepCheckOpen(false);
-    setPhysicalDeepAnswers([0, 0, 0, 0]);
+    setPhysicalDeepAnswers([null, null, null, null]);
   };
 
   const getStatusBadgeClass = (status) => {
@@ -277,7 +297,13 @@ export function ArtistHealthPage() {
                   <Activity className="w-12 h-12" />
                 </IncompleteStatusIcon>
                 <IncompleteStatusText>아직 검사를 진행하지 않았습니다.</IncompleteStatusText>
-                <Button onClick={() => setIsMentalDeepCheckOpen(true)} className="bg-purple-600 hover:bg-purple-700 text-white">
+                <Button 
+                  onClick={() => {
+                    setMentalDeepAnswers([null, null, null, null]);
+                    setIsMentalDeepCheckOpen(true);
+                  }} 
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                >
                   검사하기
                 </Button>
               </IncompleteStatusBox>
@@ -353,7 +379,13 @@ export function ArtistHealthPage() {
                 </IncompleteStatusIcon>
                 <IncompleteStatusText $isWarning>검사가 아직 완료되지 않았습니다</IncompleteStatusText>
                 <IncompleteStatusSubtext>2026.02.01까지 검사를 완료해주세요</IncompleteStatusSubtext>
-                <Button onClick={() => setIsPhysicalDeepCheckOpen(true)} className="bg-orange-500 hover:bg-orange-600 text-white font-semibold shadow-md">
+                <Button 
+                  onClick={() => {
+                    setPhysicalDeepAnswers([null, null, null, null]);
+                    setIsPhysicalDeepCheckOpen(true);
+                  }} 
+                  className="bg-orange-500 hover:bg-orange-600 text-white font-semibold shadow-md"
+                >
                   검사 시작하기
                 </Button>
               </IncompleteStatusBox>
@@ -363,7 +395,15 @@ export function ArtistHealthPage() {
       </ArtistHealthBody>
 
       {/* 정신 건강 자가검진 모달 */}
-      <Dialog open={isMentalSelfCheckOpen} onOpenChange={setIsMentalSelfCheckOpen}>
+      <Dialog 
+        open={isMentalSelfCheckOpen} 
+        onOpenChange={(open) => {
+          setIsMentalSelfCheckOpen(open);
+          if (open) {
+            setMentalSelfAnswers([null, null, null, null]);
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-[500px] bg-white max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-lg text-[#1F2328] font-bold">정신 건강 자가검진</DialogTitle>
@@ -428,7 +468,7 @@ export function ArtistHealthPage() {
               variant="outline"
               onClick={() => {
                 setIsMentalSelfCheckOpen(false);
-                setMentalSelfAnswers([0, 0, 0, 0]);
+                setMentalSelfAnswers([null, null, null, null]);
               }}
             >
               취소
@@ -441,7 +481,15 @@ export function ArtistHealthPage() {
       </Dialog>
 
       {/* 신체 건강 자가검진 모달 */}
-      <Dialog open={isPhysicalSelfCheckOpen} onOpenChange={setIsPhysicalSelfCheckOpen}>
+      <Dialog 
+        open={isPhysicalSelfCheckOpen} 
+        onOpenChange={(open) => {
+          setIsPhysicalSelfCheckOpen(open);
+          if (open) {
+            setPhysicalSelfAnswers([null, null, null, null]);
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-[500px] bg-white max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-lg text-[#1F2328] font-bold">신체 건강 자가검진</DialogTitle>
@@ -513,7 +561,7 @@ export function ArtistHealthPage() {
               variant="outline"
               onClick={() => {
                 setIsPhysicalSelfCheckOpen(false);
-                setPhysicalSelfAnswers([0, 0, 0, 0]);
+                setPhysicalSelfAnswers([null, null, null, null]);
               }}
             >
               취소
@@ -526,7 +574,15 @@ export function ArtistHealthPage() {
       </Dialog>
 
       {/* 정신 건강 심층 검진 모달 */}
-      <Dialog open={isMentalDeepCheckOpen} onOpenChange={setIsMentalDeepCheckOpen}>
+      <Dialog 
+        open={isMentalDeepCheckOpen} 
+        onOpenChange={(open) => {
+          setIsMentalDeepCheckOpen(open);
+          if (open) {
+            setMentalDeepAnswers([null, null, null, null]);
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-[500px] bg-white max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-lg text-[#1F2328] font-bold">정신 건강 심층 검진</DialogTitle>
@@ -589,7 +645,7 @@ export function ArtistHealthPage() {
               variant="outline"
               onClick={() => {
                 setIsMentalDeepCheckOpen(false);
-                setMentalDeepAnswers([0, 0, 0, 0]);
+                setMentalDeepAnswers([null, null, null, null]);
               }}
             >
               취소
@@ -602,7 +658,15 @@ export function ArtistHealthPage() {
       </Dialog>
 
       {/* 신체 건강 심층 검진 모달 */}
-      <Dialog open={isPhysicalDeepCheckOpen} onOpenChange={setIsPhysicalDeepCheckOpen}>
+      <Dialog 
+        open={isPhysicalDeepCheckOpen} 
+        onOpenChange={(open) => {
+          setIsPhysicalDeepCheckOpen(open);
+          if (open) {
+            setPhysicalDeepAnswers([null, null, null, null]);
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-[500px] bg-white max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-lg text-[#1F2328] font-bold">신체 건강 심층 검진</DialogTitle>
@@ -665,7 +729,7 @@ export function ArtistHealthPage() {
               variant="outline"
               onClick={() => {
                 setIsPhysicalDeepCheckOpen(false);
-                setPhysicalDeepAnswers([0, 0, 0, 0]);
+                setPhysicalDeepAnswers([null, null, null, null]);
               }}
             >
               취소

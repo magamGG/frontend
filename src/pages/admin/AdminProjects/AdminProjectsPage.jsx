@@ -54,6 +54,14 @@ import {
   AdminProjectModalThumbnailPreview,
   AdminProjectModalThumbnailPreviewLabel,
   AdminProjectModalActions,
+  StatusBadge,
+  RequiredMark,
+  ThumbnailImage,
+  PrimaryButton,
+  FilterButton,
+  SortButton,
+  FullWidthButton,
+  ArtistBadge,
 } from './AdminProjectsPage.styled';
 
 export function AdminProjectsPage() {
@@ -77,29 +85,6 @@ export function AdminProjectsPage() {
     thumbnail: '',
     thumbnailFile: null,
   });
-
-  useEffect(() => {
-    const headerTitle = document.querySelector('h1.text-2xl.font-bold');
-    if (headerTitle) {
-      if (showDetailPage) {
-        headerTitle.textContent = '프로젝트 상세';
-      } else {
-        headerTitle.textContent = '프로젝트 관리';
-      }
-    }
-  }, [showDetailPage]);
-
-  // 프로젝트 렌더링 시 다음 연재 일정 계산 (렌더링 시점에 계산)
-  const getNextScheduleDate = (project) => {
-    if (project.nextScheduleDate) {
-      return project.nextScheduleDate;
-    }
-    if (project.startDate && project.schedule && !isNaN(project.schedule)) {
-      const nextDate = calculateNextScheduleDate(project.startDate, Number(project.schedule));
-      return nextDate ? formatDate(nextDate) : null;
-    }
-    return null;
-  };
 
   // TODO: Zustand store mapping - 작가 목록
   const [artists] = useState([
@@ -190,6 +175,32 @@ export function AdminProjectsPage() {
   ]);
 
   useEffect(() => {
+    const headerTitle = document.querySelector('h1.text-2xl.font-bold');
+    if (headerTitle) {
+      if (showDetailPage) {
+        headerTitle.textContent = '프로젝트 상세';
+      } else {
+        headerTitle.textContent = '프로젝트 관리';
+      }
+    }
+  }, [showDetailPage]);
+
+  // localStorage에서 선택된 프로젝트 ID 확인 및 자동 이동
+  useEffect(() => {
+    const selectedProjectId = localStorage.getItem('selectedProjectId');
+    if (selectedProjectId && !showDetailPage) {
+      const projectId = parseInt(selectedProjectId, 10);
+      const project = projects.find(p => p.id === projectId);
+      if (project) {
+        setSelectedProject(project);
+        setShowDetailPage(true);
+        // 사용 후 제거
+        localStorage.removeItem('selectedProjectId');
+      }
+    }
+  }, [projects, showDetailPage]);
+
+  useEffect(() => {
     const stored = localStorage.getItem('adminProjectsData');
     if (stored) {
       const data = JSON.parse(stored);
@@ -202,6 +213,55 @@ export function AdminProjectsPage() {
   useEffect(() => {
     localStorage.setItem('adminProjectsData', JSON.stringify(projects));
   }, [projects]);
+
+  // 다음 연재 일정 계산 함수
+  const calculateNextScheduleDate = (startDate, scheduleDays) => {
+    if (!startDate || !scheduleDays || isNaN(scheduleDays)) {
+      return null;
+    }
+
+    const start = new Date(startDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    start.setHours(0, 0, 0, 0);
+
+    // 시작일부터 오늘까지 경과한 일수 계산
+    const daysDiff = Math.floor((today - start) / (1000 * 60 * 60 * 24));
+    
+    // 다음 연재일 계산 (시작일 + (경과일수 / 주기 + 1) * 주기)
+    const cyclesPassed = Math.floor(daysDiff / scheduleDays);
+    const nextDate = new Date(start);
+    nextDate.setDate(start.getDate() + (cyclesPassed + 1) * scheduleDays);
+
+    // 오늘이 시작일보다 이전이면 시작일 반환
+    if (daysDiff < 0) {
+      return start;
+    }
+
+    return nextDate;
+  };
+
+  // 날짜 포맷팅 함수
+  const formatDate = (date) => {
+    if (!date) return null;
+    const d = new Date(date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // 프로젝트 렌더링 시 다음 연재 일정 계산 (렌더링 시점에 계산)
+  const getNextScheduleDate = (project) => {
+    if (project.nextScheduleDate) {
+      return project.nextScheduleDate;
+    }
+    if (project.startDate && project.schedule && !isNaN(project.schedule)) {
+      const nextDate = calculateNextScheduleDate(project.startDate, Number(project.schedule));
+      return nextDate ? formatDate(nextDate) : null;
+    }
+    return null;
+  };
 
   // 상태 필터 선택 핸들러 (단일 선택)
   const handleFilterChange = (filter) => {
@@ -256,43 +316,6 @@ export function AdminProjectsPage() {
 
     return 0;
   });
-
-  // 다음 연재 일정 계산 함수
-  const calculateNextScheduleDate = (startDate, scheduleDays) => {
-    if (!startDate || !scheduleDays || isNaN(scheduleDays)) {
-      return null;
-    }
-
-    const start = new Date(startDate);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    start.setHours(0, 0, 0, 0);
-
-    // 시작일부터 오늘까지 경과한 일수 계산
-    const daysDiff = Math.floor((today - start) / (1000 * 60 * 60 * 24));
-    
-    // 다음 연재일 계산 (시작일 + (경과일수 / 주기 + 1) * 주기)
-    const cyclesPassed = Math.floor(daysDiff / scheduleDays);
-    const nextDate = new Date(start);
-    nextDate.setDate(start.getDate() + (cyclesPassed + 1) * scheduleDays);
-
-    // 오늘이 시작일보다 이전이면 시작일 반환
-    if (daysDiff < 0) {
-      return start;
-    }
-
-    return nextDate;
-  };
-
-  // 날짜 포맷팅 함수
-  const formatDate = (date) => {
-    if (!date) return null;
-    const d = new Date(date);
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
 
   // 날짜를 한국어 형식으로 표시
   const formatDateKorean = (date) => {
@@ -390,18 +413,6 @@ export function AdminProjectsPage() {
     todayDeadlines: projects.filter((p) => p.deadline.includes('D-0') || p.deadline.includes('D-1') || p.deadline.includes('D-2')).slice(0, 3).length,
   };
 
-  const getStatusBadgeColor = (status) => {
-    switch (status) {
-      case '연재중':
-        return 'bg-green-500 hover:bg-green-600';
-      case '휴재':
-        return 'bg-orange-500 hover:bg-orange-600';
-      case '완결':
-        return 'bg-gray-500 hover:bg-gray-600';
-      default:
-        return 'bg-blue-500 hover:bg-blue-600';
-    }
-  };
 
   if (showDetailPage && selectedProject) {
     return <ProjectDetailPage project={selectedProject} onBack={() => setShowDetailPage(false)} />;
@@ -416,10 +427,10 @@ export function AdminProjectsPage() {
             <AdminProjectsTitle>프로젝트 관리</AdminProjectsTitle>
             <AdminProjectsDescription>담당 작가들의 작품을 관리하세요</AdminProjectsDescription>
           </AdminProjectsHeaderLeft>
-          <Button onClick={() => setIsAddModalOpen(true)} className="bg-primary hover:bg-primary/90">
+          <PrimaryButton onClick={() => setIsAddModalOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
             프로젝트 추가
-          </Button>
+          </PrimaryButton>
         </AdminProjectsHeader>
 
         {/* 상단 통계 카드 */}
@@ -454,19 +465,24 @@ export function AdminProjectsPage() {
             <AdminProjectsFilterRow>
               <AdminProjectsFilterLabel>작가:</AdminProjectsFilterLabel>
               <AdminProjectsFilterButtons>
-                <Button variant={selectedArtistFilter === null ? 'default' : 'outline'} size="sm" onClick={() => setSelectedArtistFilter(null)} className={selectedArtistFilter === null ? 'bg-primary' : ''}>
+                <FilterButton 
+                  variant="outline"
+                  size="sm" 
+                  onClick={() => setSelectedArtistFilter(null)}
+                  className={selectedArtistFilter === null ? 'active' : ''}
+                >
                   전체
-                </Button>
+                </FilterButton>
                 {artists.map((artist) => (
-                  <Button
+                  <FilterButton
                     key={artist.id}
-                    variant={selectedArtistFilter === artist.id ? 'default' : 'outline'}
+                    variant="outline"
                     size="sm"
                     onClick={() => setSelectedArtistFilter(artist.id)}
-                    className={selectedArtistFilter === artist.id ? 'bg-primary' : ''}
+                    className={selectedArtistFilter === artist.id ? 'active' : ''}
                   >
                     {artist.name}
-                  </Button>
+                  </FilterButton>
                 ))}
               </AdminProjectsFilterButtons>
             </AdminProjectsFilterRow>
@@ -479,31 +495,32 @@ export function AdminProjectsPage() {
                 <AdminProjectsFilterLabel>상태:</AdminProjectsFilterLabel>
                 <AdminProjectsFilterButtons>
                   {['전체', '연재중', '휴재', '완결'].map((filter) => (
-                    <Button
+                    <FilterButton
                       key={filter}
-                      variant={statusFilter === filter ? 'default' : 'outline'}
+                      variant="outline"
                       size="sm"
                       onClick={() => handleFilterChange(filter)}
-                      className={statusFilter === filter ? getStatusBadgeColor(filter === '전체' ? '' : filter) : ''}
+                      className={statusFilter === filter ? 'active' : ''}
+                      $status={filter}
                     >
                       {filter}
-                    </Button>
+                    </FilterButton>
                   ))}
                 </AdminProjectsFilterButtons>
               </AdminProjectsFilterLeft>
 
               <AdminProjectsSortButtons>
                 <AdminProjectsFilterLabel>정렬:</AdminProjectsFilterLabel>
-                <Button variant={sortType === 'name' ? 'default' : 'outline'} size="sm" onClick={() => handleSort('name')} className="flex items-center gap-1">
+                <SortButton variant={sortType === 'name' ? 'default' : 'outline'} size="sm" onClick={() => handleSort('name')}>
                   가나다순
-                  {sortType === 'name' && <ArrowUpDown className="w-3 h-3" />}
-                  {sortType === 'name' && <span className="text-xs ml-1">{sortOrder === 'asc' ? '↑' : '↓'}</span>}
-                </Button>
-                <Button variant={sortType === 'deadline' ? 'default' : 'outline'} size="sm" onClick={() => handleSort('deadline')} className="flex items-center gap-1">
+                  {sortType === 'name' && <ArrowUpDown className="sort-icon" />}
+                  {sortType === 'name' && <span className="sort-indicator">{sortOrder === 'asc' ? '↑' : '↓'}</span>}
+                </SortButton>
+                <SortButton variant={sortType === 'deadline' ? 'default' : 'outline'} size="sm" onClick={() => handleSort('deadline')}>
                   마감일순
-                  {sortType === 'deadline' && <ArrowUpDown className="w-3 h-3" />}
-                  {sortType === 'deadline' && <span className="text-xs ml-1">{sortOrder === 'asc' ? '↑' : '↓'}</span>}
-                </Button>
+                  {sortType === 'deadline' && <ArrowUpDown className="sort-icon" />}
+                  {sortType === 'deadline' && <span className="sort-indicator">{sortOrder === 'asc' ? '↑' : '↓'}</span>}
+                </SortButton>
               </AdminProjectsSortButtons>
             </AdminProjectsFilterActions>
           </AdminProjectsFilterSection>
@@ -515,18 +532,17 @@ export function AdminProjectsPage() {
             <AdminProjectCard key={project.id} onClick={() => handleProjectClick(project)}>
               <AdminProjectCardContent>
                 <AdminProjectThumbnail>
-                  <ImageWithFallback
+                  <ThumbnailImage
                     src={project.thumbnail || 'https://images.unsplash.com/photo-1591788806059-cb6e2f6a2498?w=400'}
                     alt={project.title}
-                    className="w-24 h-32 object-cover rounded-md border-2 border-border"
                   />
                 </AdminProjectThumbnail>
                 <AdminProjectInfo>
                   <AdminProjectInfoHeader>
                     <AdminProjectTitle>{project.title}</AdminProjectTitle>
-                    <Badge variant="outline" className="text-xs">
+                    <ArtistBadge variant="outline">
                       {project.artistName}
-                    </Badge>
+                    </ArtistBadge>
                   </AdminProjectInfoHeader>
                   <AdminProjectGenre>{project.genre}</AdminProjectGenre>
                   <AdminProjectMeta>
@@ -551,7 +567,7 @@ export function AdminProjectsPage() {
                   </AdminProjectMeta>
                 </AdminProjectInfo>
                 <AdminProjectStatus>
-                  <Badge className={getStatusBadgeColor(project.serialStatus)}>{project.serialStatus}</Badge>
+                  <StatusBadge status={project.serialStatus}>{project.serialStatus}</StatusBadge>
                   <AdminProjectEpisodeText>현재 {project.currentEpisode}화</AdminProjectEpisodeText>
                   <AdminProjectStatusText>마감: {project.deadline}</AdminProjectStatusText>
                 </AdminProjectStatus>
@@ -561,7 +577,7 @@ export function AdminProjectsPage() {
 
           {sortedProjects.length === 0 && (
             <AdminProjectsEmpty>
-              <AlertCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <AlertCircle style={{ width: '48px', height: '48px', margin: '0 auto 12px', opacity: 0.5 }} />
               <AdminProjectsEmptyText>해당 조건의 작품이 없습니다</AdminProjectsEmptyText>
             </AdminProjectsEmpty>
           )}
@@ -574,7 +590,7 @@ export function AdminProjectsPage() {
           {/* 작가 선택 */}
           <AdminProjectModalField>
             <AdminProjectModalLabel>
-              작가 선택 <span className="text-red-500">*</span>
+              작가 선택 <RequiredMark>*</RequiredMark>
             </AdminProjectModalLabel>
             <AdminProjectModalSelect value={newProjectForm.artistId} onChange={(e) => setNewProjectForm({ ...newProjectForm, artistId: Number(e.target.value) })}>
               <option value={0}>작가를 선택하세요</option>
@@ -589,7 +605,7 @@ export function AdminProjectsPage() {
           {/* 프로젝트명 */}
           <AdminProjectModalField>
             <AdminProjectModalLabel>
-              프로젝트명 <span className="text-red-500">*</span>
+              프로젝트명 <RequiredMark>*</RequiredMark>
             </AdminProjectModalLabel>
             <AdminProjectModalInput
               type="text"
@@ -602,7 +618,7 @@ export function AdminProjectsPage() {
           {/* 장르 */}
           <AdminProjectModalField>
             <AdminProjectModalLabel>
-              장르 <span className="text-red-500">*</span>
+              장르 <RequiredMark>*</RequiredMark>
             </AdminProjectModalLabel>
             <AdminProjectModalInput type="text" value={newProjectForm.genre} onChange={(e) => setNewProjectForm({ ...newProjectForm, genre: e.target.value })} placeholder="예: 로맨스/판타지" />
           </AdminProjectModalField>
@@ -610,7 +626,7 @@ export function AdminProjectsPage() {
           {/* 플랫폼 선택 */}
           <AdminProjectModalField>
             <AdminProjectModalLabel>
-              플랫폼 <span className="text-red-500">*</span>
+              플랫폼 <RequiredMark>*</RequiredMark>
             </AdminProjectModalLabel>
             <AdminProjectModalSelect value={newProjectForm.platform} onChange={(e) => setNewProjectForm({ ...newProjectForm, platform: e.target.value })}>
               <option>네이버 웹툰</option>
@@ -659,19 +675,19 @@ export function AdminProjectsPage() {
             {newProjectForm.thumbnail && (
               <AdminProjectModalThumbnailPreview>
                 <AdminProjectModalThumbnailPreviewLabel>미리보기:</AdminProjectModalThumbnailPreviewLabel>
-                <ImageWithFallback src={newProjectForm.thumbnail} alt="썸네일 미리보기" className="w-24 h-32 object-cover rounded-md border-2 border-border" />
+                <ThumbnailImage src={newProjectForm.thumbnail} alt="썸네일 미리보기" />
               </AdminProjectModalThumbnailPreview>
             )}
           </AdminProjectModalField>
 
           {/* 버튼 */}
           <AdminProjectModalActions>
-            <Button variant="outline" onClick={() => setIsAddModalOpen(false)} className="flex-1">
+            <FullWidthButton variant="outline" onClick={() => setIsAddModalOpen(false)}>
               취소
-            </Button>
-            <Button onClick={handleAddProject} className="flex-1 bg-primary hover:bg-primary/90">
+            </FullWidthButton>
+            <FullWidthButton onClick={handleAddProject} as={PrimaryButton}>
               등록
-            </Button>
+            </FullWidthButton>
           </AdminProjectModalActions>
         </AdminProjectModalForm>
       </Modal>

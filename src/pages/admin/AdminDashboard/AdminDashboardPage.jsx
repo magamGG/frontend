@@ -15,6 +15,8 @@ import {
   Building2,
   Home,
   Palmtree,
+  FileText,
+  Clock,
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { ProjectListModal } from '@/components/modals/ProjectListModal';
@@ -32,9 +34,6 @@ import {
   AttendanceStartDateSub,
   AttendanceStartActions,
   HealthCheckWarning,
-  AttendanceStatusSelect,
-  AttendanceStatusSelectLabel,
-  AttendanceStatusSelectInput,
   AttendanceStatusBox,
   AttendanceStatusBoxContent,
   AttendanceStatusBoxInfo,
@@ -92,15 +91,46 @@ import {
   AttendanceScheduleItemDate,
   AttendanceScheduleWarningBox,
   AttendanceScheduleWarningText,
+  WarningBox,
+  WarningContent,
+  WarningTitle,
+  WarningDescription,
+  ModalActions,
+  QuickInfoCard,
+  QuickInfoTitle,
+  AttendanceRequestCardHeader,
+  AttendanceRequestCardList,
+  AttendanceRequestCardItem,
+  AttendanceRequestCardItemContent,
+  AttendanceRequestCardItemTitle,
+  AttendanceRequestCardItemDate,
+  AttendanceRequestCardItemBadge,
+  AttendanceRequestModalContent,
+  AttendanceRequestList,
+  AttendanceRequestCard,
+  AttendanceRequestCardContent,
+  AttendanceRequestStatusBadge,
+  AttendanceRequestInfo,
+  AttendanceRequestTypeText,
+  AttendanceRequestDateText,
+  AttendanceRequestActions,
+  AttendanceRequestSummary,
+  AttendanceRequestSummaryItem,
+  AttendanceRequestSummaryNumber,
+  AttendanceRequestSummaryLabel,
+  EmptyState,
+  EmptyStateIcon,
+  EmptyStateText,
 } from './AdminDashboardPage.styled';
 
-export function AdminDashboardPage() {
+export function AdminDashboardPage({ onNavigateToSection }) {
   const [isProjectListOpen, setIsProjectListOpen] = useState(false);
   const [isAttendanceListOpen, setIsAttendanceListOpen] = useState(false);
   const [isWorking, setIsWorking] = useState(false);
   const [showHealthSurvey, setShowHealthSurvey] = useState(false);
   const [healthCheckCompleted, setHealthCheckCompleted] = useState(false);
   const [currentAttendanceType, setCurrentAttendanceType] = useState('워케이션');
+  const [showStopConfirm, setShowStopConfirm] = useState(false);
 
   const [healthSurvey, setHealthSurvey] = useState({
     condition: 'normal',
@@ -162,6 +192,53 @@ export function AdminDashboardPage() {
     { id: 3, name: '일상 코미디', artist: '박작가', status: '정상', progress: 90, deadline: '1월 30일' },
     { id: 4, name: 'SF 드라마', artist: '최작가', status: '정상', progress: 75, deadline: '1월 28일' },
   ];
+
+  // TODO: Zustand store mapping - 신청 현황 데이터
+  const REQUEST_STATUS = {
+    PENDING: '대기',
+    APPROVED: '승인',
+    REJECTED: '반려',
+  };
+
+  const attendanceRequests = [
+    {
+      id: '1',
+      typeName: '휴가',
+      startDate: '1월 20일',
+      endDate: '1월 22일',
+      status: REQUEST_STATUS.PENDING,
+    },
+    {
+      id: '2',
+      typeName: '재택근무',
+      startDate: '1월 16일',
+      endDate: '1월 16일',
+      status: REQUEST_STATUS.APPROVED,
+    },
+    {
+      id: '3',
+      typeName: '휴가',
+      startDate: '1월 20일',
+      endDate: '1월 22일',
+      status: REQUEST_STATUS.PENDING,
+    },
+    {
+      id: '4',
+      typeName: '재택근무',
+      startDate: '1월 16일',
+      endDate: '1월 16일',
+      status: REQUEST_STATUS.APPROVED,
+    },
+    {
+      id: '5',
+      typeName: '휴가',
+      startDate: '1월 20일',
+      endDate: '1월 22일',
+      status: REQUEST_STATUS.PENDING,
+    },
+  ];
+
+  const [showAttendanceModal, setShowAttendanceModal] = useState(false);
 
   // TODO: Zustand store mapping - 마감 임박 현황 데이터
   const deadlineData = [
@@ -227,9 +304,17 @@ export function AdminDashboardPage() {
     setShowHealthSurvey(true);
   };
 
+  // 출근 종료 핸들러
   const handleStopWork = () => {
+    // 항상 확인 창 표시
+    setShowStopConfirm(true);
+  };
+
+  // 출근 종료 확인 핸들러
+  const confirmStopWork = () => {
     setIsWorking(false);
     setHealthCheckCompleted(false);
+    setShowStopConfirm(false);
     toast.success('출근을 종료했습니다.');
   };
 
@@ -341,19 +426,8 @@ export function AdminDashboardPage() {
                     </>
                   )}
                 </Button>
-              </AttendanceStartActions>
-            </AttendanceStartHeader>
-
-            <AttendanceStatusSelect>
-              <AttendanceStatusSelectLabel>현재 상태 선택</AttendanceStatusSelectLabel>
-              <AttendanceStatusSelectInput value={currentAttendanceType || ''} onChange={(e) => setCurrentAttendanceType(e.target.value || null)}>
-                <option value="">선택하세요</option>
-                <option value="출근">🏢 출근</option>
-                <option value="재택근무">🏠 재택근무</option>
-                <option value="휴가">🌴 휴가</option>
-                <option value="워케이션">✈️ 워케이션</option>
-              </AttendanceStatusSelectInput>
-            </AttendanceStatusSelect>
+            </AttendanceStartActions>
+          </AttendanceStartHeader>
 
             {statusBoxProps ? (
               <AttendanceStatusBox $bgColor={statusBoxProps.bgColor} $borderColor={statusBoxProps.borderColor}>
@@ -412,28 +486,66 @@ export function AdminDashboardPage() {
           </WorkingArtistsCard>
         </AdminDashboardTopGrid>
 
-        {/* 그래프 섹션 */}
-        <ChartSection>
+        {/* 마감 임박 현황 & 신청 현황 */}
+        <ChartSection style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          {/* 마감 임박 현황 */}
           <ChartCard>
             <ChartHeader>
               <AlertCircle className="w-5 h-5" style={{ color: '#6E8FB3' }} />
               <ChartTitle>마감 임박 현황</ChartTitle>
             </ChartHeader>
 
-            <ResponsiveContainer width="100%" height={250}>
+            <ResponsiveContainer width="100%" height={200}>
               <BarChart data={deadlineData} barSize={40}>
                 <XAxis dataKey="name" tick={{ fontSize: 12 }} stroke="#94a3b8" />
-                <YAxis tick={{ fontSize: 12 }} stroke="#94a3b8" />
+                <YAxis tick={{ fontSize: 12 }} stroke="#94a3b8" domain={[0, 'dataMax + 1']} />
                 <Tooltip contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }} />
                 <Bar dataKey="count" fill="#6E8FB3" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
 
-            <ChartAlert>
-              <AlertCircle className="w-4 h-4 text-red-600" />
-              <ChartAlertText>오늘 마감 예정 작품이 {deadlineData[0].count}개 있습니다</ChartAlertText>
-            </ChartAlert>
+            {deadlineData[0]?.count > 0 && (
+              <ChartAlert>
+                <AlertCircle className="w-4 h-4 text-red-600" />
+                <ChartAlertText>오늘 마감 예정 작품이 {deadlineData[0].count}개 있습니다</ChartAlertText>
+              </ChartAlert>
+            )}
           </ChartCard>
+
+          {/* 신청 현황 */}
+          <QuickInfoCard>
+            <AttendanceRequestCardHeader onClick={() => setShowAttendanceModal(true)} style={{ cursor: 'pointer' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FileText className="w-4 h-4" style={{ color: 'var(--foreground)' }} />
+                <QuickInfoTitle style={{ margin: 0 }}>신청 현황</QuickInfoTitle>
+              </div>
+              {attendanceRequests.length >= 2 && (
+                <ChevronRight className="w-4 h-4" style={{ color: 'var(--muted-foreground)' }} />
+              )}
+            </AttendanceRequestCardHeader>
+            {attendanceRequests.length >= 2 && (
+              <AttendanceRequestCardList>
+                {attendanceRequests.slice(0, 2).map((request) => {
+                  const statusColor = 
+                    request.status === REQUEST_STATUS.PENDING ? '#F59E0B' :
+                    request.status === REQUEST_STATUS.APPROVED ? '#10B981' :
+                    '#EF4444';
+                  
+                  return (
+                    <AttendanceRequestCardItem key={request.id}>
+                      <AttendanceRequestCardItemContent>
+                        <AttendanceRequestCardItemTitle>{request.typeName || request.type}</AttendanceRequestCardItemTitle>
+                        <AttendanceRequestCardItemDate>{request.startDate} ~ {request.endDate}</AttendanceRequestCardItemDate>
+                      </AttendanceRequestCardItemContent>
+                      <AttendanceRequestCardItemBadge $statusColor={statusColor}>
+                        {request.status}
+                      </AttendanceRequestCardItemBadge>
+                    </AttendanceRequestCardItem>
+                  );
+                })}
+              </AttendanceRequestCardList>
+            )}
+          </QuickInfoCard>
         </ChartSection>
 
         {/* 프로젝트 및 근태 섹션 */}
@@ -451,8 +563,22 @@ export function AdminDashboardPage() {
             </ProjectsHeader>
 
             <ProjectsList>
-              {managedProjects.map((project) => (
-                <ProjectItem key={project.id}>
+              {managedProjects.map((project) => {
+                // 프로젝트 클릭 핸들러
+                const handleProjectClick = () => {
+                  // 프로젝트 ID를 localStorage에 저장하여 AdminProjectsPage에서 사용
+                  localStorage.setItem('selectedProjectId', project.id.toString());
+                  // 프로젝트 관리 섹션으로 이동 (manager-projects는 인덱스 1)
+                  if (onNavigateToSection) {
+                    onNavigateToSection(1);
+                  }
+                };
+
+                return (
+                  <ProjectItem 
+                    key={project.id}
+                    onClick={handleProjectClick}
+                  >
                   <ProjectItemHeader>
                     <ProjectItemInfo>
                       <ProjectItemTitleRow>
@@ -461,13 +587,13 @@ export function AdminDashboardPage() {
                       </ProjectItemTitleRow>
                       <ProjectItemArtist>담당: {project.artist}</ProjectItemArtist>
                     </ProjectItemInfo>
-                    <ChevronRight className="w-4 h-4" style={{ color: '#6E8FB3' }} />
                   </ProjectItemHeader>
                   <ProjectItemMeta>
                     <span>마감: {project.deadline}</span>
                   </ProjectItemMeta>
                 </ProjectItem>
-              ))}
+                );
+              })}
             </ProjectsList>
 
             <ProjectsInfoBox>
@@ -514,7 +640,19 @@ export function AdminDashboardPage() {
       </AdminDashboardBody>
 
       {/* Project List Modal */}
-      <ProjectListModal open={isProjectListOpen} onOpenChange={setIsProjectListOpen} projects={managedProjects} />
+      <ProjectListModal 
+        open={isProjectListOpen} 
+        onOpenChange={setIsProjectListOpen} 
+        projects={managedProjects}
+        onProjectClick={(project) => {
+          // 프로젝트 관리 섹션으로 이동 (manager-projects는 인덱스 1)
+          if (onNavigateToSection) {
+            // 프로젝트 ID를 localStorage에 저장하여 AdminProjectsPage에서 사용
+            localStorage.setItem('selectedProjectId', project.id.toString());
+            onNavigateToSection(1); // manager-projects 섹션 인덱스
+          }
+        }}
+      />
 
       {/* Attendance List Modal */}
       <AttendanceListModal open={isAttendanceListOpen} onOpenChange={setIsAttendanceListOpen} attendances={weeklyAttendance} />
@@ -606,6 +744,128 @@ export function AdminDashboardPage() {
             </Button>
           </div>
         </div>
+      </Modal>
+
+      {/* 출근 종료 확인 모달 */}
+      <Modal isOpen={showStopConfirm} onClose={() => setShowStopConfirm(false)} title="출근 종료 확인" maxWidth="sm">
+        <WarningBox>
+          <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+          <WarningContent>
+            <WarningTitle>출근을 종료하시겠습니까?</WarningTitle>
+            <WarningDescription>
+              출근을 종료하시겠습니까?
+            </WarningDescription>
+          </WarningContent>
+        </WarningBox>
+        <ModalActions>
+          <Button variant="outline" className="flex-1" onClick={() => setShowStopConfirm(false)}>
+            취소
+          </Button>
+          <Button variant="destructive" className="flex-1" onClick={confirmStopWork}>
+            종료
+          </Button>
+        </ModalActions>
+      </Modal>
+
+      {/* 신청 현황 모달 */}
+      <Modal 
+        isOpen={showAttendanceModal} 
+        onClose={() => setShowAttendanceModal(false)} 
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <FileText className="w-5 h-5" style={{ color: 'var(--foreground)' }} />
+            <span>신청 현황 목록</span>
+          </div>
+        }
+        maxWidth="lg"
+      >
+        <AttendanceRequestModalContent>
+          <AttendanceRequestList>
+            {attendanceRequests.length === 0 ? (
+              <EmptyState>
+                <EmptyStateIcon>
+                  <FileText className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
+                </EmptyStateIcon>
+                <EmptyStateText>아직 신청 현황이 없습니다.</EmptyStateText>
+              </EmptyState>
+            ) : (
+              attendanceRequests.map((request) => {
+                const statusColor = 
+                  request.status === REQUEST_STATUS.PENDING ? '#F59E0B' :
+                  request.status === REQUEST_STATUS.APPROVED ? '#10B981' :
+                  '#EF4444';
+                
+                return (
+                  <AttendanceRequestCard key={request.id}>
+                    <AttendanceRequestCardContent>
+                      <AttendanceRequestStatusBadge $statusColor={statusColor}>
+                        {request.status}
+                      </AttendanceRequestStatusBadge>
+                      <AttendanceRequestInfo>
+                        <AttendanceRequestTypeText>{request.typeName || request.type}</AttendanceRequestTypeText>
+                        <AttendanceRequestDateText>{request.startDate} ~ {request.endDate}</AttendanceRequestDateText>
+                      </AttendanceRequestInfo>
+                      {request.status === REQUEST_STATUS.PENDING && (
+                        <AttendanceRequestActions>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => {
+                              // TODO: 수정 기능 구현
+                              toast.info('수정 기능은 준비 중입니다.');
+                            }}
+                            style={{ fontSize: '12px', padding: '6px 12px' }}
+                          >
+                            수정
+                          </Button>
+                          <Button 
+                            variant="destructive" 
+                            size="sm"
+                            onClick={() => {
+                              // TODO: 취소 기능 구현
+                              toast.info('취소 기능은 준비 중입니다.');
+                            }}
+                            style={{ fontSize: '12px', padding: '6px 12px' }}
+                          >
+                            취소
+                          </Button>
+                        </AttendanceRequestActions>
+                      )}
+                    </AttendanceRequestCardContent>
+                  </AttendanceRequestCard>
+                );
+              })
+            )}
+          </AttendanceRequestList>
+          
+          {/* 하단 통계 */}
+          {attendanceRequests.length > 0 && (
+            <AttendanceRequestSummary>
+              <AttendanceRequestSummaryItem>
+                <AttendanceRequestSummaryNumber>{attendanceRequests.length}</AttendanceRequestSummaryNumber>
+                <AttendanceRequestSummaryLabel>전체</AttendanceRequestSummaryLabel>
+              </AttendanceRequestSummaryItem>
+              <AttendanceRequestSummaryItem>
+                <AttendanceRequestSummaryNumber $color="#10B981">
+                  {attendanceRequests.filter(r => r.status === REQUEST_STATUS.APPROVED).length}
+                </AttendanceRequestSummaryNumber>
+                <AttendanceRequestSummaryLabel>승인</AttendanceRequestSummaryLabel>
+              </AttendanceRequestSummaryItem>
+              <AttendanceRequestSummaryItem>
+                <AttendanceRequestSummaryNumber $color="#F59E0B">
+                  {attendanceRequests.filter(r => r.status === REQUEST_STATUS.PENDING).length}
+                </AttendanceRequestSummaryNumber>
+                <AttendanceRequestSummaryLabel>대기</AttendanceRequestSummaryLabel>
+              </AttendanceRequestSummaryItem>
+              <AttendanceRequestSummaryItem>
+                <AttendanceRequestSummaryNumber $color="#EF4444">
+                  {attendanceRequests.filter(r => r.status === REQUEST_STATUS.REJECTED).length}
+                </AttendanceRequestSummaryNumber>
+                <AttendanceRequestSummaryLabel>반려</AttendanceRequestSummaryLabel>
+              </AttendanceRequestSummaryItem>
+            </AttendanceRequestSummary>
+          )}
+        </AttendanceRequestModalContent>
       </Modal>
     </AdminDashboardRoot>
   );

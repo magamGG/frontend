@@ -38,8 +38,8 @@
   /* 상태별 색상 */
   --status-serialization: #3F4A5A; /* Soft Navy - 연재중 */
   --status-deadline: #E89A6F; /* Sandy Orange - 마감 임박 */
-  --status-workation: #9B8FAA; /* Soft Lavender - 워케이션 */
-  --status-hiatus: #8A95A3; /* Cool Gray - 휴재 */
+  --status-workation: #8B5CF6; /* 진한 보라색 - 워케이션 */
+  --status-hiatus: #6B7280; /* 진한 회색 - 휴가 */
   --status-completed: #6BA3A3; /* Sage Teal - 완료 */
   
   --font-weight-medium: 600;

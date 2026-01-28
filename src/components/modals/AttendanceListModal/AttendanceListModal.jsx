@@ -42,7 +42,7 @@ export function AttendanceListModal({ open, onOpenChange, attendances }) {
     switch (type) {
       case '워케이션':
         return 'bg-purple-500 text-white';
-      case '휴재':
+      case '휴가':
         return 'bg-gray-500 text-white';
       case '재택근무':
         return 'bg-blue-500 text-white';

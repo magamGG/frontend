@@ -327,7 +327,7 @@ export default function App() {
         {
           id: 'manager-dashboard',
           title: '담당자 대시보드',
-          content: <AdminDashboardPage />,
+          content: (props) => <AdminDashboardPage {...props} />,
         },
         {
           id: 'manager-projects',
