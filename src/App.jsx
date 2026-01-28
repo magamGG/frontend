@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Toaster } from 'sonner';
 import { FullPageLayout } from '@/components/layout/FullPageLayout';
 import { LoginPage } from '@/pages/Login';
@@ -8,6 +8,7 @@ import { JoinAgencyRequestPage } from '@/pages/JoinAgencyRequest';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { ProjectProvider } from '@/contexts/ProjectContext';
+import useAuthStore from '@/store/authStore';
 
 // Import artist pages
 import { ArtistDashboardPage } from '@/pages/artist/ArtistDashboard';
@@ -49,6 +50,64 @@ export default function App() {
   const [authView, setAuthView] = useState('login');
   const [userRole, setUserRole] = useState(null);
   const [hasAgency, setHasAgency] = useState(true); // Track if user has agency affiliation
+  const [isLoading, setIsLoading] = useState(true); // 로딩 상태 (새로고침 시 깜빡임 방지)
+
+  // Zustand store에서 저장된 인증 정보 가져오기
+  const { user, token, isAuthenticated, logout: storeLogout } = useAuthStore();
+
+  // 새로고침 시 저장된 세션 복구
+  useEffect(() => {
+    const restoreSession = () => {
+      // localStorage에 저장된 토큰이 있고 인증된 상태면 자동 로그인
+      if (token && isAuthenticated && user) {
+        console.log('세션 복구: 저장된 로그인 정보 발견', user);
+        
+        // 역할에 따라 화면 설정
+        const memberRole = user.memberRole;
+        const agencyNo = user.agencyNo;
+        
+        const artistAndManagerRoles = [
+          '웹툰 작가',
+          '웹소설 작가',
+          '어시스트 - 채색',
+          '어시스트 - 조명',
+          '어시스트 - 배경',
+          '어시스트 - 선화',
+          '어시스트- 기타',
+          '담당자'
+        ];
+        
+        let roleType = null;
+        let userHasAgency = agencyNo !== null && agencyNo !== undefined;
+        
+        if (memberRole === '에이전시 관리자') {
+          roleType = 'agency';
+          setAuthView('dashboard');
+        } else if (artistAndManagerRoles.includes(memberRole)) {
+          if (!userHasAgency) {
+            roleType = memberRole === '담당자' ? 'manager' : 'individual';
+            setAuthView('join-request');
+          } else {
+            roleType = memberRole === '담당자' ? 'manager' : 'individual';
+            setAuthView('dashboard');
+          }
+        } else {
+          roleType = 'individual';
+          setAuthView('dashboard');
+        }
+        
+        setUserRole(roleType);
+        setHasAgency(userHasAgency);
+      } else {
+        // 저장된 정보 없으면 로그인 화면
+        setAuthView('login');
+      }
+      
+      setIsLoading(false);
+    };
+    
+    restoreSession();
+  }, [token, isAuthenticated, user]);
 
   /**
    * @param {string} memberRole - 백엔드에서 받은 실제 MEMBER_ROLE 값 (예: "웹툰 작가", "담당자", "에이전시 관리자")
@@ -108,6 +167,10 @@ export default function App() {
   };
 
   const handleLogout = () => {
+    // Zustand store에서 로그아웃 (localStorage 클리어)
+    storeLogout();
+    
+    // 로컬 상태 초기화
     setUserRole(null);
     setHasAgency(true);
     setAuthView('login');
@@ -337,6 +400,18 @@ export default function App() {
           ),
         },
       ];
+
+  // 로딩 중일 때 로딩 화면 표시 (깜빡임 방지)
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">로딩 중...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <DndProvider backend={HTML5Backend}>
