@@ -415,7 +415,7 @@ export function AdminProjectsPage() {
                     <span className="text-sm font-medium text-foreground">상태:</span>
                     <div className="flex gap-2">
                       {['전체', '연재중', '휴재', '완결'].map((filter) => (
-                        <Button
+                        <Button>
                           key={filter}
                           variant={statusFilters.includes(filter) ? 'default' : 'outline'}
                           size="sm"
@@ -513,9 +513,6 @@ export function AdminProjectsPage() {
                       <Badge className={getStatusBadgeColor(project.serialStatus)}>
                         {project.serialStatus}
                       </Badge>
-                      <p className="text-sm text-muted-foreground">
-                        현재 {project.currentEpisode}화
-                      </p>
                       <p className="text-xs text-muted-foreground">
                         마감: {project.deadline}
                       </p>
@@ -535,7 +532,7 @@ export function AdminProjectsPage() {
             </div>
           </div>
         </div>
-      )}
+      )} 
 
       {/* 작품 추가 모달 */}
       <Modal

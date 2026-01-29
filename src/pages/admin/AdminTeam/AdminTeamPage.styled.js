@@ -7,7 +7,7 @@ export const AdminTeamRoot = styled.div`
   display: flex;
   justify-content: center;
   padding: 32px 32px 96px;
-  background-color: #f0f2f5;
+  background-color: transparent;
   overflow-y: auto;
 `;
 
@@ -80,6 +80,12 @@ export const StatCardIcon = styled.div`
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  
+  svg {
+    width: 24px;
+    height: 24px;
+    color: ${props => props.$iconColor || '#6E8FB3'};
+  }
 `;
 
 export const StatCardContent = styled.div`
@@ -219,20 +225,6 @@ export const EmployeeBadge = styled.span`
         color: #1f2328;
       `;
     }
-    if (props.$variant === 'position') {
-      if (props.$position === '메인 작가') {
-        return `
-          background-color: #D4F4DD;
-          color: #1f2328;
-        `;
-      }
-      if (props.$position === '시니어 작가') {
-        return `
-          background-color: #FFF4D4;
-          color: #1f2328;
-        `;
-      }
-    }
     if (props.$variant === 'working') {
       return `
         background-color: #22C55E;
@@ -314,6 +306,11 @@ export const ChevronIcon = styled.div`
   align-items: center;
   justify-content: center;
   color: #5a6067;
+  cursor: pointer;
+  
+  svg {
+    transform: ${props => props.$rotated ? 'rotate(180deg)' : 'none'};
+  }
 `;
 
 // 직원 상세 뷰
