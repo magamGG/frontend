@@ -82,6 +82,7 @@ export function SignupPage({ onSignup, onBackToLogin }) {
     password: '',
     confirmPassword: '',
     phone: '',
+    address: '',
     organization: '',
   });
 
@@ -122,6 +123,7 @@ export function SignupPage({ onSignup, onBackToLogin }) {
         memberPassword: signupFormData.password,
         memberEmail: signupFormData.email, // UNIQUE, 로그인 ID로 사용
         memberPhone: signupFormData.phone,
+        memberAddress: signupFormData.address?.trim() || '',
         memberRole: selectedRole === USER_ROLES.ARTIST 
           ? (artistSpecialization === 'webtoon-writer' ? '웹툰 작가'
             : artistSpecialization === 'webnovel-writer' ? '웹소설 작가'
@@ -380,6 +382,19 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                       </InputWrapper>
                     </InputGroup>
                   </FormGrid>
+
+                  <InputGroup>
+                    <InputLabel>주소</InputLabel>
+                    <InputWrapper>
+                      <InputField
+                        type="text"
+                        name="address"
+                        value={signupFormData.address}
+                        onChange={handleInputChange}
+                        placeholder="주소를 입력하세요 (예: 서울시 강남구 역삼동 123-45)"
+                      />
+                    </InputWrapper>
+                  </InputGroup>
 
                   <InputGroup>
                     <InputLabel>이메일 *</InputLabel>
