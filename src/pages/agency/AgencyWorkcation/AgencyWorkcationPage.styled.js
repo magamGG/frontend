@@ -5,7 +5,8 @@ export const AgencyWorkcationRoot = styled.div`
   width: 100%;
   min-height: 100vh;
   overflow-y: auto;
-  background-color: var(--card);
+  background-color: var(--background);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 `;
 
 // 중앙 정렬 및 최대 폭 설정 (데스크탑 레이아웃 기준)
@@ -13,7 +14,7 @@ export const AgencyWorkcationBody = styled.div`
   width: 100%;
   max-width: 1600px;
   margin: 0 auto;
-  padding: 32px;
+  padding: 32px 32px 96px;
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -22,8 +23,8 @@ export const AgencyWorkcationBody = styled.div`
 // 헤더 영역
 export const HeaderSection = styled.div`
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 4px;
   margin-bottom: 8px;
 `;
 
@@ -31,12 +32,12 @@ export const HeaderTitle = styled.h1`
   font-size: 2rem;
   font-weight: bold;
   color: var(--foreground);
-  margin: 0 0 8px 0;
+  margin: 0;
 `;
 
 export const HeaderSubtitle = styled.p`
   font-size: 0.875rem;
-  color: var(--accent);
+  color: var(--muted-foreground);
   margin: 0;
 `;
 
@@ -67,14 +68,17 @@ export const StatisticsGrid = styled.div`
 `;
 
 export const StatisticsCard = styled.div`
-  border: none;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  background-color: white;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background-color: #ffffff;
+  border: 1px solid var(--border);
   border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 `;
 
 export const StatisticsCardContent = styled.div`
-  padding: 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -103,12 +107,12 @@ export const StatisticsIcon = styled.div`
 
 export const StatisticsLabel = styled.p`
   font-size: 0.875rem;
-  color: var(--accent);
+  color: var(--muted-foreground);
   margin: 0 0 4px 0;
 `;
 
 export const StatisticsValue = styled.p`
-  font-size: 1.875rem;
+  font-size: 2rem;
   font-weight: bold;
   color: var(--foreground);
   margin: 0;
@@ -131,9 +135,9 @@ export const MembersGrid = styled.div`
 
 // 멤버 카드
 export const MemberCard = styled.div`
-  border: none;
+  border: 1px solid var(--border);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  background-color: white;
+  background-color: #ffffff;
   border-radius: 8px;
   overflow: hidden;
   cursor: pointer;
@@ -146,7 +150,7 @@ export const MemberCard = styled.div`
 `;
 
 export const MemberCardHeader = styled.div`
-  background-color: var(--primary);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   padding: 24px;
   padding-bottom: 32px;
 `;
@@ -235,9 +239,9 @@ export const MemberCardActions = styled.div`
 export const EmptyStateCard = styled.div`
   padding: 48px;
   text-align: center;
-  border: none;
+  border: 1px solid var(--border);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  background-color: white;
+  background-color: #ffffff;
   border-radius: 8px;
 `;
 
@@ -260,7 +264,7 @@ export const EmptyStateTitle = styled.h3`
 `;
 
 export const EmptyStateText = styled.p`
-  color: var(--accent);
+  color: var(--muted-foreground);
   margin: 0;
 `;
 
@@ -330,9 +334,9 @@ export const DetailMemberValue = styled.p`
 // 일일 리포트 카드
 export const DailyReportCard = styled.div`
   padding: 24px;
-  border: none;
+  border: 1px solid var(--border);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  background-color: #eff6ff;
+  background-color: #ffffff;
   border-radius: 8px;
 `;
 
@@ -395,7 +399,7 @@ export const TaskCardTitle = styled.div`
 
 export const TaskCardInfo = styled.p`
   font-size: 0.875rem;
-  color: #6E8FB3;
+  color: var(--muted-foreground);
   margin: 0;
 `;
 
@@ -409,3 +413,4 @@ export const TaskCardProgress = styled.div`
 export const ProjectsSection = styled.div`
   margin-top: 8px;
 `;
+

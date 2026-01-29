@@ -7,6 +7,7 @@ export const AgencyTeamRoot = styled.div`
   justify-content: center;
   padding: 32px 32px 96px;
   background-color: var(--background);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 `;
 
 export const AgencyTeamBody = styled.div`
@@ -88,6 +89,13 @@ export const EmployeeCard = styled.div`
     border-color: var(--primary);
     opacity: 0.9;
   }
+`;
+
+export const EmployeeExpandedContent = styled.div`
+  margin-top: -1px;
+  border-top: none;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
 `;
 
 export const EmployeeCardContent = styled.div`

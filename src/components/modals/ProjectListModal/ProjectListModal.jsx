@@ -23,6 +23,7 @@ import {
   StatValue,
   StatLabel,
   EmptyMessage,
+  ChevronRightIcon,
 } from './ProjectListModal.styled';
 
 /**
@@ -40,8 +41,9 @@ import {
  * @param {boolean} props.open
  * @param {(open: boolean) => void} props.onOpenChange
  * @param {Project[]} props.projects
+ * @param {(project: Project) => void} [props.onProjectClick]
  */
-export function ProjectListModal({ open, onOpenChange, projects }) {
+export function ProjectListModal({ open, onOpenChange, projects, onProjectClick }) {
   const [searchTerm, setSearchTerm] = useState('');
 
   const getStatusColor = (status) => {
@@ -62,6 +64,15 @@ export function ProjectListModal({ open, onOpenChange, projects }) {
       project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       project.artist.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // 프로젝트 클릭 핸들러
+  const handleProjectClick = (project, e) => {
+    e.stopPropagation();
+    if (onProjectClick) {
+      onProjectClick(project);
+    }
+    onOpenChange(false);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -97,7 +108,9 @@ export function ProjectListModal({ open, onOpenChange, projects }) {
           <ProjectList>
             {filteredProjects.length > 0 ? (
               filteredProjects.map((project) => (
-                <ProjectItem key={project.id}>
+                <ProjectItem 
+                  key={project.id}
+                >
                   <ProjectHeader>
                     <ProjectInfo>
                       <ProjectTitleGroup>
@@ -108,7 +121,9 @@ export function ProjectListModal({ open, onOpenChange, projects }) {
                       </ProjectTitleGroup>
                       <ProjectArtist>담당: {project.artist}</ProjectArtist>
                     </ProjectInfo>
-                    <ChevronRight style={{ width: '20px', height: '20px', color: 'var(--muted-foreground)' }} />
+                    <ChevronRightIcon 
+                      onClick={(e) => handleProjectClick(project, e)}
+                    />
                   </ProjectHeader>
 
                   <ProjectMeta>

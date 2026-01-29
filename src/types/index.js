@@ -63,7 +63,7 @@
  * @property {string} attendanceRequestStartDate - DB 필드: ATTENDANCE_REQUEST_START_DATE (DATETIME)
  * @property {string} attendanceRequestEndDate - DB 필드: ATTENDANCE_REQUEST_END_DATE (DATETIME)
  * @property {number} attendanceRequestUsingDays - DB 필드: ATTENDANCE_REQUEST_USING_DAYS
- * @property {'연차' | '병가' | '워케이션' | '재택' | '휴재' | '반차' | '반반차'} attendanceRequestType - DB 필드: ATTENDANCE_REQUEST_TYPE
+ * @property {'연차' | '병가' | '워케이션' | '재택' | '휴가' | '반차' | '반반차'} attendanceRequestType - DB 필드: ATTENDANCE_REQUEST_TYPE
  * @property {string} [attendanceRequestReason] - DB 필드: ATTENDANCE_REQUEST_REASON
  * @property {string} [workcationLocation] - DB 필드: WORKCATION_LOCATION (워케이션 신청 시에만)
  * @property {string} medicalFileUrl - DB 필드: MEDICAL_FILE_URL (NOT NULL, 빈 문자열 가능)

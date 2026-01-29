@@ -9,6 +9,7 @@ export const AgencyDashboardRoot = styled.div`
   padding: 32px 32px 96px;
   background-color: #DADDE1;
   overflow-y: auto;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 `;
 
 // 중앙 정렬 및 최대 폭 설정 (데스크탑 레이아웃 기준)
@@ -207,4 +208,39 @@ export const PieChartFooterValue = styled.span`
   font-size: 18px;
   font-weight: 700;
   color: #1f2328;
+`;
+
+// 경고 박스
+export const WarningBox = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  background-color: color-mix(in srgb, #fbbf24 20%, transparent);
+  border: 1px solid color-mix(in srgb, #fbbf24 40%, transparent);
+  border-radius: 8px;
+`;
+
+export const WarningContent = styled.div`
+  flex: 1;
+`;
+
+export const WarningTitle = styled.p`
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--foreground);
+  margin: 0 0 4px 0;
+`;
+
+export const WarningDescription = styled.p`
+  font-size: 14px;
+  color: var(--muted-foreground);
+  margin: 0;
+`;
+
+export const ModalActions = styled.div`
+  display: flex;
+  gap: 8px;
+  padding-top: 8px;
+  justify-content: flex-end;
 `;

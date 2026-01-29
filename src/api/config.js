@@ -39,6 +39,9 @@ export const API_ENDPOINTS = {
     REQUEST: `/api/leave/request`, // POST: 연차 신청
     LIST: (memberNo, year) => `/api/leave/list?memberNo=${memberNo}&year=${year}`, // GET: 연차 목록 조회
     BALANCE: (memberNo) => `/api/leave/balance/${memberNo}`, // GET: 연차 잔액 조회
+    MY_REQUESTS: `/api/leave/my-requests`, // GET: 내 근태 신청 목록 조회
+    AGENCY_REQUESTS: (agencyNo) => `/api/leave/agency/${agencyNo}`, // GET: 에이전시 소속 근태 신청 목록
+    AGENCY_PENDING: (agencyNo) => `/api/leave/agency/${agencyNo}/pending`, // GET: 에이전시 소속 대기 중 근태 신청
   },
 
   // 프로젝트 API
@@ -57,6 +60,9 @@ export const API_ENDPOINTS = {
   // 알림 API
   NOTIFICATION: {
     LIST: `/api/notifications`, // GET: 알림 목록 조회
+    READ: (notificationNo) => `/api/notifications/${notificationNo}/read`, // PUT: 알림 읽음 처리
+    READ_ALL: `/api/notifications/read-all`, // PUT: 모든 알림 읽음 처리
+    DELETE: (notificationNo) => `/api/notifications/${notificationNo}`, // DELETE: 알림 삭제
   },
 
   // 건강 관리 API
@@ -69,6 +75,8 @@ export const API_ENDPOINTS = {
   AGENCY: {
     JOIN_REQUEST: `/api/agency/join-request`, // POST: 에이전시 가입 요청
     JOIN_REQUESTS: (agencyNo) => `/api/agency/${agencyNo}/join-requests`, // GET: 에이전시 가입 요청 목록 조회
+    APPROVE_JOIN_REQUEST: (newRequestNo) => `/api/agency/join-requests/${newRequestNo}/approve`, // POST: 가입 요청 승인
+    REJECT_JOIN_REQUEST: (newRequestNo) => `/api/agency/join-requests/${newRequestNo}/reject`, // POST: 가입 요청 거절
   },
 };
 

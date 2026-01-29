@@ -100,6 +100,21 @@ export const leaveService = {
   getLeaveBalance: (memberNo) => {
     return api.get(API_ENDPOINTS.LEAVE.BALANCE(memberNo));
   },
+  
+  // 내 근태 신청 목록 조회
+  getMyRequests: () => {
+    return api.get(API_ENDPOINTS.LEAVE.MY_REQUESTS);
+  },
+  
+  // 에이전시 소속 근태 신청 목록 조회
+  getAgencyRequests: (agencyNo) => {
+    return api.get(API_ENDPOINTS.LEAVE.AGENCY_REQUESTS(agencyNo));
+  },
+  
+  // 에이전시 소속 대기 중인 근태 신청 목록 조회
+  getAgencyPendingRequests: (agencyNo) => {
+    return api.get(API_ENDPOINTS.LEAVE.AGENCY_PENDING(agencyNo));
+  },
 };
 
 // 프로젝트 서비스
@@ -139,6 +154,21 @@ export const notificationService = {
   getNotifications: () => {
     return api.get(API_ENDPOINTS.NOTIFICATION.LIST);
   },
+  
+  // 알림 읽음 처리
+  markAsRead: (notificationNo) => {
+    return api.put(API_ENDPOINTS.NOTIFICATION.READ(notificationNo));
+  },
+  
+  // 모든 알림 읽음 처리
+  markAllAsRead: () => {
+    return api.put(API_ENDPOINTS.NOTIFICATION.READ_ALL);
+  },
+  
+  // 알림 삭제
+  deleteNotification: (notificationNo) => {
+    return api.delete(API_ENDPOINTS.NOTIFICATION.DELETE(notificationNo));
+  },
 };
 
 // 건강 관리 서비스
@@ -164,6 +194,16 @@ export const agencyService = {
   // 에이전시 가입 요청 목록 조회
   getJoinRequests: (agencyNo) => {
     return api.get(API_ENDPOINTS.AGENCY.JOIN_REQUESTS(agencyNo));
+  },
+  
+  // 에이전시 가입 요청 승인
+  approveJoinRequest: (newRequestNo) => {
+    return api.post(API_ENDPOINTS.AGENCY.APPROVE_JOIN_REQUEST(newRequestNo));
+  },
+  
+  // 에이전시 가입 요청 거절
+  rejectJoinRequest: (newRequestNo, rejectionReason) => {
+    return api.post(API_ENDPOINTS.AGENCY.REJECT_JOIN_REQUEST(newRequestNo), { rejectionReason });
   },
 };
 

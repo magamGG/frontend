@@ -681,7 +681,6 @@ export function AgencyProjectsPage() {
                   <Badge className={getStatusBadgeColor(project.serialStatus)}>
                     {project.serialStatus}
                   </Badge>
-                  <AgencyProjectStatusText>현재 {project.currentEpisode}화</AgencyProjectStatusText>
                   <AgencyProjectEpisodeText>마감: {project.deadline}</AgencyProjectEpisodeText>
                 </AgencyProjectStatus>
               </AgencyProjectCardContent>

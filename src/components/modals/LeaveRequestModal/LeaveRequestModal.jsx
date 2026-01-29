@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Upload, FileText, Calendar, AlertCircle } from 'lucide-react';
 import useAuthStore from '@/store/authStore';
+import { leaveService } from '@/api/services';
 import {
   ModalHeader,
   ModalTitle,
@@ -29,7 +30,7 @@ import {
 } from './LeaveRequestModal.styled';
 
 /**
- * @typedef {'연차' | '병가' | '워케이션' | '재택근무' | '휴재'} LeaveType
+ * @typedef {'연차' | '병가' | '워케이션' | '재택근무' | '휴가'} LeaveType
  */
 
 // 현재 날짜를 YYYY-MM-DD 형식으로 반환
@@ -76,7 +77,7 @@ export function LeaveRequestModal({ open, onOpenChange }) {
 
   // Get current user's remaining leave
   useEffect(() => {
-    if (selectedType === '연차') {
+    if (selectedType === '연차' || selectedType === '반차') {
       const memberName = getMemberName();
       const employees = JSON.parse(localStorage.getItem('agencyEmployees') || '[]');
       
@@ -100,7 +101,7 @@ export function LeaveRequestModal({ open, onOpenChange }) {
     }
   }, [selectedType, getMemberName]);
 
-  const leaveTypes = ['연차', '반차', '병가', '워케이션', '재택근무', '휴재'];
+  const leaveTypes = ['연차', '반차', '병가', '워케이션', '재택근무', '휴가'];
 
   const projectOptions = ['선택 안 함', ...projects.map(p => `${p.title} (${p.currentEpisode})`)];
 
@@ -112,7 +113,18 @@ export function LeaveRequestModal({ open, onOpenChange }) {
     setHalfDayType('선택 안 함');
     setStartTime('');
     setEndTime('');
+    // 반차/반반차 선택 시 날짜를 하루로 제한
+    if (selectedType === '반차') {
+      setEndDate(startDate);
+    }
   }, [selectedType]);
+
+  // 반차/반반차 선택 시 날짜 동기화
+  useEffect(() => {
+    if (selectedType === '반차') {
+      setEndDate(startDate);
+    }
+  }, [startDate, selectedType]);
 
   // Calculate days between dates
   const calculateDays = () => {
@@ -140,9 +152,40 @@ export function LeaveRequestModal({ open, onOpenChange }) {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!startDate || !endDate || !reason) {
       toast.error('모든 필수 항목을 입력해주세요.');
+      return;
+    }
+
+    // 과거 날짜 선택 방지
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+    if (start < today) {
+      toast.error('과거 날짜는 선택할 수 없습니다.');
+      return;
+    }
+
+    // 남은 연차 확인 (연차/반차)
+    if ((selectedType === '연차' || selectedType === '반차') && remainingLeave !== null) {
+      const requestedDays = selectedType === '반차' ? 0.5 : calculateDays();
+      if (requestedDays > remainingLeave) {
+        toast.error(`남은 연차(${remainingLeave}일)보다 많은 일수를 신청할 수 없습니다.`);
+        return;
+      }
+    }
+
+    // 반차/반반차 유형 선택 확인
+    if (selectedType === '반차' && halfDayType === '선택 안 함') {
+      toast.error('반차 유형을 선택해주세요.');
+      return;
+    }
+
+    // 반차/반반차 날짜는 하루만 선택 가능
+    if (selectedType === '반차' && startDate !== endDate) {
+      toast.error('반차/반반차는 하루만 선택할 수 있습니다.');
       return;
     }
 
@@ -152,81 +195,89 @@ export function LeaveRequestModal({ open, onOpenChange }) {
       return;
     }
 
+    // 반차/반반차 시간 제한 검증
+    if (selectedType === '반차' && startTime && endTime) {
+      const hours = calculateHours();
+      if (halfDayType === '반차' && hours > 4) {
+        toast.error('반차는 최대 4시간까지 신청할 수 있습니다.');
+        return;
+      }
+      if (halfDayType === '반반차' && hours > 2) {
+        toast.error('반반차는 최대 2시간까지 신청할 수 있습니다.');
+        return;
+      }
+      if (hours <= 0) {
+        toast.error('종료 시간은 시작 시간보다 늦어야 합니다.');
+        return;
+      }
+    }
+
     if (selectedType === '워케이션' && !location) {
       toast.error('워케이션 장소를 입력해주세요.');
       return;
     }
 
-    // localStorage에서 기존 근태 데이터 가져오기
-    const existingAttendance = JSON.parse(localStorage.getItem('attendanceData') || '[]');
-    
-    // 새 신청 ID 생성
-    const newId = existingAttendance.length > 0 
-      ? Math.max(...existingAttendance.map((r) => r.id), 0) + 1 
-      : 1;
-    
     const days = calculateDays();
     
+    // 타입 매핑 (디자인용)
     const typeMap = {
       '연차': 'break',
       '반차': 'break',
       '병가': 'break',
       '워케이션': 'workation',
       '재택근무': 'remote',
-      '휴재': 'break',
+      '휴가': 'break',
     };
 
-    const newRequestData = {
-      id: newId,
-      type: typeMap[selectedType],
-      typeName: selectedType,
-      startDate: startDate,
-      endDate: endDate,
-      days: selectedType === '반차' ? 0.5 : days,
-      hours: selectedType === '반차' ? calculateHours() : undefined,
-      startTime: selectedType === '반차' ? startTime : undefined,
-      endTime: selectedType === '반차' ? endTime : undefined,
-      halfDayType: selectedType === '반차' ? halfDayType : undefined,
-      reason: reason,
-      location: location || undefined,
-      project: selectedProject !== '선택 안 함' ? selectedProject : undefined,
-      status: 'approved', // 자동 승인으로 설정
-      requestDate: new Date().toISOString().split('T')[0],
-      rejectionReason: '',
-      attachedFile: attachedFile?.name || undefined,
+    // API 요청 데이터 구성 (DB 필드명 기준 camelCase)
+    const requestData = {
+      attendanceRequestType: selectedType,
+      attendanceRequestStartDate: startDate,
+      attendanceRequestEndDate: endDate,
+      attendanceRequestUsingDays: selectedType === '반차' ? 1 : days,
+      attendanceRequestReason: reason,
+      workcationLocation: selectedType === '워케이션' ? location : null,
+      medicalFileUrl: attachedFile?.name || null,
     };
 
-    // localStorage에 저장
-    localStorage.setItem('attendanceData', JSON.stringify([...existingAttendance, newRequestData]));
-
-    // 연차/반차 신청인 경우 사용한 연차 업데이트
-    if (selectedType === '연차' || selectedType === '반차') {
-      const memberName = getMemberName();
-      const employees = JSON.parse(localStorage.getItem('agencyEmployees') || '[]');
+    try {
+      // API 호출
+      const response = await leaveService.requestLeave(requestData);
       
-      if (memberName && employees.length > 0) {
-        const updatedEmployees = employees.map(emp => {
-          if (emp.name === memberName) {
-            const leaveDays = selectedType === '반차' ? 0.5 : days;
-            const newUsedLeave = emp.usedLeave + leaveDays;
-            const newRemainingLeave = emp.totalLeave - newUsedLeave;
-            return {
-              ...emp,
-              usedLeave: newUsedLeave,
-              remainingLeave: newRemainingLeave >= 0 ? newRemainingLeave : 0,
-            };
-          }
-          return emp;
-        });
-        localStorage.setItem('agencyEmployees', JSON.stringify(updatedEmployees));
+      console.log('근태 신청 API 응답:', response);
+      
+      // 연차/반차 신청인 경우 로컬 스토리지의 연차 정보도 업데이트 (UI 동기화용)
+      if (selectedType === '연차' || selectedType === '반차') {
+        const memberName = getMemberName();
+        const employees = JSON.parse(localStorage.getItem('agencyEmployees') || '[]');
+        
+        if (memberName && employees.length > 0) {
+          const updatedEmployees = employees.map(emp => {
+            if (emp.name === memberName) {
+              const leaveDays = selectedType === '반차' ? 0.5 : days;
+              const newUsedLeave = emp.usedLeave + leaveDays;
+              const newRemainingLeave = emp.totalLeave - newUsedLeave;
+              return {
+                ...emp,
+                usedLeave: newUsedLeave,
+                remainingLeave: newRemainingLeave >= 0 ? newRemainingLeave : 0,
+              };
+            }
+            return emp;
+          });
+          localStorage.setItem('agencyEmployees', JSON.stringify(updatedEmployees));
+        }
       }
-    }
 
-    toast.success('근태 신청이 완료되었습니다.');
-    
-    // 폼 초기화
-    resetForm();
-    onOpenChange(false);
+      toast.success('근태 신청이 완료되었습니다.');
+      
+      // 폼 초기화
+      resetForm();
+      onOpenChange(false);
+    } catch (error) {
+      console.error('근태 신청 실패:', error);
+      toast.error(error.message || '근태 신청에 실패했습니다. 다시 시도해주세요.');
+    }
   };
 
   const resetForm = () => {
@@ -261,8 +312,8 @@ export function LeaveRequestModal({ open, onOpenChange }) {
         return '워케이션 관련 제출 자료가 있으면 첨부할 수 있습니다.';
       case '재택근무':
         return '재택근무 관련 공지/승인 자료가 있으면 첨부할 수 있습니다.';
-      case '휴재':
-        return '휴재 사유 관련 자료가 있다면 첨부할 수 있습니다.';
+      case '휴가':
+        return '휴가 사유 관련 자료가 있다면 첨부할 수 있습니다.';
       default:
         return '';
     }
@@ -304,12 +355,18 @@ export function LeaveRequestModal({ open, onOpenChange }) {
                 <span className="text-sm font-semibold text-blue-900">남은 연차</span>
               </div>
               <p className="text-2xl font-bold text-blue-600">{remainingLeave}일</p>
-              {selectedType === '연차' && calculateDays() > remainingLeave && (
-                <div className="mt-2 flex items-start gap-2 text-red-600 text-xs">
-                  <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                  <span>신청하신 일수({calculateDays()}일)가 남은 연차보다 많습니다.</span>
-                </div>
-              )}
+              {(() => {
+                const requestedDays = selectedType === '반차' ? 0.5 : calculateDays();
+                if (requestedDays > remainingLeave) {
+                  return (
+                    <div className="mt-2 flex items-start gap-2 text-red-600 text-xs">
+                      <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                      <span>신청하신 일수({requestedDays}일)가 남은 연차보다 많습니다.</span>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
             </div>
           )}
 
@@ -362,19 +419,41 @@ export function LeaveRequestModal({ open, onOpenChange }) {
               <Input 
                 type="date" 
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                onChange={(e) => {
+                  const newStartDate = e.target.value;
+                  setStartDate(newStartDate);
+                  // 반차/반반차는 하루만 선택 가능
+                  if (selectedType === '반차') {
+                    setEndDate(newStartDate);
+                  }
+                }}
+                min={getCurrentDate()}
                 className="bg-white border-gray-300"
                 style={{ color: 'var(--foreground)' }}
               />
               <Input 
                 type="date" 
                 value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
+                onChange={(e) => {
+                  const newEndDate = e.target.value;
+                  // 반차/반반차는 하루만 선택 가능
+                  if (selectedType === '반차') {
+                    setEndDate(startDate);
+                    toast.info('반차/반반차는 하루만 선택할 수 있습니다.');
+                    return;
+                  }
+                  setEndDate(newEndDate);
+                }}
+                min={selectedType === '반차' ? startDate : getCurrentDate()}
+                disabled={selectedType === '반차'}
                 className="bg-white border-gray-300"
                 style={{ color: 'var(--foreground)' }}
               />
             </DateGrid>
-            <DaysInfo>총 {selectedType === '반차' ? '1일' : calculateDays() + '일'} 사용 예정</DaysInfo>
+            <DaysInfo>
+              총 {selectedType === '반차' ? '1일' : calculateDays() + '일'} 사용 예정
+              {selectedType === '반차' && ' (반차/반반차는 하루만 선택 가능)'}
+            </DaysInfo>
           </FormGroup>
 
           {/* 신청 시간 (반차 선택시만) */}
@@ -397,7 +476,19 @@ export function LeaveRequestModal({ open, onOpenChange }) {
                   style={{ color: 'var(--foreground)' }}
                 />
               </DateGrid>
-              <DaysInfo>총 {calculateHours()}시간 사용 예정</DaysInfo>
+              <DaysInfo>
+                총 {calculateHours()}시간 사용 예정
+                {halfDayType === '반차' && calculateHours() > 4 && (
+                  <span style={{ color: '#dc2626', marginLeft: '8px' }}>
+                    (반차는 최대 4시간까지 가능)
+                  </span>
+                )}
+                {halfDayType === '반반차' && calculateHours() > 2 && (
+                  <span style={{ color: '#dc2626', marginLeft: '8px' }}>
+                    (반반차는 최대 2시간까지 가능)
+                  </span>
+                )}
+              </DaysInfo>
             </FormGroup>
           )}
 
@@ -416,8 +507,8 @@ export function LeaveRequestModal({ open, onOpenChange }) {
             </FormGroup>
           )}
 
-          {/* 작품(선택) (휴재 선택시만) */}
-          {selectedType === '휴재' && (
+          {/* 작품(선택) (휴가 선택시만) */}
+          {selectedType === '휴가' && (
             <FormGroup>
               <Label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>작품(선택)</Label>
               <div style={{ position: 'relative' }}>
@@ -454,7 +545,7 @@ export function LeaveRequestModal({ open, onOpenChange }) {
                   </DropdownMenu>
                 )}
               </div>
-              <DaysInfo>휴재는 특정 작품과 연결할 수 있으요.</DaysInfo>
+              <DaysInfo>휴가는 특정 작품과 연결할 수 있으요.</DaysInfo>
             </FormGroup>
           )}
 
