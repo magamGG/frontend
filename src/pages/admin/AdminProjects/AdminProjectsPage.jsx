@@ -19,15 +19,10 @@ import {
   AdminProjectsStatHeader,
   AdminProjectsStatLabel,
   AdminProjectsStatValue,
-  AdminProjectsFilterCard,
-  AdminProjectsFilterSection,
-  AdminProjectsFilterRow,
-  AdminProjectsFilterLabel,
-  AdminProjectsFilterButtons,
-  AdminProjectsFilterDivider,
-  AdminProjectsFilterActions,
-  AdminProjectsFilterLeft,
-  AdminProjectsSortButtons,
+  FilterSection,
+  FilterRow,
+  FilterLabel,
+  FilterButtonGroup,
   AdminProjectsList,
   AdminProjectCard,
   AdminProjectCardContent,
@@ -43,6 +38,7 @@ import {
   AdminProjectStatusText,
   AdminProjectEpisodeText,
   AdminProjectsEmpty,
+  AdminProjectsEmptyIcon,
   AdminProjectsEmptyText,
   AdminProjectModalForm,
   AdminProjectModalField,
@@ -268,53 +264,25 @@ export function AdminProjectsPage() {
     setStatusFilter(filter);
   };
 
-  const filteredProjects = projects.filter((project) => {
-    const statusMatch = statusFilter === '전체' || statusFilter === project.serialStatus;
-    const artistMatch = !selectedArtistFilter || project.artistId === selectedArtistFilter;
-
-    return statusMatch && artistMatch;
-  });
-
-  const handleSort = (type) => {
-    if (sortType === type) {
-      if (sortOrder === 'asc') {
-        setSortOrder('desc');
-      } else {
-        setSortType(null);
-        setSortOrder('asc');
-      }
-    } else {
-      setSortType(type);
-      setSortOrder('asc');
+  // 상태별 배지 색상 (작가 계정과 동일)
+  const getStatusBadgeColor = (status) => {
+    switch (status) {
+      case '연재중':
+        return 'bg-green-500 hover:bg-green-600';
+      case '휴재':
+        return 'bg-orange-500 hover:bg-orange-600';
+      case '완결':
+        return 'bg-gray-500 hover:bg-gray-600';
+      default:
+        return 'bg-blue-500 hover:bg-blue-600';
     }
   };
 
-  const sortedProjects = [...filteredProjects].sort((a, b) => {
-    if (!sortType) return 0;
-
-    if (sortType === 'name') {
-      const comparison = a.title.localeCompare(b.title, 'ko');
-      return sortOrder === 'asc' ? comparison : -comparison;
-    }
-
-    if (sortType === 'deadline') {
-      const getDeadlineValue = (deadline) => {
-        if (deadline === '완결') return 9999;
-        if (deadline === '휴재중') return 9998;
-        if (deadline.startsWith('D-')) {
-          const days = parseInt(deadline.substring(2));
-          return days;
-        }
-        return 9997;
-      };
-
-      const aValue = getDeadlineValue(a.deadline);
-      const bValue = getDeadlineValue(b.deadline);
-
-      return sortOrder === 'asc' ? aValue - bValue : bValue - aValue;
-    }
-
-    return 0;
+  // 필터링된 프로젝트
+  const filteredProjects = projects.filter((project) => {
+    const statusMatch = statusFilter === '전체' || statusFilter === project.serialStatus;
+    const artistMatch = !selectedArtistFilter || project.artistId === selectedArtistFilter;
+    return statusMatch && artistMatch;
   });
 
   // 날짜를 한국어 형식으로 표시
@@ -458,77 +426,54 @@ export function AdminProjectsPage() {
           </AdminProjectsStatCard>
         </AdminProjectsStatsGrid>
 
-        {/* 필터 영역 */}
-        <AdminProjectsFilterCard>
-          <AdminProjectsFilterSection>
-            {/* 작가 카테고리 탭 */}
-            <AdminProjectsFilterRow>
-              <AdminProjectsFilterLabel>작가:</AdminProjectsFilterLabel>
-              <AdminProjectsFilterButtons>
-                <FilterButton 
-                  variant="outline"
-                  size="sm" 
-                  onClick={() => setSelectedArtistFilter(null)}
-                  className={selectedArtistFilter === null ? 'active' : ''}
+        {/* 필터 영역 (하나로 합침) */}
+        <FilterSection>
+          {/* 작가별 필터 */}
+          <FilterRow>
+            <FilterLabel>작가:</FilterLabel>
+            <FilterButtonGroup>
+              <Button
+                variant={selectedArtistFilter === null ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedArtistFilter(null)}
+              >
+                전체
+              </Button>
+              {artists.map((artist) => (
+                <Button
+                  key={artist.id}
+                  variant={selectedArtistFilter === artist.id ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSelectedArtistFilter(artist.id)}
                 >
-                  전체
-                </FilterButton>
-                {artists.map((artist) => (
-                  <FilterButton
-                    key={artist.id}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSelectedArtistFilter(artist.id)}
-                    className={selectedArtistFilter === artist.id ? 'active' : ''}
-                  >
-                    {artist.name}
-                  </FilterButton>
-                ))}
-              </AdminProjectsFilterButtons>
-            </AdminProjectsFilterRow>
+                  {artist.name}
+                </Button>
+              ))}
+            </FilterButtonGroup>
+          </FilterRow>
 
-            <AdminProjectsFilterDivider />
-
-            {/* 작품 상태 필터 & 정렬 */}
-            <AdminProjectsFilterActions>
-              <AdminProjectsFilterLeft>
-                <AdminProjectsFilterLabel>상태:</AdminProjectsFilterLabel>
-                <AdminProjectsFilterButtons>
-                  {['전체', '연재중', '휴재', '완결'].map((filter) => (
-                    <FilterButton
-                      key={filter}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleFilterChange(filter)}
-                      className={statusFilter === filter ? 'active' : ''}
-                      $status={filter}
-                    >
-                      {filter}
-                    </FilterButton>
-                  ))}
-                </AdminProjectsFilterButtons>
-              </AdminProjectsFilterLeft>
-
-              <AdminProjectsSortButtons>
-                <AdminProjectsFilterLabel>정렬:</AdminProjectsFilterLabel>
-                <SortButton variant={sortType === 'name' ? 'default' : 'outline'} size="sm" onClick={() => handleSort('name')}>
-                  가나다순
-                  {sortType === 'name' && <ArrowUpDown className="sort-icon" />}
-                  {sortType === 'name' && <span className="sort-indicator">{sortOrder === 'asc' ? '↑' : '↓'}</span>}
-                </SortButton>
-                <SortButton variant={sortType === 'deadline' ? 'default' : 'outline'} size="sm" onClick={() => handleSort('deadline')}>
-                  마감일순
-                  {sortType === 'deadline' && <ArrowUpDown className="sort-icon" />}
-                  {sortType === 'deadline' && <span className="sort-indicator">{sortOrder === 'asc' ? '↑' : '↓'}</span>}
-                </SortButton>
-              </AdminProjectsSortButtons>
-            </AdminProjectsFilterActions>
-          </AdminProjectsFilterSection>
-        </AdminProjectsFilterCard>
+          {/* 상태 필터 */}
+          <FilterRow>
+            <FilterLabel>상태:</FilterLabel>
+            <FilterButtonGroup>
+              {['전체', '연재중', '휴재', '완결'].map((filter) => (
+                <Button
+                  key={filter}
+                  variant={statusFilter === filter ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handleFilterChange(filter)}
+                  className={statusFilter === filter ? getStatusBadgeColor(filter === '전체' ? '' : filter) : ''}
+                >
+                  {filter}
+                </Button>
+              ))}
+            </FilterButtonGroup>
+          </FilterRow>
+        </FilterSection>
 
         {/* 작품 리스트 */}
         <AdminProjectsList>
-          {sortedProjects.map((project) => (
+          {filteredProjects.map((project) => (
             <AdminProjectCard key={project.id} onClick={() => handleProjectClick(project)}>
               <AdminProjectCardContent>
                 <AdminProjectThumbnail>
@@ -568,16 +513,17 @@ export function AdminProjectsPage() {
                 </AdminProjectInfo>
                 <AdminProjectStatus>
                   <StatusBadge status={project.serialStatus}>{project.serialStatus}</StatusBadge>
-                  <AdminProjectEpisodeText>현재 {project.currentEpisode}화</AdminProjectEpisodeText>
                   <AdminProjectStatusText>마감: {project.deadline}</AdminProjectStatusText>
                 </AdminProjectStatus>
               </AdminProjectCardContent>
             </AdminProjectCard>
           ))}
 
-          {sortedProjects.length === 0 && (
+          {filteredProjects.length === 0 && (
             <AdminProjectsEmpty>
-              <AlertCircle style={{ width: '48px', height: '48px', margin: '0 auto 12px', opacity: 0.5 }} />
+              <AdminProjectsEmptyIcon>
+                <AlertCircle />
+              </AdminProjectsEmptyIcon>
               <AdminProjectsEmptyText>해당 조건의 작품이 없습니다</AdminProjectsEmptyText>
             </AdminProjectsEmpty>
           )}

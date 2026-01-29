@@ -751,7 +751,6 @@ export function AdminDashboardPage({ onNavigateToSection }) {
         <WarningBox>
           <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
           <WarningContent>
-            <WarningTitle>출근을 종료하시겠습니까?</WarningTitle>
             <WarningDescription>
               출근을 종료하시겠습니까?
             </WarningDescription>
