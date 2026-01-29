@@ -84,6 +84,7 @@ export function Header({
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef(null);
 
+<<<<<<< Updated upstream
   const [notifications, setNotifications] = useState([
     {
       id: 1,
@@ -131,6 +132,91 @@ export function Header({
       linkedPage: "projects",
     },
   ]);
+=======
+  // 알림 목록 조회
+  const fetchNotifications = async () => {
+    try {
+      setIsLoadingNotifications(true);
+      const response = await notificationService.getNotifications();
+      
+      // API 응답을 프론트엔드 형식으로 변환
+      const formattedNotifications = response.map((n) => ({
+        id: n.notificationNo,
+        title: n.notificationName || '알림',
+        message: n.notificationText || '',
+        time: formatTimeAgo(n.notificationCreatedAt),
+        isRead: n.isRead,
+        type: getNotificationType(n.notificationType),
+        linkedPage: getLinkedPage(n.notificationType),
+      }));
+      
+      setNotifications(formattedNotifications);
+    } catch (error) {
+      console.error('알림 목록 조회 실패:', error);
+      // 에러 시 빈 배열 유지
+    } finally {
+      setIsLoadingNotifications(false);
+    }
+  };
+
+  // 시간 포맷팅 (몇 분 전, 몇 시간 전 등)
+  const formatTimeAgo = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return '방금 전';
+    if (diffMins < 60) return `${diffMins}분 전`;
+    if (diffHours < 24) return `${diffHours}시간 전`;
+    if (diffDays < 7) return `${diffDays}일 전`;
+    return date.toLocaleDateString();
+  };
+
+  // 알림 타입에 따른 UI 타입 반환
+  const getNotificationType = (type) => {
+    switch (type) {
+      case 'JOIN_REQ':
+        return 'info';
+      case 'LEAVE_REQ':
+        return 'warning';
+      case 'APPROVED':
+        return 'success';
+      case 'REJECTED':
+        return 'error';
+      case 'ASSIGNMENT':
+        return 'info';
+      default:
+        return 'info';
+    }
+  };
+
+  // 알림 타입에 따른 연결 페이지 반환
+  const getLinkedPage = (type) => {
+    switch (type) {
+      case 'JOIN_REQ':
+        return 'approvals';
+      case 'LEAVE_REQ':
+        return 'approvals';
+      case 'APPROVED':
+      case 'REJECTED':
+        return 'dashboard';
+      case 'ASSIGNMENT':
+        // 작가 배정 알림은 할당 관리 페이지로 이동
+        return 'assignment';
+      default:
+        return 'dashboard';
+    }
+  };
+
+  // 컴포넌트 마운트 시 알림 목록 조회
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+>>>>>>> Stashed changes
 
   const unreadCount = notifications.filter(
     (n) => !n.isRead,
