@@ -17,6 +17,12 @@ export const API_ENDPOINTS = {
   MEMBERS: {
     BASE: `/api/members`, // POST: 회원가입
     CURRENT: `/api/members/me`, // GET: 현재 회원 정보 조회
+    MY_PAGE: (memberNo) => `/api/members/${memberNo}`, // GET: 마이페이지 정보 조회
+    UPDATE_PROFILE: (memberNo) => `/api/members/${memberNo}`, // PUT: 프로필 정보 수정
+    UPLOAD_PROFILE_IMAGE: (memberNo) => `/api/members/${memberNo}/profile-image`, // POST: 프로필 이미지 업로드
+    UPLOAD_BACKGROUND_IMAGE: (memberNo) => `/api/members/${memberNo}/background-image`, // POST: 배경 이미지 업로드
+    EMPLOYEE_STATISTICS: (agencyNo) => `/api/members/agency/${agencyNo}/statistics`, // GET: 직원 통계 조회
+    DELETE_MEMBER: (memberNo) => `/api/members/${memberNo}`, // DELETE: 회원 탈퇴
   },
 
   // 출석/근태 API
@@ -24,6 +30,8 @@ export const API_ENDPOINTS = {
     CHECK_IN: `/api/attendance/check-in`, // POST: 출근 체크
     HISTORY: (memberNo, startDate, endDate) => 
       `/api/attendance/history?memberNo=${memberNo}&startDate=${startDate}&endDate=${endDate}`, // GET: 출석 이력 조회
+    STATISTICS: (memberNo, year, month) => 
+      `/api/attendance/statistics/${memberNo}?year=${year}&month=${month}`, // GET: 근태 통계 조회
   },
 
   // 연차/휴가 API

@@ -20,6 +20,50 @@ export const memberService = {
   getCurrentMember: () => {
     return api.get(API_ENDPOINTS.MEMBERS.CURRENT);
   },
+  
+  // 마이페이지 정보 조회
+  getMyPageInfo: (memberNo) => {
+    return api.get(API_ENDPOINTS.MEMBERS.MY_PAGE(memberNo));
+  },
+  
+  // 프로필 정보 수정
+  updateProfile: (memberNo, memberData) => {
+    return api.put(API_ENDPOINTS.MEMBERS.UPDATE_PROFILE(memberNo), memberData);
+  },
+  
+  // 프로필 이미지 업로드
+  uploadProfileImage: (memberNo, file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post(API_ENDPOINTS.MEMBERS.UPLOAD_PROFILE_IMAGE(memberNo), formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+  
+  // 배경 이미지 업로드
+  uploadBackgroundImage: (memberNo, file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post(API_ENDPOINTS.MEMBERS.UPLOAD_BACKGROUND_IMAGE(memberNo), formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+  
+  // 직원 통계 조회 (에이전시 대표용)
+  getEmployeeStatistics: (agencyNo) => {
+    return api.get(API_ENDPOINTS.MEMBERS.EMPLOYEE_STATISTICS(agencyNo));
+  },
+  
+  // 회원 탈퇴
+  deleteMember: (memberNo, password) => {
+    return api.delete(API_ENDPOINTS.MEMBERS.DELETE_MEMBER(memberNo), {
+      data: { password }
+    });
+  },
 };
 
 // 출석/근태 서비스
@@ -32,6 +76,11 @@ export const attendanceService = {
   // 출석 이력 조회
   getHistory: (memberNo, startDate, endDate) => {
     return api.get(API_ENDPOINTS.ATTENDANCE.HISTORY(memberNo, startDate, endDate));
+  },
+  
+  // 근태 통계 조회
+  getStatistics: (memberNo, year, month) => {
+    return api.get(API_ENDPOINTS.ATTENDANCE.STATISTICS(memberNo, year, month));
   },
 };
 

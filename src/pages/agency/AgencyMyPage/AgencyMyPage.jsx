@@ -8,31 +8,34 @@ import { toast } from 'sonner';
 import { motion } from 'motion/react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { ActionButtonsGroup, ActionButton } from './AgencyMyPage.styled';
+import { memberService } from '@/api/services';
+import { API_BASE_URL } from '@/api/config';
+import useAuthStore from '@/store/authStore';
 
 export function AgencyMyPage({ onClose, onLogout }) {
+  const { user } = useAuthStore();
+  const memberNo = user?.memberNo;
+  const agencyNo = user?.agencyNo;
+  
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isImageSelectModalOpen, setIsImageSelectModalOpen] = useState(false);
-  const [userName, setUserName] = useState('김에이전시');
-  const [email, setEmail] = useState('kim.agency@example.com');
-  const [phone, setPhone] = useState('010-5678-9012');
-  const [location, setLocation] = useState('서울특별시 강남구');
-  const [studio, setStudio] = useState('스튜디오 아방가르');
+  const [isLoading, setIsLoading] = useState(true);
+  const [userName, setUserName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [location, setLocation] = useState('');
+  const [studio, setStudio] = useState('');
   const [profileImage, setProfileImage] = useState(null);
   const [backgroundImage, setBackgroundImage] = useState(null);
-  const [companyCodeInput, setCompanyCodeInput] = useState('');
-
-  const companyCode = '202490123456';
-
-  // 직원 인원수 데이터 (담당자, 작가, 어시스트)
-  const employeeData = [
-    { name: '담당자', value: 5, color: '#00ACC1' },
-    { name: '작가', value: 12, color: '#9C27B0' },
-    { name: '어시스트', value: 8, color: '#FF9800' },
-  ];
-
-  // 총 직원 수 계산
-  const totalEmployees = employeeData.reduce((sum, item) => sum + item.value, 0);
+  const [companyCode, setCompanyCode] = useState('');
+  const [employeeData, setEmployeeData] = useState([]);
+  const [totalEmployees, setTotalEmployees] = useState(0);
+  const [memberRole, setMemberRole] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteError, setDeleteError] = useState('');
 
   // Custom tooltip for the pie chart
   const CustomTooltip = ({ active, payload }) => {
@@ -47,47 +50,103 @@ export function AgencyMyPage({ onClose, onLogout }) {
     return null;
   };
 
-  const handleVerifyCode = () => {
-    if (!companyCodeInput.trim()) {
-      toast.error('회사 코드를 입력해주세요.');
+  // Load user data from API
+  useEffect(() => {
+    if (!memberNo) return;
+    
+    const loadMyPageData = async () => {
+      try {
+        setIsLoading(true);
+        
+        // 마이페이지 정보 조회
+        const myPageData = await memberService.getMyPageInfo(memberNo);
+        setUserName(myPageData.memberName || '');
+        setEmail(myPageData.memberEmail || '');
+        setPhone(myPageData.memberPhone || '');
+        setLocation(myPageData.memberAddress || '');
+        setStudio(myPageData.agencyName || '');
+        setCompanyCode(myPageData.agencyCode || '');
+        setMemberRole(myPageData.memberRole || '');
+        
+        // 이미지 URL 설정 (백엔드에서 반환된 파일명을 전체 URL로 변환)
+        const imageBaseUrl = API_BASE_URL || 'http://localhost:8888';
+        if (myPageData.memberProfileImage) {
+          setProfileImage(`${imageBaseUrl}/uploads/${myPageData.memberProfileImage}`);
+        }
+        if (myPageData.memberProfileBannerImage) {
+          setBackgroundImage(`${imageBaseUrl}/uploads/${myPageData.memberProfileBannerImage}`);
+        }
+        
+        // 직원 통계 조회 (에이전시 대표인 경우)
+        if (agencyNo && myPageData.memberRole === '에이전시 대표') {
+          try {
+            const statistics = await memberService.getEmployeeStatistics(agencyNo);
+            const roleColorMap = {
+              '담당자': '#00ACC1',
+              '작가': '#9C27B0',
+              '어시스트': '#FF9800',
+            };
+            
+            const formattedData = statistics.roleCounts.map(item => ({
+              name: item.role,
+              value: Number(item.count), // Long을 Number로 변환
+              color: roleColorMap[item.role] || '#6E8FB3',
+            }));
+            
+            setEmployeeData(formattedData);
+            setTotalEmployees(statistics.totalCount || 0);
+          } catch (error) {
+            console.error('직원 통계 조회 실패:', error);
+            setEmployeeData([]);
+            setTotalEmployees(0);
+          }
+        }
+      } catch (error) {
+        console.error('마이페이지 데이터 로드 실패:', error);
+        toast.error('데이터를 불러오는데 실패했습니다.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadMyPageData();
+  }, [memberNo, agencyNo]);
+
+  const handleSaveProfile = async () => {
+    if (!memberNo) return;
+    
+    if (password && password !== confirmPassword) {
+      toast.error('비밀번호가 일치하지 않습니다.');
       return;
     }
     
-    if (companyCodeInput === companyCode) {
-      toast.success('회사 코드가 확인되었습니다.');
-    } else {
-      toast.error('올바른 회사 코드가 아닙니다.');
+    try {
+      const updateData = {
+        memberName: userName,
+        memberPhone: phone,
+        memberAddress: location,
+        agencyName: studio, // 에이전시 대표만 수정 가능
+        memberPassword: password || undefined, // 비밀번호가 있으면 전송
+      };
+      
+      await memberService.updateProfile(memberNo, updateData);
+      toast.success('프로필이 성공적으로 업데이트되었습니다.');
+      setIsEditModalOpen(false);
+      setPassword('');
+      setConfirmPassword('');
+      
+      // 데이터 다시 로드
+      const myPageData = await memberService.getMyPageInfo(memberNo);
+      setUserName(myPageData.memberName || '');
+      setEmail(myPageData.memberEmail || '');
+      setPhone(myPageData.memberPhone || '');
+      setLocation(myPageData.memberAddress || '');
+      setStudio(myPageData.agencyName || '');
+      setMemberRole(myPageData.memberRole || '');
+    } catch (error) {
+      console.error('프로필 수정 실패:', error);
+      toast.error('프로필 수정에 실패했습니다.');
     }
-  };
-
-  // Load user data from localStorage
-  useEffect(() => {
-    const savedUserData = localStorage.getItem('agencyUserData');
-    if (savedUserData) {
-      const userData = JSON.parse(savedUserData);
-      setUserName(userData.name || '김에이전시');
-      setEmail(userData.email || 'kim.agency@example.com');
-      setPhone(userData.phone || '010-5678-9012');
-      setLocation(userData.location || '서울특별시 강남구');
-      setStudio(userData.studio || '스튜디오 아방가르');
-      setProfileImage(userData.profileImage || null);
-      setBackgroundImage(userData.backgroundImage || null);
-    }
-  }, []);
-
-  const handleSaveProfile = () => {
-    const userData = {
-      name: userName,
-      email,
-      phone,
-      location,
-      studio,
-      profileImage,
-      backgroundImage
-    };
-    localStorage.setItem('agencyUserData', JSON.stringify(userData));
-    toast.success('프로필이 성공적으로 업데이트되었습니다.');
-    setIsEditModalOpen(false);
   };
 
   const handleLogout = () => {
@@ -98,46 +157,73 @@ export function AgencyMyPage({ onClose, onLogout }) {
     onLogout();
   };
 
-  const handleDeleteAccount = () => {
-    localStorage.clear();
-    toast.success('회원 탈퇴가 완료되었습니다.');
-    setIsDeleteModalOpen(false);
-    onLogout();
+  const handleDeleteAccount = async () => {
+    if (!memberNo) return;
+    
+    // 에러 메시지 초기화
+    setDeleteError('');
+    
+    if (!deletePassword || deletePassword.trim() === '') {
+      setDeleteError('비밀번호를 입력해주세요.');
+      return;
+    }
+    
+    try {
+      await memberService.deleteMember(memberNo, deletePassword);
+      toast.success('회원 탈퇴가 완료되었습니다.');
+      setIsDeleteModalOpen(false);
+      setDeletePassword('');
+      setDeleteError('');
+      onLogout();
+    } catch (error) {
+      console.error('회원 탈퇴 실패:', error);
+      const errorMessage = error?.response?.data?.message || error?.message || '회원 탈퇴에 실패했습니다.';
+      setDeleteError(errorMessage);
+    }
   };
 
 
   const handleImageTypeSelect = (type) => {
+    if (!memberNo) return;
+    
     setIsImageSelectModalOpen(false);
     
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    input.onchange = (e) => {
+    input.onchange = async (e) => {
       const file = e.target.files?.[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const newImage = reader.result;
-          const savedUserData = localStorage.getItem('agencyUserData');
-          const userData = savedUserData ? JSON.parse(savedUserData) : {};
-          
-          if (type === 'background') {
-            setBackgroundImage(newImage);
-            userData.backgroundImage = newImage;
-            toast.success('배경 이미지가 변경되었습니다.');
-          } else {
-            setProfileImage(newImage);
-            userData.profileImage = newImage;
-            toast.success('프로필 사진이 변경되었습니다.');
-          }
-          
-          localStorage.setItem('agencyUserData', JSON.stringify(userData));
-        };
-        reader.readAsDataURL(file);
+      if (!file) return;
+      
+      try {
+        const imageBaseUrl = API_BASE_URL || 'http://localhost:8888';
+        let fileName;
+        if (type === 'background') {
+          fileName = await memberService.uploadBackgroundImage(memberNo, file);
+          setBackgroundImage(`${imageBaseUrl}/uploads/${fileName}`);
+          toast.success('배경 이미지가 변경되었습니다.');
+        } else {
+          fileName = await memberService.uploadProfileImage(memberNo, file);
+          setProfileImage(`${imageBaseUrl}/uploads/${fileName}`);
+          toast.success('프로필 사진이 변경되었습니다.');
+        }
+      } catch (error) {
+        console.error('이미지 업로드 실패:', error);
+        toast.error('이미지 업로드에 실패했습니다.');
       }
     };
     input.click();
   };
+
+  if (isLoading) {
+    return (
+      <div className="fixed inset-0 z-50 bg-background flex items-center justify-center p-8 overflow-auto">
+        <div className="text-center">
+          <p className="text-[#6E8FB3]">로딩 중...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex items-center justify-center p-8 overflow-auto">
@@ -207,7 +293,7 @@ export function AgencyMyPage({ onClose, onLogout }) {
               {/* Center: Name, Role, and Employee Stats */}
               <div className="flex-1 pt-20">
                 <h1 className="text-[30px] font-bold text-[#1F2328] mb-2">{userName}</h1>
-                <p className="text-[#6E8FB3] text-base mb-8">에이전시 대표</p>
+                <p className="text-[#6E8FB3] text-base mb-8">{memberRole}</p>
 
                 {/* Employee Stats */}
                 <div className="mb-8">
@@ -313,21 +399,7 @@ export function AgencyMyPage({ onClose, onLogout }) {
                     <KeyRound className="w-5 h-5 text-[#6E8FB3] mt-0.5 flex-shrink-0" />
                     <div className="flex-1">
                       <p className="text-xs text-[#6E8FB3] mb-1">회사 코드</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Input
-                          type="text"
-                          value={companyCodeInput}
-                          onChange={(e) => setCompanyCodeInput(e.target.value)}
-                          placeholder="회사 코드 입력"
-                          className="flex-1 h-8 text-xs bg-white border-[#DADDE1] text-[#1F2328]"
-                        />
-                        <Button
-                          onClick={handleVerifyCode}
-                          className="h-8 px-3 text-xs bg-[#9C27B0] hover:bg-[#9C27B0]/90 text-white"
-                        >
-                          확인
-                        </Button>
-                      </div>
+                      <p className="text-sm text-[#1F2328]">{companyCode}</p>
                     </div>
                   </div>
                 </div>
@@ -356,12 +428,24 @@ export function AgencyMyPage({ onClose, onLogout }) {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-email" className="text-sm text-[#1F2328]">이메일</Label>
+              <Label htmlFor="edit-password" className="text-sm text-[#1F2328]">비밀번호 변경</Label>
               <Input
-                id="edit-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="edit-password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="변경할 비밀번호 (변경하지 않으려면 비워두세요)"
+                className="bg-white border-[#DADDE1] text-[#1F2328]"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-confirm-password" className="text-sm text-[#1F2328]">비밀번호 확인</Label>
+              <Input
+                id="edit-confirm-password"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="비밀번호 확인"
                 className="bg-white border-[#DADDE1] text-[#1F2328]"
               />
             </div>
@@ -384,7 +468,7 @@ export function AgencyMyPage({ onClose, onLogout }) {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-code" className="text-sm text-[#1F2328]">스튜디오 마감기기</Label>
+              <Label htmlFor="edit-code" className="text-sm text-[#1F2328]">소속</Label>
               <Input
                 id="edit-code"
                 value={studio}
@@ -438,7 +522,13 @@ export function AgencyMyPage({ onClose, onLogout }) {
       </Dialog>
 
       {/* Delete Account Confirmation Modal */}
-      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+      <Dialog open={isDeleteModalOpen} onOpenChange={(open) => {
+        setIsDeleteModalOpen(open);
+        if (!open) {
+          setDeletePassword('');
+          setDeleteError('');
+        }
+      }}>
         <DialogContent className="sm:max-w-[400px] bg-white">
           <DialogHeader>
             <DialogTitle className="text-lg text-[#1F2328] font-bold">회원 탈퇴</DialogTitle>
@@ -450,6 +540,27 @@ export function AgencyMyPage({ onClose, onLogout }) {
             <p className="text-sm text-[#1F2328] mb-4">
               탈퇴 시 모든 데이터가 삭제되며, 복구할 수 없습니다.
             </p>
+            <div className="space-y-2 mb-4">
+              <Label htmlFor="delete-password" className="text-sm text-[#1F2328]">
+                비밀번호 확인
+              </Label>
+              <Input
+                id="delete-password"
+                type="password"
+                value={deletePassword}
+                onChange={(e) => {
+                  setDeletePassword(e.target.value);
+                  setDeleteError('');
+                }}
+                placeholder="비밀번호를 입력하세요"
+                className={`bg-white border-[#DADDE1] text-[#1F2328] ${
+                  deleteError ? 'border-red-500' : ''
+                }`}
+              />
+              {deleteError && (
+                <p className="text-xs text-red-600 mt-1">{deleteError}</p>
+              )}
+            </div>
             <div className="bg-[#FEF2F2] border border-[#FCA5A5] rounded-lg p-3">
               <p className="text-xs text-[#DC2626]">
                 ⚠️ 진행 중인 프로젝트와 모든 기록이 영구적으로 삭제됩니다.
@@ -457,7 +568,11 @@ export function AgencyMyPage({ onClose, onLogout }) {
             </div>
           </div>
           <div className="flex gap-2 justify-end pt-4 border-t border-[#DADDE1]">
-            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
+            <Button variant="outline" onClick={() => {
+              setIsDeleteModalOpen(false);
+              setDeletePassword('');
+              setDeleteError('');
+            }}>
               취소
             </Button>
             <Button 
