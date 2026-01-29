@@ -23,9 +23,20 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-/**
- * ArtistDashboardPage component
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 export function ArtistDashboardPage() {
   const [isWorking, setIsWorking] = useState(false);
   const [healthCheckCompleted, setHealthCheckCompleted] = useState(false);
@@ -40,7 +51,7 @@ export function ArtistDashboardPage() {
   const [currentMemoText, setCurrentMemoText] = useState('');
   const [editingMemoId, setEditingMemoId] = useState(null);
   const [memos, setMemos] = useState([]);
-  const [taskStatuses, setTaskStatuses] = useState({
+  const [taskStatuses, setTaskStatuses] = useState>({
     1: 'in-progress',
     2: 'in-progress',
     3: 'in-progress',
@@ -49,11 +60,7 @@ export function ArtistDashboardPage() {
   });
   const [currentAttendanceType, setCurrentAttendanceType] = useState('워케이션');
   
-  /**
-   * Get status color based on attendance type
-   * @param {string} status - Attendance status
-   * @returns {string} CSS class for background color
-   */
+  // 근태 상태별 색상 반환
   const getStatusColor = (status) => {
     switch (status) {
       case '워케이션':
@@ -69,11 +76,7 @@ export function ArtistDashboardPage() {
     }
   };
 
-  /**
-   * Get status text color based on attendance type
-   * @param {string} status - Attendance status
-   * @returns {string} CSS class for text color
-   */
+  // 근태 상태별 텍스트 색상 반환
   const getStatusTextColor = (status) => {
     switch (status) {
       case '워케이션':
@@ -90,10 +93,10 @@ export function ArtistDashboardPage() {
   };
   
   const [healthSurvey, setHealthSurvey] = useState({
-    condition: 'normal',
-    sleepHours: '',
-    discomfortLevel: 0,
-    notes: '',
+    condition,
+    sleepHours,
+    discomfortLevel,
+    notes,
   });
 
   // localStorage에서 피드백 로드
@@ -174,20 +177,20 @@ export function ArtistDashboardPage() {
         // 기본 샘플 데이터
         setFeedbacks([
           {
-            id: '1',
+            id,
             project: '내 웹툰',
             content: '에피소드 41 수정 요청: 3페이지 배경 디테일 보완',
             from: '이편집자',
             date: '오늘',
-            isRead: false,
+            isRead,
           },
           {
-            id: '2',
+            id,
             project: '신작',
             content: '캐릭터 디자인 방향성 좋습니다. 그대로 진행해주세요!',
             from: '김담당자',
             date: '어제',
-            isRead: true,
+            isRead,
           },
         ]);
       }
@@ -202,21 +205,21 @@ export function ArtistDashboardPage() {
 
   // Mock data for deadlines
   const deadlineProjects = [
-    { id: 1, name: '에피소드 42 연재', deadline: '오늘 자정', urgent: true },
-    { id: 2, name: '에피소드 43 스케치', deadline: '1월 17일', urgent: false },
+    { id, name: '에피소드 42 연재', deadline: '오늘 자정', urgent,
+    { id, name: '에피소드 43 스케치', deadline: '1월 17일', urgent,
   ];
 
   // Mock data for attendance requests
   const [attendanceRequests] = useState([
     {
-      id: '1',
+      id,
       type: '휴가',
       startDate: '1월 20일',
       endDate: '1월 22일',
       status: '대기',
     },
     {
-      id: '2',
+      id,
       type: '재택근무',
       startDate: '1월 16일',
       endDate: '1월 16일',
@@ -268,10 +271,6 @@ export function ArtistDashboardPage() {
     toast.info('건강 체크를 취소했습니다. 작업이 시작되지 않았습니다.');
   };
 
-  /**
-   * Toggle task status between in-progress and completed
-   * @param {number} taskId - Task ID
-   */
   const toggleTaskStatus = (taskId) => {
     setTaskStatuses(prev => ({
       ...prev,
@@ -296,7 +295,7 @@ export function ArtistDashboardPage() {
         const newMemo = {
           id: Date.now().toString(),
           title: currentMemoTitle || '새 메모',
-          content: currentMemoText,
+          content,
           color: memoColors[getRandomColor()].bg,
           createdAt: new Date().toISOString(),
         };
@@ -319,10 +318,6 @@ export function ArtistDashboardPage() {
     setEditingMemoId(null);
   };
 
-  /**
-   * Handle editing a memo
-   * @param {string} memoId - Memo ID
-   */
   const handleEditMemo = (memoId) => {
     const memoToEdit = memos.find(memo => memo.id === memoId);
     if (memoToEdit) {
@@ -333,21 +328,12 @@ export function ArtistDashboardPage() {
     }
   };
 
-  /**
-   * Handle deleting a memo
-   * @param {string} memoId - Memo ID
-   */
   const handleDeleteMemo = (memoId) => {
     setMemos(memos.filter(memo => memo.id !== memoId));
     localStorage.setItem('artistMemos', JSON.stringify(memos.filter(memo => memo.id !== memoId)));
     toast.success('메모가 삭제되었습니다.');
   };
 
-  /**
-   * Get badge color for status
-   * @param {string} status - Status string
-   * @returns {string} CSS class for badge color
-   */
   const getStatusBadgeColor = (status) => {
     switch (status) {
       case '대기':
@@ -409,7 +395,7 @@ export function ArtistDashboardPage() {
                   <label className="text-sm font-medium text-foreground mb-2 block">현재 상태 선택</label>
                   <select
                     value={currentAttendanceType || ''}
-                    onChange={(e) => setCurrentAttendanceType(e.target.value || null)}
+                    onChange={(e) => setCurrentAttendanceType(e.target.value)}
                     className="w-full px-4 py-2.5 border-2 border-border rounded-lg bg-background text-foreground font-medium focus:ring-2 focus:ring-primary focus:border-primary outline-none"
                   >
                     <option value="">선택하세요</option>
@@ -510,7 +496,7 @@ export function ArtistDashboardPage() {
                 )}
               </Card>
 
-              {/* New Container: Feedback, Deadline, Attendance Request */}
+              {/* New Container, Deadline, Attendance Request */}
               <div className="grid grid-cols-3 gap-4">
                 {/* Feedback */}
                 <Card className="p-4">
@@ -738,15 +724,15 @@ export function ArtistDashboardPage() {
             </label>
             <div className="grid grid-cols-4 gap-2">
               {[
-                { value: 'tired', label: '피곤함' },
-                { value: 'normal', label: '보통' },
-                { value: 'good', label: '좋음' },
-                { value: 'excellent', label: '최상' },
+                { value, label: '피곤함' },
+                { value, label: '보통' },
+                { value, label: '좋음' },
+                { value, label: '최상' },
               ].map((option) => (
                 <button
                   key={option.value}
                   type="button"
-                  onClick={() => setHealthSurvey({ ...healthSurvey, condition: option.value })}
+                  onClick={() => setHealthSurvey({ ...healthSurvey, condition: option.value)}
                   className={`py-3 px-4 rounded-lg border-2 text-sm font-medium transition-all ${
                     healthSurvey.condition === option.value
                       ? 'border-primary bg-primary/10 text-primary'

@@ -3,9 +3,6 @@ import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
 import { MapPin, Calendar, CheckCircle2, Circle } from 'lucide-react';
 
-/**
- * ArtistWorkationPage component
- */
 export function ArtistWorkationPage() {
   return (
     <div className="w-full h-full overflow-y-auto hide-scrollbar">

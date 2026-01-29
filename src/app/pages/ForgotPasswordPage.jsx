@@ -4,10 +4,13 @@ import { Card } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Mail, Lock, ArrowLeft, Check } from 'lucide-react';
 
+
+
+
+
 /**
- * ForgotPasswordPage component
  * @param {Object} props
- * @param {Function} props.onBackToLogin - Callback to go back to login page
+ * @param {Function} props.onBackToLogin
  */
 export function ForgotPasswordPage({ onBackToLogin }) {
   const [step, setStep] = useState('email');
@@ -16,30 +19,18 @@ export function ForgotPasswordPage({ onBackToLogin }) {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  /**
-   * Handle sending verification email
-   * @param {React.FormEvent} e - Form event
-   */
   const handleSendEmail = (e) => {
     e.preventDefault();
     // Mock: Send verification email
     setStep('verify');
   };
 
-  /**
-   * Handle verification code
-   * @param {React.FormEvent} e - Form event
-   */
   const handleVerifyCode = (e) => {
     e.preventDefault();
     // Mock: Verify code
     setStep('reset');
   };
 
-  /**
-   * Handle password reset
-   * @param {React.FormEvent} e - Form event
-   */
   const handleResetPassword = (e) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
@@ -61,8 +52,8 @@ export function ForgotPasswordPage({ onBackToLogin }) {
 
       {/* Back Button - Fixed Top Left */}
       <motion.button
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
+        initial={{ opacity, x: -20 }}
+        animate={{ opacity, x: 0 }}
         transition={{ delay: 0.2 }}
         onClick={onBackToLogin}
         className="fixed top-8 left-8 z-50 flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors"
@@ -72,8 +63,8 @@ export function ForgotPasswordPage({ onBackToLogin }) {
       </motion.button>
 
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity, y: 20 }}
+        animate={{ opacity, y: 0 }}
         transition={{ duration: 0.6 }}
         className="w-full max-w-md px-6 relative z-10"
       >
@@ -82,7 +73,7 @@ export function ForgotPasswordPage({ onBackToLogin }) {
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+            transition={{ delay: 0.2, type, stiffness: 200 }}
             className="inline-flex items-center justify-center w-20 h-20 bg-primary rounded-2xl shadow-2xl mb-6"
           >
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -148,8 +139,8 @@ export function ForgotPasswordPage({ onBackToLogin }) {
 
         {/* Forms */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity, y: 20 }}
+          animate={{ opacity, y: 0 }}
           transition={{ delay: 0.5 }}
         >
           <Card className="p-8 shadow-2xl">
@@ -257,7 +248,7 @@ export function ForgotPasswordPage({ onBackToLogin }) {
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  transition={{ type: "spring", stiffness: 200 }}
+                  transition={{ type, stiffness: 200 }}
                   className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto"
                 >
                   <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center">

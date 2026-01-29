@@ -6,9 +6,6 @@ import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react";
 
 import { cn } from "./utils";
 
-/**
- * Menubar component
- */
 function Menubar({
   className,
   ...props
@@ -25,39 +22,32 @@ function Menubar({
   );
 }
 
-/**
- * MenubarMenu component
- */
-function MenubarMenu({ ...props }) {
+function MenubarMenu({
+  ...props
+}) {
   return <MenubarPrimitive.Menu data-slot="menubar-menu" {...props} />;
 }
 
-/**
- * MenubarGroup component
- */
-function MenubarGroup({ ...props }) {
+function MenubarGroup({
+  ...props
+}) {
   return <MenubarPrimitive.Group data-slot="menubar-group" {...props} />;
 }
 
-/**
- * MenubarPortal component
- */
-function MenubarPortal({ ...props }) {
+function MenubarPortal({
+  ...props
+}) {
   return <MenubarPrimitive.Portal data-slot="menubar-portal" {...props} />;
 }
 
-/**
- * MenubarRadioGroup component
- */
-function MenubarRadioGroup({ ...props }) {
+function MenubarRadioGroup({
+  ...props
+}) {
   return (
     <MenubarPrimitive.RadioGroup data-slot="menubar-radio-group" {...props} />
   );
 }
 
-/**
- * MenubarTrigger component
- */
 function MenubarTrigger({
   className,
   ...props
@@ -74,13 +64,6 @@ function MenubarTrigger({
   );
 }
 
-/**
- * MenubarContent component
- * @param {Object} props
- * @param {string} [props.align] - Alignment (start, center, end)
- * @param {number} [props.alignOffset] - Align offset
- * @param {number} [props.sideOffset] - Side offset
- */
 function MenubarContent({
   className,
   align = "start",
@@ -89,7 +72,7 @@ function MenubarContent({
   ...props
 }) {
   return (
-    <MenubarPortal>
+    
       <MenubarPrimitive.Content
         data-slot="menubar-content"
         align={align}
@@ -105,12 +88,6 @@ function MenubarContent({
   );
 }
 
-/**
- * MenubarItem component
- * @param {Object} props
- * @param {boolean} [props.inset] - Inset style
- * @param {string} [props.variant] - Variant (default, destructive)
- */
 function MenubarItem({
   className,
   inset,
@@ -131,9 +108,6 @@ function MenubarItem({
   );
 }
 
-/**
- * MenubarCheckboxItem component
- */
 function MenubarCheckboxItem({
   className,
   children,
@@ -160,9 +134,6 @@ function MenubarCheckboxItem({
   );
 }
 
-/**
- * MenubarRadioItem component
- */
 function MenubarRadioItem({
   className,
   children,
@@ -187,11 +158,6 @@ function MenubarRadioItem({
   );
 }
 
-/**
- * MenubarLabel component
- * @param {Object} props
- * @param {boolean} [props.inset] - Inset style
- */
 function MenubarLabel({
   className,
   inset,
@@ -210,9 +176,6 @@ function MenubarLabel({
   );
 }
 
-/**
- * MenubarSeparator component
- */
 function MenubarSeparator({
   className,
   ...props
@@ -220,15 +183,13 @@ function MenubarSeparator({
   return (
     <MenubarPrimitive.Separator
       data-slot="menubar-separator"
-      className={cn("bg-border -mx-1 my-1 h-px", className)}
+      className={cn(className)}
+      style={{ backgroundColor: 'var(--border)', margin: '4px -4px', height: '1px' }}
       {...props}
     />
   );
 }
 
-/**
- * MenubarShortcut component
- */
 function MenubarShortcut({
   className,
   ...props
@@ -245,18 +206,12 @@ function MenubarShortcut({
   );
 }
 
-/**
- * MenubarSub component
- */
-function MenubarSub({ ...props }) {
+function MenubarSub({
+  ...props
+}) {
   return <MenubarPrimitive.Sub data-slot="menubar-sub" {...props} />;
 }
 
-/**
- * MenubarSubTrigger component
- * @param {Object} props
- * @param {boolean} [props.inset] - Inset style
- */
 function MenubarSubTrigger({
   className,
   inset,
@@ -279,9 +234,6 @@ function MenubarSubTrigger({
   );
 }
 
-/**
- * MenubarSubContent component
- */
 function MenubarSubContent({
   className,
   ...props

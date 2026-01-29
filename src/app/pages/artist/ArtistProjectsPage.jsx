@@ -8,9 +8,8 @@ import { toast } from 'sonner';
 import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
 import { ProjectDetailPage } from './ProjectDetailPage';
 
-/**
- * ArtistProjectsPage component
- */
+
+
 export function ArtistProjectsPage() {
   const [selectedProject, setSelectedProject] = useState(null);
   const [showDetailPage, setShowDetailPage] = useState(false);
@@ -32,12 +31,12 @@ export function ArtistProjectsPage() {
 
   const [projects, setProjects] = useState([
     {
-      id: 1,
+      id,
       title: '로맨스 판타지',
       platform: '네이버 웹툰',
-      status: 'urgent',
+      status,
       serialStatus: '연재중',
-      currentEpisode: 42,
+      currentEpisode,
       deadline: 'D-2',
       genre: '로맨스/판타지',
       description: '매주 일요일 업데이트. 현재 스토리보드 단계입니다.',
@@ -45,12 +44,12 @@ export function ArtistProjectsPage() {
       thumbnail: 'https://images.unsplash.com/photo-1591788806059-cb6e2f6a2498?w=400',
     },
     {
-      id: 2,
+      id,
       title: '학원물',
       platform: '카카오페이지',
-      status: 'normal',
+      status,
       serialStatus: '연재중',
-      currentEpisode: 15,
+      currentEpisode,
       deadline: 'D-5',
       genre: '학원/일상',
       description: '매주 수요일 업데이트. 러프 스케치 단계입니다.',
@@ -58,12 +57,12 @@ export function ArtistProjectsPage() {
       thumbnail: 'https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?w=400',
     },
     {
-      id: 3,
+      id,
       title: '미스터리 스릴러',
       platform: '레진코믹스',
-      status: 'normal',
+      status,
       serialStatus: '휴재',
-      currentEpisode: 28,
+      currentEpisode,
       deadline: '휴재중',
       genre: '미스터리/스릴러',
       description: '2025년 3월 재연재 예정',
@@ -71,12 +70,12 @@ export function ArtistProjectsPage() {
       thumbnail: 'https://images.unsplash.com/photo-1618556662146-0c86c2466516?w=400',
     },
     {
-      id: 4,
+      id,
       title: '액션 판타지',
       platform: '네이버 시리즈',
-      status: 'completed',
+      status,
       serialStatus: '완결',
-      currentEpisode: 120,
+      currentEpisode,
       deadline: '완결',
       genre: '액션/판타지',
       description: '총 120화 완결. 조회수 2.5M을 기록했습니다.',
@@ -101,10 +100,7 @@ export function ArtistProjectsPage() {
     localStorage.setItem('projectsData', JSON.stringify(projects));
   }, [projects]);
 
-  /**
-   * Toggle filter selection
-   * @param {string} filter - Filter value to toggle
-   */
+  // 필터 토글 핸들러
   const toggleFilter = (filter) => {
     if (filter === '전체') {
       setStatusFilters(['전체']);
@@ -131,19 +127,11 @@ export function ArtistProjectsPage() {
     return statusFilters.includes(project.serialStatus);
   });
 
-  /**
-   * Handle project click
-   * @param {Object} project - Project object
-   */
   const handleProjectClick = (project) => {
     setSelectedProject(project);
     setShowDetailPage(true);
   };
 
-  /**
-   * Handle project deletion
-   * @param {number} projectId - Project ID to delete
-   */
   const handleDeleteProject = (projectId) => {
     setProjects((prevProjects) => prevProjects.filter((project) => project.id !== projectId));
     toast.success('작품이 삭제되었습니다.');
@@ -157,11 +145,7 @@ export function ArtistProjectsPage() {
     completed: projects.filter(p => p.serialStatus === '완결').length,
   };
 
-  /**
-   * Get badge color for status
-   * @param {string} status - Status string
-   * @returns {string} CSS class for badge color
-   */
+  // 상태별 배지 색상
   const getStatusBadgeColor = (status) => {
     switch (status) {
       case '연재중':
@@ -232,9 +216,7 @@ export function ArtistProjectsPage() {
                       variant={statusFilters.includes(filter) ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => toggleFilter(filter)}
-                      className={statusFilters.includes(filter) ? getStatusBadgeColor(filter === '전체' ? '' : filter) : ''}
-                    >
-                      {filter}
+                      className={statusFilters.includes(filter) ? getStatusBadgeColor(filter === '전체' ? '' : filter) {filter}
                     </Button>
                   ))}
                 </div>

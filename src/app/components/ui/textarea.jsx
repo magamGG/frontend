@@ -2,11 +2,6 @@ import * as React from "react";
 
 import { cn } from "./utils";
 
-/**
- * Textarea component
- * @param {Object} props
- * @param {string} [props.className] - Additional CSS classes
- */
 function Textarea({ className, ...props }) {
   return (
     <textarea

@@ -16,15 +16,18 @@ import { Label } from "./label";
 const Form = FormProvider;
 
 /**
- * FormFieldContext value
+ * @typedef {Object} FormFieldContextValue
+ * @property {string} name
  */
 const FormFieldContext = React.createContext({});
 
 /**
- * FormField component
- * @param {Object} props - Controller props from react-hook-form
+ * @param {Object} props
+ * @param {string} props.name
  */
-const FormField = ({ ...props }) => {
+const FormField = ({
+  ...props
+}) => {
   return (
     <FormFieldContext.Provider value={{ name: props.name }}>
       <Controller {...props} />
@@ -32,10 +35,6 @@ const FormField = ({ ...props }) => {
   );
 };
 
-/**
- * useFormField hook
- * @returns {Object} Form field state and IDs
- */
 const useFormField = () => {
   const fieldContext = React.useContext(FormFieldContext);
   const itemContext = React.useContext(FormItemContext);
@@ -44,7 +43,7 @@ const useFormField = () => {
   const fieldState = getFieldState(fieldContext.name, formState);
 
   if (!fieldContext) {
-    throw new Error("useFormField should be used within <FormField>");
+    throw new Error("useFormField should be used within ");
   }
 
   const { id } = itemContext;
@@ -59,14 +58,15 @@ const useFormField = () => {
   };
 };
 
+
+};
+
 /**
- * FormItemContext value
+ * @typedef {Object} FormItemContextValue
+ * @property {string} id
  */
 const FormItemContext = React.createContext({});
 
-/**
- * FormItem component
- */
 function FormItem({ className, ...props }) {
   const id = React.useId();
 
@@ -81,9 +81,6 @@ function FormItem({ className, ...props }) {
   );
 }
 
-/**
- * FormLabel component
- */
 function FormLabel({
   className,
   ...props
@@ -101,9 +98,6 @@ function FormLabel({
   );
 }
 
-/**
- * FormControl component
- */
 function FormControl({ ...props }) {
   const { error, formItemId, formDescriptionId, formMessageId } =
     useFormField();
@@ -123,9 +117,6 @@ function FormControl({ ...props }) {
   );
 }
 
-/**
- * FormDescription component
- */
 function FormDescription({ className, ...props }) {
   const { formDescriptionId } = useFormField();
 
@@ -139,9 +130,6 @@ function FormDescription({ className, ...props }) {
   );
 }
 
-/**
- * FormMessage component
- */
 function FormMessage({ className, ...props }) {
   const { error, formMessageId } = useFormField();
   const body = error ? String(error?.message ?? "") : props.children;

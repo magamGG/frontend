@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Command as CommandPrimitive } from "cmdk";
+import { Command;
 import { SearchIcon } from "lucide-react";
 
 import { cn } from "./utils";
@@ -13,9 +13,6 @@ import {
   DialogTitle,
 } from "./dialog";
 
-/**
- * Command component
- */
 function Command({
   className,
   ...props
@@ -32,12 +29,6 @@ function Command({
   );
 }
 
-/**
- * CommandDialog component
- * @param {Object} props
- * @param {string} [props.title] - Dialog title
- * @param {string} [props.description] - Dialog description
- */
 function CommandDialog({
   title = "Command Palette",
   description = "Search for a command to run...",
@@ -47,8 +38,8 @@ function CommandDialog({
   return (
     <Dialog {...props}>
       <DialogHeader className="sr-only">
-        <DialogTitle>{title}</DialogTitle>
-        <DialogDescription>{description}</DialogDescription>
+        {title}</DialogTitle>
+        {description}</DialogDescription>
       </DialogHeader>
       <DialogContent className="overflow-hidden p-0">
         <Command className="[&_[cmdk-group-heading]]:text-muted-foreground **:data-[slot=command-input-wrapper]:h-12 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group]]:px-2 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5">
@@ -59,9 +50,6 @@ function CommandDialog({
   );
 }
 
-/**
- * CommandInput component
- */
 function CommandInput({
   className,
   ...props
@@ -84,9 +72,6 @@ function CommandInput({
   );
 }
 
-/**
- * CommandList component
- */
 function CommandList({
   className,
   ...props
@@ -103,10 +88,9 @@ function CommandList({
   );
 }
 
-/**
- * CommandEmpty component
- */
-function CommandEmpty({ ...props }) {
+function CommandEmpty({
+  ...props
+}) {
   return (
     <CommandPrimitive.Empty
       data-slot="command-empty"
@@ -116,9 +100,6 @@ function CommandEmpty({ ...props }) {
   );
 }
 
-/**
- * CommandGroup component
- */
 function CommandGroup({
   className,
   ...props
@@ -135,9 +116,6 @@ function CommandGroup({
   );
 }
 
-/**
- * CommandSeparator component
- */
 function CommandSeparator({
   className,
   ...props
@@ -151,9 +129,6 @@ function CommandSeparator({
   );
 }
 
-/**
- * CommandItem component
- */
 function CommandItem({
   className,
   ...props
@@ -170,9 +145,6 @@ function CommandItem({
   );
 }
 
-/**
- * CommandShortcut component
- */
 function CommandShortcut({
   className,
   ...props

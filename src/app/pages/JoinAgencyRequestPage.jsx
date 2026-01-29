@@ -9,11 +9,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Building2, User, Mail, Phone, Key, Send, ArrowLeft, CheckCircle2, Edit, Building } from 'lucide-react';
 import { toast } from 'sonner';
 
+
+
 /**
- * JoinAgencyRequestPage component
  * @param {Object} props
- * @param {Function} props.onBack - Callback to go back
- * @param {Function} props.onSuccess - Callback when request is successful
+ * @param {Function} props.onBack
+ * @param {Function} props.onSuccess
  */
 export function JoinAgencyRequestPage({ onBack, onSuccess }) {
   const [step, setStep] = useState('form');
@@ -29,11 +30,6 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
   const [editFormData, setEditFormData] = useState({ ...userData });
   const [agencyCode, setAgencyCode] = useState('');
 
-  /**
-   * Handle edit input change
-   * @param {string} field - Field name
-   * @param {string} value - Field value
-   */
   const handleEditInputChange = (field, value) => {
     setEditFormData(prev => ({ ...prev, [field]: value }));
   };
@@ -62,10 +58,6 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
     toast.success('개인 정보가 수정되었습니다.');
   };
 
-  /**
-   * Handle form submission
-   * @param {React.FormEvent} e - Form event
-   */
   const handleSubmit = (e) => {
     e.preventDefault();
     
@@ -90,8 +82,8 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
     return (
       <div className="w-full min-h-screen bg-background flex items-center justify-center p-6">
         <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
+          initial={{ opacity, scale: 0.9 }}
+          animate={{ opacity, scale: 1 }}
           transition={{ duration: 0.5 }}
           className="w-full max-w-lg"
         >
@@ -99,7 +91,7 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+              transition={{ delay: 0.2, type, stiffness: 200 }}
               className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-6"
             >
               <CheckCircle2 className="w-12 h-12 text-green-600" />
@@ -154,8 +146,8 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
 
       {/* Back Button - Fixed Top Left */}
       <motion.button
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
+        initial={{ opacity, x: -20 }}
+        animate={{ opacity, x: 0 }}
         transition={{ delay: 0.2 }}
         onClick={onBack}
         className="fixed top-8 left-8 z-50 flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors"
@@ -165,8 +157,8 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
       </motion.button>
 
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity, y: 20 }}
+        animate={{ opacity, y: 0 }}
         transition={{ duration: 0.6 }}
         className="w-full max-w-2xl px-6 relative z-10"
       >
@@ -175,7 +167,7 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+            transition={{ delay: 0.2, type, stiffness: 200 }}
             className="inline-flex items-center justify-center w-20 h-20 bg-primary rounded-2xl shadow-2xl mb-6"
           >
             <Building2 className="w-10 h-10 text-primary-foreground" />

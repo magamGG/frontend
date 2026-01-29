@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Toaster } from 'sonner';
 import { FullPageLayout } from '@/components/layout/FullPageLayout';
 import { LoginPage } from '@/pages/Login';
@@ -8,36 +8,38 @@ import { JoinAgencyRequestPage } from '@/pages/JoinAgencyRequest';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { ProjectProvider } from '@/contexts/ProjectContext';
+import useAuthStore from '@/store/authStore';
 
 // Import artist pages
-import { ArtistDashboardPage } from '@/pages/ArtistDashboard';
-import { ArtistProjectsPage } from '@/pages/ArtistProjects';
-import { ArtistCalendarPage } from '@/pages/ArtistCalendar';
-import { ArtistWorkationPage } from '@/pages/ArtistWorkation';
-import { ArtistTeamPage } from '@/pages/ArtistTeam';
-import { ArtistHealthPage } from '@/pages/ArtistHealth';
+import { ArtistDashboardPage } from '@/pages/artist/ArtistDashboard';
+import { ArtistProjectsPage } from '@/pages/artist/ArtistProjects';
+import { ArtistCalendarPage } from '@/pages/artist/ArtistCalendar';
+import { ArtistWorkationPage } from '@/pages/artist/ArtistWorkation';
+import { ArtistTeamPage } from '@/pages/artist/ArtistTeam';
+import { ArtistHealthPage } from '@/pages/artist/ArtistHealth';
 import { AttendancePage } from '@/pages/Attendance';
 
 // Import admin pages
-import { AdminDashboardPage } from '@/pages/AdminDashboard';
-import { AdminProjectsPage } from '@/pages/AdminProjects';
-import { AdminCalendarPage } from '@/pages/AdminCalendar';
-import { AdminTeamPage } from '@/pages/AdminTeam';
-import { AdminHealthPage } from '@/pages/AdminHealth';
-import { AdminPersonalHealthPage } from '@/pages/AdminPersonalHealth';
-import { AdminAbsenteePage } from '@/pages/AdminAbsentee';
-import { AdminMyPage } from '@/pages/AdminMyPage';
-import { AdminWorkcationPage } from '@/pages/AdminWorkcation';
+import { AdminDashboardPage } from '@/pages/admin/AdminDashboard';
+import { AdminProjectsPage } from '@/pages/admin/AdminProjects';
+import { AdminCalendarPage } from '@/pages/admin/AdminCalendar';
+import { AdminTeamPage } from '@/pages/admin/AdminTeam';
+import { AdminHealthPage } from '@/pages/admin/AdminHealth';
+import { AdminPersonalHealthPage } from '@/pages/admin/AdminPersonalHealth';
+import { AdminAbsenteePage } from '@/pages/admin/AdminAbsentee';
+import { AdminMyPage } from '@/pages/admin/AdminMyPage';
+import { AdminWorkcationPage } from '@/pages/admin/AdminWorkcation';
 
 // Import agency pages
-import { AgencyDashboardPage } from '@/pages/AgencyDashboard';
-import { AgencyProjectsPage } from '@/pages/AgencyProjects';
-import { AgencyTeamPage } from '@/pages/AgencyTeam';
-import { AgencyApprovalsPage } from '@/pages/AgencyApprovals';
-import { AgencyWorkcationPage } from '@/pages/AgencyWorkcation';
-import { AgencyMyPage } from '@/pages/AgencyMyPage';
-import { AgencyHealthPage } from '@/pages/AgencyHealth';
-import { AgencyAssignmentPage } from '@/pages/AgencyAssignment';
+import { AgencyDashboardPage } from '@/pages/agency/AgencyDashboard';
+import { AgencyProjectsPage } from '@/pages/agency/AgencyProjects';
+import { AgencyTeamPage } from '@/pages/agency/AgencyTeam';
+import { AgencyApprovalsPage } from '@/pages/agency/AgencyApprovals';
+import { AgencyWorkcationPage } from '@/pages/agency/AgencyWorkcation';
+import { AgencyMyPage } from '@/pages/agency/AgencyMyPage';
+import { AgencyHealthPage } from '@/pages/agency/AgencyHealth';
+import { AgencyAssignmentPage } from '@/pages/agency/AgencyAssignment';
+import { AgencyLeaveSettingsPage } from '@/pages/agency/AgencyLeaveSettings';
 
 /**
  * @typedef {'login' | 'signup' | 'forgot-password' | 'dashboard' | 'join-request'} AuthView
@@ -48,31 +50,127 @@ export default function App() {
   const [authView, setAuthView] = useState('login');
   const [userRole, setUserRole] = useState(null);
   const [hasAgency, setHasAgency] = useState(true); // Track if user has agency affiliation
+  const [isLoading, setIsLoading] = useState(true); // 로딩 상태 (새로고침 시 깜빡임 방지)
+
+  // Zustand store에서 저장된 인증 정보 가져오기
+  const { user, token, isAuthenticated, logout: storeLogout } = useAuthStore();
+
+  // 새로고침 시 저장된 세션 복구
+  useEffect(() => {
+    const restoreSession = () => {
+      // localStorage에 저장된 토큰이 있고 인증된 상태면 자동 로그인
+      if (token && isAuthenticated && user) {
+        console.log('세션 복구: 저장된 로그인 정보 발견', user);
+        
+        // 역할에 따라 화면 설정
+        const memberRole = user.memberRole;
+        const agencyNo = user.agencyNo;
+        
+        const artistAndManagerRoles = [
+          '웹툰 작가',
+          '웹소설 작가',
+          '어시스트 - 채색',
+          '어시스트 - 조명',
+          '어시스트 - 배경',
+          '어시스트 - 선화',
+          '어시스트- 기타',
+          '담당자'
+        ];
+        
+        let roleType = null;
+        let userHasAgency = agencyNo !== null && agencyNo !== undefined;
+        
+        if (memberRole === '에이전시 관리자') {
+          roleType = 'agency';
+          setAuthView('dashboard');
+        } else if (artistAndManagerRoles.includes(memberRole)) {
+          if (!userHasAgency) {
+            roleType = memberRole === '담당자' ? 'manager' : 'individual';
+            setAuthView('join-request');
+          } else {
+            roleType = memberRole === '담당자' ? 'manager' : 'individual';
+            setAuthView('dashboard');
+          }
+        } else {
+          roleType = 'individual';
+          setAuthView('dashboard');
+        }
+        
+        setUserRole(roleType);
+        setHasAgency(userHasAgency);
+      } else {
+        // 저장된 정보 없으면 로그인 화면
+        setAuthView('login');
+      }
+      
+      setIsLoading(false);
+    };
+    
+    restoreSession();
+  }, [token, isAuthenticated, user]);
 
   /**
-   * @param {UserRole} role
-   * @param {boolean} [affiliated=true]
+   * @param {string} memberRole - 백엔드에서 받은 실제 MEMBER_ROLE 값 (예: "웹툰 작가", "담당자", "에이전시 관리자")
+   * @param {number|null} agencyNo - AGENCY_NO 값 (null일 수 있음)
    */
-  const handleLogin = (role, affiliated = true) => {
-    setUserRole(role);
-    setHasAgency(affiliated);
+  const handleLogin = (memberRole, agencyNo) => {
+    // memberRole이 없으면 기본값 처리
+    if (!memberRole) {
+      console.error('memberRole이 없습니다.');
+      return;
+    }
     
-    if (!affiliated && (role === 'individual' || role === 'manager')) {
-      // If no agency affiliation, go to join request page
-      setAuthView('join-request');
+    // 아티스트/담당자 역할 목록
+    const artistAndManagerRoles = [
+      '웹툰 작가',
+      '웹소설 작가',
+      '어시스트 - 채색',
+      '어시스트 - 조명',
+      '어시스트 - 배경',
+      '어시스트 - 선화',
+      '어시스트- 기타',
+      '담당자'
+    ];
+    
+    // 프론트엔드에서 사용할 역할 타입 매핑
+    let roleType = null;
+    let hasAgency = agencyNo !== null && agencyNo !== undefined;
+    
+    if (memberRole === '에이전시 관리자') {
+      // 에이전시 관리자는 항상 대시보드로 이동
+      roleType = 'agency';
+      setAuthView('dashboard');
+    } else if (artistAndManagerRoles.includes(memberRole)) {
+      // 아티스트/담당자 역할인 경우
+      if (!hasAgency) {
+        // AGENCY_NO가 NULL인 경우 비소속 에이전시 가입 요청 페이지로 이동
+        roleType = memberRole === '담당자' ? 'manager' : 'individual';
+        setAuthView('join-request');
+      } else {
+        // AGENCY_NO가 NULL이 아닌 경우 담당자/아티스트 대시보드로 이동
+        roleType = memberRole === '담당자' ? 'manager' : 'individual';
+        setAuthView('dashboard');
+      }
     } else {
+      // 알 수 없는 역할인 경우 기본값으로 처리
+      roleType = 'individual';
       setAuthView('dashboard');
     }
+    
+    setUserRole(roleType);
+    setHasAgency(hasAgency);
   };
 
   const handleSignup = () => {
-    // After successful signup, redirect to dashboard
-    setUserRole('individual'); // Default role for signup
-    setHasAgency(true);
-    setAuthView('dashboard');
+    // 회원가입 완료 후 로그인 페이지로 리다이렉션
+    setAuthView('login');
   };
 
   const handleLogout = () => {
+    // Zustand store에서 로그아웃 (localStorage 클리어)
+    storeLogout();
+    
+    // 로컬 상태 초기화
     setUserRole(null);
     setHasAgency(true);
     setAuthView('login');
@@ -112,7 +210,7 @@ export default function App() {
         },
         {
           id: 'calendar',
-          title: '일정',
+          title: '캘린더',
           content: (props) => <ArtistCalendarPage {...props} />,
         },
         {
@@ -203,6 +301,11 @@ export default function App() {
           title: '할당 관리',
           content: <AgencyAssignmentPage />,
         },
+        {
+          id: 'leave-settings',
+          title: '연차 설정',
+          content: <AgencyLeaveSettingsPage />,
+        },
       ]
     : [
         // All pages - for development/preview
@@ -218,13 +321,13 @@ export default function App() {
         },
         {
           id: 'individual-calendar',
-          title: '작가 일정',
+          title: '작가 캘린더',
           content: (props) => <ArtistCalendarPage {...props} />,
         },
         {
           id: 'manager-dashboard',
           title: '담당자 대시보드',
-          content: <AdminDashboardPage />,
+          content: (props) => <AdminDashboardPage {...props} />,
         },
         {
           id: 'manager-projects',
@@ -297,6 +400,18 @@ export default function App() {
           ),
         },
       ];
+
+  // 로딩 중일 때 로딩 화면 표시 (깜빡임 방지)
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">로딩 중...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <DndProvider backend={HTML5Backend}>

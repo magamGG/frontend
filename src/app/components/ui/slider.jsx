@@ -5,14 +5,6 @@ import * as SliderPrimitive from "@radix-ui/react-slider";
 
 import { cn } from "./utils";
 
-/**
- * Slider component
- * @param {Object} props
- * @param {number|number[]} [props.defaultValue] - Default value
- * @param {number|number[]} [props.value] - Current value
- * @param {number} [props.min] - Minimum value
- * @param {number} [props.max] - Maximum value
- */
 function Slider({
   className,
   defaultValue,
@@ -26,8 +18,7 @@ function Slider({
       Array.isArray(value)
         ? value
         : Array.isArray(defaultValue)
-          ? defaultValue
-          : [min, max],
+          ? defaultValue, max],
     [value, defaultValue, min, max],
   );
 
@@ -61,7 +52,16 @@ function Slider({
         <SliderPrimitive.Thumb
           data-slot="slider-thumb"
           key={index}
-          className="border-primary bg-background ring-ring/50 block size-4 shrink-0 rounded-full border shadow-sm transition-[color,box-shadow] hover:ring-4 focus-visible:ring-4 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50"
+          style={{ borderColor: 'var(--primary)', backgroundColor: 'var(--background)', border: '1px solid', width: '16px', height: '16px', flexShrink: '0', borderRadius: '9999px', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)', transition: 'color 0.2s, box-shadow 0.2s' }}
+          onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 0 0 4px color-mix(in srgb, var(--ring) 50%, transparent)'}
+          onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)'}
+          onFocus={(e) => {
+            e.currentTarget.style.boxShadow = '0 0 0 4px color-mix(in srgb, var(--ring) 50%, transparent)';
+            e.currentTarget.style.outline = 'none';
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)';
+          }}
         />
       ))}
     </SliderPrimitive.Root>

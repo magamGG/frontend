@@ -2,6 +2,8 @@ import { motion, AnimatePresence } from "motion/react";
 import { Bell, Plus, User, X, ChevronRight } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Badge } from "@/app/components/ui/badge";
+import { notificationService } from "@/api/services";
+import { toast } from "sonner";
 import {
   HeaderContainer,
   HeaderContent,
@@ -83,56 +85,9 @@ export function Header({
 }) {
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef(null);
+  const [notifications, setNotifications] = useState([]);
+  const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
 
-<<<<<<< Updated upstream
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      title: "마감 알림",
-      message: "에피소드 42 마감이 오늘입니다.",
-      time: "방금 전",
-      isRead: false,
-      type: "warning",
-      linkedPage: "calendar",
-    },
-    {
-      id: 2,
-      title: "일정 알림",
-      message: "내일 편집자 미팅이 예정되어 있습니다.",
-      time: "30분 전",
-      isRead: false,
-      type: "info",
-      linkedPage: "calendar",
-    },
-    {
-      id: 3,
-      title: "승인 완료",
-      message: "워케이션 신청이 승인되었습니다.",
-      time: "2시간 전",
-      isRead: false,
-      type: "success",
-      linkedPage: "attendance",
-    },
-    {
-      id: 4,
-      title: "건강 체크",
-      message: "오늘 건강 설문을 완료하지 않았습니다.",
-      time: "3시간 전",
-      isRead: true,
-      type: "info",
-      linkedPage: "dashboard",
-    },
-    {
-      id: 5,
-      title: "작품 업데이트",
-      message: "새로운 에피소드가 업로드되었습니다.",
-      time: "어제",
-      isRead: true,
-      type: "info",
-      linkedPage: "projects",
-    },
-  ]);
-=======
   // 알림 목록 조회
   const fetchNotifications = async () => {
     try {
@@ -216,7 +171,6 @@ export function Header({
   useEffect(() => {
     fetchNotifications();
   }, []);
->>>>>>> Stashed changes
 
   const unreadCount = notifications.filter(
     (n) => !n.isRead,
@@ -248,13 +202,21 @@ export function Header({
     };
   }, [showNotifications]);
 
-  const handleNotificationClick = (notification) => {
-    // 읽음 처리
-    setNotifications(
-      notifications.map((n) =>
-        n.id === notification.id ? { ...n, isRead: true } : n,
-      ),
-    );
+  const handleNotificationClick = async (notification) => {
+    // 읽지 않은 알림인 경우에만 API 호출
+    if (!notification.isRead) {
+      try {
+        await notificationService.markAsRead(notification.id);
+        // 로컬 상태 업데이트
+        setNotifications(
+          notifications.map((n) =>
+            n.id === notification.id ? { ...n, isRead: true } : n,
+          ),
+        );
+      } catch (error) {
+        console.error('알림 읽음 처리 실패:', error);
+      }
+    }
 
     // 페이지 이동
     const sectionIndex = sections.findIndex(
@@ -266,15 +228,29 @@ export function Header({
     }
   };
 
-  const markAllAsRead = () => {
-    setNotifications(
-      notifications.map((n) => ({ ...n, isRead: true })),
-    );
+  const markAllAsRead = async () => {
+    try {
+      await notificationService.markAllAsRead();
+      // 로컬 상태 업데이트
+      setNotifications(
+        notifications.map((n) => ({ ...n, isRead: true })),
+      );
+    } catch (error) {
+      console.error('모든 알림 읽음 처리 실패:', error);
+      toast.error('알림 읽음 처리에 실패했습니다.');
+    }
   };
 
-  const deleteNotification = (id, event) => {
+  const deleteNotification = async (id, event) => {
     event.stopPropagation();
-    setNotifications(notifications.filter((n) => n.id !== id));
+    try {
+      await notificationService.deleteNotification(id);
+      // 로컬 상태에서 삭제
+      setNotifications(notifications.filter((n) => n.id !== id));
+    } catch (error) {
+      console.error('알림 삭제 실패:', error);
+      toast.error('알림 삭제에 실패했습니다.');
+    }
   };
 
   const getNotificationBadgeVariant = (type) => {
@@ -443,8 +419,8 @@ export function Header({
                                 </NotificationItemTime>
                                 <span
                                   style={{
-                                    background: notification.type === 'warning' ? 'rgb(254, 226, 226)' : notification.type === 'error' ? 'rgb(254, 226, 226)' : notification.type === 'success' ? '#dcfce7' : '#dbeafe',
-                                    color: notification.type === 'warning' ? 'rgb(239, 68, 68)' : notification.type === 'error' ? 'rgb(239, 68, 68)' : notification.type === 'success' ? '#16a34a' : '#3b82f6',
+                                    background: notification.type === 'warning' ? 'color-mix(in srgb, var(--destructive) 10%, transparent)' : notification.type === 'error' ? 'color-mix(in srgb, var(--destructive) 10%, transparent)' : notification.type === 'success' ? 'color-mix(in srgb, var(--chart-2) 10%, transparent)' : 'color-mix(in srgb, var(--chart-2) 10%, transparent)',
+                                    color: notification.type === 'warning' ? 'var(--destructive)' : notification.type === 'error' ? 'var(--destructive)' : notification.type === 'success' ? 'var(--chart-2)' : 'var(--chart-2)',
                                     fontSize: '10px',
                                     padding: '2px 6px',
                                     borderRadius: '4px',

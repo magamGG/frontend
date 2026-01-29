@@ -5,7 +5,7 @@ export const SurveyListManagementRoot = styled.div`
   width: 100%;
   min-height: 100vh;
   overflow-y: auto;
-  background-color: #DADDE1;
+  background-color: var(--background);
   padding: 24px;
 `;
 
@@ -41,20 +41,20 @@ export const BackButton = styled.button`
 export const HeaderTitle = styled.h1`
   font-size: 1.25rem;
   font-weight: bold;
-  color: #1F2328;
+  color: var(--foreground);
   margin: 0;
 `;
 
 export const HeaderSubtitle = styled.p`
   font-size: 0.875rem;
-  color: #6E8FB3;
+  color: var(--accent);
   margin: 0;
 `;
 
 export const AddButton = styled.button`
   display: flex;
   align-items: center;
-  background-color: #3F4A5A;
+  background-color: var(--primary);
   color: white;
   height: 36px;
   padding: 0 16px;
@@ -64,7 +64,7 @@ export const AddButton = styled.button`
   transition: background-color 0.2s;
 
   &:hover {
-    background-color: #2F3A4A;
+    background-color: color-mix(in srgb, var(--primary) 90%, black);
   }
 `;
 
@@ -116,14 +116,14 @@ export const SurveyListHeader = styled.div`
 export const SurveyListTitle = styled.h2`
   font-size: 1rem;
   font-weight: bold;
-  color: #1F2328;
+  color: var(--foreground);
   margin: 0;
 `;
 
 export const SurveyListEmpty = styled.div`
   text-align: center;
   padding: 48px 0;
-  color: #6E8FB3;
+  color: var(--accent);
 `;
 
 // 설문 아이템
@@ -132,12 +132,12 @@ export const SurveyItem = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: 16px;
-  background-color: #FAFAFA;
+  background-color: var(--card);
   border-radius: 8px;
   transition: background-color 0.2s;
 
   &:hover {
-    background-color: #F0F0F0;
+    background-color: var(--muted);
   }
 `;
 
@@ -147,7 +147,7 @@ export const SurveyItemContent = styled.div`
 
 export const SurveyItemTitle = styled.div`
   font-weight: 500;
-  color: #1F2328;
+  color: var(--foreground);
   font-size: 0.875rem;
 `;
 
@@ -156,7 +156,7 @@ export const SurveyItemMeta = styled.div`
   align-items: center;
   gap: 16px;
   font-size: 0.75rem;
-  color: #6E8FB3;
+  color: var(--accent);
   margin-top: 4px;
 `;
 
@@ -176,10 +176,10 @@ export const ActionButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  color: ${props => props.$danger ? '#dc2626' : '#6E8FB3'};
+  color: ${props => props.$danger ? 'var(--destructive)' : 'var(--accent)'};
   transition: color 0.2s;
 
   &:hover {
-    color: ${props => props.$danger ? '#b91c1c' : '#3F4A5A'};
+    color: ${props => props.$danger ? 'color-mix(in srgb, var(--destructive) 90%, black)' : 'var(--primary)'};
   }
 `;

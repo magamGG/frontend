@@ -5,22 +5,15 @@ import { Button } from '@/app/components/ui/button';
 import { Mail, Lock, Edit, Building, Eye, Users, UserPlus } from 'lucide-react';
 
 /**
- * LoginPage component
  * @param {Object} props
- * @param {Function} props.onLogin - Callback function when login is successful
- * @param {string} props.onLogin.role - User role: 'individual' | 'manager' | 'agency' | 'all'
- * @param {boolean} [props.onLogin.affiliated] - Whether user is affiliated with an agency
- * @param {Function} props.onShowSignup - Callback to show signup page
- * @param {Function} props.onShowForgotPassword - Callback to show forgot password page
+ * @param {Function} props.onLogin
+ * @param {Function} props.onShowSignup
+ * @param {Function} props.onShowForgotPassword
  */
 export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  /**
-   * Handle form submission
-   * @param {React.FormEvent} e - Form event
-   */
   const handleSubmit = (e) => {
     e.preventDefault();
     // Mock login - in real app, validate credentials
@@ -38,8 +31,8 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
       </div>
 
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity, y: 20 }}
+        animate={{ opacity, y: 0 }}
         transition={{ duration: 0.6 }}
         className="w-full max-w-md px-6 relative z-10"
       >
@@ -48,7 +41,7 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+            transition={{ delay: 0.2, type, stiffness: 200 }}
             className="inline-flex items-center justify-center w-20 h-20 bg-primary rounded-2xl shadow-2xl mb-6"
           >
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -78,8 +71,8 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
 
         {/* Login Card */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity, y: 20 }}
+          animate={{ opacity, y: 0 }}
           transition={{ delay: 0.5 }}
         >
           <Card className="p-8 shadow-2xl">

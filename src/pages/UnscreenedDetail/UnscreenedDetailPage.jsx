@@ -50,7 +50,7 @@ const initialUnscreenedData = [
   { id: 10, name: '조민아', date: '2026.01.07', missedType: '정신건강', lastCheckDate: '2025.12.08', team: '기획팀', position: '매니저', daysOverdue: 12 },
 ];
 
-const FILTER_TYPES = ['전체', '정신건강', '신체건강', '둘 다'];
+const FILTER_TYPES = ['전체', '정신건강', '신체건강'];
 
 export function UnscreenedDetailPage({ onBack }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -58,29 +58,31 @@ export function UnscreenedDetailPage({ onBack }) {
   const [unscreenedData] = useState(initialUnscreenedData);
 
   // 유형별 배지 색상
-  const getTypeBadgeClass = (type) => {
+  const getTypeBadgeStyle = (type) => {
     switch (type) {
       case '둘 다':
-        return 'bg-red-100 text-red-600';
+        return { backgroundColor: '#FEE2E2', color: '#DC2626' };
       case '정신건강':
-        return 'bg-purple-100 text-purple-600';
+        return { backgroundColor: '#F3E5F5', color: '#9B8FAA' };
       case '신체건강':
-        return 'bg-blue-100 text-blue-600';
+        return { backgroundColor: '#DBEAFE', color: '#3B82F6' };
       default:
-        return 'bg-gray-100 text-gray-600';
+        return { backgroundColor: '#F3F4F6', color: '#6B7280' };
     }
-  };
-
-  // 유형 표시 텍스트
-  const getTypeDisplayText = (type) => {
-    return type === '둘 다' ? '전체' : type;
   };
 
   // 필터링된 데이터 (지연 일수 내림차순 정렬)
   const filteredData = unscreenedData
     .filter((person) => {
       const matchesSearch = person.name.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesType = filterType === '전체' || person.missedType === filterType;
+      let matchesType = false;
+      if (filterType === '전체') {
+        matchesType = true;
+      } else if (filterType === '정신건강') {
+        matchesType = person.missedType === '정신건강' || person.missedType === '둘 다';
+      } else if (filterType === '신체건강') {
+        matchesType = person.missedType === '신체건강' || person.missedType === '둘 다';
+      }
       return matchesSearch && matchesType;
     })
     .sort((a, b) => b.daysOverdue - a.daysOverdue);
@@ -103,9 +105,8 @@ export function UnscreenedDetailPage({ onBack }) {
   // 통계 계산
   const stats = {
     total: unscreenedData.length,
-    both: unscreenedData.filter(p => p.missedType === '둘 다').length,
-    mental: unscreenedData.filter(p => p.missedType === '정신건강').length,
-    physical: unscreenedData.filter(p => p.missedType === '신체건강').length,
+    mental: unscreenedData.filter(p => p.missedType === '정신건강' || p.missedType === '둘 다').length,
+    physical: unscreenedData.filter(p => p.missedType === '신체건강' || p.missedType === '둘 다').length,
   };
 
   return (
@@ -132,15 +133,15 @@ export function UnscreenedDetailPage({ onBack }) {
         {/* 통계 카드 */}
         <StatisticsGrid>
           <StatisticsCard>
-            <StatisticsLabel $color="red">전체</StatisticsLabel>
-            <StatisticsValue $color="red">{stats.both}명</StatisticsValue>
+            <StatisticsLabel>전체</StatisticsLabel>
+            <StatisticsValue $color="red">{stats.total}명</StatisticsValue>
           </StatisticsCard>
           <StatisticsCard>
-            <StatisticsLabel $color="purple">정신건강</StatisticsLabel>
+            <StatisticsLabel>정신건강</StatisticsLabel>
             <StatisticsValue $color="purple">{stats.mental}명</StatisticsValue>
           </StatisticsCard>
           <StatisticsCard>
-            <StatisticsLabel $color="blue">신체건강</StatisticsLabel>
+            <StatisticsLabel>신체건강</StatisticsLabel>
             <StatisticsValue $color="blue">{stats.physical}명</StatisticsValue>
           </StatisticsCard>
         </StatisticsGrid>
@@ -150,7 +151,7 @@ export function UnscreenedDetailPage({ onBack }) {
           <div className="flex items-center gap-3">
             <FilterSearchContainer>
               <FilterSearchIcon>
-                <Search className="w-4 h-4 text-[#6E8FB3]" />
+                <Search className="w-4 h-4" style={{ color: '#5a6067' }} />
               </FilterSearchIcon>
               <Input
                 type="text"
@@ -158,6 +159,7 @@ export function UnscreenedDetailPage({ onBack }) {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 h-9 text-sm"
+                style={{ backgroundColor: '#e8eaed' }}
               />
             </FilterSearchContainer>
             <FilterButtonGroup>
@@ -194,13 +196,13 @@ export function UnscreenedDetailPage({ onBack }) {
                   <TableRow key={person.id}>
                     <TableCell $fontWeight="medium">{person.name}</TableCell>
                     <TableCell $align="center">
-                      <TypeBadge className={getTypeBadgeClass(person.missedType)}>
-                        {getTypeDisplayText(person.missedType)}
+                      <TypeBadge style={getTypeBadgeStyle(person.missedType)}>
+                        {person.missedType === '둘 다' ? '전체' : person.missedType}
                       </TypeBadge>
                     </TableCell>
                     <TableCell $align="center">
-                      <div className="flex items-center justify-center gap-1 text-sm text-[#1F2328]">
-                        <Calendar className="w-3.5 h-3.5 text-[#6E8FB3]" />
+                      <div className="flex items-center justify-center gap-1 text-sm" style={{ color: '#1f2328' }}>
+                        <Calendar className="w-3.5 h-3.5" style={{ color: '#5a6067' }} />
                         {person.date}
                       </div>
                     </TableCell>
@@ -208,8 +210,8 @@ export function UnscreenedDetailPage({ onBack }) {
                       <DelayBadge>{person.daysOverdue}일 지연</DelayBadge>
                     </TableCell>
                     <TableCell $align="right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Clock className="w-3.5 h-3.5" />
+                      <div className="flex items-center justify-end gap-1 text-sm" style={{ color: '#1f2328' }}>
+                        <Clock className="w-3.5 h-3.5" style={{ color: '#5a6067' }} />
                         {person.lastCheckDate}
                       </div>
                     </TableCell>
@@ -234,7 +236,7 @@ export function UnscreenedDetailPage({ onBack }) {
 
           {filteredData.length === 0 && (
             <EmptyState>
-              <p className="text-sm text-[#6E8FB3]">검색 결과가 없습니다.</p>
+              <p className="text-sm" style={{ color: 'var(--accent)' }}>검색 결과가 없습니다.</p>
             </EmptyState>
           )}
         </DataTableCard>

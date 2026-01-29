@@ -6,50 +6,47 @@ import { Users, Plus, MoreVertical, CheckCircle2, Clock, AlertTriangle, Mail, Me
 
 const teamMembers = [
   {
-    id: 1,
+    id,
     name: '김작가',
     role: '메인 작가',
     status: '출근',
     avatar: '김',
     projects: ['로맨스 판타지', '학원물'],
-    productivity: 85,
+    productivity,
     workHours: '8.5시간'
   },
   {
-    id: 2,
+    id,
     name: '이어시',
     role: '어시스턴트',
     status: '출근',
     avatar: '이',
     projects: ['로맨스 판타지'],
-    productivity: 92,
+    productivity,
     workHours: '7.2시간'
   },
   {
-    id: 3,
+    id,
     name: '박채색',
     role: '채색 담당',
     status: '휴가',
     avatar: '박',
     projects: ['학원물', '액션 판타지'],
-    productivity: 78,
+    productivity,
     workHours: '-'
   },
   {
-    id: 4,
+    id,
     name: '정배경',
     role: '배경 담당',
     status: '출근',
     avatar: '정',
     projects: ['액션 판타지'],
-    productivity: 88,
+    productivity,
     workHours: '6.8시간'
   }
 ];
 
-/**
- * TeamPage component
- */
 export function TeamPage() {
   return (
     <div className="w-full h-full">

@@ -6,9 +6,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { CheckCircle, Calendar, Clock, FileText, AlertCircle, Activity } from 'lucide-react';
 import { toast } from 'sonner';
 
-/**
- * AdminPersonalHealthPage component
- */
 export function AdminPersonalHealthPage() {
   const [isMentalSelfCheckOpen, setIsMentalSelfCheckOpen] = useState(false);
   const [isPhysicalSelfCheckOpen, setIsPhysicalSelfCheckOpen] = useState(false);
@@ -25,24 +22,24 @@ export function AdminPersonalHealthPage() {
   const [nextCheckupDate] = useState({
     mentalCheckup: '2026.01.25',
     physicalCheckup: '2026.02.01',
-    daysUntilMental: 7,
-    daysUntilPhysical: 14,
+    daysUntilMental,
+    daysUntilPhysical,
   });
 
   // 심층 검진 검사 데이터 - 상태로 변경
   const [deepCheckupData, setDeepCheckupData] = useState({
     mental: {
       lastCheckDate: '2026.01.15',
-      score: 8,
+      score,
       status: '주의',
-      isCompleted: true,
+      isCompleted,
       nextCheckDate: '2026.01.25',
     },
     physical: {
-      lastCheckDate: '',
-      score: 0,
+      lastCheckDate,
+      score,
       status: '미완료',
-      isCompleted: false,  // 신체 건강 미완료로 변경
+      isCompleted,  // 신체 건강 미완료로 변경
       nextCheckDate: '2026.02.01',
     },
   });
@@ -96,10 +93,10 @@ export function AdminPersonalHealthPage() {
     setDeepCheckupData({
       ...deepCheckupData,
       physical: {
-        lastCheckDate: formattedDate,
-        score: finalScore,
-        status: status,
-        isCompleted: true,
+        lastCheckDate,
+        score,
+        status,
+        isCompleted,
         nextCheckDate: deepCheckupData.physical.nextCheckDate,
       },
     });
@@ -109,11 +106,7 @@ export function AdminPersonalHealthPage() {
     setPhysicalDeepAnswers([0, 0, 0, 0]);
   };
 
-  /**
-   * Get badge class for status
-   * @param {string} status - Status string
-   * @returns {string} CSS class for badge
-   */
+  // 상태별 배지 색상
   const getStatusBadgeClass = (status) => {
     switch (status) {
       case '위험':

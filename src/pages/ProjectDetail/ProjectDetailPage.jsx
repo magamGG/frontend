@@ -624,11 +624,6 @@ export function ProjectDetailPage({
 
   // 보드 삭제
   const handleDeleteBoard = (boardId) => {
-    if (boards.length <= 1) {
-      toast.error('최소 1개의 보드는 필요합니다.');
-      return;
-    }
-
     setBoards(boards.filter(b => b.id !== boardId));
     toast.success('보드가 삭제되었습니다.');
   };
@@ -942,7 +937,7 @@ export function ProjectDetailPage({
             <div className="flex-1 min-w-0">
               <Card className="p-6 h-[calc(100vh-320px)] flex flex-col">
                 <div className="flex items-center justify-between mb-6 flex-shrink-0">
-                  <h2 className="text-xl font-bold text-foreground">프로젝트 관리</h2>
+                  <h2 className="text-xl font-bold text-foreground">업무 일정 보드</h2>
                   <Button
                     size="sm"
                     onClick={() => setIsBoardModalOpen(true)}
@@ -952,33 +947,41 @@ export function ProjectDetailPage({
                   </Button>
                 </div>
 
-                <div className="flex gap-4 overflow-x-auto overflow-y-hidden pb-4 flex-1 min-h-0">
-                  {boards.map((board) => (
-                    <DroppableBoard
-                      key={board.id}
-                      board={board}
-                      onCardDrop={handleCardDrop}
-                      onEdit={(card) => {
-                        setEditingCard(card);
-                        setSelectedAssignee(card.assignedTo || null);
-                        setCardForm({
-                          title: card.title,
-                          description: card.description,
-                          startDate: card.startDate,
-                          dueDate: card.dueDate,
-                        });
-                        setIsCardModalOpen(true);
-                      }}
-                      onDelete={handleDeleteCard}
-                      onAddCard={(boardId) => {
-                        setCurrentBoardId(boardId);
-                        setIsCardModalOpen(true);
-                      }}
-                      onDeleteBoard={handleDeleteBoard}
-                      projectColor={projectColor}
-                    />
-                  ))}
-                </div>
+                {boards.length === 0 ? (
+                  <div className="flex-1 flex items-center justify-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                    <div className="text-center">
+                      <p className="text-gray-500 text-sm">보드를 추가해서 업무 일정을 기록하세요</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex gap-4 overflow-x-auto overflow-y-hidden pb-4 flex-1 min-h-0">
+                    {boards.map((board) => (
+                      <DroppableBoard
+                        key={board.id}
+                        board={board}
+                        onCardDrop={handleCardDrop}
+                        onEdit={(card) => {
+                          setEditingCard(card);
+                          setSelectedAssignee(card.assignedTo || null);
+                          setCardForm({
+                            title: card.title,
+                            description: card.description,
+                            startDate: card.startDate,
+                            dueDate: card.dueDate,
+                          });
+                          setIsCardModalOpen(true);
+                        }}
+                        onDelete={handleDeleteCard}
+                        onAddCard={(boardId) => {
+                          setCurrentBoardId(boardId);
+                          setIsCardModalOpen(true);
+                        }}
+                        onDeleteBoard={handleDeleteBoard}
+                        projectColor={projectColor}
+                      />
+                    ))}
+                  </div>
+                )}
               </Card>
             </div>
 

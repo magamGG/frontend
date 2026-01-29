@@ -13,7 +13,7 @@ import {
  * @param {Object} props
  * @param {boolean} props.isOpen
  * @param {() => void} props.onClose
- * @param {string} [props.title]
+ * @param {string | import('react').ReactNode} [props.title]
  * @param {import('react').ReactNode} props.children
  * @param {'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl'} [props.maxWidth]
  * @param {boolean} [props.showCloseButton]

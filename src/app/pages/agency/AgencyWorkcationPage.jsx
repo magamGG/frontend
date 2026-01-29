@@ -17,16 +17,14 @@ import {
   FileText
 } from 'lucide-react';
 import { mockWorkcationMembers } from '@/app/data/mockData';
+import { WorkcationMember } from '@/app/types';
 
-/**
- * AgencyWorkcationPage component
- */
 export function AgencyWorkcationPage() {
   const [selectedMember, setSelectedMember] = useState(null);
   const [filterRole, setFilterRole] = useState('all');
 
   // Calculate days remaining for each member
-  const getDaysRemaining = (endDate: string) => {
+  const getDaysRemaining = (endDate) => {
     const today = new Date('2026-01-16');
     const end = new Date(endDate);
     const diffTime = end.getTime() - today.getTime();
@@ -34,12 +32,7 @@ export function AgencyWorkcationPage() {
     return diffDays;
   };
 
-  /**
-   * Get role display name
-   * @param {string} role - Role string
-   * @param {string} [customRole] - Custom role string
-   * @returns {string} Display name for role
-   */
+  // Get role display name
   const getRoleDisplay = (role, customRole) => {
     if (role === 'assist' && customRole) return customRole;
     const roleMap = {
@@ -52,11 +45,7 @@ export function AgencyWorkcationPage() {
     return roleMap[role] || role;
   };
 
-  /**
-   * Get priority color
-   * @param {string} priority - Priority string
-   * @returns {string} CSS classes for priority color
-   */
+  // Get priority color
   const getPriorityColor = (priority) => {
     switch (priority) {
       case 'high':

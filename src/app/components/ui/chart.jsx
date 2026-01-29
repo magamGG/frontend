@@ -9,24 +9,17 @@ import { cn } from "./utils";
 const THEMES = { light: "", dark: ".dark" };
 
 /**
- * ChartConfig type definition
+ * Chart configuration object
  * @typedef {Object} ChartConfig
- * @property {Object} [key] - Chart config entry
- * @property {React.ReactNode} [key.label] - Label
- * @property {React.ComponentType} [key.icon] - Icon component
- * @property {string} [key.color] - Color (if theme is not provided)
- * @property {Object} [key.theme] - Theme colors (if color is not provided)
+ * @property {React.ReactNode} [label]
+ * @property {React.ComponentType} [icon]
+ * @property {string} [color]
+ * @property {string} [theme]
  */
+export const ChartConfig = {};
 
-/**
- * ChartContext value
- */
 const ChartContext = React.createContext(null);
 
-/**
- * useChart hook
- * @returns {Object} Chart context value
- */
 function useChart() {
   const context = React.useContext(ChartContext);
 
@@ -38,10 +31,11 @@ function useChart() {
 }
 
 /**
- * ChartContainer component
  * @param {Object} props
- * @param {string} [props.id] - Chart ID
- * @param {Object} props.config - Chart configuration
+ * @param {string} [props.id]
+ * @param {string} [props.className]
+ * @param {React.ReactNode} [props.children]
+ * @param {Object} props.config
  */
 function ChartContainer({
   id,
@@ -74,10 +68,9 @@ function ChartContainer({
 }
 
 /**
- * ChartStyle component
  * @param {Object} props
- * @param {string} props.id - Chart ID
- * @param {Object} props.config - Chart configuration
+ * @param {string} props.id
+ * @param {Object} props.config
  */
 const ChartStyle = ({ id, config }) => {
   const colorConfig = Object.entries(config).filter(
@@ -98,7 +91,7 @@ ${prefix} [data-chart=${id}] {
 ${colorConfig
   .map(([key, itemConfig]) => {
     const color =
-      itemConfig.theme?.[theme] ||
+      itemConfig.theme?.[theme.theme] ||
       itemConfig.color;
     return color ? `  --color-${key}: ${color};` : null;
   })
@@ -115,15 +108,20 @@ ${colorConfig
 const ChartTooltip = RechartsPrimitive.Tooltip;
 
 /**
- * ChartTooltipContent component
  * @param {Object} props
- * @param {boolean} [props.active] - Is tooltip active
- * @param {Array} [props.payload] - Tooltip payload
- * @param {string} [props.indicator] - Indicator type (line, dot, dashed)
- * @param {boolean} [props.hideLabel] - Hide label
- * @param {boolean} [props.hideIndicator] - Hide indicator
- * @param {string} [props.nameKey] - Name key
- * @param {string} [props.labelKey] - Label key
+ * @param {boolean} [props.active]
+ * @param {Array} [props.payload]
+ * @param {string} [props.className]
+ * @param {"line" | "dot" | "dashed"} [props.indicator="dot"]
+ * @param {boolean} [props.hideLabel=false]
+ * @param {boolean} [props.hideIndicator=false]
+ * @param {*} [props.label]
+ * @param {Function} [props.labelFormatter]
+ * @param {string} [props.labelClassName]
+ * @param {Function} [props.formatter]
+ * @param {string} [props.color]
+ * @param {string} [props.nameKey]
+ * @param {string} [props.labelKey]
  */
 function ChartTooltipContent({
   active,
@@ -152,7 +150,7 @@ function ChartTooltipContent({
     const itemConfig = getPayloadConfigFromPayload(config, item, key);
     const value =
       !labelKey && typeof label === "string"
-        ? config[label]?.label || label
+        ? config[label?.label || label
         : itemConfig?.label;
 
     if (labelFormatter) {
@@ -229,7 +227,7 @@ function ChartTooltipContent({
                           {
                             "--color-bg": indicatorColor,
                             "--color-border": indicatorColor,
-                          }
+                          }.CSSProperties
                         }
                       />
                     )
@@ -264,21 +262,17 @@ function ChartTooltipContent({
 
 const ChartLegend = RechartsPrimitive.Legend;
 
-/**
- * ChartLegendContent component
- * @param {Object} props
- * @param {boolean} [props.hideIcon] - Hide icon
- * @param {Array} [props.payload] - Legend payload
- * @param {string} [props.verticalAlign] - Vertical alignment (top, bottom)
- * @param {string} [props.nameKey] - Name key
- */
 function ChartLegendContent({
   className,
   hideIcon = false,
   payload,
   verticalAlign = "bottom",
   nameKey,
-}) {
+} &
+  Pick<RechartsPrimitive.LegendProps, "payload" | "verticalAlign"> & {
+    hideIcon?: boolean;
+    nameKey?: string;
+  }) {
   const { config } = useChart();
 
   if (!payload?.length) {
@@ -322,13 +316,7 @@ function ChartLegendContent({
   );
 }
 
-/**
- * Helper to extract item config from a payload.
- * @param {Object} config - Chart configuration
- * @param {*} payload - Payload object
- * @param {string} key - Key to extract
- * @returns {Object|undefined} Item configuration
- */
+// Helper to extract item config from a payload.
 function getPayloadConfigFromPayload(
   config,
   payload,
@@ -362,7 +350,7 @@ function getPayloadConfigFromPayload(
 
   return configLabelKey in config
     ? config[configLabelKey]
-    : config[key];
+    : config[key;
 }
 
 export {

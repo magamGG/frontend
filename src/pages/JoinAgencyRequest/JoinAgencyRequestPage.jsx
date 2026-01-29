@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Card } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
@@ -7,6 +7,8 @@ import { Label } from '@/app/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/app/components/ui/dialog';
 import { Building2, User, Mail, Phone, Key, Send, ArrowLeft, CheckCircle2, Edit } from 'lucide-react';
 import { toast } from 'sonner';
+import { agencyService } from '@/api';
+import useAuthStore from '@/store/authStore';
 import {
   JoinAgencyRequestRoot,
   BackgroundPattern,
@@ -38,17 +40,27 @@ import {
 
 export function JoinAgencyRequestPage({ onBack, onSuccess }) {
   const [step, setStep] = useState('form');
+  const [isLoading, setIsLoading] = useState(false);
+  const user = useAuthStore((state) => state.user);
   
-  // TODO: Zustand store에서 사용자 정보 가져오기
+  // Zustand store에서 사용자 정보 가져오기
   const [userData, setUserData] = useState({
-    name: '김작가',
-    email: 'kim.artist@example.com',
-    phone: '010-1234-5678',
+    name: user?.memberName || '',
+    email: '', // 이메일은 DB에서 가져와야 함
+    phone: '', // 전화번호도 DB에서 가져와야 함
   });
   
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editFormData, setEditFormData] = useState({ ...userData });
-  const [agencyCode, setAgencyCode] = useState('');
+  const [agencyCodeInput, setAgencyCodeInput] = useState('');
+  
+  // 사용자 정보 초기화 (실제로는 API로 가져와야 함)
+  useEffect(() => {
+    if (user?.memberName) {
+      setUserData(prev => ({ ...prev, name: user.memberName }));
+      setEditFormData(prev => ({ ...prev, name: user.memberName }));
+    }
+  }, [user]);
 
   const handleEditInputChange = (field, value) => {
     setEditFormData(prev => ({ ...prev, [field]: value }));
@@ -77,19 +89,34 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
     toast.success('개인 정보가 수정되었습니다.');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!agencyCode) {
+    if (!agencyCodeInput.trim()) {
       toast.error('회사 전용 코드를 입력해주세요.');
       return;
     }
 
-    // TODO: API 호출로 에이전시 가입 요청 전송
-    setTimeout(() => {
-      setStep('success');
+    setIsLoading(true);
+    try {
+      // 가이드 문서에 따른 요청 변수명
+      const requestData = {
+        agencyCode: agencyCodeInput.trim(),
+        memberName: userData.name,
+        memberEmail: userData.email,
+        memberPhone: userData.phone,
+      };
+
+      await agencyService.requestJoinAgency(requestData);
       toast.success('에이전시 가입 요청이 전송되었습니다!');
-    }, 1000);
+      setStep('success');
+    } catch (error) {
+      const errorMessage = error?.message || '에이전시 가입 요청 전송에 실패했습니다. 다시 시도해주세요.';
+      toast.error(errorMessage);
+      console.error('Join agency request error:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleComplete = () => {
@@ -140,7 +167,7 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
                 </InfoRow>
                 <InfoRow>
                   <InfoLabel>회사 코드</InfoLabel>
-                  <InfoValue>{agencyCode}</InfoValue>
+                  <InfoValue>{agencyCodeInput || '미입력'}</InfoValue>
                 </InfoRow>
               </SuccessInfoBox>
 
@@ -234,13 +261,14 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
                   <InputGroup>
                     <Label htmlFor="agencyCode">회사 전용 코드 *</Label>
                     <InputWrapper>
-                      <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5" style={{ color: 'var(--muted-foreground)' }} />
+                      <Key style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', width: '20px', height: '20px', color: 'var(--muted-foreground)' }} />
                       <InputField
                         id="agencyCode"
                         type="text"
                         placeholder="예: AGENCY-2026-001"
-                        value={agencyCode}
-                        onChange={(e) => setAgencyCode(e.target.value)}
+                        value={agencyCodeInput}
+                        onChange={(e) => setAgencyCodeInput(e.target.value)}
+                        disabled={isLoading}
                         required
                         $mono
                         style={{ height: '48px' }}
@@ -252,14 +280,14 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
                   </InputGroup>
                 </div>
 
-                <Button type="submit" style={{ width: '100%', padding: '24px', fontSize: '16px', fontWeight: 600 }}>
+                <Button type="submit" style={{ width: '100%', padding: '24px', fontSize: '16px', fontWeight: 600 }} disabled={isLoading}>
                   <Send size={20} style={{ marginRight: '8px' }} />
-                  가입 요청 보내기
+                  {isLoading ? '전송 중...' : '가입 요청 보내기'}
                 </Button>
               </FormSection>
 
               <InfoAlert>
-                <p style={{ fontSize: '14px', color: '#1e40af', margin: 0 }}>
+                <p style={{ fontSize: '14px', color: 'var(--chart-2)', margin: 0 }}>
                   <strong>💡 안내:</strong> 가입 요청 후 에이전시 담당자의 승인이 필요합니다. 
                   승인 완료 시 등록하신 이메일로 알림이 전송됩니다.
                 </p>
@@ -270,52 +298,52 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
       </motion.div>
 
       <Dialog open={isEditingProfile} onOpenChange={setIsEditingProfile}>
-        <DialogContent style={{ maxWidth: '500px', backgroundColor: 'white' }}>
+        <DialogContent style={{ maxWidth: '500px', backgroundColor: 'var(--card)' }}>
           <DialogHeader>
-            <DialogTitle style={{ fontSize: '18px', color: '#1F2328', fontWeight: 'bold' }}>개인 정보 수정</DialogTitle>
-            <DialogDescription style={{ fontSize: '14px', color: '#6E8FB3' }}>
+            <DialogTitle style={{ fontSize: '18px', color: 'var(--foreground)', fontWeight: 'bold' }}>개인 정보 수정</DialogTitle>
+            <DialogDescription style={{ fontSize: '14px', color: 'var(--accent)' }}>
               회원가입 시 입력한 개인 정보를 수정할 수 있습니다.
             </DialogDescription>
           </DialogHeader>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '16px 0' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <Label htmlFor="edit-name" style={{ fontSize: '14px', color: '#1F2328' }}>이름 *</Label>
+              <Label htmlFor="edit-name" style={{ fontSize: '14px', color: 'var(--foreground)' }}>이름 *</Label>
               <Input
                 id="edit-name"
                 value={editFormData.name}
                 onChange={(e) => handleEditInputChange('name', e.target.value)}
-                style={{ backgroundColor: 'white', borderColor: '#DADDE1', color: '#1F2328' }}
+                style={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
               />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <Label htmlFor="edit-email" style={{ fontSize: '14px', color: '#1F2328' }}>이메일 *</Label>
+              <Label htmlFor="edit-email" style={{ fontSize: '14px', color: 'var(--foreground)' }}>이메일 *</Label>
               <Input
                 id="edit-email"
                 type="email"
                 value={editFormData.email}
                 onChange={(e) => handleEditInputChange('email', e.target.value)}
-                style={{ backgroundColor: 'white', borderColor: '#DADDE1', color: '#1F2328' }}
+                style={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
               />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <Label htmlFor="edit-phone" style={{ fontSize: '14px', color: '#1F2328' }}>연락처 *</Label>
+              <Label htmlFor="edit-phone" style={{ fontSize: '14px', color: 'var(--foreground)' }}>연락처 *</Label>
               <Input
                 id="edit-phone"
                 value={editFormData.phone}
                 onChange={(e) => handleEditInputChange('phone', e.target.value)}
                 placeholder="010-0000-0000"
-                style={{ backgroundColor: 'white', borderColor: '#DADDE1', color: '#1F2328' }}
+                style={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
               />
               <p style={{ fontSize: '12px', color: 'var(--muted-foreground)', margin: 0 }}>
                 하이픈(-)을 포함하여 입력해주세요
               </p>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', paddingTop: '16px', borderTop: '1px solid #DADDE1' }}>
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
             <Button variant="outline" onClick={() => setIsEditingProfile(false)}>
               취소
             </Button>
-            <Button style={{ backgroundColor: '#3F4A5A' }} onClick={handleSaveProfile}>
+            <Button style={{ backgroundColor: 'var(--primary)' }} onClick={handleSaveProfile}>
               저장
             </Button>
           </div>

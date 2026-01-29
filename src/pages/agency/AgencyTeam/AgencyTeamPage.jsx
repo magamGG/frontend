@@ -1,13 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Card } from '@/app/components/ui/card';
-import { Button } from '@/app/components/ui/button';
-import { Badge } from '@/app/components/ui/badge';
-import { Input } from '@/app/components/ui/input';
-import { Label } from '@/app/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/app/components/ui/dialog';
+// 외부 라이브러리
+import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
-import { memberService } from '@/api';
-import useAuthStore from '@/store/authStore';
 import { 
   Search,
   Users,
@@ -17,14 +10,23 @@ import {
   Phone,
   Briefcase,
   UserPlus,
-  X,
-  Edit2,
   Trash2,
   BookOpen,
-  Heart,
-  Calendar
+  Heart
 } from 'lucide-react';
-import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
+
+// 내부 alias (@/)
+import { Card } from '@/app/components/ui/card';
+import { Button } from '@/app/components/ui/button';
+import { Badge } from '@/app/components/ui/badge';
+import { Input } from '@/app/components/ui/input';
+import { Label } from '@/app/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/app/components/ui/dialog';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/app/components/ui/pagination';
+import { memberService } from '@/api';
+import useAuthStore from '@/store/authStore';
+
+// 상대 경로
 import {
   AgencyTeamRoot,
   AgencyTeamBody,
@@ -60,7 +62,6 @@ import {
   StatisticsGrid,
   StatisticsCard,
   EmptyState,
-  EmptyStateIcon,
   EmptyStateText,
 } from './AgencyTeamPage.styled';
 
@@ -78,19 +79,11 @@ export function AgencyTeamPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [employeeDetails, setEmployeeDetails] = useState({}); // 직원별 상세 정보 캐시
   const [loadingDetails, setLoadingDetails] = useState(new Set()); // 로딩 중인 직원 ID
-  
-  // 프로젝트 데이터 (실제로는 Zustand store에서 가져와야 함)
-  const [projects] = useState(() => {
-    const stored = localStorage.getItem('agencyProjectsData');
-    if (stored) {
-      try {
-        return JSON.parse(stored);
-      } catch {
-        return [];
-      }
-    }
-    return [];
-  });
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [employeeToDelete, setEmployeeToDelete] = useState(null);
+  const projectContainerRefs = useRef({}); // 참여 중인 프로젝트 컨테이너 refs
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5; // 한 페이지에 표시할 직원 수
 
   // 새 직원 추가 폼 상태
   const [newEmployee, setNewEmployee] = useState({
@@ -136,6 +129,7 @@ export function AgencyTeamPage() {
 
     fetchEmployees();
   }, [user?.agencyNo]);
+
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -238,13 +232,35 @@ export function AgencyTeamPage() {
     toast.success('직원 정보가 수정되었습니다.');
   };
 
-  // 직원 삭제 핸들러
-  const handleDeleteEmployee = (id) => {
-    if (window.confirm('정말 삭제하시겠습니까?')) {
-      setEmployees(employees.filter(emp => emp.id !== id));
+  // 삭제 확인 모달 열기
+  const handleDeleteClick = (employee, event) => {
+    // 이벤트 전파 방지 (카드 클릭 이벤트와 충돌 방지)
+    if (event) {
+      event.stopPropagation();
+    }
+    setEmployeeToDelete(employee);
+    setIsDeleteModalOpen(true);
+  };
+
+  // 직원 삭제 핸들러 (에이전시에서 제거 - agencyNo를 null로 설정)
+  const handleDeleteEmployee = async () => {
+    if (!employeeToDelete) return;
+
+    try {
+      // API 호출하여 agencyNo를 null로 설정 (회원은 삭제하지 않음)
+      await memberService.removeFromAgency(employeeToDelete.id);
+      // 로컬 상태에서도 제거
+      setEmployees(employees.filter(emp => emp.id !== employeeToDelete.id));
+      // 상태 초기화
       setIsEditModalOpen(false);
       setEditingEmployee(null);
-      toast.success('직원이 삭제되었습니다.');
+      setIsDeleteModalOpen(false);
+      setEmployeeToDelete(null);
+      toast.success('직원이 에이전시에서 제거되었습니다.');
+    } catch (error) {
+      console.error('직원 제거 실패:', error);
+      const errorMessage = error?.message || '직원 제거에 실패했습니다.';
+      toast.error(errorMessage);
     }
   };
 
@@ -271,12 +287,8 @@ export function AgencyTeamPage() {
     
     setLoadingDetails(prev => new Set(prev).add(employeeId));
     try {
-      console.log('직원 상세 정보 조회 시작:', employeeId);
       const response = await memberService.getMemberDetails(employeeId);
-      console.log('직원 상세 정보 API 응답:', response);
-      
       const data = Array.isArray(response) ? response[0] : response;
-      console.log('직원 상세 정보 데이터:', data);
       
       // API 응답을 컴포넌트 형식으로 변환
       const details = {
@@ -294,15 +306,12 @@ export function AgencyTeamPage() {
         } : null,
       };
       
-      console.log('변환된 상세 정보:', details);
-      
       setEmployeeDetails(prev => ({
         ...prev,
         [employeeId]: details,
       }));
     } catch (error) {
       console.error('직원 상세 정보 조회 실패:', error);
-      console.error('에러 상세:', error.response || error.message);
       toast.error('직원 상세 정보를 불러오는데 실패했습니다.');
       // 에러 시 빈 데이터 설정
       setEmployeeDetails(prev => ({
@@ -365,6 +374,22 @@ export function AgencyTeamPage() {
     };
   };
 
+  // 역할을 필터 카테고리로 매핑하는 함수
+  const mapRoleToFilterCategory = (role) => {
+    if (!role) return '';
+    
+    // 작가 관련 역할들을 "작가"로 매핑
+    if (role.includes('작가')) {
+      return '작가';
+    }
+    // 어시스트 관련 역할들을 "어시스트"로 매핑
+    if (role.includes('어시스트')) {
+      return '어시스트';
+    }
+    // 그 외는 그대로 반환
+    return role;
+  };
+
   // Filter employees by search query and role
   const filteredEmployees = employees.filter(employee => {
     // 에이전시 관리자는 전체 직원 목록에서 제외
@@ -377,12 +402,26 @@ export function AgencyTeamPage() {
       employee.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       employee.role.toLowerCase().includes(searchQuery.toLowerCase());
 
+    // 역할을 필터 카테고리로 매핑하여 비교
+    const roleCategory = mapRoleToFilterCategory(employee.role);
     const matchesRole = 
       selectedRoles.includes('전체') ||
-      selectedRoles.includes(employee.role);
+      selectedRoles.includes(roleCategory) ||
+      selectedRoles.includes(employee.role); // 정확한 역할명도 체크 (호환성)
 
     return matchesSearch && matchesRole;
   });
+
+  // 페이지네이션 계산
+  const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedEmployees = filteredEmployees.slice(startIndex, endIndex);
+
+  // 검색어나 필터가 변경되면 첫 페이지로 이동
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedRoles]);
 
   return (
     <AgencyTeamRoot>
@@ -438,20 +477,26 @@ export function AgencyTeamPage() {
         {/* Employee List Cards */}
         {isLoading ? (
           <Card className="p-12 text-center">
-            <EmptyStateIcon>
-              <Users className="w-12 h-12 text-muted-foreground animate-pulse" />
-            </EmptyStateIcon>
             <EmptyStateText>직원 목록을 불러오는 중...</EmptyStateText>
           </Card>
+        ) : filteredEmployees.length === 0 ? (
+          <Card className="p-12 text-center">
+            <EmptyStateText>
+              {employees.length === 0 
+                ? '등록된 직원이 없습니다. "직원 추가" 버튼을 눌러 직원을 추가해주세요.' 
+                : searchQuery || (selectedRoles.length > 0 && !selectedRoles.includes('전체'))
+                  ? '검색 결과가 없습니다'
+                  : '등록된 직원이 없습니다. "직원 추가" 버튼을 눌러 직원을 추가해주세요.'}
+            </EmptyStateText>
+          </Card>
         ) : (
-          <EmployeeListContainer>
-            {filteredEmployees.map((employee) => {
+          <>
+            <EmployeeListContainer>
+              {paginatedEmployees.map((employee) => {
             const isExpanded = expandedEmployees.has(employee.id);
             return (
               <div key={employee.id}>
-                <EmployeeCard 
-                  onClick={() => toggleEmployee(employee.id)}
-                >
+                <EmployeeCard>
                   <EmployeeCardContent>
                     <EmployeeAvatar>
                       <Users className="w-7 h-7 text-primary" />
@@ -482,19 +527,40 @@ export function AgencyTeamPage() {
                         </div>
                       </EmployeeContactInfo>
                     </EmployeeInfo>
-                    <EmployeeStats>
-                      <p className="text-xs text-muted-foreground mb-1">참여 중인 프로젝트</p>
-                      <p className="text-lg font-semibold text-foreground">
-                        {loadingDetails.has(employee.id) 
-                          ? '...' 
-                          : (getEmployeeDetails(employee.id).currentProjects?.length || 0) + '개'}
-                      </p>
-                    </EmployeeStats>
-                    {isExpanded ? (
-                      <ChevronDown className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                    ) : (
-                      <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                    )}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+                      {/* 참여 중인 프로젝트와 화살표를 하나로 묶기 */}
+                      <div 
+                        ref={(el) => {
+                          projectContainerRefs.current[employee.id] = el;
+                        }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '0px', cursor: 'pointer', height: 'fit-content' }} 
+                        onClick={() => toggleEmployee(employee.id)}
+                      >
+                        <EmployeeStats style={{ display: 'flex', alignItems: 'center', gap: '8px', height: 'fit-content', lineHeight: '1.2' }}>
+                          <p className="text-xs text-muted-foreground mb-0" style={{ lineHeight: '1.2' }}>참여 중인 프로젝트</p>
+                          <p className="text-lg font-semibold text-foreground mb-0" style={{ lineHeight: '1.2' }}>
+                            {loadingDetails.has(employee.id) 
+                              ? '...' 
+                              : (getEmployeeDetails(employee.id).currentProjects?.length || 0) + '개'}
+                          </p>
+                        </EmployeeStats>
+                        {isExpanded ? (
+                          <ChevronDown className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                        ) : (
+                          <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                        )}
+                      </div>
+                      {/* 삭제 버튼 */}
+                      <Button
+                        data-employee-id={employee.id}
+                        onClick={(e) => handleDeleteClick(employee, e)}
+                        className="bg-destructive hover:bg-destructive/90 text-white h-8 px-3 text-sm font-medium"
+                        style={{ width: '60px', minWidth: '60px' }}
+                        title="직원 삭제"
+                      >
+                        삭제
+                      </Button>
+                    </div>
                   </EmployeeCardContent>
                 </EmployeeCard>
                 
@@ -822,16 +888,41 @@ export function AgencyTeamPage() {
               </div>
             );
           })}
-          </EmployeeListContainer>
-        )}
-
-        {!isLoading && filteredEmployees.length === 0 && (
-          <Card className="p-12 text-center">
-            <EmptyStateIcon>
-              <Users className="w-12 h-12 text-muted-foreground" />
-            </EmptyStateIcon>
-            <EmptyStateText>검색 결과가 없습니다</EmptyStateText>
-          </Card>
+            </EmployeeListContainer>
+            
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex justify-center mt-6">
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious 
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <PaginationItem key={page}>
+                        <PaginationLink
+                          onClick={() => setCurrentPage(page)}
+                          isActive={currentPage === page}
+                          className="cursor-pointer"
+                        >
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ))}
+                    <PaginationItem>
+                      <PaginationNext 
+                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
+          </>
         )}
       </AgencyTeamBody>
 
@@ -975,7 +1066,13 @@ export function AgencyTeamPage() {
           <div className="flex gap-2 justify-between">
             <Button
               variant="destructive"
-              onClick={() => editingEmployee && handleDeleteEmployee(editingEmployee.id)}
+              onClick={() => {
+                if (editingEmployee) {
+                  setEmployeeToDelete(editingEmployee);
+                  setIsEditModalOpen(false);
+                  setIsDeleteModalOpen(true);
+                }
+              }}
             >
               <Trash2 className="w-4 h-4 mr-2" />
               삭제
@@ -988,6 +1085,39 @@ export function AgencyTeamPage() {
                 저장
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 삭제 확인 모달 */}
+      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>에이전시에서 제거</DialogTitle>
+            <DialogDescription>
+              {employeeToDelete && (
+                <>
+                  <strong>{employeeToDelete.name}</strong>님을 에이전시에서 제거하시겠습니까?
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 justify-end mt-4">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsDeleteModalOpen(false);
+                setEmployeeToDelete(null);
+              }}
+            >
+              취소
+            </Button>
+            <Button 
+              onClick={handleDeleteEmployee}
+              className="bg-destructive hover:bg-destructive/90 text-white"
+            >
+              제거
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

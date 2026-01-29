@@ -50,7 +50,7 @@ import {
 const ATTENDANCE_TYPE = {
   OFFICE: '출근',
   REMOTE: '재택근무',
-  LEAVE: '휴재',
+  LEAVE: '휴가',
   WORKATION: '워케이션',
 };
 
@@ -97,7 +97,7 @@ const initialRequests = [
     startDate: '2026-01-20',
     endDate: '2026-01-22',
     days: 3,
-    reason: '개인 사유로 인한 휴재 신청',
+    reason: '개인 사유로 인한 휴가 신청',
     status: REQUEST_STATUS.PENDING,
     requestDate: '2026-01-13',
   },
@@ -278,7 +278,7 @@ export function AttendancePage() {
             <SectionHeader>
               <SectionTitle>승인 대기 중</SectionTitle>
               {pendingRequests.length > 0 && (
-                <Badge className="bg-white border border-border">{pendingRequests.length}건</Badge>
+                <Badge className="bg-white text-blackborder border-border">{pendingRequests.length}건</Badge>
               )}
             </SectionHeader>
 

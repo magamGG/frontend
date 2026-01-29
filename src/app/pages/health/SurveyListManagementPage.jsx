@@ -7,40 +7,35 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { ArrowLeft, Plus, Edit2, Trash2, FileText, X } from 'lucide-react';
 import { toast } from 'sonner';
 
-interface Survey {
-  id: string;
-  title: string;
-  category: '정신건강' | '신체건강';
-  status: '사용 중' | '미사용';
-  createdDate: string;
-  questions: string[];
-}
 
-interface SurveyListManagementPageProps {
-  onBack: () => void;
-}
 
-export function SurveyListManagementPage({ onBack }: SurveyListManagementPageProps) {
-  const [selectedTab, setSelectedTab] = useState<'정신건강' | '신체건강'>('정신건강');
+
+
+/**
+ * @param {Object} props
+ * @param {Function} props.onBack
+ */
+export function SurveyListManagementPage({ onBack }) {
+  const [selectedTab, setSelectedTab] = useState('정신건강');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [selectedSurvey, setSelectedSurvey] = useState<Survey | null>(null);
+  const [selectedSurvey, setSelectedSurvey] = useState(null);
   
   // 설문 폼 상태
   const [formData, setFormData] = useState({
-    title: '',
-    category: '정신건강' as '정신건강' | '신체건강',
-    status: '사용 중' as '사용 중' | '미사용',
-    questions: [] as string[],
+    title,
+    category: '정신건강'정신건강' | '신체건강',
+    status: '사용 중'사용 중' | '미사용',
+    questions,
   });
 
   // 새 문항 입력 상태
   const [newQuestion, setNewQuestion] = useState('');
 
-  const [surveys, setSurveys] = useState<Survey[]>([
+  const [surveys, setSurveys] = useState([
     { 
-      id: '1', 
+      id, 
       title: '일일 간이 체크', 
       category: '정신건강', 
       status: '사용 중', 
@@ -54,7 +49,7 @@ export function SurveyListManagementPage({ onBack }: SurveyListManagementPagePro
       ]
     },
     { 
-      id: '2', 
+      id, 
       title: '정기 심층 검사', 
       category: '정신건강', 
       status: '사용 중', 
@@ -68,7 +63,7 @@ export function SurveyListManagementPage({ onBack }: SurveyListManagementPagePro
       ]
     },
     { 
-      id: '3', 
+      id, 
       title: 'PHQ-9 우울증 검사', 
       category: '정신건강', 
       status: '사용 중', 
@@ -80,7 +75,7 @@ export function SurveyListManagementPage({ onBack }: SurveyListManagementPagePro
       ]
     },
     { 
-      id: '5', 
+      id, 
       title: '일일 간이 체크', 
       category: '신체건강', 
       status: '사용 중', 
@@ -94,7 +89,7 @@ export function SurveyListManagementPage({ onBack }: SurveyListManagementPagePro
       ]
     },
     { 
-      id: '6', 
+      id, 
       title: '정기 심층 검사', 
       category: '신체건강', 
       status: '사용 중', 
@@ -112,16 +107,16 @@ export function SurveyListManagementPage({ onBack }: SurveyListManagementPagePro
 
   const handleAdd = () => {
     setFormData({
-      title: '',
-      category: selectedTab,
+      title,
+      category,
       status: '사용 중',
-      questions: [],
+      questions,
     });
     setNewQuestion('');
     setIsAddModalOpen(true);
   };
 
-  const handleEdit = (survey: Survey) => {
+  const handleEdit = (survey) => {
     setSelectedSurvey(survey);
     setFormData({
       title: survey.title,
@@ -133,7 +128,7 @@ export function SurveyListManagementPage({ onBack }: SurveyListManagementPagePro
     setIsEditModalOpen(true);
   };
 
-  const handleDelete = (survey: Survey) => {
+  const handleDelete = (survey) => {
     setSelectedSurvey(survey);
     setIsDeleteModalOpen(true);
   };
@@ -147,7 +142,7 @@ export function SurveyListManagementPage({ onBack }: SurveyListManagementPagePro
     setNewQuestion('');
   };
 
-  const handleRemoveQuestion = (index: number) => {
+  const handleRemoveQuestion = (index) => {
     setFormData({
       ...formData,
       questions: formData.questions.filter((_, i) => i !== index),
@@ -164,7 +159,7 @@ export function SurveyListManagementPage({ onBack }: SurveyListManagementPagePro
       return;
     }
 
-    const newSurvey: Survey = {
+    const newSurvey = {
       id: Date.now().toString(),
       title: formData.title,
       category: formData.category,

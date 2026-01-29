@@ -6,54 +6,48 @@ import { Users, Mail, MessageCircle, Calendar } from 'lucide-react';
 
 const teamMembers = [
   {
-    id: 1,
+    id,
     name: '김작가',
     role: '메인 작가',
     status: '출근',
     avatar: '김',
     projects: ['내 웹툰'],
-    productivity: 85,
+    productivity,
     workHours: '8.5시간',
-    isMe: true
-  },
+    isMe,
   {
-    id: 2,
+    id,
     name: '이어시',
     role: '어시스턴트',
     status: '출근',
     avatar: '이',
     projects: ['내 웹툰'],
-    productivity: 92,
+    productivity,
     workHours: '7.2시간',
-    isMe: false
-  },
+    isMe,
   {
-    id: 3,
+    id,
     name: '박채색',
     role: '채색 담당',
     status: '휴재',
     avatar: '박',
     projects: ['내 웹툰'],
-    productivity: 78,
+    productivity,
     workHours: '-',
-    isMe: false
-  },
+    isMe,
   {
-    id: 4,
+    id,
     name: '정배경',
     role: '배경 담당',
     status: '출근',
     avatar: '정',
     projects: ['내 웹툰'],
-    productivity: 88,
+    productivity,
     workHours: '6.8시간',
     isMe: false
   }
 ];
 
-/**
- * ArtistTeamPage component
- */
 export function ArtistTeamPage() {
   return (
     <div className="w-full h-full overflow-y-auto hide-scrollbar">

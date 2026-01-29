@@ -149,11 +149,17 @@ export const RoleSelectionGrid = styled.div`
 export const RoleButton = styled.button`
   position: relative;
   padding: 16px;
+  min-height: 120px;
   border-radius: 8px;
   border: 2px solid ${props => props.$isSelected ? 'var(--primary)' : 'var(--border)'};
   background-color: ${props => props.$isSelected ? 'color-mix(in srgb, var(--primary) 10%, transparent)' : 'color-mix(in srgb, var(--muted) 30%, transparent)'};
   transition: all 0.2s;
   cursor: pointer;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 
   &:hover {
     border-color: ${props => props.$isSelected ? 'var(--primary)' : 'color-mix(in srgb, var(--primary) 50%, transparent)'};

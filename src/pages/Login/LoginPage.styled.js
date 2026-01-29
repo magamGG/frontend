@@ -261,3 +261,73 @@ export const Footer = styled.p`
   color: var(--muted-foreground);
   margin-top: 16px;
 `;
+
+// 체험 계정 바 (오른쪽 하단 고정)
+export const DemoAccountBar = styled.div`
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 1000;
+  pointer-events: none;
+`;
+
+export const DemoAccountBarContainer = styled.div`
+  display: flex;
+  gap: 8px;
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 8px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  pointer-events: auto;
+`;
+
+export const DemoAccountBarItem = styled.button`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  background-color: transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 60px;
+
+  &:hover {
+    background-color: ${props => props.$color ? `${props.$color}15` : 'var(--muted)'};
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+export const DemoAccountBarIcon = styled.div`
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background-color: ${props => props.$color ? `${props.$color}20` : 'var(--muted)'};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: ${props => props.$color || 'var(--foreground)'};
+  transition: all 0.2s;
+
+  ${DemoAccountBarItem}:hover & {
+    background-color: ${props => props.$color ? `${props.$color}30` : 'var(--muted)'};
+  }
+`;
+
+export const DemoAccountBarLabel = styled.span`
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--foreground);
+  white-space: nowrap;
+`;

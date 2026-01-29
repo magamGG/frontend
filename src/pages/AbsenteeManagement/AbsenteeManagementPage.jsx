@@ -1,448 +1,506 @@
 import { useState } from 'react';
-import { Card } from '@/app/components/ui/card';
-import { Button } from '@/app/components/ui/button';
-import { Badge } from '@/app/components/ui/badge';
+import { 
+  MapPin, 
+  Briefcase, 
+  CheckCircle2, 
+  Calendar, 
+  Clock,
+  X,
+  ArrowUpDown,
+  List,
+  Mail,
+  Phone
+} from 'lucide-react';
 import { Modal } from '@/components/common/Modal';
-import { Calendar, User, CheckCircle2, XCircle, Plus, AlignLeft } from 'lucide-react';
-import { toast } from 'sonner';
 import {
-  AbsenteeManagementRoot,
-  AbsenteeManagementBody,
-  OverviewGrid,
-  RequestButtonSection,
-  CurrentAbsencesCard,
-  CardTitle,
-  AbsenceList,
-  AbsenceItem,
-  AbsenceItemHeader,
-  AbsenceItemLeft,
-  AvatarContainer,
-  AvatarText,
-  AbsenceItemInfo,
-  AbsenceItemName,
-  AbsenceItemRole,
-  InfoGrid,
-  InfoItem,
-  InfoLabel,
-  InfoValue,
-  ProjectsSection,
-  ActionButtons,
-  UpcomingScheduleCard,
-  ScheduleList,
-  ScheduleItem,
-  ScheduleItemContent,
-  ScheduleItemLeft,
-  ScheduleItemName,
-  ScheduleItemDate,
-  ModalForm,
-  FormRow,
-  FormLabel,
-  FormSelect,
-  FormInput,
-  FormTextarea,
-  FormLabelWithIcon,
-  ModalActions,
-  DetailContent,
-  DetailCard,
-  DetailHeader,
-  DetailAvatar,
-  DetailAvatarText,
-  DetailInfo,
-  DetailName,
-  DetailRole,
-  DetailInfoList,
-  DetailInfoItem,
-  DetailInfoLabel,
-  DetailInfoValue,
-  DetailDescription,
-  DetailActions,
+  RemoteManagementRoot,
+  RemoteManagementBody,
+  RemoteManagementHeader,
+  HeaderLeft,
+  PageTitle,
+  PageSubtitle,
+  HeaderRight,
+  FilterButton,
+  StatsGrid,
+  StatCard,
+  StatCardContent,
+  StatCardLabel,
+  StatCardValue,
+  StatCardIcon,
+  EmployeeGrid,
+  EmployeeCard,
+  EmployeeCardHeader,
+  StatusBadge,
+  EmployeeProfile,
+  EmployeeAvatar,
+  EmployeeInfo,
+  EmployeeName,
+  EmployeeRole,
+  DaysBadge,
+  ProjectInfo,
+  ProjectLocation,
+  ProjectDate,
+  ProjectWorks,
+  ProgressSection,
+  ProgressLabel,
+  ProgressBar,
+  ProgressValue,
+  TaskCount,
+  DetailButton,
+  WorkationModalContent,
+  ModalHeader,
+  ModalTitle,
+  CloseButton,
+  ProfileSection,
+  ProfileHeader,
+  ProfileAvatar,
+  ProfileInfo,
+  ProfileName,
+  ProfileRole,
+  ProfileStatusBadge,
+  InfoCardsGrid,
+  InfoCard,
+  InfoCardIcon,
+  InfoCardContent,
+  InfoCardLabel,
+  InfoCardValue,
+  InfoCardSubtext,
+  CurrentTasksSection,
+  SectionTitle,
+  SectionDate,
+  OverallProgress,
+  ProgressBarContainer,
+  CompletedTasksList,
+  CompletedTaskItem,
+  TaskListSection,
+  TaskCard,
+  TaskHeader,
+  TaskTitle,
+  PriorityBadge,
+  TaskDueDate,
+  TaskProject,
+  TaskProgress,
+  ParticipatingWorksSection,
+  WorksList,
+  WorkItem,
 } from './AbsenteeManagementPage.styled';
 
-// 휴재 사유 타입 정의
-const ABSENCE_REASON = {
-  BREAK: 'break',
-  EMERGENCY_BREAK: 'emergency-break',
-  WORKATION: 'workation',
-  SICK_LEAVE: 'sick-leave',
+// 정렬 타입
+const SORT_TYPE = {
+  ALPHABETICAL: 'alphabetical',
+  URGENT: 'urgent',
 };
 
-// 휴재 사유 표시명 매핑
-const REASON_LABELS = {
-  [ABSENCE_REASON.BREAK]: '휴재',
-  [ABSENCE_REASON.EMERGENCY_BREAK]: '긴급 휴재',
-  [ABSENCE_REASON.WORKATION]: '워케이션',
-  [ABSENCE_REASON.SICK_LEAVE]: '건강 관리',
+// 정렬 방향
+const SORT_DIRECTION = {
+  ASC: 'asc',
+  DESC: 'desc',
 };
 
-// 근태 상태 정의
-const ABSENCE_STATUS = {
-  APPROVED: '승인됨',
-  PENDING: '대기중',
-};
-
-// TODO: Zustand store mapping - 근태 신청 목록
-const initialAbsenceRequests = [
+// TODO: Zustand store mapping - 원격 근무 직원 목록
+const initialEmployees = [
   {
     id: 1,
-    name: '박채색',
-    role: '채색 담당',
-    reason: REASON_LABELS[ABSENCE_REASON.BREAK],
-    startDate: '2026.01.10',
-    endDate: '2026.01.20',
-    status: ABSENCE_STATUS.APPROVED,
-    projects: ['학원물', '액션 판타지'],
-    description: '개인 건강 관리를 위한 일시 중단',
+    name: '최작가',
+    role: '스토리',
+    status: '워케이션 진행 중',
+    daysRemaining: 8,
+    location: '제주도 서귀포',
+    dateRange: '01-10 ~ 01-24',
+    works: ['도시의 수호자'],
+    progress: 58,
+    taskCount: 3,
+    email: 'choi.writer@example.com',
+    phone: '010-1234-5678',
+    period: '2026-01-10 ~ 2026-01-24',
+    currentTasks: {
+      overallProgress: 75,
+      completedTasks: [
+        'Episode 33 초고 완료',
+        '캐릭터 대사 수정',
+      ],
+      tasks: [
+        {
+          id: 1,
+          title: 'Episode 33 스토리보드',
+          priority: '높음',
+          priorityColor: '#EF4444',
+          dueDate: '2026-01-18',
+          project: '도시의 수호자',
+          progress: 85,
+        },
+        {
+          id: 2,
+          title: 'Episode 34 스크립트 작성',
+          priority: '보통',
+          priorityColor: '#F59E0B',
+          dueDate: '2026-01-20',
+          project: '도시의 수호자',
+          progress: 60,
+        },
+        {
+          id: 3,
+          title: 'Episode 35 콘티 구성',
+          priority: '보통',
+          priorityColor: '#F59E0B',
+          dueDate: '2026-01-23',
+          project: '도시의 수호자',
+          progress: 30,
+        },
+      ],
+    },
+    participatingWorks: ['도시의 수호자'],
   },
   {
     id: 2,
-    name: '최스토리',
-    role: '스토리 작가',
-    reason: REASON_LABELS[ABSENCE_REASON.EMERGENCY_BREAK],
-    startDate: '2026.01.12',
-    endDate: '2026.01.15',
-    status: ABSENCE_STATUS.PENDING,
-    projects: ['로맨스 판타지'],
-    description: '건강 상의 이유로 긴급 휴재',
+    name: '한유진',
+    role: '컬러링',
+    status: '워케이션 작업 시작 전',
+    daysRemaining: 3,
+    location: '강릉 커피거리',
+    dateRange: '01-15 ~ 01-25',
+    works: ['별빛의 전설'],
+    progress: 80,
+    taskCount: 2,
+  },
+  {
+    id: 3,
+    name: '박민수',
+    role: '라인',
+    status: '재택근무 진행 중',
+    daysRemaining: 5,
+    location: '부산 해운대',
+    dateRange: '01-12 ~ 01-22',
+    works: ['별빛의 전설'],
+    progress: 33,
+    taskCount: 1,
+  },
+  {
+    id: 4,
+    name: '이서연',
+    role: '효과 작업',
+    status: '워케이션 진행 중',
+    daysRemaining: 6,
+    location: '경주 한옥마을',
+    dateRange: '01-14 ~ 01-26',
+    works: ['도시의 수호자', '별빛의 전설'],
+    progress: 25,
+    taskCount: 2,
+  },
+  {
+    id: 5,
+    name: '정다은',
+    role: '배경',
+    status: '워케이션 진행 중',
+    daysRemaining: 2,
+    location: '속초 바다뷰 카페',
+    dateRange: '01-16 ~ 01-28',
+    works: ['별빛의 전설'],
+    progress: 95,
+    taskCount: 1,
   },
 ];
 
-// TODO: Zustand store mapping - 예정된 휴재 일정
-const upcomingSchedules = [
-  { name: '이어시', dates: '2026.02.01 - 02.05', reason: '휴재' },
-  { name: '정배경', dates: '2026.02.10 - 02.15', reason: '워케이션' },
-  { name: '김작가', dates: '2026.03.01 - 03.10', reason: '워케이션' },
-];
-
 export function AbsenteeManagementPage() {
-  const [absenceRequests, setAbsenceRequests] = useState(initialAbsenceRequests);
-  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [selectedRequest, setSelectedRequest] = useState(null);
-  const [newRequest, setNewRequest] = useState({
-    reason: ABSENCE_REASON.BREAK,
-    startDate: '',
-    endDate: '',
-    projects: '',
-    description: '',
-  });
+  const [employees, setEmployees] = useState(initialEmployees);
+  const [sortType, setSortType] = useState(null);
+  const [sortDirection, setSortDirection] = useState(SORT_DIRECTION.ASC);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // 통계 계산
-  const currentAbsences = absenceRequests.filter((req) => req.status === ABSENCE_STATUS.APPROVED).length;
-  const pendingRequests = absenceRequests.filter((req) => req.status === ABSENCE_STATUS.PENDING).length;
-  const approvedThisMonth = 5; // TODO: Zustand store에서 가져오기
+  const remotePersonnel = employees.length;
+  const ongoingTasks = employees.reduce((sum, emp) => sum + emp.taskCount, 0);
+  const completedTasks = 0; // TODO: 실제 데이터에서 가져오기
 
-  // 근태 신청 제출
-  const handleRequestSubmit = () => {
-    if (!newRequest.startDate || !newRequest.endDate) {
-      toast.error('시작일과 종료일을 입력해주세요.');
-      return;
+  // 정렬 처리
+  const handleSort = (type) => {
+    if (sortType === type) {
+      // 같은 필터를 클릭하면 방향 전환
+      setSortDirection(sortDirection === SORT_DIRECTION.ASC ? SORT_DIRECTION.DESC : SORT_DIRECTION.ASC);
+    } else {
+      setSortType(type);
+      setSortDirection(SORT_DIRECTION.ASC);
     }
-
-    const request = {
-      id: Date.now(),
-      name: '김작가', // TODO: 현재 사용자 정보에서 가져오기
-      role: '작가',
-      reason: REASON_LABELS[newRequest.reason],
-      startDate: newRequest.startDate.replace(/-/g, '.'),
-      endDate: newRequest.endDate.replace(/-/g, '.'),
-      status: ABSENCE_STATUS.PENDING,
-      projects: newRequest.projects.split(',').map((p) => p.trim()).filter(Boolean),
-      description: newRequest.description,
-    };
-
-    setAbsenceRequests([...absenceRequests, request]);
-    setIsRequestModalOpen(false);
-    setNewRequest({
-      reason: ABSENCE_REASON.BREAK,
-      startDate: '',
-      endDate: '',
-      projects: '',
-      description: '',
-    });
-    toast.success('근태 신청이 완료되었습니다.');
   };
 
-  // 승인 처리
-  const handleApprove = (id) => {
-    setAbsenceRequests(
-      absenceRequests.map((req) => (req.id === id ? { ...req, status: ABSENCE_STATUS.APPROVED } : req))
-    );
-    toast.success('근태가 승인되었습니다.');
+  // 정렬된 직원 목록
+  const sortedEmployees = [...employees].sort((a, b) => {
+    if (sortType === SORT_TYPE.ALPHABETICAL) {
+      const comparison = a.name.localeCompare(b.name, 'ko');
+      return sortDirection === SORT_DIRECTION.ASC ? comparison : -comparison;
+    } else if (sortType === SORT_TYPE.URGENT) {
+      const comparison = a.daysRemaining - b.daysRemaining;
+      return sortDirection === SORT_DIRECTION.ASC ? comparison : -comparison;
+    }
+    return 0;
+  });
+
+  // 직원 카드 클릭 핸들러
+  const handleEmployeeClick = (employee) => {
+    setSelectedEmployee(employee);
+    setIsModalOpen(true);
   };
 
-  // 거부 처리
-  const handleReject = (id) => {
-    setAbsenceRequests(absenceRequests.filter((req) => req.id !== id));
-    toast.error('근태가 거부되었습니다.');
-  };
-
-  // 상세 모달 열기
-  const openDetailModal = (request) => {
-    setSelectedRequest(request);
-    setIsDetailModalOpen(true);
+  // 모달 닫기
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedEmployee(null);
   };
 
   return (
-    <AbsenteeManagementRoot>
-      <AbsenteeManagementBody>
-        {/* 개요 통계 */}
-        <OverviewGrid>
-          <Card className="p-3">
-            <div className="flex items-center gap-2 mb-1">
-              <User className="w-3 h-3 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">현재 휴재 중</span>
-            </div>
-            <p className="text-2xl font-bold text-foreground">{currentAbsences}명</p>
-          </Card>
-
-          <Card className="p-3">
-            <div className="flex items-center gap-2 mb-1">
-              <Calendar className="w-3 h-3 text-primary" />
-              <span className="text-xs text-muted-foreground">예정된 휴재</span>
-            </div>
-            <p className="text-2xl font-bold text-foreground">{upcomingSchedules.length}건</p>
-          </Card>
-
-          <Card className="p-3">
-            <div className="flex items-center gap-2 mb-1">
-              <XCircle className="w-3 h-3 text-destructive" />
-              <span className="text-xs text-muted-foreground">승인 대기</span>
-            </div>
-            <p className="text-2xl font-bold text-foreground">{pendingRequests}건</p>
-          </Card>
-
-          <Card className="p-3">
-            <div className="flex items-center gap-2 mb-1">
-              <CheckCircle2 className="w-3 h-3 text-primary" />
-              <span className="text-xs text-muted-foreground">이번 달 승인</span>
-            </div>
-            <p className="text-2xl font-bold text-foreground">{approvedThisMonth}건</p>
-          </Card>
-        </OverviewGrid>
-
-        {/* 근태 신청 버튼 */}
-        <RequestButtonSection>
-          <Button onClick={() => setIsRequestModalOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            근태 신청
-          </Button>
-        </RequestButtonSection>
-
-        {/* 현재 휴재 중인 작가/팀원 */}
-        <CurrentAbsencesCard>
-          <CardTitle>현재 휴재 중인 작가/팀원</CardTitle>
-          <AbsenceList>
-            {absenceRequests.map((person) => (
-              <AbsenceItem key={person.id} onClick={() => openDetailModal(person)}>
-                <AbsenceItemHeader>
-                  <AbsenceItemLeft>
-                    <AvatarContainer>
-                      <AvatarText>{person.name[0]}</AvatarText>
-                    </AvatarContainer>
-                    <AbsenceItemInfo>
-                      <AbsenceItemName>{person.name}</AbsenceItemName>
-                      <AbsenceItemRole>{person.role}</AbsenceItemRole>
-                    </AbsenceItemInfo>
-                  </AbsenceItemLeft>
-                  <Badge variant={person.status === ABSENCE_STATUS.APPROVED ? 'default' : 'secondary'}>
-                    {person.status}
-                  </Badge>
-                </AbsenceItemHeader>
-
-                <InfoGrid>
-                  <InfoItem>
-                    <InfoLabel>사유</InfoLabel>
-                    <InfoValue>{person.reason}</InfoValue>
-                  </InfoItem>
-                  <InfoItem>
-                    <InfoLabel>기간</InfoLabel>
-                    <InfoValue>
-                      {person.startDate} ~ {person.endDate}
-                    </InfoValue>
-                  </InfoItem>
-                </InfoGrid>
-
-                <ProjectsSection>
-                  <InfoLabel>담당 작품</InfoLabel>
-                  <InfoValue>{person.projects.join(', ')}</InfoValue>
-                </ProjectsSection>
-
-                {person.status === ABSENCE_STATUS.PENDING && (
-                  <ActionButtons onClick={(e) => e.stopPropagation()}>
-                    <Button size="sm" className="flex-1" onClick={() => handleApprove(person.id)}>
-                      승인
-                    </Button>
-                    <Button size="sm" variant="outline" className="flex-1" onClick={() => handleReject(person.id)}>
-                      거부
-                    </Button>
-                  </ActionButtons>
-                )}
-              </AbsenceItem>
-            ))}
-          </AbsenceList>
-        </CurrentAbsencesCard>
-
-        {/* 예정된 휴재 일정 */}
-        <UpcomingScheduleCard>
-          <CardTitle>예정된 휴재 일정</CardTitle>
-          <ScheduleList>
-            {upcomingSchedules.map((schedule, idx) => (
-              <ScheduleItem key={idx}>
-                <ScheduleItemContent>
-                  <ScheduleItemLeft>
-                    <ScheduleItemName>{schedule.name}</ScheduleItemName>
-                    <ScheduleItemDate>{schedule.dates}</ScheduleItemDate>
-                  </ScheduleItemLeft>
-                  <Badge variant="outline">{schedule.reason}</Badge>
-                </ScheduleItemContent>
-              </ScheduleItem>
-            ))}
-          </ScheduleList>
-        </UpcomingScheduleCard>
-      </AbsenteeManagementBody>
-
-      {/* 근태 신청 모달 */}
-      <Modal isOpen={isRequestModalOpen} onClose={() => setIsRequestModalOpen(false)} title="근태 신청" maxWidth="xl">
-        <ModalForm>
-          <FormRow>
-            <FormLabel>사유</FormLabel>
-            <FormSelect
-              value={newRequest.reason}
-              onChange={(e) => setNewRequest({ ...newRequest, reason: e.target.value })}
+    <RemoteManagementRoot>
+      <RemoteManagementBody>
+        {/* 헤더 */}
+        <RemoteManagementHeader>
+          <HeaderLeft>
+            <PageTitle>원격 관리</PageTitle>
+            <PageSubtitle>원격 근무 중인 팀원들의 작업 현황을 관리합니다</PageSubtitle>
+          </HeaderLeft>
+          <HeaderRight>
+            <FilterButton
+              $active={sortType === SORT_TYPE.ALPHABETICAL}
+              onClick={() => handleSort(SORT_TYPE.ALPHABETICAL)}
             >
-              <option value={ABSENCE_REASON.BREAK}>휴재</option>
-              <option value={ABSENCE_REASON.EMERGENCY_BREAK}>긴급 휴재</option>
-              <option value={ABSENCE_REASON.WORKATION}>워케이션</option>
-              <option value={ABSENCE_REASON.SICK_LEAVE}>건강 관리</option>
-            </FormSelect>
-          </FormRow>
+              가나다순 <ArrowUpDown className="w-4 h-4" />
+            </FilterButton>
+            <FilterButton
+              $active={sortType === SORT_TYPE.URGENT}
+              onClick={() => handleSort(SORT_TYPE.URGENT)}
+            >
+              현재 임박 <ArrowUpDown className="w-4 h-4" />
+            </FilterButton>
+          </HeaderRight>
+        </RemoteManagementHeader>
 
-          <FormRow>
-            <FormLabel>시작 날짜</FormLabel>
-            <FormInput
-              type="date"
-              value={newRequest.startDate}
-              onChange={(e) => setNewRequest({ ...newRequest, startDate: e.target.value })}
-            />
-          </FormRow>
+        {/* 통계 카드 */}
+        <StatsGrid>
+          <StatCard>
+            <StatCardContent>
+              <StatCardLabel>원격 인원</StatCardLabel>
+              <StatCardValue>{remotePersonnel}명</StatCardValue>
+            </StatCardContent>
+            <StatCardIcon $color="#9B8FAA">
+              <MapPin className="w-6 h-6" />
+            </StatCardIcon>
+          </StatCard>
 
-          <FormRow>
-            <FormLabel>종료 날짜</FormLabel>
-            <FormInput
-              type="date"
-              value={newRequest.endDate}
-              onChange={(e) => setNewRequest({ ...newRequest, endDate: e.target.value })}
-            />
-          </FormRow>
+          <StatCard>
+            <StatCardContent>
+              <StatCardLabel>진행 중인 작업</StatCardLabel>
+              <StatCardValue>{ongoingTasks}개</StatCardValue>
+            </StatCardContent>
+            <StatCardIcon $color="#4CAF50">
+              <Briefcase className="w-6 h-6" />
+            </StatCardIcon>
+          </StatCard>
 
-          <FormRow>
-            <FormLabel>담당 작품</FormLabel>
-            <FormInput
-              type="text"
-              placeholder="작품명을 쉼표로 구분하여 입력 (예: 내 웹툰, 신작)"
-              value={newRequest.projects}
-              onChange={(e) => setNewRequest({ ...newRequest, projects: e.target.value })}
-            />
-          </FormRow>
+          <StatCard>
+            <StatCardContent>
+              <StatCardLabel>완료된 작업</StatCardLabel>
+              <StatCardValue>{completedTasks}개</StatCardValue>
+            </StatCardContent>
+            <StatCardIcon $color="#81C784">
+              <CheckCircle2 className="w-6 h-6" />
+            </StatCardIcon>
+          </StatCard>
+        </StatsGrid>
 
-          <FormRow>
-            <FormLabelWithIcon>
-              <AlignLeft className="w-4 h-4" />
-              상세 설명
-            </FormLabelWithIcon>
-            <FormTextarea
-              placeholder="상세한 사유를 입력해주세요"
-              value={newRequest.description}
-              onChange={(e) => setNewRequest({ ...newRequest, description: e.target.value })}
-              rows={3}
-            />
-          </FormRow>
+        {/* 직원 카드 그리드 */}
+        <EmployeeGrid>
+          {sortedEmployees.map((employee) => (
+            <EmployeeCard key={employee.id} onClick={() => handleEmployeeClick(employee)}>
+              <EmployeeCardHeader>
+                <StatusBadge>{employee.status}</StatusBadge>
+                <DaysBadge>D-{employee.daysRemaining}</DaysBadge>
+              </EmployeeCardHeader>
 
-          <ModalActions>
-            <Button variant="outline" onClick={() => setIsRequestModalOpen(false)}>
-              취소
-            </Button>
-            <Button onClick={handleRequestSubmit}>신청</Button>
-          </ModalActions>
-        </ModalForm>
-      </Modal>
+              <EmployeeProfile>
+                <EmployeeAvatar>
+                  {employee.name[0]}
+                </EmployeeAvatar>
+                <EmployeeInfo>
+                  <EmployeeName>{employee.name}</EmployeeName>
+                  <EmployeeRole>{employee.role}</EmployeeRole>
+                </EmployeeInfo>
+              </EmployeeProfile>
 
-      {/* 상세 정보 모달 */}
+              <ProjectInfo>
+                <ProjectLocation>
+                  <MapPin className="w-4 h-4" />
+                  {employee.location}
+                </ProjectLocation>
+                <ProjectDate>
+                  <Calendar className="w-4 h-4" />
+                  {employee.dateRange}
+                </ProjectDate>
+                <ProjectWorks>
+                  <span>담당 작품</span>
+                  <div>{employee.works.join(', ')}</div>
+                </ProjectWorks>
+              </ProjectInfo>
+
+              <ProgressSection>
+                <ProgressLabel>전체 작업 진행률</ProgressLabel>
+                <ProgressBarContainer>
+                  <ProgressBar $progress={employee.progress} $isDark={true} />
+                  <ProgressValue>{employee.progress}%</ProgressValue>
+                </ProgressBarContainer>
+                <TaskCount>작업 {employee.taskCount}개</TaskCount>
+              </ProgressSection>
+
+              <DetailButton>상세보기 &gt;</DetailButton>
+            </EmployeeCard>
+          ))}
+        </EmployeeGrid>
+      </RemoteManagementBody>
+
+      {/* 워케이션 상세 정보 모달 */}
       <Modal
-        isOpen={isDetailModalOpen}
-        onClose={() => setIsDetailModalOpen(false)}
-        title="근태 상세 정보"
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
         maxWidth="lg"
+        showCloseButton={false}
       >
-        {selectedRequest && (
-          <DetailContent>
-            <DetailCard>
-              <DetailHeader>
-                <DetailAvatar>
-                  <DetailAvatarText>{selectedRequest.name[0]}</DetailAvatarText>
-                </DetailAvatar>
-                <DetailInfo>
-                  <DetailName>{selectedRequest.name}</DetailName>
-                  <DetailRole>{selectedRequest.role}</DetailRole>
-                </DetailInfo>
-              </DetailHeader>
+        {selectedEmployee && (
+          <WorkationModalContent>
+            <ModalHeader>
+              <ModalTitle>워케이션 상세 정보</ModalTitle>
+              <CloseButton onClick={handleCloseModal}>
+                <X className="w-5 h-5" />
+              </CloseButton>
+            </ModalHeader>
 
-              <DetailInfoList>
-                <DetailInfoItem>
-                  <DetailInfoLabel>상태:</DetailInfoLabel>
-                  <Badge variant={selectedRequest.status === ABSENCE_STATUS.APPROVED ? 'default' : 'secondary'}>
-                    {selectedRequest.status}
-                  </Badge>
-                </DetailInfoItem>
-                <DetailInfoItem>
-                  <DetailInfoLabel>사유:</DetailInfoLabel>
-                  <DetailInfoValue>{selectedRequest.reason}</DetailInfoValue>
-                </DetailInfoItem>
-                <DetailInfoItem>
-                  <DetailInfoLabel>기간:</DetailInfoLabel>
-                  <DetailInfoValue>
-                    {selectedRequest.startDate} ~ {selectedRequest.endDate}
-                  </DetailInfoValue>
-                </DetailInfoItem>
-                <DetailInfoItem alignStart>
-                  <DetailInfoLabel>담당 작품:</DetailInfoLabel>
-                  <DetailInfoValue textRight>{selectedRequest.projects.join(', ')}</DetailInfoValue>
-                </DetailInfoItem>
-                {selectedRequest.description && (
-                  <DetailDescription>
-                    <DetailInfoLabel style={{ display: 'block', marginBottom: '4px' }}>상세 설명:</DetailInfoLabel>
-                    <DetailInfoValue style={{ display: 'block' }}>{selectedRequest.description}</DetailInfoValue>
-                  </DetailDescription>
-                )}
-              </DetailInfoList>
-            </DetailCard>
+            {/* 프로필 섹션 */}
+            <ProfileSection>
+              <ProfileHeader>
+                <ProfileAvatar>
+                  {selectedEmployee.name[0]}
+                </ProfileAvatar>
+                <ProfileInfo>
+                  <ProfileName>{selectedEmployee.name}</ProfileName>
+                  <ProfileRole>{selectedEmployee.role}</ProfileRole>
+                </ProfileInfo>
+                <ProfileStatusBadge>{selectedEmployee.status}</ProfileStatusBadge>
+              </ProfileHeader>
 
-            {selectedRequest.status === ABSENCE_STATUS.PENDING && (
-              <DetailActions>
-                <Button
-                  className="flex-1"
-                  onClick={() => {
-                    handleApprove(selectedRequest.id);
-                    setIsDetailModalOpen(false);
-                  }}
-                >
-                  승인
-                </Button>
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => {
-                    handleReject(selectedRequest.id);
-                    setIsDetailModalOpen(false);
-                  }}
-                >
-                  거부
-                </Button>
-              </DetailActions>
+              <InfoCardsGrid>
+                <InfoCard>
+                  <InfoCardIcon>
+                    <MapPin className="w-5 h-5" />
+                  </InfoCardIcon>
+                  <InfoCardContent>
+                    <InfoCardLabel>위치</InfoCardLabel>
+                    <InfoCardValue>{selectedEmployee.location}</InfoCardValue>
+                  </InfoCardContent>
+                </InfoCard>
+
+                <InfoCard>
+                  <InfoCardIcon>
+                    <Calendar className="w-5 h-5" />
+                  </InfoCardIcon>
+                  <InfoCardContent>
+                    <InfoCardLabel>기간</InfoCardLabel>
+                    <InfoCardValue>{selectedEmployee.period || selectedEmployee.dateRange}</InfoCardValue>
+                    <InfoCardSubtext>(D-{selectedEmployee.daysRemaining}일 남음)</InfoCardSubtext>
+                  </InfoCardContent>
+                </InfoCard>
+
+                <InfoCard>
+                  <InfoCardIcon>
+                    <Mail className="w-5 h-5" />
+                  </InfoCardIcon>
+                  <InfoCardContent>
+                    <InfoCardLabel>이메일</InfoCardLabel>
+                    <InfoCardValue>{selectedEmployee.email || 'N/A'}</InfoCardValue>
+                  </InfoCardContent>
+                </InfoCard>
+
+                <InfoCard>
+                  <InfoCardIcon>
+                    <Phone className="w-5 h-5" />
+                  </InfoCardIcon>
+                  <InfoCardContent>
+                    <InfoCardLabel>연락처</InfoCardLabel>
+                    <InfoCardValue>{selectedEmployee.phone || 'N/A'}</InfoCardValue>
+                  </InfoCardContent>
+                </InfoCard>
+              </InfoCardsGrid>
+            </ProfileSection>
+
+            {/* 현재 작업 중인 업무 */}
+            {selectedEmployee.currentTasks && (
+              <CurrentTasksSection>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <SectionTitle>
+                    <Calendar className="w-4 h-4" />
+                    현재 작업 중인 업무
+                  </SectionTitle>
+                  <SectionDate>2026-01-16 18:30</SectionDate>
+                </div>
+
+                <OverallProgress>
+                  <span>전체 진행률</span>
+                  <ProgressBarContainer>
+                    <ProgressBar $progress={selectedEmployee.currentTasks.overallProgress} $isDark={false} />
+                    <ProgressValue style={{ color: '#1f2328' }}>{selectedEmployee.currentTasks.overallProgress}%</ProgressValue>
+                  </ProgressBarContainer>
+                </OverallProgress>
+
+                <CompletedTasksList>
+                  <span>완료한 작업</span>
+                  {selectedEmployee.currentTasks.completedTasks.map((task, idx) => (
+                    <CompletedTaskItem key={idx}>
+                      <CheckCircle2 className="w-4 h-4" style={{ color: '#4CAF50' }} />
+                      {task}
+                    </CompletedTaskItem>
+                  ))}
+                </CompletedTasksList>
+              </CurrentTasksSection>
             )}
-          </DetailContent>
+
+            {/* 담당 작업 목록 */}
+            {selectedEmployee.currentTasks && (
+              <TaskListSection>
+                <SectionTitle>
+                  <List className="w-4 h-4" />
+                  담당 작업 목록
+                </SectionTitle>
+                {selectedEmployee.currentTasks.tasks.map((task) => (
+                  <TaskCard key={task.id}>
+                    <TaskHeader>
+                      <TaskTitle>{task.title}</TaskTitle>
+                      <PriorityBadge $color={task.priorityColor}>{task.priority}</PriorityBadge>
+                    </TaskHeader>
+                    <TaskDueDate>
+                      <Clock className="w-4 h-4" />
+                      {task.dueDate}
+                    </TaskDueDate>
+                    <TaskProject>{task.project}</TaskProject>
+                    <TaskProgress>
+                      <span>진행률</span>
+                      <ProgressBarContainer>
+                        <ProgressBar $progress={task.progress} $isDark={false} />
+                        <ProgressValue style={{ color: '#1f2328' }}>{task.progress}%</ProgressValue>
+                      </ProgressBarContainer>
+                    </TaskProgress>
+                  </TaskCard>
+                ))}
+              </TaskListSection>
+            )}
+
+            {/* 참여 작품 */}
+            <ParticipatingWorksSection>
+              <SectionTitle>참여 작품</SectionTitle>
+              <WorksList>
+                {selectedEmployee.participatingWorks?.map((work, idx) => (
+                  <WorkItem key={idx}>{work}</WorkItem>
+                ))}
+              </WorksList>
+            </ParticipatingWorksSection>
+          </WorkationModalContent>
         )}
       </Modal>
-    </AbsenteeManagementRoot>
+    </RemoteManagementRoot>
   );
 }

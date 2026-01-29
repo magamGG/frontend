@@ -41,6 +41,11 @@ export const memberService = {
     return api.get(API_ENDPOINTS.MEMBERS.ARTISTS(agencyNo));
   },
 
+  // 담당자별 작가 목록 조회 (ARTIST_ASSIGNMENT 테이블에서 managerNo로 조회)
+  getArtistsByManager: (managerNo) => {
+    return api.get(API_ENDPOINTS.MEMBERS.ARTISTS_BY_MANAGER(managerNo));
+  },
+
   // 작가를 담당자에게 배정
   assignArtistToManager: (artistNo, managerNo) => {
     return api.post(API_ENDPOINTS.MEMBERS.ASSIGN(artistNo, managerNo));
@@ -49,6 +54,16 @@ export const memberService = {
   // 작가의 담당자 배정 해제
   unassignArtistFromManager: (artistNo) => {
     return api.delete(API_ENDPOINTS.MEMBERS.UNASSIGN(artistNo));
+  },
+
+  // 회원 삭제
+  deleteMember: (memberNo) => {
+    return api.delete(API_ENDPOINTS.MEMBERS.DELETE(memberNo));
+  },
+
+  // 회원을 에이전시에서 제거 (agencyNo를 null로 설정)
+  removeFromAgency: (memberNo) => {
+    return api.put(API_ENDPOINTS.MEMBERS.REMOVE_FROM_AGENCY(memberNo));
   },
 };
 

@@ -7,42 +7,39 @@ import { CheckCircle2, XCircle, Calendar, FileText, Clock, AlertCircle, User, Br
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-/**
- * AgencyApprovalsPage component
- */
-  status: '대기' | '승인' | '반려';
-  submittedDate: string;
-  rejectionReason?: string;
-  processedDate?: string;
-}
 
-type Request = VacationRequest | JoinRequest | ProjectRequest;
+
+
+
+
+
+
 
 export function AgencyApprovalsPage() {
   const [showRejectModal, setShowRejectModal] = useState(false);
-  const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<'vacation' | 'join' | 'project'>('vacation');
+  const [selectedCategory, setSelectedCategory] = useState('vacation');
 
   // 요청 데이터
-  const [requests, setRequests] = useState<Request[]>([
+  const [requests, setRequests] = useState([
     {
-      id: 1,
+      id,
       type: '휴가',
-      category: 'vacation',
+      category,
       requester: '김담당자',
       role: '시니어 매니저',
       startDate: '2026-01-20',
       endDate: '2026-01-22',
-      days: 3,
+      days,
       reason: '개인 사유로 인한 휴가 신청',
       status: '대기',
       submittedDate: '2026-01-15',
     },
     {
-      id: 2,
+      id,
       type: '신작',
-      category: 'project',
+      category,
       requester: '이담당자',
       role: '매니저',
       projectName: '새로운 판타지 웹툰',
@@ -53,22 +50,22 @@ export function AgencyApprovalsPage() {
       submittedDate: '2026-01-14',
     },
     {
-      id: 3,
+      id,
       type: '휴가',
-      category: 'vacation',
+      category,
       requester: '박담당자',
       role: '주니어 매니저',
       startDate: '2026-01-16',
       endDate: '2026-01-18',
-      days: 3,
+      days,
       reason: '건강 검진 및 치료',
       status: '대기',
       submittedDate: '2026-01-15',
     },
     {
-      id: 4,
+      id,
       type: '신작',
-      category: 'project',
+      category,
       requester: '최담당자',
       role: '매니저',
       projectName: '로맨스 드라마',
@@ -79,9 +76,9 @@ export function AgencyApprovalsPage() {
       submittedDate: '2026-01-13',
     },
     {
-      id: 5,
+      id,
       type: '가입',
-      category: 'join',
+      category,
       requester: '박신입',
       role: '작가',
       email: 'newartist@email.com',
@@ -91,9 +88,9 @@ export function AgencyApprovalsPage() {
       submittedDate: '2026-01-12',
     },
     {
-      id: 6,
+      id,
       type: '가입',
-      category: 'join',
+      category,
       requester: '정신입',
       role: '담당자',
       email: 'newmanager@email.com',
@@ -103,23 +100,23 @@ export function AgencyApprovalsPage() {
       submittedDate: '2026-01-11',
     },
     {
-      id: 7,
+      id,
       type: '휴가',
-      category: 'vacation',
+      category,
       requester: '이담당자',
       role: '매니저',
       startDate: '2026-01-10',
       endDate: '2026-01-12',
-      days: 3,
+      days,
       reason: '가족 행사',
       status: '승인',
       submittedDate: '2026-01-05',
       processedDate: '2026-01-06',
     },
     {
-      id: 8,
+      id,
       type: '신작',
-      category: 'project',
+      category,
       requester: '김담당자',
       role: '시니어 매니저',
       projectName: '액션 만화',
@@ -131,9 +128,9 @@ export function AgencyApprovalsPage() {
       processedDate: '2026-01-09',
     },
     {
-      id: 9,
+      id,
       type: '가입',
-      category: 'join',
+      category,
       requester: '김작가',
       role: '작가',
       email: 'rejected@email.com',
@@ -156,7 +153,7 @@ export function AgencyApprovalsPage() {
       return dateB - dateA;
     });
 
-  const handleApprove = (request: Request) => {
+  const handleApprove = (request) => {
     setRequests(requests.map(r => 
       r.id === request.id 
         ? { ...r, status: '승인', processedDate: new Date().toISOString().split('T')[0] }
@@ -165,7 +162,7 @@ export function AgencyApprovalsPage() {
     toast.success(`${request.requester}의 ${request.type} 신청이 승인되었습니다.`);
   };
 
-  const handleOpenRejectModal = (request: Request) => {
+  const handleOpenRejectModal = (request) => {
     setSelectedRequest(request);
     setShowRejectModal(true);
   };
@@ -182,7 +179,7 @@ export function AgencyApprovalsPage() {
           ? { 
               ...r, 
               status: '반려', 
-              rejectionReason: rejectionReason,
+              rejectionReason,
               processedDate: new Date().toISOString().split('T')[0]
             }
           : r
@@ -195,7 +192,7 @@ export function AgencyApprovalsPage() {
     setRejectionReason('');
   };
 
-  const getTypeColor = (type: string) => {
+  const getTypeColor = (type) => {
     switch (type) {
       case '휴가':
         return 'bg-[#9C27B0]'; // 보라색
@@ -208,7 +205,7 @@ export function AgencyApprovalsPage() {
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status) => {
     switch (status) {
       case '대기':
         return 'bg-yellow-500';
@@ -221,7 +218,7 @@ export function AgencyApprovalsPage() {
     }
   };
 
-  const formatDate = (dateStr: string) => {
+  const formatDate = (dateStr) => {
     const date = new Date(dateStr);
     return `${date.getMonth() + 1}월 ${date.getDate()}일`;
   };
@@ -340,8 +337,8 @@ export function AgencyApprovalsPage() {
                                 <div className="flex items-center gap-2">
                                   <Calendar className="w-3 h-3" />
                                   <span>
-                                    {formatDate((request as VacationRequest).startDate)} ~ {formatDate((request as VacationRequest).endDate)} 
-                                    ({(request as VacationRequest).days}일)
+                                    {formatDate((request).startDate)} ~ {formatDate((request).endDate)} 
+                                    ({(request).days}일)
                                   </span>
                                 </div>
                               </>
@@ -351,11 +348,11 @@ export function AgencyApprovalsPage() {
                               <>
                                 <div className="flex items-center gap-2">
                                   <FileText className="w-3 h-3" />
-                                  <span>{(request as JoinRequest).email}</span>
+                                  <span>{(request).email}</span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <FileText className="w-3 h-3" />
-                                  <span>{(request as JoinRequest).phone}</span>
+                                  <span>{(request).phone}</span>
                                 </div>
                               </>
                             )}
@@ -364,15 +361,15 @@ export function AgencyApprovalsPage() {
                               <>
                                 <div className="flex items-center gap-2">
                                   <Briefcase className="w-3 h-3" />
-                                  <span>{(request as ProjectRequest).projectName}</span>
+                                  <span>{(request).projectName}</span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <User className="w-3 h-3" />
-                                  <span>작가: {(request as ProjectRequest).artist}</span>
+                                  <span>작가: {(request).artist}</span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <FileText className="w-3 h-3" />
-                                  <span>플랫폼: {(request as ProjectRequest).platform}</span>
+                                  <span>플랫폼: {(request).platform}</span>
                                 </div>
                               </>
                             )}
@@ -453,15 +450,15 @@ export function AgencyApprovalsPage() {
                           <div className="space-y-1 text-xs text-muted-foreground">
                             {request.category === 'vacation' && (
                               <div>
-                                {formatDate((request as VacationRequest).startDate)} ~ {formatDate((request as VacationRequest).endDate)} 
-                                ({(request as VacationRequest).days}일)
+                                {formatDate((request).startDate)} ~ {formatDate((request).endDate)} 
+                                ({(request).days}일)
                               </div>
                             )}
                             {request.category === 'join' && (
-                              <div>{(request as JoinRequest).email}</div>
+                              <div>{(request).email}</div>
                             )}
                             {request.category === 'project' && (
-                              <div>{(request as ProjectRequest).projectName} - {(request as ProjectRequest).artist}</div>
+                              <div>{(request).projectName} - {(request).artist}</div>
                             )}
                             <div>사유: {request.reason}</div>
                             {request.status === '반려' && request.rejectionReason && (

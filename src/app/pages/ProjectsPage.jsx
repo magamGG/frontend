@@ -6,50 +6,47 @@ import { Plus, MoreVertical, Calendar, TrendingUp } from 'lucide-react';
 
 const projects = [
   {
-    id: 1,
+    id,
     title: '로맨스 판타지',
     status: '연재중',
     platform: '네이버 웹툰',
-    episodeCount: 42,
+    episodeCount,
     nextDeadline: '2026년 1월 15일',
-    progress: 75,
+    progress,
     views: '125만'
   },
   {
-    id: 2,
+    id,
     title: '학원물',
     status: '연재중',
     platform: '카카오 웹툰',
-    episodeCount: 15,
+    episodeCount,
     nextDeadline: '2026년 1월 18일',
-    progress: 60,
+    progress,
     views: '85만'
   },
   {
-    id: 3,
+    id,
     title: '액션 판타지',
     status: '휴재',
     platform: '네이버 웹툰',
-    episodeCount: 28,
-    nextDeadline: null,
-    progress: 45,
+    episodeCount,
+    nextDeadline,
+    progress,
     views: '200만'
   },
   {
-    id: 4,
+    id,
     title: 'SF 스릴러',
     status: '준비중',
     platform: '카카오 웹툰',
-    episodeCount: 0,
+    episodeCount,
     nextDeadline: '2026년 2월 1일',
-    progress: 15,
+    progress,
     views: '-'
   }
 ];
 
-/**
- * ProjectsPage component
- */
 export function ProjectsPage() {
   return (
     <div className="w-full h-full">

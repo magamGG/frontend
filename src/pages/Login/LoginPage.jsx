@@ -3,6 +3,9 @@ import { motion } from 'motion/react';
 import { Button } from '@/app/components/ui/button';
 import { Card } from '@/app/components/ui/card';
 import { Mail, Lock, Edit, Building, Users, UserPlus } from 'lucide-react';
+import { toast } from 'sonner';
+import { authService } from '@/api';
+import useAuthStore from '@/store/authStore';
 import {
   LoginRoot,
   BackgroundPattern,
@@ -23,15 +26,16 @@ import {
   LinkButton,
   Divider,
   DividerText,
-  DemoAccountGroup,
-  DemoAccountButton,
-  DemoAccountTextArea,
-  DemoAccountEmail,
   Footer,
+  DemoAccountBar,
+  DemoAccountBarContainer,
+  DemoAccountBarItem,
+  DemoAccountBarIcon,
+  DemoAccountBarLabel,
 } from './LoginPage.styled';
 
-// TODO: Zustand store mapping - 사용자 역할 타입
-const USER_ROLES = {
+// 사용자 역할 타입 상수
+const USER_ROLE_TYPES = {
   INDIVIDUAL: 'individual',
   MANAGER: 'manager',
   AGENCY: 'agency',
@@ -39,56 +43,112 @@ const USER_ROLES = {
 };
 
 // 데모 계정 설정
-const demoAccounts = [
+const demoAccountList = [
   {
-    id: USER_ROLES.INDIVIDUAL,
+    id: USER_ROLE_TYPES.INDIVIDUAL,
     icon: Edit,
-    label: '개인(작가) 계정으로 체험',
+    label: '개인작가',
     email: 'demo@artist.com',
-    borderColor: '#e9d5ff',
-    bgColor: 'transparent',
-    hoverBgColor: '#faf5ff',
-    hoverBorderColor: '#d8b4fe',
+    color: '#a855f7',
   },
   {
-    id: USER_ROLES.MANAGER,
+    id: USER_ROLE_TYPES.MANAGER,
     icon: Building,
-    label: '담당자 계정으로 체험',
+    label: '담당자',
     email: 'demo@manager.com',
-    borderColor: '#bfdbfe',
-    bgColor: 'transparent',
-    hoverBgColor: '#eff6ff',
-    hoverBorderColor: '#93c5fd',
+    color: '#3b82f6',
   },
   {
-    id: USER_ROLES.AGENCY,
+    id: USER_ROLE_TYPES.AGENCY,
     icon: Users,
-    label: '에이전시 계정으로 체험',
+    label: '에이전시',
     email: 'demo@agency.com',
-    borderColor: '#bbf7d0',
-    bgColor: 'transparent',
-    hoverBgColor: '#f0fdf4',
-    hoverBorderColor: '#86efac',
+    color: '#22c55e',
+  },
+  {
+    id: 'no-agency',
+    icon: UserPlus,
+    label: '소속없음',
+    email: 'demo@individual.com',
+    color: '#6b7280',
   },
 ];
 
+
 export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [emailInput, setEmailInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const login = useAuthStore((state) => state.login);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // TODO: API 호출로 인증 처리
-    // Mock login - 실제 앱에서는 자격 증명 검증
-    onLogin(USER_ROLES.INDIVIDUAL);
+    
+    if (!emailInput || !passwordInput) {
+      toast.error('이메일과 비밀번호를 입력해주세요.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // DB 스키마에 MEMBER_ID 필드가 없으므로 MEMBER_EMAIL을 로그인 ID로 사용
+      const response = await authService.login({
+        memberEmail: emailInput, // 이메일을 로그인 ID로 사용
+        memberPassword: passwordInput,
+      });
+      
+      // 가이드 문서에 따른 응답 데이터 구조
+      login({
+        token: response.token || response.accessToken,
+        memberNo: response.memberNo,
+        memberName: response.memberName || emailInput,
+        memberRole: response.memberRole,
+        agencyNo: response.agencyNo,
+      });
+      
+      toast.success('로그인에 성공했습니다.');
+      
+      // memberRole과 agencyNo를 기반으로 리다이렉트 결정
+      // onLogin에 실제 memberRole과 agencyNo를 전달
+      onLogin(response.memberRole, response.agencyNo);
+    } catch (error) {
+      const errorMessage = error?.message || '로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.';
+      toast.error(errorMessage);
+      console.error('Login error:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleDemoLogin = (role) => {
-    onLogin(role);
-  };
-
-  const handleNoAgencyLogin = () => {
-    onLogin(USER_ROLES.INDIVIDUAL, false);
+  const handleDemoLogin = (account) => {
+    // 데모 계정은 로그인 API 호출 없이 바로 로그인 처리
+    // account.id를 실제 MEMBER_ROLE 값으로 매핑
+    let memberRole = '';
+    let agencyNo = null;
+    
+    if (account.id === USER_ROLE_TYPES.INDIVIDUAL) {
+      memberRole = '웹툰 작가';
+      agencyNo = 1; // 데모는 기본적으로 에이전시 소속
+    } else if (account.id === USER_ROLE_TYPES.MANAGER) {
+      memberRole = '담당자';
+      agencyNo = 1; // 데모는 기본적으로 에이전시 소속
+    } else if (account.id === USER_ROLE_TYPES.AGENCY) {
+      memberRole = '에이전시 관리자';
+      agencyNo = 1; // 에이전시 관리자는 항상 에이전시 소속
+    } else if (account.id === 'no-agency') {
+      // 비소속 계정
+      memberRole = '웹툰 작가';
+      agencyNo = null; // 비소속
+    }
+    
+    login({
+      token: 'demo-token',
+      memberNo: 0,
+      memberName: '데모 사용자',
+      memberRole: memberRole,
+      agencyNo: agencyNo,
+    });
+    onLogin(memberRole, agencyNo);
   };
 
   return (
@@ -143,10 +203,11 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5" style={{ color: 'var(--muted-foreground)' }} />
                       <InputField
                         type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        value={emailInput}
+                        onChange={(e) => setEmailInput(e.target.value)}
                         placeholder="kim.artist@example.com"
                         required
+                        disabled={isLoading}
                       />
                     </InputWrapper>
                   </InputGroup>
@@ -158,10 +219,11 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5" style={{ color: 'var(--muted-foreground)' }} />
                       <InputField
                         type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
+                        value={passwordInput}
+                        onChange={(e) => setPasswordInput(e.target.value)}
                         placeholder="••••••••"
                         required
+                        disabled={isLoading}
                       />
                     </InputWrapper>
                   </InputGroup>
@@ -187,8 +249,12 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
                   </CheckboxLinkGroup>
 
                   {/* Login Button */}
-                  <Button type="submit" style={{ width: '100%', padding: '24px', fontSize: '16px', fontWeight: 600 }}>
-                    로그인
+                  <Button 
+                    type="submit" 
+                    style={{ width: '100%', padding: '24px', fontSize: '16px', fontWeight: 600 }}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? '로그인 중...' : '로그인'}
                   </Button>
                 </FormSection>
 
@@ -204,7 +270,7 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
                   style={{
                     width: '100%',
                     padding: '12px',
-                    borderColor: '#d1d5db',
+                    borderColor: 'var(--border)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -224,53 +290,6 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
                   <span>Google로 로그인</span>
                 </Button>
 
-                {/* Divider */}
-                <Divider>
-                  <DividerText>데모 계정</DividerText>
-                </Divider>
-
-                {/* Demo Login */}
-                <DemoAccountGroup>
-                  {demoAccounts.map((account) => {
-                    const AccountIcon = account.icon;
-                    return (
-                      <DemoAccountButton
-                        key={account.id}
-                        type="button"
-                        $borderColor={account.borderColor}
-                        $bgColor={account.bgColor}
-                        $hoverBgColor={account.hoverBgColor}
-                        $hoverBorderColor={account.hoverBorderColor}
-                        onClick={() => handleDemoLogin(account.id)}
-                      >
-                        <AccountIcon size={16} />
-                        <DemoAccountTextArea>
-                          <span style={{ fontWeight: 500 }}>{account.label}</span>
-                          <DemoAccountEmail>{account.email}</DemoAccountEmail>
-                        </DemoAccountTextArea>
-                      </DemoAccountButton>
-                    );
-                  })}
-                </DemoAccountGroup>
-
-                {/* Divider */}
-                <Divider>
-                  <DividerText>소속이 없으신가요?</DividerText>
-                </Divider>
-
-                {/* No Agency Button */}
-                <DemoAccountButton
-                  type="button"
-                  $borderColor="#fed7aa"
-                  $bgColor="transparent"
-                  $hoverBgColor="#fff7ed"
-                  $hoverBorderColor="#fdba74"
-                  onClick={handleNoAgencyLogin}
-                  style={{ fontWeight: 500, padding: '16px' }}
-                >
-                  <UserPlus size={20} />
-                  <span>소속 없는 계정으로 시작하기</span>
-                </DemoAccountButton>
               </LoginCard>
             </Card>
           </motion.div>
@@ -289,6 +308,29 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
           </motion.p>
         </LoginContainer>
       </motion.div>
+
+      {/* 체험 계정 바 (오른쪽 하단) */}
+      <DemoAccountBar>
+        <DemoAccountBarContainer>
+          {demoAccountList.map((account) => {
+            const AccountIcon = account.icon;
+            return (
+              <DemoAccountBarItem
+                key={account.id}
+                onClick={() => handleDemoLogin(account)}
+                $color={account.color}
+                disabled={isLoading}
+                title={account.email}
+              >
+                <DemoAccountBarIcon $color={account.color}>
+                  <AccountIcon size={16} />
+                </DemoAccountBarIcon>
+                <DemoAccountBarLabel>{account.label}</DemoAccountBarLabel>
+              </DemoAccountBarItem>
+            );
+          })}
+        </DemoAccountBarContainer>
+      </DemoAccountBar>
     </LoginRoot>
   );
 }

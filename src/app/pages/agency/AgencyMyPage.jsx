@@ -7,11 +7,12 @@ import { Label } from '@/app/components/ui/label';
 import { toast } from 'sonner';
 import { motion } from 'motion/react';
 
+
+
 /**
- * AgencyMyPage component
  * @param {Object} props
- * @param {Function} props.onClose - Callback to close the page
- * @param {Function} props.onLogout - Callback to logout
+ * @param {Function} props.onClose
+ * @param {Function} props.onLogout
  */
 export function AgencyMyPage({ onClose, onLogout }) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -28,10 +29,10 @@ export function AgencyMyPage({ onClose, onLogout }) {
 
   // 에이전시 통계 데이터
   const agencyStats = [
-    { label: '완료한 작업', value: 45, percentage: 45, color: 'bg-[#6366F1]' },
-    { label: '완료된 에피소드', value: 80, percentage: 80, color: 'bg-[#8B5CF6]' },
-    { label: '진행중인 작업', value: 65, percentage: 65, color: 'bg-[#A855F7]' },
-    { label: '내일 마감', value: 25, percentage: 25, color: 'bg-[#F97316]' },
+    { label: '완료한 작업', value, percentage, color: 'bg-[#6366F1]' },
+    { label: '완료된 에피소드', value, percentage, color: 'bg-[#8B5CF6]' },
+    { label: '진행중인 작업', value, percentage, color: 'bg-[#A855F7]' },
+    { label: '내일 마감', value, percentage, color: 'bg-[#F97316]' },
   ];
 
   // Load user data from localStorage
@@ -50,7 +51,7 @@ export function AgencyMyPage({ onClose, onLogout }) {
 
   const handleSaveProfile = () => {
     const userData = {
-      name: userName,
+      name,
       email,
       phone,
       location,
@@ -77,10 +78,6 @@ export function AgencyMyPage({ onClose, onLogout }) {
     onLogout();
   };
 
-  /**
-   * Handle copying company code
-   * @param {string} code - Company code to copy
-   */
   const handleCopyCode = (code) => {
     // Try modern clipboard API first
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -98,10 +95,6 @@ export function AgencyMyPage({ onClose, onLogout }) {
     }
   };
 
-  /**
-   * Fallback method to copy code
-   * @param {string} code - Company code to copy
-   */
   const fallbackCopyCode = (code) => {
     const textArea = document.createElement('textarea');
     textArea.value = code;
@@ -123,9 +116,9 @@ export function AgencyMyPage({ onClose, onLogout }) {
   return (
     <div className="fixed inset-0 z-50 bg-background flex items-center justify-center p-8 overflow-auto">
       <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 20 }}
+        initial={{ opacity, y: 20 }}
+        animate={{ opacity, y: 0 }}
+        exit={{ opacity, y: 20 }}
         transition={{ duration: 0.3 }}
         className="w-full max-w-5xl bg-white rounded-3xl shadow-2xl overflow-hidden"
       >
@@ -161,7 +154,7 @@ export function AgencyMyPage({ onClose, onLogout }) {
                     input.type = 'file';
                     input.accept = 'image/*';
                     input.onchange = (e) => {
-                      const file = e.target.files?.[0];
+                      const file = (e.target).files?.[0];
                       if (file) {
                         const reader = new FileReader();
                         reader.onloadend = () => {
@@ -169,7 +162,7 @@ export function AgencyMyPage({ onClose, onLogout }) {
                           setProfileImage(newImage);
                           // Save to localStorage
                           const savedUserData = localStorage.getItem('agencyUserData');
-                          const userData = savedUserData ? JSON.parse(savedUserData) : {};
+                          const userData = savedUserData ? JSON.parse(savedUserData) {};
                           userData.profileImage = newImage;
                           localStorage.setItem('agencyUserData', JSON.stringify(userData));
                           toast.success('프로필 사진이 변경되었습니다.');

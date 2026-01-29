@@ -3,8 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Home, Briefcase, Calendar, Users, Palmtree, Heart, Plane, Bell, User, ClipboardCheck, Activity, UserCog, HeartPulse } from 'lucide-react';
 import { Header } from '../Header';
 import { MyPage } from '@/pages/MyPage';
-import { AdminMyPage } from '@/pages/AdminMyPage';
-import { AgencyMyPage } from '@/pages/AgencyMyPage';
+import { AdminMyPage } from '@/pages/admin/AdminMyPage';
+import { AgencyMyPage } from '@/pages/agency/AgencyMyPage';
 import { LeaveRequestModal } from '@/components/modals/LeaveRequestModal';
 import {
   LayoutContainer,

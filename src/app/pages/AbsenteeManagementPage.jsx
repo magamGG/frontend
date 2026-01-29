@@ -6,9 +6,8 @@ import { Calendar, User, Clock, CheckCircle2, XCircle, Plus, AlignLeft } from 'l
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-/**
- * AbsenteeManagementPage component
- */
+
+
 export function AbsenteeManagementPage() {
   const [absenceRequests, setAbsenceRequests] = useState([
     {
@@ -46,9 +45,6 @@ export function AbsenteeManagementPage() {
     description: '',
   });
 
-  /**
-   * Handle request submission
-   */
   const handleRequestSubmit = () => {
     // 임시로 작가 본인 이름 사용
     const request = {
@@ -79,22 +75,18 @@ export function AbsenteeManagementPage() {
     toast.success('근태 신청이 완료되었습니다.');
   };
 
-  const handleApprove = (id: number) => {
+  const handleApprove = (id) => {
     setAbsenceRequests(absenceRequests.map(req => 
       req.id === id ? { ...req, status: '승인됨' } : req
     ));
     toast.success('근태가 승인되었습니다.');
   };
 
-  const handleReject = (id: number) => {
+  const handleReject = (id) => {
     setAbsenceRequests(absenceRequests.filter(req => req.id !== id));
     toast.error('근태가 거부되었습니다.');
   };
 
-  /**
-   * Open detail modal for a request
-   * @param {Object} request - Absence request object
-   */
   const openDetailModal = (request) => {
     setSelectedRequest(request);
     setIsDetailModalOpen(true);
@@ -242,7 +234,7 @@ export function AbsenteeManagementPage() {
             <label className="text-sm font-medium text-foreground mb-1 block">사유</label>
             <select
               value={newRequest.reason}
-              onChange={(e) => setNewRequest({ ...newRequest, reason: e.target.value })}
+              onChange={(e) => setNewRequest({ ...newRequest, reason: e.target.value)}
               className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring outline-none text-sm bg-background text-foreground"
             >
               <option value="break">휴재</option>

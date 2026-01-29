@@ -9,10 +9,9 @@ import { motion } from 'motion/react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
 /**
- * MyPage component
  * @param {Object} props
- * @param {Function} props.onClose - Callback to close the page
- * @param {Function} props.onLogout - Callback to logout
+ * @param {Function} props.onClose
+ * @param {Function} props.onLogout
  */
 export function MyPage({ onClose, onLogout }) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -27,19 +26,24 @@ export function MyPage({ onClose, onLogout }) {
   const [backgroundImage, setBackgroundImage] = useState(null);
 
   // 근태 통계 데이터 (이번 달 기준)
-  const currentMonth = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' });
+  const currentMonth = new Date().toLocaleDateString('ko-KR', { year, month);
   const attendanceData = [
-    { name: '출근', value: 12, color: '#00ACC1' },
-    { name: '휴가', value: 3, color: '#757575' },
-    { name: '재택근무', value: 8, color: '#FF9800' },
-    { name: '워케이션', value: 2, color: '#9C27B0' },
+    { name: '출근', value, color: '#00ACC1' },
+    { name: '휴가', value, color: '#757575' },
+    { name: '재택근무', value, color: '#FF9800' },
+    { name: '워케이션', value, color: '#9C27B0' },
   ];
 
   // 총 일수 계산
   const totalDays = attendanceData.reduce((sum, item) => sum + item.value, 0);
 
   // Custom tooltip for the pie chart
-  const CustomTooltip = ({ active, payload }: any) => {
+  /**
+   * @param {Object} props
+   * @param {boolean} props.active
+   * @param {Array} props.payload
+   */
+  const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-white px-4 py-2 rounded-lg shadow-lg border border-[#DADDE1]">
@@ -68,7 +72,7 @@ export function MyPage({ onClose, onLogout }) {
 
   const handleSaveProfile = () => {
     const userData = {
-      name: userName,
+      name,
       email,
       phone,
       location,
@@ -98,10 +102,6 @@ export function MyPage({ onClose, onLogout }) {
     onLogout();
   };
 
-  /**
-   * Handle copying company code
-   * @param {string} code - Company code to copy
-   */
   const handleCopyCode = (code) => {
     // Try modern clipboard API first
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -119,10 +119,6 @@ export function MyPage({ onClose, onLogout }) {
     }
   };
 
-  /**
-   * Fallback method to copy code
-   * @param {string} code - Company code to copy
-   */
   const fallbackCopyCode = (code) => {
     const textArea = document.createElement('textarea');
     textArea.value = code;
@@ -141,10 +137,6 @@ export function MyPage({ onClose, onLogout }) {
     document.body.removeChild(textArea);
   };
 
-  /**
-   * Handle image type selection
-   * @param {string} type - Image type: 'background' or 'profile'
-   */
   const handleImageTypeSelect = (type) => {
     setIsImageSelectModalOpen(false);
     
@@ -152,13 +144,13 @@ export function MyPage({ onClose, onLogout }) {
     input.type = 'file';
     input.accept = 'image/*';
     input.onchange = (e) => {
-      const file = e.target.files?.[0];
+      const file = (e.target).files?.[0];
       if (file) {
         const reader = new FileReader();
         reader.onloadend = () => {
-          const newImage = reader.result as string;
+          const newImage = reader.result;
           const savedUserData = localStorage.getItem('artistUserData');
-          const userData = savedUserData ? JSON.parse(savedUserData) : {};
+          const userData = savedUserData ? JSON.parse(savedUserData) {};
           
           if (type === 'background') {
             setBackgroundImage(newImage);
@@ -181,9 +173,9 @@ export function MyPage({ onClose, onLogout }) {
   return (
     <div className="fixed inset-0 z-50 bg-background flex items-center justify-center p-8 overflow-auto">
       <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 20 }}
+        initial={{ opacity, y: 20 }}
+        animate={{ opacity, y: 0 }}
+        exit={{ opacity, y: 20 }}
         transition={{ duration: 0.3 }}
         className="w-full max-w-5xl bg-white rounded-3xl shadow-2xl overflow-hidden"
       >
@@ -253,7 +245,7 @@ export function MyPage({ onClose, onLogout }) {
               </div>
             </div>
 
-            {/* Center: Name, Role, and Stats */}
+            {/* Center, Role, and Stats */}
             <div className="flex-1 pt-20">
               <h1 className="text-3xl font-bold text-[#1F2328] mb-2">{userName}</h1>
               <p className="text-[#6E8FB3] text-base mb-8">에이전시 대표</p>
