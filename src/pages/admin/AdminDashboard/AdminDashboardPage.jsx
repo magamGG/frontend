@@ -22,6 +22,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, 
 import { ProjectListModal } from '@/components/modals/ProjectListModal';
 import { AttendanceListModal } from '@/components/modals/AttendanceListModal';
 import { toast } from 'sonner';
+import { leaveService, attendanceService } from '@/api/services';
 import svgPaths from '@/imports/svg-oq0e8tu4xb';
 import {
   AdminDashboardRoot,
@@ -129,7 +130,8 @@ export function AdminDashboardPage({ onNavigateToSection }) {
   const [isWorking, setIsWorking] = useState(false);
   const [showHealthSurvey, setShowHealthSurvey] = useState(false);
   const [healthCheckCompleted, setHealthCheckCompleted] = useState(false);
-  const [currentAttendanceType, setCurrentAttendanceType] = useState('워케이션');
+  const [currentAttendanceType, setCurrentAttendanceType] = useState(null);
+  const [currentAttendanceData, setCurrentAttendanceData] = useState(null);
   const [showStopConfirm, setShowStopConfirm] = useState(false);
 
   const [healthSurvey, setHealthSurvey] = useState({
@@ -139,32 +141,76 @@ export function AdminDashboardPage({ onNavigateToSection }) {
     notes: '',
   });
 
+  // 현재 적용 중인 근태 상태 조회 (API 호출)
   useEffect(() => {
-    const checkCurrentAttendance = () => {
-      const storedAttendance = localStorage.getItem('managerAttendanceRequests');
-      if (storedAttendance) {
-        const requests = JSON.parse(storedAttendance);
-        const today = new Date();
-        const todayString = today.toISOString().split('T')[0];
-
-        const currentRequest = requests.find((req) => {
-          if (req.status !== '승인') return false;
-          const startDate = new Date(req.startDate).toISOString().split('T')[0];
-          const endDate = new Date(req.endDate).toISOString().split('T')[0];
-          return todayString >= startDate && todayString <= endDate;
-        });
-
-        if (currentRequest && (currentRequest.type === '워케이션' || currentRequest.type === '휴가')) {
-          setCurrentAttendanceType(currentRequest.type);
+    const fetchCurrentAttendanceStatus = async () => {
+      try {
+        const response = await leaveService.getCurrentStatus();
+        console.log('현재 근태 상태 API 응답:', response);
+        // axios 인터셉터가 이미 response.data를 반환하므로 response 자체가 데이터
+        const data = response;
+        console.log('현재 근태 상태 데이터:', data);
+        
+        if (data && data.attendanceRequestType) {
+          // DB에서 받아온 타입을 프론트 표시용으로 매핑
+          const typeMap = {
+            '연차': '휴가',
+            '반차': '휴가',
+            '병가': '휴가',
+            '워케이션': '워케이션',
+            '재택근무': '재택근무',
+            '재택': '재택근무',
+            '휴가': '휴가',
+            '휴재': '휴가',
+          };
+          const displayType = typeMap[data.attendanceRequestType] || data.attendanceRequestType;
+          console.log('매핑된 상태 타입:', displayType, '원본 타입:', data.attendanceRequestType);
+          setCurrentAttendanceType(displayType);
+          setCurrentAttendanceData(data);
         } else {
-          setCurrentAttendanceType(null);
+          console.log('현재 근태 상태 데이터 없음 - 기본값(출근)으로 설정');
+          // 승인된 근태요청이 없으면 기본값으로 출근 설정
+          setCurrentAttendanceType('출근');
+          setCurrentAttendanceData(null);
         }
+      } catch (error) {
+        console.error('현재 근태 상태 조회 실패:', error);
+        console.log('에러 발생 - 기본값(출근)으로 설정');
+        // 에러 발생 시에도 기본값으로 출근 설정
+        setCurrentAttendanceType('출근');
+        setCurrentAttendanceData(null);
       }
     };
 
-    checkCurrentAttendance();
-    const interval = setInterval(checkCurrentAttendance, 1000);
+    fetchCurrentAttendanceStatus();
+    // 5분마다 상태 갱신 (필요시 조절)
+    const interval = setInterval(fetchCurrentAttendanceStatus, 300000);
     return () => clearInterval(interval);
+  }, []);
+
+  // 오늘 출근 상태 조회 (페이지 로드 시 및 리다이렉션 시) - DB와 동기화
+  useEffect(() => {
+    const fetchTodayAttendanceStatus = async () => {
+      try {
+        const response = await attendanceService.getTodayStatus();
+        const data = response;
+        if (data && data.isWorking && data.lastAttendanceType === '출근') {
+          setIsWorking(true);
+          setHealthCheckCompleted(true);
+        } else {
+          setIsWorking(false);
+          setHealthCheckCompleted(false);
+        }
+      } catch (error) {
+        console.error('오늘 출근 상태 조회 실패:', error);
+        setIsWorking(false);
+        setHealthCheckCompleted(false);
+      }
+    };
+    fetchTodayAttendanceStatus();
+    const handleFocus = () => fetchTodayAttendanceStatus();
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
   // TODO: Zustand store mapping - 현재 작업 중인 작가 목록
@@ -310,27 +356,47 @@ export function AdminDashboardPage({ onNavigateToSection }) {
     setShowStopConfirm(true);
   };
 
-  // 출근 종료 확인 핸들러
-  const confirmStopWork = () => {
-    setIsWorking(false);
-    setHealthCheckCompleted(false);
-    setShowStopConfirm(false);
-    toast.success('출근을 종료했습니다.');
+  // 출근 종료 확인 핸들러 (퇴근 API 호출 후 상태 갱신)
+  const confirmStopWork = async () => {
+    try {
+      await attendanceService.endAttendance();
+      setIsWorking(false);
+      setHealthCheckCompleted(false);
+      setShowStopConfirm(false);
+      toast.success('출근이 종료되었습니다.');
+    } catch (error) {
+      console.error('출근 종료 실패:', error);
+      toast.error(error?.message || '출근 종료에 실패했습니다. 다시 시도해주세요.');
+    }
   };
 
   const isHealthSurveyValid = () => {
     return healthSurvey.sleepHours.trim() !== '';
   };
 
-  const handleHealthSurveySubmit = () => {
+  const handleHealthSurveySubmit = async () => {
     if (!isHealthSurveyValid()) {
       toast.error('필수 항목을 모두 입력해주세요.');
       return;
     }
-    setIsWorking(true);
-    setHealthCheckCompleted(true);
-    setShowHealthSurvey(false);
-    toast.success('건강 체크가 완료되었습니다. 좋은 하루 되세요!');
+    try {
+      const sleepHoursMatch = healthSurvey.sleepHours.match(/\d+/);
+      const sleepHoursValue = sleepHoursMatch ? parseInt(sleepHoursMatch[0]) : null;
+      const healthCheckData = {
+        healthCondition: healthSurvey.condition,
+        sleepHours: sleepHoursValue,
+        discomfortLevel: healthSurvey.discomfortLevel,
+        healthCheckNotes: healthSurvey.notes || '',
+      };
+      await attendanceService.startAttendance(healthCheckData);
+      setIsWorking(true);
+      setHealthCheckCompleted(true);
+      setShowHealthSurvey(false);
+      toast.success('출근이 시작되었습니다. 좋은 하루 되세요!');
+    } catch (error) {
+      console.error('출근 시작 실패:', error);
+      toast.error(error?.message || '출근 시작에 실패했습니다. 다시 시도해주세요.');
+    }
   };
 
   const handleCancelHealthCheck = () => {
@@ -340,8 +406,34 @@ export function AdminDashboardPage({ onNavigateToSection }) {
 
   const today = new Date();
   const todayString = `${today.getMonth() + 1}월 ${today.getDate()}일`;
+  const weekdays = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
+  const todayFullDate = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일 ${weekdays[today.getDay()]}`;
+  
+  // 현재 상태 텍스트 가져오기
+  const getCurrentStatusText = () => {
+    const displayType = currentAttendanceType || '출근';
+    return `${displayType} 중`;
+  };
+
+  // 날짜 포맷 함수 (2026-01-15T00:00:00 -> 1월 15일)
+  const formatPeriodDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return `${date.getMonth() + 1}월 ${date.getDate()}일`;
+  };
+
+  // 현재 근태 상태에 따른 기간 문자열 생성
+  const getAttendancePeriod = () => {
+    if (!currentAttendanceData) return null;
+    const startDate = formatPeriodDate(currentAttendanceData.attendanceRequestStartDate);
+    const endDate = formatPeriodDate(currentAttendanceData.attendanceRequestEndDate);
+    return `${startDate} ~ ${endDate}`;
+  };
 
   const getAttendanceStatusBoxProps = (type) => {
+    const period = getAttendancePeriod();
+    const location = currentAttendanceData?.workcationLocation;
+    
     switch (type) {
       case '출근':
         return {
@@ -362,6 +454,7 @@ export function AdminDashboardPage({ onNavigateToSection }) {
           Icon: Home,
           title: '재택근무 중',
           description: '자택에서 작업 중입니다',
+          period: period,
         };
       case '휴가':
         return {
@@ -372,7 +465,7 @@ export function AdminDashboardPage({ onNavigateToSection }) {
           Icon: Calendar,
           title: '휴가 중',
           description: '휴식 중입니다',
-          period: '1월 15일 ~ 1월 22일',
+          period: period,
         };
       case '워케이션':
         return {
@@ -382,8 +475,8 @@ export function AdminDashboardPage({ onNavigateToSection }) {
           iconColor: '#9C27B0',
           Icon: Palmtree,
           title: '워케이션 중',
-          description: '외부 환경에서 작업 중입니다',
-          period: '1월 15일 ~ 1월 22일',
+          description: location ? `${location}에서 작업 중입니다` : '외부 환경에서 작업 중입니다',
+          period: period,
         };
       default:
         return null;
@@ -401,8 +494,8 @@ export function AdminDashboardPage({ onNavigateToSection }) {
           <AttendanceStartCard>
             <AttendanceStartHeader>
               <AttendanceStartDateInfo>
-                <AttendanceStartDate>{todayString}</AttendanceStartDate>
-                <AttendanceStartDateSub>2026년 1월 15일 수요일</AttendanceStartDateSub>
+                <AttendanceStartDate>{getCurrentStatusText()}</AttendanceStartDate>
+                <AttendanceStartDateSub>{todayFullDate}</AttendanceStartDateSub>
               </AttendanceStartDateInfo>
               <AttendanceStartActions>
                 {isWorking && !healthCheckCompleted && (
@@ -429,35 +522,62 @@ export function AdminDashboardPage({ onNavigateToSection }) {
             </AttendanceStartActions>
           </AttendanceStartHeader>
 
-            {statusBoxProps ? (
-              <AttendanceStatusBox $bgColor={statusBoxProps.bgColor} $borderColor={statusBoxProps.borderColor}>
-                <AttendanceStatusBoxContent>
-                  <AttendanceStatusBoxInfo>
-                    <AttendanceStatusBoxIcon $bgColor={statusBoxProps.iconBgColor}>
-                      <statusBoxProps.Icon className="w-6 h-6" style={{ color: statusBoxProps.iconColor }} />
-                    </AttendanceStatusBoxIcon>
-                    <AttendanceStatusBoxText>
-                      <AttendanceStatusBoxTitle>{statusBoxProps.title}</AttendanceStatusBoxTitle>
-                      <AttendanceStatusBoxDescription>{statusBoxProps.description}</AttendanceStatusBoxDescription>
-                    </AttendanceStatusBoxText>
-                  </AttendanceStatusBoxInfo>
-                </AttendanceStatusBoxContent>
-                {statusBoxProps.period && (
-                  <AttendanceStatusBoxPeriod $borderColor={statusBoxProps.borderColor}>
-                    <AttendanceStatusBoxPeriodLabel>{currentAttendanceType === '휴가' ? '휴가 기간' : '워케이션 기간'}</AttendanceStatusBoxPeriodLabel>
-                    <AttendanceStatusBoxPeriodValue>{statusBoxProps.period}</AttendanceStatusBoxPeriodValue>
-                  </AttendanceStatusBoxPeriod>
-                )}
-              </AttendanceStatusBox>
-            ) : (
-              <AttendanceStatusEmpty>
-                <AttendanceStatusEmptyIcon>
-                  <Briefcase className="w-8 h-8 text-gray-400" />
-                </AttendanceStatusEmptyIcon>
-                <AttendanceStatusEmptyTitle>현재 상태를 선택해주세요</AttendanceStatusEmptyTitle>
-                <AttendanceStatusEmptyDescription>위의 드롭다운에서 오늘의 근무 상태를 선택하세요</AttendanceStatusEmptyDescription>
-              </AttendanceStatusEmpty>
-            )}
+            {(() => {
+              // 승인된 근태요청이 없으면 기본값으로 출근 설정
+              const displayType = currentAttendanceType || '출근';
+              const displayProps = getAttendanceStatusBoxProps(displayType);
+              
+              if (!displayProps) {
+                // 출근 기본값 설정
+                const defaultProps = {
+                  bgColor: '#E8F6F8',
+                  borderColor: 'rgba(0, 172, 193, 0.2)',
+                  iconBgColor: 'rgba(0, 172, 193, 0.1)',
+                  iconColor: '#00ACC1',
+                  Icon: Building2,
+                  title: '출근 중',
+                  description: '사무실에서 작업 중입니다',
+                };
+                
+                return (
+                  <AttendanceStatusBox $bgColor={defaultProps.bgColor} $borderColor={defaultProps.borderColor}>
+                    <AttendanceStatusBoxContent>
+                      <AttendanceStatusBoxInfo>
+                        <AttendanceStatusBoxIcon $bgColor={defaultProps.iconBgColor}>
+                          <defaultProps.Icon className="w-6 h-6" style={{ color: defaultProps.iconColor }} />
+                        </AttendanceStatusBoxIcon>
+                        <AttendanceStatusBoxText>
+                          <AttendanceStatusBoxTitle>{defaultProps.title}</AttendanceStatusBoxTitle>
+                          <AttendanceStatusBoxDescription>{defaultProps.description}</AttendanceStatusBoxDescription>
+                        </AttendanceStatusBoxText>
+                      </AttendanceStatusBoxInfo>
+                    </AttendanceStatusBoxContent>
+                  </AttendanceStatusBox>
+                );
+              }
+              
+              return (
+                <AttendanceStatusBox $bgColor={displayProps.bgColor} $borderColor={displayProps.borderColor}>
+                  <AttendanceStatusBoxContent>
+                    <AttendanceStatusBoxInfo>
+                      <AttendanceStatusBoxIcon $bgColor={displayProps.iconBgColor}>
+                        <displayProps.Icon className="w-6 h-6" style={{ color: displayProps.iconColor }} />
+                      </AttendanceStatusBoxIcon>
+                      <AttendanceStatusBoxText>
+                        <AttendanceStatusBoxTitle>{displayProps.title}</AttendanceStatusBoxTitle>
+                        <AttendanceStatusBoxDescription>{displayProps.description}</AttendanceStatusBoxDescription>
+                      </AttendanceStatusBoxText>
+                      </AttendanceStatusBoxInfo>
+                    </AttendanceStatusBoxContent>
+                    {(displayType === '휴가' || displayType === '워케이션') && currentAttendanceData && displayProps.period && (
+                      <AttendanceStatusBoxPeriod $borderColor={displayProps.borderColor}>
+                        <AttendanceStatusBoxPeriodLabel>{displayType === '휴가' ? '휴가 기간' : '워케이션 기간'}</AttendanceStatusBoxPeriodLabel>
+                        <AttendanceStatusBoxPeriodValue>{displayProps.period}</AttendanceStatusBoxPeriodValue>
+                      </AttendanceStatusBoxPeriod>
+                    )}
+                  </AttendanceStatusBox>
+              );
+            })()}
           </AttendanceStartCard>
 
           {/* 오른쪽: 현재 작업 중인 작가 섹션 */}
@@ -751,10 +871,7 @@ export function AdminDashboardPage({ onNavigateToSection }) {
         <WarningBox>
           <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
           <WarningContent>
-            <WarningTitle>출근을 종료하시겠습니까?</WarningTitle>
-            <WarningDescription>
-              출근을 종료하시겠습니까?
-            </WarningDescription>
+            <WarningDescription>출근을 종료하시겠습니까?</WarningDescription>
           </WarningContent>
         </WarningBox>
         <ModalActions>

@@ -29,6 +29,21 @@ export const attendanceService = {
     return api.post(API_ENDPOINTS.ATTENDANCE.CHECK_IN, attendanceData);
   },
   
+  // 출근 시작 (건강 체크 + 출근 기록)
+  startAttendance: (healthCheckData) => {
+    return api.post(API_ENDPOINTS.ATTENDANCE.START, healthCheckData);
+  },
+
+  // 출근 종료 (퇴근 기록)
+  endAttendance: () => {
+    return api.post(API_ENDPOINTS.ATTENDANCE.END);
+  },
+
+  // 오늘 출근 상태 조회
+  getTodayStatus: () => {
+    return api.get(API_ENDPOINTS.ATTENDANCE.TODAY_STATUS);
+  },
+  
   // 출석 이력 조회
   getHistory: (memberNo, startDate, endDate) => {
     return api.get(API_ENDPOINTS.ATTENDANCE.HISTORY(memberNo, startDate, endDate));
@@ -65,6 +80,21 @@ export const leaveService = {
   // 에이전시 소속 대기 중인 근태 신청 목록 조회
   getAgencyPendingRequests: (agencyNo) => {
     return api.get(API_ENDPOINTS.LEAVE.AGENCY_PENDING(agencyNo));
+  },
+  
+  // 현재 적용 중인 근태 상태 조회 (승인된 휴가/워케이션/재택 등)
+  getCurrentStatus: () => {
+    return api.get(API_ENDPOINTS.LEAVE.CURRENT_STATUS);
+  },
+  
+  // 근태 신청 승인
+  approveAttendanceRequest: (attendanceRequestNo) => {
+    return api.post(API_ENDPOINTS.LEAVE.APPROVE(attendanceRequestNo));
+  },
+  
+  // 근태 신청 반려
+  rejectAttendanceRequest: (attendanceRequestNo, rejectReason) => {
+    return api.post(API_ENDPOINTS.LEAVE.REJECT(attendanceRequestNo), { rejectReason });
   },
 };
 
