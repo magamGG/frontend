@@ -2,6 +2,9 @@ import { motion, AnimatePresence } from "motion/react";
 import { Bell, Plus, User, X, ChevronRight } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Badge } from "@/app/components/ui/badge";
+import { memberService } from '@/api/services';
+import { API_BASE_URL } from '@/api/config';
+import useAuthStore from '@/store/authStore';
 import {
   HeaderContainer,
   HeaderContent,
@@ -81,8 +84,16 @@ export function Header({
   onAttendanceClick,
   userRole,
 }) {
+  const { user } = useAuthStore();
+  const memberNo = user?.memberNo;
+
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef(null);
+
+  // 사용자 정보 state
+  const [memberName, setMemberName] = useState('');
+  const [memberRole, setMemberRole] = useState('');
+  const [profileImage, setProfileImage] = useState(null);
 
   const [notifications, setNotifications] = useState([
     {
@@ -135,6 +146,34 @@ export function Header({
   const unreadCount = notifications.filter(
     (n) => !n.isRead,
   ).length;
+
+  // 사용자 정보 로드
+  useEffect(() => {
+    if (!memberNo) return;
+    
+    const loadUserInfo = async () => {
+      try {
+        const myPageData = await memberService.getMyPageInfo(memberNo);
+        setMemberName(myPageData.memberName || '');
+        setMemberRole(myPageData.memberRole || '');
+        
+        // 프로필 이미지 URL 설정
+        const imageBaseUrl = API_BASE_URL || 'http://localhost:8888';
+        if (myPageData.memberProfileImage) {
+          setProfileImage(`${imageBaseUrl}/uploads/${myPageData.memberProfileImage}`);
+        } else {
+          setProfileImage(null);
+        }
+      } catch (error) {
+        console.error('사용자 정보 로드 실패:', error);
+        // 에러 발생 시 기본값 사용
+        setMemberName(user?.memberName || '');
+        setMemberRole(user?.memberRole || '');
+      }
+    };
+    
+    loadUserInfo();
+  }, [memberNo, user]);
 
   // Close notification panel when clicking outside
   useEffect(() => {
@@ -403,14 +442,27 @@ export function Header({
             onClick={onProfileClick}
           >
             <ProfileAvatar>
-              <User style={{ width: '16px', height: '16px', color: 'var(--primary-foreground)' }} />
+              {profileImage ? (
+                <img 
+                  src={profileImage} 
+                  alt="Profile" 
+                  style={{ 
+                    width: '100%', 
+                    height: '100%', 
+                    objectFit: 'cover',
+                    borderRadius: '50%'
+                  }} 
+                />
+              ) : (
+                <User style={{ width: '16px', height: '16px', color: 'var(--primary-foreground)' }} />
+              )}
             </ProfileAvatar>
             <ProfileInfo>
               <ProfileName>
-                김작가
+                {memberName || user?.memberName || '사용자'}
               </ProfileName>
               <ProfileRole>
-                에이전시 대표
+                {memberRole || user?.memberRole || ''}
               </ProfileRole>
             </ProfileInfo>
             <ProfileChevron as={ChevronRight} />
