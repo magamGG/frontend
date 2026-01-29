@@ -23,7 +23,6 @@ import {
 import { toast } from 'sonner';
 import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
 import { useDrag, useDrop } from 'react-dnd';
-import { DraggableCardContainer } from './ProjectDetailPage.styled';
 
 /**
  * @typedef {Object} Project
@@ -100,14 +99,12 @@ const ITEM_TYPE = 'KANBAN_CARD';
  * @param {KanbanCard} props.card
  * @param {(card: KanbanCard) => void} props.onEdit
  * @param {(cardId: number) => void} props.onDelete
- * @param {(cardId: number) => void} props.onToggleComplete
  * @param {string} props.projectColor
  */
 function DraggableCard({ 
   card, 
   onEdit, 
   onDelete,
-  onToggleComplete,
   projectColor
 }) {
   const [{ isDragging }, drag] = useDrag({
@@ -118,35 +115,17 @@ function DraggableCard({
     }),
   });
 
-  const handleToggleComplete = (e) => {
-    e.stopPropagation();
-    if (onToggleComplete) {
-      onToggleComplete(card.id);
-    }
-  };
-
   return (
-    <DraggableCardContainer
+    <div
       ref={drag}
-      $borderColor={projectColor}
-      isDragging={isDragging}
+      className={`group bg-white border-l-4 rounded-lg p-3 mb-2 cursor-move hover:shadow-md transition-shadow ${
+        isDragging ? 'opacity-50' : 'opacity-100'
+      }`}
+      style={{ borderLeftColor: projectColor }}
     >
       <div className="flex items-start justify-between gap-2 mb-2">
-        {/* 체크 버튼과 제목 */}
-        <div className="flex items-start gap-2 flex-1 min-w-0">
-          <button
-            onClick={handleToggleComplete}
-            className="flex-shrink-0 mt-0.5 text-muted-foreground hover:text-green-600 transition-colors"
-            aria-label={card.completed ? '완료 취소' : '완료 표시'}
-          >
-            {card.completed ? (
-              <CheckCircle2 className="w-5 h-5 text-green-600" />
-            ) : (
-              <Circle className="w-5 h-5" />
-            )}
-          </button>
-          <h4 className="font-semibold text-sm text-foreground flex-1 break-words">{card.title}</h4>
-        </div>
+        {/* 제목 */}
+        <h4 className="font-semibold text-sm text-foreground flex-1 break-words">{card.title}</h4>
 
         {/* 편집/삭제 버튼 */}
         <div className="flex gap-1 flex-shrink-0">
@@ -181,7 +160,7 @@ function DraggableCard({
           <span className="font-medium">{card.assignedTo.name}</span>
         </div>
       )}
-    </DraggableCardContainer>
+    </div>
   );
 }
 
@@ -191,7 +170,6 @@ function DraggableCard({
  * @param {(cardId: number, sourceBoardId: number, targetBoardId: number) => void} props.onCardDrop
  * @param {(card: KanbanCard) => void} props.onEdit
  * @param {(cardId: number) => void} props.onDelete
- * @param {(cardId: number) => void} props.onToggleComplete
  * @param {(boardId: number) => void} props.onAddCard
  * @param {(boardId: number) => void} props.onDeleteBoard
  * @param {string} props.projectColor
@@ -201,7 +179,6 @@ function DroppableBoard({
   onCardDrop,
   onEdit,
   onDelete,
-  onToggleComplete,
   onAddCard,
   onDeleteBoard,
   projectColor
@@ -242,7 +219,6 @@ function DroppableBoard({
             card={card}
             onEdit={onEdit}
             onDelete={onDelete}
-            onToggleComplete={onToggleComplete}
             projectColor={projectColor}
           />
         ))}
@@ -364,42 +340,31 @@ export function ProjectDetailPage({
     },
   ]);
 
-  // 칸반 보드 데이터 - localStorage에서 로드
-  const [boards, setBoards] = useState(() => {
-    const saved = localStorage.getItem(`kanban_boards_${project.id}`);
-    if (saved) {
-      return JSON.parse(saved);
-    }
-    return [
-      {
-        id: 1,
-        title: '할 일',
-        cards: [
-          { id: 1, title: '43화 스토리보드', description: '스토리 구성 및 콘티 작업', startDate: '2025-01-15', dueDate: '2025-01-20', boardId: 1, completed: false },
-          { id: 2, title: '44화 스크립트 검토', description: '작가와 스크립트 회의', startDate: '2025-01-17', dueDate: '2025-01-22', boardId: 1, completed: false },
-        ],
-      },
-      {
-        id: 2,
-        title: '진행중',
-        cards: [
-          { id: 3, title: '42화 채색', description: '메인 씬 채색 작업', startDate: '2025-01-16', dueDate: '2025-01-18', boardId: 2, completed: false },
-        ],
-      },
-      {
-        id: 3,
-        title: '완료',
-        cards: [
-          { id: 4, title: '41화 업로드', description: '네이버 웹툰 업로드 완료', startDate: '2025-01-13', dueDate: '2025-01-14', boardId: 3, completed: true },
-        ],
-      },
-    ];
-  });
-
-  // 보드 상태를 localStorage에 저장하는 함수
-  const saveBoardsToLocalStorage = (updatedBoards) => {
-    localStorage.setItem(`kanban_boards_${project.id}`, JSON.stringify(updatedBoards));
-  };
+  // 칸반 보드 데이터
+  const [boards, setBoards] = useState([
+    {
+      id: 1,
+      title: '할 일',
+      cards: [
+        { id: 1, title: '43화 스토리보드', description: '스토리 구성 및 콘티 작업', startDate: '2025-01-15', dueDate: '2025-01-20', boardId: 1 },
+        { id: 2, title: '44화 스크립트 검토', description: '작가와 스크립트 회의', startDate: '2025-01-17', dueDate: '2025-01-22', boardId: 1 },
+      ],
+    },
+    {
+      id: 2,
+      title: '진행중',
+      cards: [
+        { id: 3, title: '42화 채색', description: '메인 씬 채색 작업', startDate: '2025-01-16', dueDate: '2025-01-18', boardId: 2 },
+      ],
+    },
+    {
+      id: 3,
+      title: '완료',
+      cards: [
+        { id: 4, title: '41화 업로드', description: '네이버 웹툰 업로드 완료', startDate: '2025-01-13', dueDate: '2025-01-14', boardId: 3 },
+      ],
+    },
+  ]);
 
   // 주간 일정
   const [weeklySchedule] = useState([
@@ -558,22 +523,6 @@ export function ProjectDetailPage({
     }
   };
 
-  // 카드 완료 상태 토글 핸들러
-  const handleToggleComplete = (cardId) => {
-    setBoards((prevBoards) => {
-      const newBoards = prevBoards.map((board) => ({
-        ...board,
-        cards: board.cards.map((card) =>
-          card.id === cardId
-            ? { ...card, completed: !card.completed }
-            : card
-        ),
-      }));
-      saveBoardsToLocalStorage(newBoards);
-      return newBoards;
-    });
-  };
-
   // 카드 드롭 핸들러
   const handleCardDrop = (cardId, sourceBoardId, targetBoardId) => {
     setBoards((prevBoards) => {
@@ -590,7 +539,6 @@ export function ProjectDetailPage({
         }
       }
 
-      saveBoardsToLocalStorage(newBoards);
       return newBoards;
     });
     toast.success('카드가 이동되었습니다.');
@@ -605,18 +553,16 @@ export function ProjectDetailPage({
 
     if (editingCard) {
       // 수정
-      setBoards((prevBoards) => {
-        const newBoards = prevBoards.map((board) => ({
+      setBoards((prevBoards) =>
+        prevBoards.map((board) => ({
           ...board,
           cards: board.cards.map((card) =>
             card.id === editingCard.id
-              ? { ...card, ...cardForm, assignedTo: selectedAssignee, completed: card.completed || false }
+              ? { ...card, ...cardForm, assignedTo: selectedAssignee }
               : card
           ),
-        }));
-        saveBoardsToLocalStorage(newBoards);
-        return newBoards;
-      });
+        }))
+      );
       toast.success('카드가 수정되었습니다.');
     } else if (currentBoardId !== null) {
       // 추가
@@ -625,18 +571,15 @@ export function ProjectDetailPage({
         ...cardForm,
         boardId: currentBoardId,
         assignedTo: selectedAssignee,
-        completed: false,
       };
 
-      setBoards((prevBoards) => {
-        const newBoards = prevBoards.map((board) =>
+      setBoards((prevBoards) =>
+        prevBoards.map((board) =>
           board.id === currentBoardId
             ? { ...board, cards: [...board.cards, newCard] }
             : board
-        );
-        saveBoardsToLocalStorage(newBoards);
-        return newBoards;
-      });
+        )
+      );
       toast.success('카드가 추가되었습니다.');
     }
 
@@ -651,14 +594,12 @@ export function ProjectDetailPage({
 
   // 카드 삭제
   const handleDeleteCard = (cardId) => {
-    setBoards((prevBoards) => {
-      const newBoards = prevBoards.map((board) => ({
+    setBoards((prevBoards) =>
+      prevBoards.map((board) => ({
         ...board,
         cards: board.cards.filter((card) => card.id !== cardId),
-      }));
-      saveBoardsToLocalStorage(newBoards);
-      return newBoards;
-    });
+      }))
+    );
     toast.success('카드가 삭제되었습니다.');
   };
 
@@ -675,9 +616,7 @@ export function ProjectDetailPage({
       cards: [],
     };
 
-    const newBoards = [...boards, newBoard];
-    setBoards(newBoards);
-    saveBoardsToLocalStorage(newBoards);
+    setBoards([...boards, newBoard]);
     toast.success('보드가 추가되었습니다.');
     setIsBoardModalOpen(false);
     setNewBoardTitle('');
@@ -685,9 +624,7 @@ export function ProjectDetailPage({
 
   // 보드 삭제
   const handleDeleteBoard = (boardId) => {
-    const newBoards = boards.filter(b => b.id !== boardId);
-    setBoards(newBoards);
-    saveBoardsToLocalStorage(newBoards);
+    setBoards(boards.filter(b => b.id !== boardId));
     toast.success('보드가 삭제되었습니다.');
   };
 
@@ -714,20 +651,6 @@ export function ProjectDetailPage({
 
     setEditingCard(updatedCard);
     setCardComments([...(editingCard.comments || []), comment]);
-
-    // 보드 상태도 업데이트
-    setBoards((prevBoards) => {
-      const newBoards = prevBoards.map((board) => ({
-        ...board,
-        cards: board.cards.map((card) =>
-          card.id === editingCard.id
-            ? updatedCard
-            : card
-        ),
-      }));
-      saveBoardsToLocalStorage(newBoards);
-      return newBoards;
-    });
 
     // localStorage에 피드백 저장
     const feedback = {
@@ -776,18 +699,16 @@ export function ProjectDetailPage({
     setCardComments(updatedComments);
 
     // 보드 상태도 업데이트
-    setBoards((prevBoards) => {
-      const newBoards = prevBoards.map((board) => ({
+    setBoards((prevBoards) =>
+      prevBoards.map((board) => ({
         ...board,
         cards: board.cards.map((card) =>
           card.id === editingCard.id
             ? updatedCard
             : card
         ),
-      }));
-      saveBoardsToLocalStorage(newBoards);
-      return newBoards;
-    });
+      }))
+    );
 
     setEditingComment(null);
     setEditingCommentContent('');
@@ -809,18 +730,16 @@ export function ProjectDetailPage({
     setCardComments(updatedComments);
 
     // 보드 상태도 업데이트
-    setBoards((prevBoards) => {
-      const newBoards = prevBoards.map((board) => ({
+    setBoards((prevBoards) =>
+      prevBoards.map((board) => ({
         ...board,
         cards: board.cards.map((card) =>
           card.id === editingCard.id
             ? updatedCard
             : card
         ),
-      }));
-      saveBoardsToLocalStorage(newBoards);
-      return newBoards;
-    });
+      }))
+    );
 
     toast.success('코멘트가 삭제되었습니다.');
   };
@@ -1053,7 +972,6 @@ export function ProjectDetailPage({
                           setIsCardModalOpen(true);
                         }}
                         onDelete={handleDeleteCard}
-                        onToggleComplete={handleToggleComplete}
                         onAddCard={(boardId) => {
                           setCurrentBoardId(boardId);
                           setIsCardModalOpen(true);

@@ -152,12 +152,6 @@ export const AttendanceStatusIconContainer = styled.div`
   padding: 12px;
   border-radius: 8px;
   background-color: ${props => props.$iconBgColor};
-  
-  svg {
-    width: 24px;
-    height: 24px;
-    color: ${props => props.$iconColor || 'var(--foreground)'};
-  }
 `;
 
 export const AttendanceStatusText = styled.div`
@@ -259,18 +253,6 @@ export const QuickInfoTitle = styled.h4`
   font-weight: 600;
   color: var(--foreground);
   margin: 0;
-`;
-
-export const ModalTitleWrapper = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  
-  svg {
-    width: 20px;
-    height: 20px;
-    color: var(--foreground);
-  }
 `;
 
 export const QuickInfoList = styled.div`
@@ -387,25 +369,6 @@ export const AttendanceRequestCardHeader = styled.div`
   justify-content: space-between;
   margin-bottom: 12px;
   padding: 4px 0;
-  cursor: pointer;
-  
-  > div {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    
-    svg {
-      width: 16px;
-      height: 16px;
-      color: var(--foreground);
-    }
-  }
-  
-  svg:last-child {
-    width: 16px;
-    height: 16px;
-    color: var(--muted-foreground);
-  }
 `;
 
 // 신청 현황 카드 리스트

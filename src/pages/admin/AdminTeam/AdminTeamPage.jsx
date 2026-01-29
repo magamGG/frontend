@@ -189,7 +189,8 @@ export function AdminTeamPage() {
     const query = searchQuery.toLowerCase();
     return (
       emp.name.toLowerCase().includes(query) ||
-      emp.email.toLowerCase().includes(query)
+      emp.email.toLowerCase().includes(query) ||
+      emp.position.toLowerCase().includes(query)
     );
   });
 
@@ -215,8 +216,8 @@ export function AdminTeamPage() {
           {/* 통계 정보 카드 */}
           <StatsGrid>
             <StatCard>
-              <StatCardIcon $bgColor="rgba(110, 143, 179, 0.1)" $iconColor="#6E8FB3">
-                <Users className="w-6 h-6" />
+              <StatCardIcon $bgColor="rgba(110, 143, 179, 0.1)">
+                <Users className="w-6 h-6" style={{ color: '#6E8FB3' }} />
               </StatCardIcon>
               <StatCardContent>
                 <StatCardLabel>총 작가</StatCardLabel>
@@ -225,8 +226,8 @@ export function AdminTeamPage() {
             </StatCard>
             
             <StatCard>
-              <StatCardIcon $bgColor="rgba(59, 130, 246, 0.1)" $iconColor="#3B82F6">
-                <Briefcase className="w-6 h-6" />
+              <StatCardIcon $bgColor="rgba(59, 130, 246, 0.1)">
+                <Briefcase className="w-6 h-6" style={{ color: '#3B82F6' }} />
               </StatCardIcon>
               <StatCardContent>
                 <StatCardLabel>진행 중인 작품</StatCardLabel>
@@ -235,8 +236,8 @@ export function AdminTeamPage() {
             </StatCard>
             
             <StatCard>
-              <StatCardIcon $bgColor="rgba(34, 197, 94, 0.1)" $iconColor="#22C55E">
-                <Activity className="w-6 h-6" />
+              <StatCardIcon $bgColor="rgba(34, 197, 94, 0.1)">
+                <Activity className="w-6 h-6" style={{ color: '#22C55E' }} />
               </StatCardIcon>
               <StatCardContent>
                 <StatCardLabel>활동 작가</StatCardLabel>
@@ -252,7 +253,7 @@ export function AdminTeamPage() {
             </SearchIcon>
             <SearchInput
               type="text"
-              placeholder="이름 또는 이메일로 검색..."
+              placeholder="이름, 이메일 또는 직급으로 검색..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -270,6 +271,9 @@ export function AdminTeamPage() {
                   <EmployeeDetailName>{selectedEmployee.name}</EmployeeDetailName>
                   <EmployeeDetailBadges>
                     <EmployeeBadge $variant="role">{selectedEmployee.role}</EmployeeBadge>
+                    <EmployeeBadge $variant="position" $position={selectedEmployee.position}>
+                      {selectedEmployee.position}
+                    </EmployeeBadge>
                     <EmployeeBadge $variant={selectedEmployee.status === '근무중' ? 'working' : 'leave'}>
                       {selectedEmployee.status}
                     </EmployeeBadge>
@@ -294,8 +298,8 @@ export function AdminTeamPage() {
                     <ProjectsLabel>참여 중인 프로젝트</ProjectsLabel>
                     <ProjectsCount>{selectedEmployee.projectCount}개</ProjectsCount>
                   </ProjectsInfo>
-                  <ChevronIcon onClick={handleBackToList} $rotated>
-                    <ChevronRight className="w-5 h-5" />
+                  <ChevronIcon onClick={handleBackToList} style={{ cursor: 'pointer' }}>
+                    <ChevronRight className="w-5 h-5" style={{ transform: 'rotate(180deg)' }} />
                   </ChevronIcon>
                 </EmployeeRight>
               </EmployeeDetailHeader>
@@ -421,8 +425,8 @@ export function AdminTeamPage() {
         {/* 통계 정보 카드 */}
         <StatsGrid>
           <StatCard>
-            <StatCardIcon $bgColor="rgba(110, 143, 179, 0.1)" $iconColor="#6E8FB3">
-              <Users className="w-6 h-6" />
+            <StatCardIcon $bgColor="rgba(110, 143, 179, 0.1)">
+              <Users className="w-6 h-6" style={{ color: '#6E8FB3' }} />
             </StatCardIcon>
             <StatCardContent>
               <StatCardLabel>총 작가</StatCardLabel>
@@ -431,8 +435,8 @@ export function AdminTeamPage() {
           </StatCard>
           
           <StatCard>
-            <StatCardIcon $bgColor="rgba(59, 130, 246, 0.1)" $iconColor="#3B82F6">
-              <Briefcase className="w-6 h-6" />
+            <StatCardIcon $bgColor="rgba(59, 130, 246, 0.1)">
+              <Briefcase className="w-6 h-6" style={{ color: '#3B82F6' }} />
             </StatCardIcon>
             <StatCardContent>
               <StatCardLabel>진행 중인 작품</StatCardLabel>
@@ -441,8 +445,8 @@ export function AdminTeamPage() {
           </StatCard>
           
           <StatCard>
-            <StatCardIcon $bgColor="rgba(34, 197, 94, 0.1)" $iconColor="#22C55E">
-              <Activity className="w-6 h-6" />
+            <StatCardIcon $bgColor="rgba(34, 197, 94, 0.1)">
+              <Activity className="w-6 h-6" style={{ color: '#22C55E' }} />
             </StatCardIcon>
             <StatCardContent>
               <StatCardLabel>활동 작가</StatCardLabel>
@@ -456,12 +460,12 @@ export function AdminTeamPage() {
           <SearchIcon>
             <Search className="w-5 h-5" />
           </SearchIcon>
-            <SearchInput
-              type="text"
-              placeholder="이름 또는 이메일로 검색..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+          <SearchInput
+            type="text"
+            placeholder="이름, 이메일 또는 직급으로 검색..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </SearchContainer>
 
         {/* 직원 목록 */}
@@ -476,6 +480,7 @@ export function AdminTeamPage() {
                   <EmployeeName>{employee.name}</EmployeeName>
                   <EmployeeBadges>
                     <EmployeeBadge $variant="role">{employee.role}</EmployeeBadge>
+                    <EmployeeBadge $variant="position" $position={employee.position}>{employee.position}</EmployeeBadge>
                     <EmployeeBadge $variant={employee.status === '근무중' ? 'working' : 'leave'}>
                       {employee.status}
                     </EmployeeBadge>

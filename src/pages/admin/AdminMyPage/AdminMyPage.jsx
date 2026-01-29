@@ -6,7 +6,6 @@ import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { toast } from 'sonner';
 import { motion } from 'motion/react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import {
   AdminMyPageOverlay,
   AdminMyPageContainer,
@@ -24,22 +23,6 @@ import {
   ProfileCenter,
   ProfileName,
   ProfileRole,
-  AttendanceStatsSection,
-  AttendanceStatsHeader,
-  AttendanceStatsTitleRow,
-  TitleIndicator,
-  AttendanceStatsTitle,
-  AttendanceStatsMonth,
-  ChartContainer,
-  PieChartWrapper,
-  ChartCenterText,
-  ChartCenterValue,
-  ChartCenterLabel,
-  LegendContainer,
-  LegendItem,
-  LegendColor,
-  LegendText,
-  LegendValue,
   ProfileRight,
   BasicInfoSection,
   BasicInfoHeader,
@@ -54,53 +37,12 @@ import {
   FormLabel,
   FormInput,
   FormTextarea,
-  FormHelperText,
   ModalActions,
   ImageSelectGrid,
   ImageSelectButton,
   ImageSelectIcon,
   ImageSelectLabel,
-  BasicInfoContent,
-  DeleteModalContent,
-  DeleteModalText,
-  DeleteWarningBox,
-  DeleteWarningText,
-  MotionWrapper,
 } from './AdminMyPage.styled';
-
-// 근태 타입 정의
-const ATTENDANCE_TYPE = {
-  OFFICE: '출근',
-  LEAVE: '휴가',
-  REMOTE: '재택근무',
-  WORKATION: '워케이션',
-};
-
-// 근태 통계 데이터 (이번 달 기준)
-const getAttendanceData = () => [
-  { name: ATTENDANCE_TYPE.OFFICE, value: 12, color: '#00ACC1' },
-  { name: ATTENDANCE_TYPE.LEAVE, value: 3, color: '#757575' },
-  { name: ATTENDANCE_TYPE.REMOTE, value: 8, color: '#FF9800' },
-  { name: ATTENDANCE_TYPE.WORKATION, value: 2, color: '#9C27B0' },
-];
-
-// Custom tooltip for the pie chart
-/**
- * @param {Object} props
- * @param {boolean} props.active
- * @param {Array} props.payload
- */
-const CustomTooltip = ({ active, payload }) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-white px-4 py-2 rounded-lg shadow-lg border border-[#DADDE1]">
-        <p className="text-sm font-semibold text-[#1F2328]">{payload[0].name}</p>
-        <p className="text-sm text-[#6E8FB3]">{payload[0].value}일</p>
-      </div>
-    );
-  }
-  return null;
-};
 
 export function AdminMyPage({ onClose, onLogout }) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -113,11 +55,6 @@ export function AdminMyPage({ onClose, onLogout }) {
   const [studio, setStudio] = useState('스튜디오 아방가르');
   const [profileImage, setProfileImage] = useState(null);
   const [backgroundImage, setBackgroundImage] = useState(null);
-
-  // 근태 통계 데이터
-  const attendanceData = getAttendanceData();
-  const totalDays = attendanceData.reduce((sum, item) => sum + item.value, 0);
-  const currentMonth = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' });
 
   // TODO: Zustand store mapping - 사용자 데이터 로드
   useEffect(() => {
@@ -199,15 +136,16 @@ export function AdminMyPage({ onClose, onLogout }) {
 
   return (
     <AdminMyPageOverlay>
-      <MotionWrapper
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 20 }}
         transition={{ duration: 0.3 }}
+        style={{ width: '100%', maxWidth: '1280px' }}
       >
         <AdminMyPageContainer>
           {/* Header */}
-          <HeaderBackground $backgroundImage={backgroundImage}>
+          <HeaderBackground style={backgroundImage ? { backgroundImage: `url(${backgroundImage})` } : {}}>
             <BackButton onClick={onClose}>
               <ArrowLeft className="w-5 h-5" />
             </BackButton>
@@ -222,14 +160,14 @@ export function AdminMyPage({ onClose, onLogout }) {
                 <ProfilePhotoButton onClick={() => setIsImageSelectModalOpen(true)} aria-label="프로필 사진 변경">
                   <ProfilePhotoContainer>
                     {profileImage ? (
-                      <img src={profileImage} alt="Profile" />
+                      <img src={profileImage} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
-                      <User className="w-16 h-16" />
+                      <User className="w-16 h-16" style={{ color: '#9CA3AF' }} />
                     )}
                   </ProfilePhotoContainer>
                   <ProfilePhotoOverlay>
                     <CameraIconContainer>
-                      <Camera className="w-6 h-6" />
+                      <Camera className="w-6 h-6" style={{ color: '#3F4A5A' }} />
                     </CameraIconContainer>
                   </ProfilePhotoOverlay>
                 </ProfilePhotoButton>
@@ -248,69 +186,21 @@ export function AdminMyPage({ onClose, onLogout }) {
                 </ActionButtonsGroup>
               </ProfileLeft>
 
-              {/* Center: Name, Role, and Stats */}
+              {/* Center: Name and Role */}
               <ProfileCenter>
                 <ProfileName>{userName}</ProfileName>
                 <ProfileRole>담당자</ProfileRole>
-
-                {/* Attendance Stats */}
-                <AttendanceStatsSection>
-                  <AttendanceStatsHeader>
-                    <AttendanceStatsTitleRow>
-                      <TitleIndicator />
-                      <AttendanceStatsTitle>근태 통계</AttendanceStatsTitle>
-                    </AttendanceStatsTitleRow>
-                    <AttendanceStatsMonth>{currentMonth}</AttendanceStatsMonth>
-                  </AttendanceStatsHeader>
-
-                  <ChartContainer>
-                    <PieChartWrapper>
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={attendanceData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={40}
-                            outerRadius={60}
-                            paddingAngle={2}
-                            dataKey="value"
-                          >
-                            {attendanceData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                          </Pie>
-                          <Tooltip content={<CustomTooltip />} />
-                        </PieChart>
-                      </ResponsiveContainer>
-                      <ChartCenterText>
-                        <ChartCenterValue>{totalDays}</ChartCenterValue>
-                        <ChartCenterLabel>일</ChartCenterLabel>
-                      </ChartCenterText>
-                    </PieChartWrapper>
-
-                    <LegendContainer>
-                      {attendanceData.map((item, index) => (
-                        <LegendItem key={index}>
-                          <LegendColor $color={item.color} />
-                          <LegendText>{item.name}</LegendText>
-                          <LegendValue>{item.value}일</LegendValue>
-                        </LegendItem>
-                      ))}
-                    </LegendContainer>
-                  </ChartContainer>
-                </AttendanceStatsSection>
               </ProfileCenter>
 
               {/* Right: Basic Info */}
               <ProfileRight>
                 <BasicInfoSection>
                   <BasicInfoHeader>
-                    <User className="w-5 h-5" />
+                    <User className="w-5 h-5" style={{ color: '#6366F1' }} />
                     <BasicInfoTitle>기본 정보</BasicInfoTitle>
                   </BasicInfoHeader>
 
-                  <BasicInfoContent>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     {/* Email */}
                     <InfoItem>
                       <InfoIcon>
@@ -354,13 +244,13 @@ export function AdminMyPage({ onClose, onLogout }) {
                         <InfoValue>{studio}</InfoValue>
                       </InfoContent>
                     </InfoItem>
-                  </BasicInfoContent>
+                  </div>
                 </BasicInfoSection>
               </ProfileRight>
             </ProfileSection>
           </MainContent>
         </AdminMyPageContainer>
-      </MotionWrapper>
+      </motion.div>
 
       {/* Edit Profile Modal */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
@@ -411,8 +301,9 @@ export function AdminMyPage({ onClose, onLogout }) {
                 id="edit-code"
                 value={studio}
                 disabled
+                style={{ backgroundColor: '#F3F4F6', cursor: 'not-allowed' }}
               />
-              <FormHelperText>소속은 변경할 수 없습니다.</FormHelperText>
+              <p style={{ fontSize: '12px', color: '#6E8FB3', marginTop: '4px' }}>소속은 변경할 수 없습니다.</p>
             </FormRow>
           </ModalForm>
           <ModalActions>
@@ -435,16 +326,16 @@ export function AdminMyPage({ onClose, onLogout }) {
               정말로 회원 탈퇴를 하시겠습니까?
             </DialogDescription>
           </DialogHeader>
-          <DeleteModalContent>
-            <DeleteModalText>
+          <div style={{ padding: '16px 0' }}>
+            <p style={{ fontSize: '14px', color: '#1F2328', marginBottom: '16px' }}>
               탈퇴 시 모든 데이터가 삭제되며, 복구할 수 없습니다.
-            </DeleteModalText>
-            <DeleteWarningBox>
-              <DeleteWarningText>
+            </p>
+            <div style={{ backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: '8px', padding: '12px' }}>
+              <p style={{ fontSize: '12px', color: '#DC2626' }}>
                 ⚠️ 진행 중인 프로젝트와 모든 기록이 영구적으로 삭제됩니다.
-              </DeleteWarningText>
-            </DeleteWarningBox>
-          </DeleteModalContent>
+              </p>
+            </div>
+          </div>
           <ModalActions>
             <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
               취소
@@ -470,15 +361,15 @@ export function AdminMyPage({ onClose, onLogout }) {
           </DialogHeader>
           <ImageSelectGrid>
             <ImageSelectButton onClick={() => handleImageTypeSelect('background')}>
-              <ImageSelectIcon $bgColor="#3F4A5A">
-                <Camera className="w-8 h-8" />
+              <ImageSelectIcon style={{ backgroundColor: '#3F4A5A' }}>
+                <Camera className="w-8 h-8" style={{ color: 'white' }} />
               </ImageSelectIcon>
               <ImageSelectLabel>배경 이미지</ImageSelectLabel>
             </ImageSelectButton>
             
             <ImageSelectButton onClick={() => handleImageTypeSelect('profile')}>
-              <ImageSelectIcon $bgColor="#6E8FB3" $rounded>
-                <User className="w-8 h-8" />
+              <ImageSelectIcon style={{ backgroundColor: '#6E8FB3', borderRadius: '50%' }}>
+                <User className="w-8 h-8" style={{ color: 'white' }} />
               </ImageSelectIcon>
               <ImageSelectLabel>프로필 사진</ImageSelectLabel>
             </ImageSelectButton>

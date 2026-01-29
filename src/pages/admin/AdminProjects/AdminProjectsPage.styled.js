@@ -91,39 +91,7 @@ export const AdminProjectsStatValue = styled.p`
   margin: 0;
 `;
 
-// 필터 섹션 (작가 계정과 동일한 디자인)
-export const FilterSection = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 16px;
-  background-color: white;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  margin-bottom: 24px;
-`;
-
-// 필터 행 (작가 필터, 상태 필터 각각)
-export const FilterRow = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
-`;
-
-export const FilterLabel = styled.span`
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--foreground);
-  white-space: nowrap;
-`;
-
-export const FilterButtonGroup = styled.div`
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-`;
-
-// 필터 카드 (기존 호환성 유지)
+// 필터 카드
 export const AdminProjectsFilterCard = styled.div`
   padding: 16px;
   background-color: white;
@@ -277,18 +245,6 @@ export const AdminProjectEpisodeText = styled.p`
 `;
 
 // 빈 상태
-export const AdminProjectsEmptyIcon = styled.div`
-  width: 48px;
-  height: 48px;
-  margin: 0 auto 12px;
-  opacity: 0.5;
-  
-  svg {
-    width: 100%;
-    height: 100%;
-  }
-`;
-
 export const AdminProjectsEmpty = styled.div`
   padding: 48px;
   background-color: white;
@@ -386,18 +342,18 @@ export const AdminProjectModalActions = styled.div`
   padding-top: 16px;
 `;
 
-// 상태별 Badge 스타일 컴포넌트 (작가 계정과 동일한 색상)
+// 상태별 Badge 스타일 컴포넌트
 export const StatusBadge = styled(Badge)`
   background-color: ${props => {
     switch (props.status) {
       case '연재중':
-        return '#22C55E'; // green-500
+        return 'var(--status-serialization)';
       case '휴재':
-        return '#FF9800'; // orange-500
+        return 'var(--status-hiatus)';
       case '완결':
-        return '#6A7079'; // gray-500
+        return 'var(--status-completed)';
       default:
-        return '#6E8FB3'; // primary
+        return 'var(--primary)';
     }
   }};
   color: white;
