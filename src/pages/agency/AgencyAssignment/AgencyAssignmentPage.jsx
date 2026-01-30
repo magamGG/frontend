@@ -6,6 +6,7 @@ import { Input } from '@/app/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/app/components/ui/dialog';
 import { toast } from 'sonner';
 import { memberService } from '@/api';
+import { API_BASE_URL } from '@/api/config';
 import useAuthStore from '@/store/authStore';
 import { 
   Search,
@@ -13,7 +14,8 @@ import {
   UserPlus,
   X,
   Mail,
-  Briefcase
+  Briefcase,
+  User
 } from 'lucide-react';
 import {
   AgencyAssignmentRoot,
@@ -90,12 +92,25 @@ export function AgencyAssignmentPage() {
         console.log('처리된 작가 목록:', artistsList);
 
         // 담당자 데이터 변환 (MANAGER 테이블의 데이터 사용)
+        const imageBaseUrl = API_BASE_URL || 'http://localhost:8888';
         const mappedManagers = managersList.map((manager) => {
           // 작가 목록에서 해당 담당자에게 배정된 작가 수 계산
           // managerNo는 MANAGER 테이블의 MANAGER_NO를 의미
           const assignedCount = artistsList.filter(
             (artist) => artist.managerNo === manager.managerNo
           ).length;
+          
+          // 프로필 이미지 URL 구성
+          let profileImageUrl = null;
+          if (manager.memberProfileImage) {
+            if (manager.memberProfileImage.startsWith('http://') || manager.memberProfileImage.startsWith('https://')) {
+              profileImageUrl = manager.memberProfileImage;
+            } else if (manager.memberProfileImage.startsWith('/uploads/')) {
+              profileImageUrl = `${imageBaseUrl}${manager.memberProfileImage}`;
+            } else {
+              profileImageUrl = `${imageBaseUrl}/uploads/${manager.memberProfileImage}`;
+            }
+          }
           
           return {
             id: manager.managerNo, // MANAGER 테이블의 MANAGER_NO 사용
@@ -104,6 +119,7 @@ export function AgencyAssignmentPage() {
             email: manager.memberEmail,
             position: manager.memberRole,
             assignedArtists: assignedCount,
+            profileImage: profileImageUrl, // 프로필 이미지 URL
           };
         });
         
@@ -126,6 +142,18 @@ export function AgencyAssignmentPage() {
             ? mappedManagers.find(m => m.id === managerNo) 
             : undefined;
 
+          // 프로필 이미지 URL 구성
+          let profileImageUrl = null;
+          if (artist.memberProfileImage) {
+            if (artist.memberProfileImage.startsWith('http://') || artist.memberProfileImage.startsWith('https://')) {
+              profileImageUrl = artist.memberProfileImage;
+            } else if (artist.memberProfileImage.startsWith('/uploads/')) {
+              profileImageUrl = `${imageBaseUrl}${artist.memberProfileImage}`;
+            } else {
+              profileImageUrl = `${imageBaseUrl}/uploads/${artist.memberProfileImage}`;
+            }
+          }
+
           return {
             id: artist.memberNo,
             name: artist.memberName,
@@ -135,6 +163,7 @@ export function AgencyAssignmentPage() {
             status: status,
             managerNo: managerNo, // 명시적으로 저장
             assignedManager: assignedManager, // 배정된 담당자 (없으면 undefined)
+            profileImage: profileImageUrl, // 프로필 이미지 URL
           };
         });
         
@@ -345,8 +374,19 @@ export function AgencyAssignmentPage() {
               <ManagerCardContent>
                 <ManagerCardHeader>
                   <div className="flex items-center gap-3">
-                    <ManagerAvatar>
-                      <Users className="w-6 h-6 text-primary" />
+                    <ManagerAvatar $hasImage={!!manager.profileImage}>
+                      {manager.profileImage ? (
+                        <img 
+                          src={manager.profileImage} 
+                          alt={manager.name}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'block';
+                          }}
+                        />
+                      ) : null}
+                      <Users className="w-6 h-6 text-primary" style={{ display: manager.profileImage ? 'none' : 'block' }} />
                     </ManagerAvatar>
                     <ManagerInfo>
                       <ManagerName>{manager.name}</ManagerName>
@@ -406,16 +446,32 @@ export function AgencyAssignmentPage() {
                       key={artist.id}
                       className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
                     >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium text-foreground">{artist.name}</span>
-                          <Badge className={getStatusColor(artist.status)} style={{ fontSize: '10px' }}>
-                            {artist.status}
-                          </Badge>
+                      <div className="flex items-center gap-3 flex-1">
+                        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
+                          {artist.profileImage ? (
+                            <img 
+                              src={artist.profileImage} 
+                              alt={artist.name}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'block';
+                              }}
+                            />
+                          ) : null}
+                          <User className="w-5 h-5 text-muted-foreground" style={{ display: artist.profileImage ? 'none' : 'block' }} />
                         </div>
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                          <span>{artist.email}</span>
-                          <span>프로젝트: {artist.projects}개</span>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-medium text-foreground">{artist.name}</span>
+                            <Badge className={getStatusColor(artist.status)} style={{ fontSize: '10px' }}>
+                              {artist.status}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                            <span>{artist.email}</span>
+                            <span>프로젝트: {artist.projects}개</span>
+                          </div>
                         </div>
                       </div>
                       <Button
@@ -451,16 +507,32 @@ export function AgencyAssignmentPage() {
                       key={artist.id}
                       className="flex items-center justify-between p-3 bg-blue-50/50 rounded-lg border border-blue-100"
                     >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium text-foreground">{artist.name}</span>
-                          <Badge className={getStatusColor(artist.status)} style={{ fontSize: '10px' }}>
-                            {artist.status}
-                          </Badge>
+                      <div className="flex items-center gap-3 flex-1">
+                        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
+                          {artist.profileImage ? (
+                            <img 
+                              src={artist.profileImage} 
+                              alt={artist.name}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'block';
+                              }}
+                            />
+                          ) : null}
+                          <User className="w-5 h-5 text-muted-foreground" style={{ display: artist.profileImage ? 'none' : 'block' }} />
                         </div>
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                          <span>{artist.email}</span>
-                          <span>프로젝트: {artist.projects}개</span>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-medium text-foreground">{artist.name}</span>
+                            <Badge className={getStatusColor(artist.status)} style={{ fontSize: '10px' }}>
+                              {artist.status}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                            <span>{artist.email}</span>
+                            <span>프로젝트: {artist.projects}개</span>
+                          </div>
                         </div>
                       </div>
                       <Button

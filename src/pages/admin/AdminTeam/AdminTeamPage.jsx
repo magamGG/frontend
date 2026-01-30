@@ -13,6 +13,7 @@ import {
 import { Card } from '@/app/components/ui/card';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { memberService } from '@/api';
+import { API_BASE_URL } from '@/api/config';
 import useAuthStore from '@/store/authStore';
 import { toast } from 'sonner';
 import {
@@ -117,20 +118,36 @@ export function AdminTeamPage() {
           : artistsResponse?.data || [];
 
         // 3. 작가 데이터를 컴포넌트 형식으로 변환
-        const mappedEmployees = artistsList.map((artist) => ({
-          id: artist.memberNo,
-          name: artist.memberName,
-          email: artist.memberEmail,
-          phone: artist.memberPhone || '',
-          role: artist.memberRole, // 원본 역할 그대로 표시
-          originalRole: artist.memberRole, // 원본 역할 저장
-          status: artist.memberStatus === 'ACTIVE' ? '근무중' 
-            : artist.memberStatus === 'ON_LEAVE' ? '휴가' 
-            : artist.memberStatus === 'SICK_LEAVE' ? '병가' 
-            : '근무중',
-          projectCount: 0, // 프로젝트 수는 상세 정보에서 가져옴
-          healthCheck: null, // 건강 체크는 상세 정보에서 가져옴
-        }));
+        const imageBaseUrl = API_BASE_URL || 'http://localhost:8888';
+        const mappedEmployees = artistsList.map((artist) => {
+          // 프로필 이미지 URL 구성
+          let profileImageUrl = null;
+          if (artist.memberProfileImage) {
+            if (artist.memberProfileImage.startsWith('http://') || artist.memberProfileImage.startsWith('https://')) {
+              profileImageUrl = artist.memberProfileImage;
+            } else if (artist.memberProfileImage.startsWith('/uploads/')) {
+              profileImageUrl = `${imageBaseUrl}${artist.memberProfileImage}`;
+            } else {
+              profileImageUrl = `${imageBaseUrl}/uploads/${artist.memberProfileImage}`;
+            }
+          }
+          
+          return {
+            id: artist.memberNo,
+            name: artist.memberName,
+            email: artist.memberEmail,
+            phone: artist.memberPhone || '',
+            role: artist.memberRole, // 원본 역할 그대로 표시
+            originalRole: artist.memberRole, // 원본 역할 저장
+            status: artist.memberStatus === 'ACTIVE' ? '근무중' 
+              : artist.memberStatus === 'ON_LEAVE' ? '휴가' 
+              : artist.memberStatus === 'SICK_LEAVE' ? '병가' 
+              : '근무중',
+            projectCount: 0, // 프로젝트 수는 상세 정보에서 가져옴
+            healthCheck: null, // 건강 체크는 상세 정보에서 가져옴
+            profileImage: profileImageUrl, // 프로필 이미지 URL
+          };
+        });
 
         setEmployees(mappedEmployees);
       } catch (error) {
@@ -183,10 +200,23 @@ export function AdminTeamPage() {
         },
       }));
 
+      // 프로필 이미지 URL 구성
+      let profileImageUrl = null;
+      if (data?.memberProfileImage) {
+        const imageBaseUrl = API_BASE_URL || 'http://localhost:8888';
+        if (data.memberProfileImage.startsWith('http://') || data.memberProfileImage.startsWith('https://')) {
+          profileImageUrl = data.memberProfileImage;
+        } else if (data.memberProfileImage.startsWith('/uploads/')) {
+          profileImageUrl = `${imageBaseUrl}${data.memberProfileImage}`;
+        } else {
+          profileImageUrl = `${imageBaseUrl}/uploads/${data.memberProfileImage}`;
+        }
+      }
+
       // employees 상태도 업데이트
       setEmployees(prev => prev.map(emp => 
         emp.id === employeeId 
-          ? { ...emp, projectCount, healthCheck }
+          ? { ...emp, projectCount, healthCheck, profileImage: profileImageUrl || emp.profileImage }
           : emp
       ));
     } catch (error) {
@@ -294,7 +324,18 @@ export function AdminTeamPage() {
             <EmployeeDetailCard>
               <EmployeeDetailHeader>
                 <EmployeeDetailAvatar>
-                  <Users className="w-8 h-8" />
+                  {selectedEmployee.profileImage ? (
+                    <img 
+                      src={selectedEmployee.profileImage} 
+                      alt={selectedEmployee.name}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'block';
+                      }}
+                    />
+                  ) : null}
+                  <Users className="w-8 h-8" style={{ display: selectedEmployee.profileImage ? 'none' : 'block' }} />
                 </EmployeeDetailAvatar>
                 <EmployeeDetailInfo>
                   <EmployeeDetailName>{selectedEmployee.name}</EmployeeDetailName>
@@ -541,7 +582,18 @@ export function AdminTeamPage() {
                   <EmployeeCard onClick={() => handleEmployeeClick(employee)}>
                     <EmployeeLeft>
                       <EmployeeAvatar>
-                        <Users className="w-6 h-6" />
+                        {employee.profileImage ? (
+                          <img 
+                            src={employee.profileImage} 
+                            alt={employee.name}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'block';
+                            }}
+                          />
+                        ) : null}
+                        <Users className="w-6 h-6" style={{ display: employee.profileImage ? 'none' : 'block' }} />
                       </EmployeeAvatar>
                       <EmployeeInfo>
                         <EmployeeName>{employee.name}</EmployeeName>
