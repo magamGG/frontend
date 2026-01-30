@@ -76,6 +76,7 @@ export function SignupPage({ onSignup, onBackToLogin }) {
   const [artistSpecialization, setArtistSpecialization] = useState(null);
   const [customSpecializationInput, setCustomSpecializationInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSelectOpen, setIsSelectOpen] = useState(false);
   const [signupFormData, setSignupFormData] = useState({
     name: '',
     email: '',
@@ -298,10 +299,13 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                         <InputLabel>세부 직무 선택 *</InputLabel>
                         <Select 
                           value={artistSpecialization || ''} 
+                          open={isSelectOpen}
+                          onOpenChange={setIsSelectOpen}
                           onValueChange={(value) => {
                             setArtistSpecialization(value);
+                            setIsSelectOpen(false); // 선택 시 즉시 닫기
                             if (value !== 'assistant-other') {
-                              setCustomSpecialization('');
+                              setCustomSpecializationInput('');
                             }
                           }}
                         >

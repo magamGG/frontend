@@ -144,7 +144,7 @@ input[type="date"]::-moz-calendar-picker-indicator:hover {
 .modal-scrollbar-transparent {
   /* Firefox */
   scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
+  scrollbar-color: rgba(0, 0, 0, 0.05) transparent;
 }
 
 .modal-scrollbar-transparent::-webkit-scrollbar {
@@ -156,10 +156,57 @@ input[type="date"]::-moz-calendar-picker-indicator:hover {
 }
 
 .modal-scrollbar-transparent::-webkit-scrollbar-thumb {
-  background-color: rgba(0, 0, 0, 0.1);
+  background-color: rgba(0, 0, 0, 0.05);
   border-radius: 4px;
 }
 
 .modal-scrollbar-transparent::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(0, 0, 0, 0.15);
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+/* 심층 검진 모달 기본 닫기 버튼 숨기기 */
+.physical-deep-check-modal [data-slot='dialog-close'],
+[data-slot='dialog-content'].physical-deep-check-modal > [data-slot='dialog-close'],
+.physical-deep-check-modal button[data-slot='dialog-close'],
+.physical-deep-check-modal > button,
+[data-slot='dialog-content'].physical-deep-check-modal > button {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  position: absolute !important;
+  left: -9999px !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* 전역 선택자로도 시도 */
+body [data-slot='dialog-content'].physical-deep-check-modal > [data-slot='dialog-close'],
+body .physical-deep-check-modal [data-slot='dialog-close'] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* 토스트 알림 닫기 버튼 숨기기 */
+.toast-custom [data-close-button],
+[data-sonner-toast] [data-close-button],
+[data-sonner-toast] button[aria-label*="close"],
+[data-sonner-toast] button[aria-label*="닫기"],
+[data-sonner-toast] > button:last-child,
+[data-sonner-toast] button[data-close-button],
+[data-sonner-toast] [data-button],
+[data-sonner-toast] button[type="button"]:last-child {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+[data-sonner-toast] button[data-close-button]:hover,
+[data-sonner-toast] [data-button]:hover,
+[data-sonner-toast] button[type="button"]:last-child:hover {
+  opacity: 0.8 !important;
 }
