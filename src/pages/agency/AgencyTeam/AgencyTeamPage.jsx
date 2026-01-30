@@ -1,10 +1,5 @@
-import { useState } from 'react';
-import { Card } from '@/app/components/ui/card';
-import { Button } from '@/app/components/ui/button';
-import { Badge } from '@/app/components/ui/badge';
-import { Input } from '@/app/components/ui/input';
-import { Label } from '@/app/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/app/components/ui/dialog';
+// 외부 라이브러리
+import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { 
   Search,
@@ -15,14 +10,23 @@ import {
   Phone,
   Briefcase,
   UserPlus,
-  X,
-  Edit2,
   Trash2,
   BookOpen,
-  Heart,
-  Calendar
+  Heart
 } from 'lucide-react';
-import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
+
+// 내부 alias (@/)
+import { Card } from '@/app/components/ui/card';
+import { Button } from '@/app/components/ui/button';
+import { Badge } from '@/app/components/ui/badge';
+import { Input } from '@/app/components/ui/input';
+import { Label } from '@/app/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/app/components/ui/dialog';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/app/components/ui/pagination';
+import { memberService } from '@/api';
+import useAuthStore from '@/store/authStore';
+
+// 상대 경로
 import {
   AgencyTeamRoot,
   AgencyTeamBody,
@@ -58,184 +62,28 @@ import {
   StatisticsGrid,
   StatisticsCard,
   EmptyState,
-  EmptyStateIcon,
   EmptyStateText,
 } from './AgencyTeamPage.styled';
-
-// TODO: Zustand store mapping - 직원 목록
-const initialEmployees = [
-  {
-    id: 1,
-    name: '김담당자',
-    role: '담당자',
-    position: '담당자',
-    email: 'kim@agency.com',
-    phone: '010-1234-5678',
-    status: '근무중',
-    joinDate: '2020-03-15',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-    currentProjects: ['로맨스 판타지', '액션 드라마', '일상 코미디', '미스터리 스릴러'],
-    participatedProjects: ['로맨스 판타지', '액션 드라마', '일상 코미디', '미스터리 스릴러', 'SF 대작', '판타지 모험', '일상 슬라이스'],
-    managedArtists: ['김작가', '박작가'], // 담당 작가 목록
-    healthCheck: {
-      date: '2026-01-23',
-      condition: '보통',
-      sleepHours: 7,
-      discomfortLevel: 4,
-      memo: '오늘은 키위가 먹고싶네여...'
-    }
-  },
-  {
-    id: 2,
-    name: '이담당자',
-    role: '담당자',
-    position: '담당자',
-    email: 'lee@agency.com',
-    phone: '010-2345-6789',
-    status: '근무중',
-    joinDate: '2021-06-20',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
-    currentProjects: ['학원물', '로맨스 웹툰', '판타지 액션'],
-    participatedProjects: ['학원물', '로맨스 웹툰', '판타지 액션', '스릴러 웹툰', '코미디 시리즈'],
-    managedArtists: ['이작가'],
-    healthCheck: {
-      date: '2026-01-23',
-      condition: '좋음',
-      sleepHours: 8,
-      discomfortLevel: 2,
-      memo: ''
-    }
-  },
-  {
-    id: 3,
-    name: '박담당자',
-    role: '담당자',
-    position: '담당자',
-    email: 'park@agency.com',
-    phone: '010-3456-7890',
-    status: '근무중',
-    joinDate: '2023-01-10',
-    avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150',
-    currentProjects: ['스포츠 드라마', '청춘 로맨스'],
-    participatedProjects: ['스포츠 드라마', '청춘 로맨스', '학원 코미디'],
-    managedArtists: [],
-    healthCheck: {
-      date: '2026-01-23',
-      condition: '보통',
-      sleepHours: 6,
-      discomfortLevel: 5,
-      memo: ''
-    }
-  },
-  {
-    id: 4,
-    name: '김작가',
-    role: '작가',
-    position: '메인 작가',
-    email: 'kim.artist@agency.com',
-    phone: '010-4567-8901',
-    status: '근무중',
-    joinDate: '2021-09-05',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-    currentProjects: ['로맨스 판타지', '액션 드라마'],
-    participatedProjects: ['로맨스 판타지', '액션 드라마', 'SF 대작', '미스터리 시리즈', '일상 웹툰'],
-    myWorks: ['로맨스 판타지', '액션 드라마', 'SF 대작'], // 자기 작품
-    serializingWorks: ['로맨스 판타지', '액션 드라마'], // 연재중인 작품
-    healthCheck: {
-      date: '2026-01-23',
-      condition: '보통',
-      sleepHours: 7,
-      discomfortLevel: 4,
-      memo: '오늘은 키위가 먹고싶네여...'
-    }
-  },
-  {
-    id: 5,
-    name: '이작가',
-    role: '작가',
-    position: '시니어 작가',
-    email: 'lee.artist@agency.com',
-    phone: '010-5678-9012',
-    status: '휴가',
-    joinDate: '2019-11-22',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
-    currentProjects: ['무협 웹툰', '판타지 로맨스'],
-    participatedProjects: ['무협 웹툰', '판타지 로맨스', '액션 판타지', '역사 드라마', '로맨스 코미디', '스릴러 웹툰'],
-    myWorks: ['무협 웹툰', '판타지 로맨스', '액션 판타지'],
-    serializingWorks: ['무협 웹툰', '판타지 로맨스'],
-    healthCheck: {
-      date: '2026-01-23',
-      condition: '피곤함',
-      sleepHours: 5,
-      discomfortLevel: 6,
-      memo: ''
-    }
-  },
-  {
-    id: 6,
-    name: '최어시',
-    role: '어시스트',
-    position: '배경 어시스트',
-    email: 'choi.assist@agency.com',
-    phone: '010-6789-0123',
-    status: '근무중',
-    joinDate: '2023-05-15',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-    currentProjects: ['로맨스 판타지', '액션 드라마'],
-    participatedProjects: ['로맨스 판타지', '액션 드라마', 'SF 대작'],
-    healthCheck: {
-      date: '2026-01-23',
-      condition: '좋음',
-      sleepHours: 8,
-      discomfortLevel: 3,
-      memo: ''
-    }
-  },
-  {
-    id: 7,
-    name: '정어시',
-    role: '어시스트',
-    position: '채색 어시스트',
-    email: 'jung.assist@agency.com',
-    phone: '010-7890-1234',
-    status: '근무중',
-    joinDate: '2023-08-20',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
-    currentProjects: ['무협 웹툰', '판타지 로맨스'],
-    participatedProjects: ['무협 웹툰', '판타지 로맨스', '액션 판타지'],
-    healthCheck: {
-      date: '2026-01-23',
-      condition: '보통',
-      sleepHours: 7,
-      discomfortLevel: 4,
-      memo: ''
-    }
-  },
-];
 
 const ROLE_FILTERS = ['전체', '담당자', '작가', '어시스트'];
 
 export function AgencyTeamPage() {
+  const user = useAuthStore((state) => state.user);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedEmployees, setExpandedEmployees] = useState(new Set());
   const [selectedRoles, setSelectedRoles] = useState(['전체']);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedArtist, setSelectedArtist] = useState(null);
-  const [employees, setEmployees] = useState(initialEmployees);
-  
-  // 프로젝트 데이터 (실제로는 Zustand store에서 가져와야 함)
-  const [projects] = useState(() => {
-    const stored = localStorage.getItem('agencyProjectsData');
-    if (stored) {
-      try {
-        return JSON.parse(stored);
-      } catch {
-        return [];
-      }
-    }
-    return [];
-  });
+  const [employees, setEmployees] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [employeeDetails, setEmployeeDetails] = useState({}); // 직원별 상세 정보 캐시
+  const [loadingDetails, setLoadingDetails] = useState(new Set()); // 로딩 중인 직원 ID
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [employeeToDelete, setEmployeeToDelete] = useState(null);
+  const projectContainerRefs = useRef({}); // 참여 중인 프로젝트 컨테이너 refs
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5; // 한 페이지에 표시할 직원 수
 
   // 새 직원 추가 폼 상태
   const [newEmployee, setNewEmployee] = useState({
@@ -244,6 +92,44 @@ export function AgencyTeamPage() {
 
   // 편집 중인 직원 상태
   const [editingEmployee, setEditingEmployee] = useState(null);
+
+  // API에서 직원 목록 가져오기
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      if (!user?.agencyNo) {
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const response = await memberService.getMembersByAgency(user.agencyNo);
+        
+        // API 응답 데이터를 컴포넌트에서 사용하는 형식으로 변환
+        const members = Array.isArray(response) ? response : [];
+        const mappedEmployees = members.map((member) => ({
+          id: member.memberNo,
+          name: member.memberName,
+          role: member.memberRole,
+          position: member.memberRole,
+          email: member.memberEmail,
+          phone: member.memberPhone || '',
+          status: member.memberStatus === 'ACTIVE' ? '근무중' : member.memberStatus === 'ON_LEAVE' ? '휴가' : member.memberStatus === 'SICK_LEAVE' ? '병가' : '근무중',
+          joinDate: member.memberCreatedAt ? new Date(member.memberCreatedAt).toISOString().split('T')[0] : '',
+          avatar: member.memberProfileImage || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
+        }));
+
+        setEmployees(mappedEmployees);
+      } catch (error) {
+        console.error('직원 목록 조회 실패:', error);
+        toast.error('직원 목록을 불러오는데 실패했습니다.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchEmployees();
+  }, [user?.agencyNo]);
+
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -346,63 +232,196 @@ export function AgencyTeamPage() {
     toast.success('직원 정보가 수정되었습니다.');
   };
 
-  // 직원 삭제 핸들러
-  const handleDeleteEmployee = (id) => {
-    if (window.confirm('정말 삭제하시겠습니까?')) {
-      setEmployees(employees.filter(emp => emp.id !== id));
+  // 삭제 확인 모달 열기
+  const handleDeleteClick = (employee, event) => {
+    // 이벤트 전파 방지 (카드 클릭 이벤트와 충돌 방지)
+    if (event) {
+      event.stopPropagation();
+    }
+    setEmployeeToDelete(employee);
+    setIsDeleteModalOpen(true);
+  };
+
+  // 직원 삭제 핸들러 (에이전시에서 제거 - agencyNo를 null로 설정)
+  const handleDeleteEmployee = async () => {
+    if (!employeeToDelete) return;
+
+    try {
+      // API 호출하여 agencyNo를 null로 설정 (회원은 삭제하지 않음)
+      await memberService.removeFromAgency(employeeToDelete.id);
+      // 로컬 상태에서도 제거
+      setEmployees(employees.filter(emp => emp.id !== employeeToDelete.id));
+      // 상태 초기화
       setIsEditModalOpen(false);
       setEditingEmployee(null);
-      toast.success('직원이 삭제되었습니다.');
+      setIsDeleteModalOpen(false);
+      setEmployeeToDelete(null);
+      toast.success('직원이 에이전시에서 제거되었습니다.');
+    } catch (error) {
+      console.error('직원 제거 실패:', error);
+      const errorMessage = error?.message || '직원 제거에 실패했습니다.';
+      toast.error(errorMessage);
     }
   };
 
-  // 접이식 토글 핸들러
-  const toggleEmployee = (employeeId) => {
+  // 접이식 토글 핸들러 - 직원 클릭 시 상세 정보 로드
+  const toggleEmployee = async (employeeId) => {
     const newExpanded = new Set(expandedEmployees);
-    if (newExpanded.has(employeeId)) {
-      newExpanded.delete(employeeId);
-    } else {
+    const isExpanding = !newExpanded.has(employeeId);
+    
+    if (isExpanding) {
       newExpanded.add(employeeId);
+      // 상세 정보가 없으면 API 호출
+      if (!employeeDetails[employeeId]) {
+        await fetchEmployeeDetails(employeeId);
+      }
+    } else {
+      newExpanded.delete(employeeId);
     }
     setExpandedEmployees(newExpanded);
   };
 
-  // 담당자의 담당 작가 정보 가져오기
-  const getManagedArtists = (managerId) => {
-    const manager = employees.find(m => m.id === managerId);
-    if (!manager || !manager.managedArtists) return [];
+  // 직원 상세 정보 가져오기
+  const fetchEmployeeDetails = async (employeeId) => {
+    if (loadingDetails.has(employeeId)) return;
     
-    return employees.filter(emp => 
-      emp.role === '작가' && manager.managedArtists.includes(emp.name)
-    );
+    setLoadingDetails(prev => new Set(prev).add(employeeId));
+    try {
+      const response = await memberService.getMemberDetails(employeeId);
+      const data = Array.isArray(response) ? response[0] : response;
+      
+      // API 응답을 컴포넌트 형식으로 변환
+      const details = {
+        currentProjects: data?.currentProjects || [],
+        participatedProjects: data?.participatedProjects || [],
+        myWorks: data?.myWorks || [],
+        serializingWorks: data?.serializingWorks || [],
+        managedArtists: data?.managedArtists || [],
+        healthCheck: data?.healthCheck ? {
+          date: data.healthCheck.date || new Date().toISOString().split('T')[0],
+          condition: data.healthCheck.condition || '보통',
+          sleepHours: data.healthCheck.sleepHours || 0,
+          discomfortLevel: data.healthCheck.discomfortLevel || 0,
+          memo: data.healthCheck.memo || '',
+        } : null,
+      };
+      
+      setEmployeeDetails(prev => ({
+        ...prev,
+        [employeeId]: details,
+      }));
+    } catch (error) {
+      console.error('직원 상세 정보 조회 실패:', error);
+      toast.error('직원 상세 정보를 불러오는데 실패했습니다.');
+      // 에러 시 빈 데이터 설정
+      setEmployeeDetails(prev => ({
+        ...prev,
+        [employeeId]: {
+          currentProjects: [],
+          participatedProjects: [],
+          myWorks: [],
+          serializingWorks: [],
+          managedArtists: [],
+          healthCheck: null,
+        },
+      }));
+    } finally {
+      setLoadingDetails(prev => {
+        const next = new Set(prev);
+        next.delete(employeeId);
+        return next;
+      });
+    }
+  };
+
+  // 담당자의 담당 작가 정보 가져오기 (DB에서 가져온 데이터 사용)
+  const getManagedArtists = (managerId) => {
+    const details = employeeDetails[managerId];
+    if (!details || !details.managedArtists) return [];
+    // API에서 받은 ManagedArtistInfo를 컴포넌트 형식으로 변환
+    return details.managedArtists.map(artist => ({
+      id: artist.id,
+      name: artist.name,
+      role: artist.role,
+      position: artist.position || artist.role,
+      email: artist.email,
+      phone: artist.phone,
+    }));
   };
 
   // 담당자의 담당 작가의 연재중인 작품 가져오기
   const getManagedArtistsSerializingWorks = (managerId) => {
     const managedArtists = getManagedArtists(managerId);
-    
     const works = [];
     managedArtists.forEach(artist => {
-      if (artist.serializingWorks) {
-        works.push(...artist.serializingWorks);
+      const artistDetails = employeeDetails[artist.id];
+      if (artistDetails && artistDetails.serializingWorks) {
+        works.push(...artistDetails.serializingWorks);
       }
     });
     return [...new Set(works)]; // 중복 제거
   };
 
+  // 직원의 상세 정보 가져오기 (캐시된 데이터 또는 기본값)
+  const getEmployeeDetails = (employeeId) => {
+    return employeeDetails[employeeId] || {
+      currentProjects: [],
+      participatedProjects: [],
+      myWorks: [],
+      serializingWorks: [],
+      managedArtists: [],
+      healthCheck: null,
+    };
+  };
+
+  // 역할을 필터 카테고리로 매핑하는 함수
+  const mapRoleToFilterCategory = (role) => {
+    if (!role) return '';
+    
+    // 작가 관련 역할들을 "작가"로 매핑
+    if (role.includes('작가')) {
+      return '작가';
+    }
+    // 어시스트 관련 역할들을 "어시스트"로 매핑
+    if (role.includes('어시스트')) {
+      return '어시스트';
+    }
+    // 그 외는 그대로 반환
+    return role;
+  };
+
   // Filter employees by search query and role
   const filteredEmployees = employees.filter(employee => {
+    // 에이전시 관리자는 전체 직원 목록에서 제외
+    if (employee.role === '에이전시 관리자' || employee.role === '관리자') {
+      return false;
+    }
+
     const matchesSearch = 
       employee.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       employee.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       employee.role.toLowerCase().includes(searchQuery.toLowerCase());
 
+    // 역할을 필터 카테고리로 매핑하여 비교
+    const roleCategory = mapRoleToFilterCategory(employee.role);
     const matchesRole = 
       selectedRoles.includes('전체') ||
-      selectedRoles.includes(employee.role);
+      selectedRoles.includes(roleCategory) ||
+      selectedRoles.includes(employee.role); // 정확한 역할명도 체크 (호환성)
 
     return matchesSearch && matchesRole;
   });
+
+  // 페이지네이션 계산
+  const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedEmployees = filteredEmployees.slice(startIndex, endIndex);
+
+  // 검색어나 필터가 변경되면 첫 페이지로 이동
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedRoles]);
 
   return (
     <AgencyTeamRoot>
@@ -456,14 +475,28 @@ export function AgencyTeamPage() {
         </SearchBarContainer>
 
         {/* Employee List Cards */}
-        <EmployeeListContainer>
-          {filteredEmployees.map((employee) => {
+        {isLoading ? (
+          <Card className="p-12 text-center">
+            <EmptyStateText>직원 목록을 불러오는 중...</EmptyStateText>
+          </Card>
+        ) : filteredEmployees.length === 0 ? (
+          <Card className="p-12 text-center">
+            <EmptyStateText>
+              {employees.length === 0 
+                ? '등록된 직원이 없습니다. "직원 추가" 버튼을 눌러 직원을 추가해주세요.' 
+                : searchQuery || (selectedRoles.length > 0 && !selectedRoles.includes('전체'))
+                  ? '검색 결과가 없습니다'
+                  : '등록된 직원이 없습니다. "직원 추가" 버튼을 눌러 직원을 추가해주세요.'}
+            </EmptyStateText>
+          </Card>
+        ) : (
+          <>
+            <EmployeeListContainer>
+              {paginatedEmployees.map((employee) => {
             const isExpanded = expandedEmployees.has(employee.id);
             return (
               <div key={employee.id}>
-                <EmployeeCard 
-                  onClick={() => toggleEmployee(employee.id)}
-                >
+                <EmployeeCard>
                   <EmployeeCardContent>
                     <EmployeeAvatar>
                       <Users className="w-7 h-7 text-primary" />
@@ -474,7 +507,7 @@ export function AgencyTeamPage() {
                         <Badge className={getRoleColor(employee.role)} style={{ fontSize: '11px' }}>
                           {employee.role}
                         </Badge>
-                        {employee.position && (
+                        {employee.position && employee.position !== employee.role && (
                           <Badge variant="outline" style={{ fontSize: '10px' }}>
                             {employee.position}
                           </Badge>
@@ -494,95 +527,132 @@ export function AgencyTeamPage() {
                         </div>
                       </EmployeeContactInfo>
                     </EmployeeInfo>
-                    <EmployeeStats>
-                      <p className="text-xs text-muted-foreground mb-1">참여 중인 프로젝트</p>
-                      <p className="text-lg font-semibold text-foreground">{employee.currentProjects.length}개</p>
-                    </EmployeeStats>
-                    {isExpanded ? (
-                      <ChevronDown className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                    ) : (
-                      <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                    )}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+                      {/* 참여 중인 프로젝트와 화살표를 하나로 묶기 */}
+                      <div 
+                        ref={(el) => {
+                          projectContainerRefs.current[employee.id] = el;
+                        }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '0px', cursor: 'pointer', height: 'fit-content' }} 
+                        onClick={() => toggleEmployee(employee.id)}
+                      >
+                        <EmployeeStats style={{ display: 'flex', alignItems: 'center', gap: '8px', height: 'fit-content', lineHeight: '1.2' }}>
+                          <p className="text-xs text-muted-foreground mb-0" style={{ lineHeight: '1.2' }}>참여 중인 프로젝트</p>
+                          <p className="text-lg font-semibold text-foreground mb-0" style={{ lineHeight: '1.2' }}>
+                            {loadingDetails.has(employee.id) 
+                              ? '...' 
+                              : (getEmployeeDetails(employee.id).currentProjects?.length || 0) + '개'}
+                          </p>
+                        </EmployeeStats>
+                        {isExpanded ? (
+                          <ChevronDown className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                        ) : (
+                          <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                        )}
+                      </div>
+                      {/* 삭제 버튼 */}
+                      <Button
+                        data-employee-id={employee.id}
+                        onClick={(e) => handleDeleteClick(employee, e)}
+                        className="bg-destructive hover:bg-destructive/90 text-white h-8 px-3 text-sm font-medium"
+                        style={{ width: '60px', minWidth: '60px' }}
+                        title="직원 삭제"
+                      >
+                        삭제
+                      </Button>
+                    </div>
                   </EmployeeCardContent>
                 </EmployeeCard>
                 
                 {/* 접이식 내용 */}
                 {isExpanded && (
                   <Card className="mt-0 p-6 bg-white border-t-0 rounded-t-none" style={{ borderTopLeftRadius: 0, borderTopRightRadius: 0, marginTop: '-1px' }}>
-                    {employee.role === '작가' && (
-                      <div className="grid grid-cols-2 gap-6">
-                        {/* 왼쪽: 작가와 연재중인 작품 */}
-                        <div className="space-y-4">
-                          <div>
-                            <div className="flex items-center gap-2 mb-3">
-                              <BookOpen className="w-4 h-4 text-primary" />
-                              <h3 className="text-base font-semibold text-foreground">내 작품</h3>
-                            </div>
-                            <div className="space-y-2">
-                              {(employee.myWorks || []).map((work, index) => (
-                                <div key={index} className="p-2 bg-muted/30 rounded-lg border border-border">
-                                  <span className="text-sm font-medium text-foreground">{work}</span>
+                    {loadingDetails.has(employee.id) ? (
+                      <div className="text-center py-8">
+                        <p className="text-sm text-muted-foreground">상세 정보를 불러오는 중...</p>
+                      </div>
+                    ) : (
+                      <>
+                        {employee.role === '작가' || employee.role?.includes('작가') && (
+                          <div className="grid grid-cols-2 gap-6">
+                            {/* 왼쪽: 작가와 연재중인 작품 */}
+                            <div className="space-y-4">
+                              <div>
+                                <div className="flex items-center gap-2 mb-3">
+                                  <BookOpen className="w-4 h-4 text-primary" />
+                                  <h3 className="text-base font-semibold text-foreground">내 작품</h3>
                                 </div>
-                              ))}
-                              {(!employee.myWorks || employee.myWorks.length === 0) && (
-                                <p className="text-sm text-muted-foreground">작품이 없습니다</p>
-                              )}
-                            </div>
-                          </div>
-
-                          <div>
-                            <div className="flex items-center gap-2 mb-3">
-                              <Briefcase className="w-4 h-4 text-primary" />
-                              <h3 className="text-base font-semibold text-foreground">연재중인 작품</h3>
-                            </div>
-                            <div className="space-y-2">
-                              {(employee.serializingWorks || []).map((work, index) => (
-                                <div key={index} className="p-2 bg-muted/30 rounded-lg border border-border">
-                                  <span className="text-sm font-medium text-foreground">{work}</span>
+                                <div className="space-y-2">
+                                  {(getEmployeeDetails(employee.id).myWorks || []).map((work, index) => (
+                                    <div key={index} className="p-2 bg-muted/30 rounded-lg border border-border">
+                                      <span className="text-sm font-medium text-foreground">{work}</span>
+                                    </div>
+                                  ))}
+                                  {(!getEmployeeDetails(employee.id).myWorks || getEmployeeDetails(employee.id).myWorks.length === 0) && (
+                                    <p className="text-sm text-muted-foreground">작품이 없습니다</p>
+                                  )}
                                 </div>
-                              ))}
-                              {(!employee.serializingWorks || employee.serializingWorks.length === 0) && (
-                                <p className="text-sm text-muted-foreground">연재중인 작품이 없습니다</p>
-                              )}
-                            </div>
-                          </div>
-                        </div>
+                              </div>
 
-                        {/* 오른쪽: 건강검진 결과 */}
-                        {employee.healthCheck && (
+                              <div>
+                                <div className="flex items-center gap-2 mb-3">
+                                  <Briefcase className="w-4 h-4 text-primary" />
+                                  <h3 className="text-base font-semibold text-foreground">연재중인 작품</h3>
+                                </div>
+                                <div className="space-y-2">
+                                  {(getEmployeeDetails(employee.id).serializingWorks || []).map((work, index) => (
+                                    <div key={index} className="p-2 bg-muted/30 rounded-lg border border-border">
+                                      <span className="text-sm font-medium text-foreground">{work}</span>
+                                    </div>
+                                  ))}
+                                  {(!getEmployeeDetails(employee.id).serializingWorks || getEmployeeDetails(employee.id).serializingWorks.length === 0) && (
+                                    <p className="text-sm text-muted-foreground">연재중인 작품이 없습니다</p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* 오른쪽: 건강검진 결과 */}
                           <div>
                             <div className="flex items-center gap-2 mb-3">
                               <Heart className="w-4 h-4 text-primary" />
                               <h3 className="text-base font-semibold text-foreground">
-                                {employee.healthCheck.date} 건강 체크 결과
+                                건강 체크 결과
                               </h3>
                             </div>
-                            <Card className="p-4 bg-white border border-border">
-                              <div className="space-y-0">
-                                <div className="flex items-center justify-between py-2 border-b border-border">
-                                  <span className="text-sm text-muted-foreground">오늘 컨디션</span>
-                                  <span className="text-sm font-medium text-foreground">{employee.healthCheck.condition}</span>
-                                </div>
-                                <div className="flex items-center justify-between py-2 border-b border-border">
-                                  <span className="text-sm text-muted-foreground">수면 시간</span>
-                                  <span className="text-sm font-medium text-foreground">{employee.healthCheck.sleepHours}시간</span>
-                                </div>
-                                <div className="flex items-center justify-between py-2">
-                                  <span className="text-sm text-muted-foreground">신체 불편함</span>
-                                  <span className="text-sm font-medium text-foreground">{employee.healthCheck.discomfortLevel}</span>
-                                </div>
-                                {employee.healthCheck.memo && (
-                                  <div className="pt-3 mt-3 border-t border-border">
-                                    <p className="text-xs text-muted-foreground mb-2">메모</p>
-                                    <div className="p-3 bg-muted/30 rounded-lg">
-                                      <p className="text-sm text-foreground">{employee.healthCheck.memo}</p>
-                                    </div>
+                            {getEmployeeDetails(employee.id).healthCheck ? (
+                              <Card className="p-4 bg-white border border-border">
+                                <div className="space-y-0">
+                                  <div className="flex items-center justify-between py-2 border-b border-border">
+                                    <span className="text-sm text-muted-foreground">오늘 컨디션</span>
+                                    <span className="text-sm font-medium text-foreground">{getEmployeeDetails(employee.id).healthCheck?.condition || '-'}</span>
                                   </div>
-                                )}
-                              </div>
-                            </Card>
+                                  <div className="flex items-center justify-between py-2 border-b border-border">
+                                    <span className="text-sm text-muted-foreground">수면 시간</span>
+                                    <span className="text-sm font-medium text-foreground">{getEmployeeDetails(employee.id).healthCheck?.sleepHours || 0}시간</span>
+                                  </div>
+                                  <div className="flex items-center justify-between py-2">
+                                    <span className="text-sm text-muted-foreground">신체 불편함</span>
+                                    <span className="text-sm font-medium text-foreground">{getEmployeeDetails(employee.id).healthCheck?.discomfortLevel || 0}</span>
+                                  </div>
+                                  {getEmployeeDetails(employee.id).healthCheck?.memo && (
+                                    <div className="pt-3 mt-3 border-t border-border">
+                                      <p className="text-xs text-muted-foreground mb-2">메모</p>
+                                      <div className="p-3 bg-muted/30 rounded-lg">
+                                        <p className="text-sm text-foreground">{getEmployeeDetails(employee.id).healthCheck.memo}</p>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </Card>
+                            ) : (
+                              <Card className="p-4 bg-white border border-border">
+                                <div className="text-center py-8">
+                                  <p className="text-sm text-muted-foreground">검진을 하지 않았습니다</p>
+                                </div>
+                              </Card>
+                            )}
                           </div>
-                        )}
                       </div>
                     )}
 
@@ -640,44 +710,50 @@ export function AgencyTeamPage() {
                         </div>
 
                         {/* 오른쪽: 건강검진 결과 */}
-                        {employee.healthCheck && (
                           <div>
                             <div className="flex items-center gap-2 mb-3">
                               <Heart className="w-4 h-4 text-primary" />
                               <h3 className="text-base font-semibold text-foreground">
-                                {employee.healthCheck.date} 건강 체크 결과
+                                건강 체크 결과
                               </h3>
                             </div>
-                            <Card className="p-4 bg-white border border-border">
-                              <div className="space-y-0">
-                                <div className="flex items-center justify-between py-2 border-b border-border">
-                                  <span className="text-sm text-muted-foreground">오늘 컨디션</span>
-                                  <span className="text-sm font-medium text-foreground">{employee.healthCheck.condition}</span>
-                                </div>
-                                <div className="flex items-center justify-between py-2 border-b border-border">
-                                  <span className="text-sm text-muted-foreground">수면 시간</span>
-                                  <span className="text-sm font-medium text-foreground">{employee.healthCheck.sleepHours}시간</span>
-                                </div>
-                                <div className="flex items-center justify-between py-2">
-                                  <span className="text-sm text-muted-foreground">신체 불편함</span>
-                                  <span className="text-sm font-medium text-foreground">{employee.healthCheck.discomfortLevel}</span>
-                                </div>
-                                {employee.healthCheck.memo && (
-                                  <div className="pt-3 mt-3 border-t border-border">
-                                    <p className="text-xs text-muted-foreground mb-2">메모</p>
-                                    <div className="p-3 bg-muted/30 rounded-lg">
-                                      <p className="text-sm text-foreground">{employee.healthCheck.memo}</p>
-                                    </div>
+                            {getEmployeeDetails(employee.id).healthCheck ? (
+                              <Card className="p-4 bg-white border border-border">
+                                <div className="space-y-0">
+                                  <div className="flex items-center justify-between py-2 border-b border-border">
+                                    <span className="text-sm text-muted-foreground">오늘 컨디션</span>
+                                    <span className="text-sm font-medium text-foreground">{getEmployeeDetails(employee.id).healthCheck.condition}</span>
                                   </div>
-                                )}
-                              </div>
-                            </Card>
+                                  <div className="flex items-center justify-between py-2 border-b border-border">
+                                    <span className="text-sm text-muted-foreground">수면 시간</span>
+                                    <span className="text-sm font-medium text-foreground">{getEmployeeDetails(employee.id).healthCheck.sleepHours}시간</span>
+                                  </div>
+                                  <div className="flex items-center justify-between py-2">
+                                    <span className="text-sm text-muted-foreground">신체 불편함</span>
+                                    <span className="text-sm font-medium text-foreground">{getEmployeeDetails(employee.id).healthCheck.discomfortLevel}</span>
+                                  </div>
+                                  {getEmployeeDetails(employee.id).healthCheck.memo && (
+                                    <div className="pt-3 mt-3 border-t border-border">
+                                      <p className="text-xs text-muted-foreground mb-2">메모</p>
+                                      <div className="p-3 bg-muted/30 rounded-lg">
+                                        <p className="text-sm text-foreground">{getEmployeeDetails(employee.id).healthCheck.memo}</p>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </Card>
+                            ) : (
+                              <Card className="p-4 bg-white border border-border">
+                                <div className="text-center py-8">
+                                  <p className="text-sm text-muted-foreground">검진을 하지 않았습니다</p>
+                                </div>
+                              </Card>
+                            )}
                           </div>
-                        )}
                       </div>
                     )}
 
-                    {employee.role === '어시스트' && (
+                    {employee.role?.includes('어시스트') && (
                       <div className="grid grid-cols-2 gap-6">
                         {/* 왼쪽: 참여중인 작품 */}
                         <div>
@@ -686,68 +762,167 @@ export function AgencyTeamPage() {
                             <h3 className="text-base font-semibold text-foreground">참여중인 작품</h3>
                           </div>
                           <div className="space-y-2">
-                            {(employee.currentProjects || []).map((project, index) => (
+                            {(getEmployeeDetails(employee.id).currentProjects || []).map((project, index) => (
                               <div key={index} className="p-2 bg-muted/30 rounded-lg border border-border">
                                 <span className="text-sm font-medium text-foreground">{project}</span>
                               </div>
                             ))}
-                            {(!employee.currentProjects || employee.currentProjects.length === 0) && (
+                            {(!getEmployeeDetails(employee.id).currentProjects || getEmployeeDetails(employee.id).currentProjects.length === 0) && (
                               <p className="text-sm text-muted-foreground">참여중인 작품이 없습니다</p>
                             )}
                           </div>
                         </div>
 
-                        {/* 오른쪽: 건강검진 결과 */}
-                        {employee.healthCheck && (
-                          <div>
-                            <div className="flex items-center gap-2 mb-3">
-                              <Heart className="w-4 h-4 text-primary" />
-                              <h3 className="text-base font-semibold text-foreground">
-                                {employee.healthCheck.date} 건강 체크 결과
-                              </h3>
-                            </div>
-                            <Card className="p-4 bg-white border border-border">
-                              <div className="space-y-0">
-                                <div className="flex items-center justify-between py-2 border-b border-border">
-                                  <span className="text-sm text-muted-foreground">오늘 컨디션</span>
-                                  <span className="text-sm font-medium text-foreground">{employee.healthCheck.condition}</span>
+                            {/* 오른쪽: 건강검진 결과 */}
+                              <div>
+                                <div className="flex items-center gap-2 mb-3">
+                                  <Heart className="w-4 h-4 text-primary" />
+                                  <h3 className="text-base font-semibold text-foreground">
+                                    건강 체크 결과
+                                  </h3>
                                 </div>
-                                <div className="flex items-center justify-between py-2 border-b border-border">
-                                  <span className="text-sm text-muted-foreground">수면 시간</span>
-                                  <span className="text-sm font-medium text-foreground">{employee.healthCheck.sleepHours}시간</span>
-                                </div>
-                                <div className="flex items-center justify-between py-2">
-                                  <span className="text-sm text-muted-foreground">신체 불편함</span>
-                                  <span className="text-sm font-medium text-foreground">{employee.healthCheck.discomfortLevel}</span>
-                                </div>
-                                {employee.healthCheck.memo && (
-                                  <div className="pt-3 mt-3 border-t border-border">
-                                    <p className="text-xs text-muted-foreground mb-2">메모</p>
-                                    <div className="p-3 bg-muted/30 rounded-lg">
-                                      <p className="text-sm text-foreground">{employee.healthCheck.memo}</p>
+                                {getEmployeeDetails(employee.id).healthCheck ? (
+                                  <Card className="p-4 bg-white border border-border">
+                                    <div className="space-y-0">
+                                      <div className="flex items-center justify-between py-2 border-b border-border">
+                                        <span className="text-sm text-muted-foreground">오늘 컨디션</span>
+                                        <span className="text-sm font-medium text-foreground">{getEmployeeDetails(employee.id).healthCheck.condition}</span>
+                                      </div>
+                                      <div className="flex items-center justify-between py-2 border-b border-border">
+                                        <span className="text-sm text-muted-foreground">수면 시간</span>
+                                        <span className="text-sm font-medium text-foreground">{getEmployeeDetails(employee.id).healthCheck.sleepHours}시간</span>
+                                      </div>
+                                      <div className="flex items-center justify-between py-2">
+                                        <span className="text-sm text-muted-foreground">신체 불편함</span>
+                                        <span className="text-sm font-medium text-foreground">{getEmployeeDetails(employee.id).healthCheck.discomfortLevel}</span>
+                                      </div>
+                                      {getEmployeeDetails(employee.id).healthCheck.memo && (
+                                        <div className="pt-3 mt-3 border-t border-border">
+                                          <p className="text-xs text-muted-foreground mb-2">메모</p>
+                                          <div className="p-3 bg-muted/30 rounded-lg">
+                                            <p className="text-sm text-foreground">{getEmployeeDetails(employee.id).healthCheck.memo}</p>
+                                          </div>
+                                        </div>
+                                      )}
                                     </div>
-                                  </div>
+                                  </Card>
+                                ) : (
+                                  <Card className="p-4 bg-white border border-border">
+                                    <div className="text-center py-8">
+                                      <p className="text-sm text-muted-foreground">검진을 하지 않았습니다</p>
+                                    </div>
+                                  </Card>
                                 )}
                               </div>
-                            </Card>
                           </div>
                         )}
-                      </div>
+
+                        {/* 역할이 매칭되지 않을 때 기본 정보 표시 */}
+                        {employee.role !== '작가' && employee.role !== '담당자' && !employee.role?.includes('어시스트') && (
+                          <div className="grid grid-cols-2 gap-6">
+                            {/* 왼쪽: 참여중인 프로젝트 */}
+                            <div>
+                              <div className="flex items-center gap-2 mb-3">
+                                <Briefcase className="w-4 h-4 text-primary" />
+                                <h3 className="text-base font-semibold text-foreground">참여중인 프로젝트</h3>
+                              </div>
+                              <div className="space-y-2">
+                                {(getEmployeeDetails(employee.id).currentProjects || []).map((project, index) => (
+                                  <div key={index} className="p-2 bg-muted/30 rounded-lg border border-border">
+                                    <span className="text-sm font-medium text-foreground">{project}</span>
+                                  </div>
+                                ))}
+                                {(!getEmployeeDetails(employee.id).currentProjects || getEmployeeDetails(employee.id).currentProjects.length === 0) && (
+                                  <p className="text-sm text-muted-foreground">참여중인 프로젝트가 없습니다</p>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* 오른쪽: 건강검진 결과 */}
+                              <div>
+                                <div className="flex items-center gap-2 mb-3">
+                                  <Heart className="w-4 h-4 text-primary" />
+                                  <h3 className="text-base font-semibold text-foreground">
+                                    건강 체크 결과
+                                  </h3>
+                                </div>
+                                {getEmployeeDetails(employee.id).healthCheck ? (
+                                  <Card className="p-4 bg-white border border-border">
+                                    <div className="space-y-0">
+                                      <div className="flex items-center justify-between py-2 border-b border-border">
+                                        <span className="text-sm text-muted-foreground">오늘 컨디션</span>
+                                        <span className="text-sm font-medium text-foreground">{getEmployeeDetails(employee.id).healthCheck.condition}</span>
+                                      </div>
+                                      <div className="flex items-center justify-between py-2 border-b border-border">
+                                        <span className="text-sm text-muted-foreground">수면 시간</span>
+                                        <span className="text-sm font-medium text-foreground">{getEmployeeDetails(employee.id).healthCheck.sleepHours}시간</span>
+                                      </div>
+                                      <div className="flex items-center justify-between py-2">
+                                        <span className="text-sm text-muted-foreground">신체 불편함</span>
+                                        <span className="text-sm font-medium text-foreground">{getEmployeeDetails(employee.id).healthCheck.discomfortLevel}</span>
+                                      </div>
+                                      {getEmployeeDetails(employee.id).healthCheck.memo && (
+                                        <div className="pt-3 mt-3 border-t border-border">
+                                          <p className="text-xs text-muted-foreground mb-2">메모</p>
+                                          <div className="p-3 bg-muted/30 rounded-lg">
+                                            <p className="text-sm text-foreground">{getEmployeeDetails(employee.id).healthCheck.memo}</p>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </Card>
+                                ) : (
+                                  <Card className="p-4 bg-white border border-border">
+                                    <div className="text-center py-8">
+                                      <p className="text-sm text-muted-foreground">검진을 하지 않았습니다</p>
+                                    </div>
+                                  </Card>
+                                )}
+                              </div>
+                          </div>
+                        )}
+                      </>
                     )}
                   </Card>
                 )}
               </div>
             );
           })}
-        </EmployeeListContainer>
-
-        {filteredEmployees.length === 0 && (
-          <Card className="p-12 text-center">
-            <EmptyStateIcon>
-              <Users className="w-12 h-12 text-muted-foreground" />
-            </EmptyStateIcon>
-            <EmptyStateText>검색 결과가 없습니다</EmptyStateText>
-          </Card>
+            </EmployeeListContainer>
+            
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex justify-center mt-6">
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious 
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <PaginationItem key={page}>
+                        <PaginationLink
+                          onClick={() => setCurrentPage(page)}
+                          isActive={currentPage === page}
+                          className="cursor-pointer"
+                        >
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ))}
+                    <PaginationItem>
+                      <PaginationNext 
+                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
+          </>
         )}
       </AgencyTeamBody>
 
@@ -891,7 +1066,13 @@ export function AgencyTeamPage() {
           <div className="flex gap-2 justify-between">
             <Button
               variant="destructive"
-              onClick={() => editingEmployee && handleDeleteEmployee(editingEmployee.id)}
+              onClick={() => {
+                if (editingEmployee) {
+                  setEmployeeToDelete(editingEmployee);
+                  setIsEditModalOpen(false);
+                  setIsDeleteModalOpen(true);
+                }
+              }}
             >
               <Trash2 className="w-4 h-4 mr-2" />
               삭제
@@ -904,6 +1085,39 @@ export function AgencyTeamPage() {
                 저장
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 삭제 확인 모달 */}
+      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>에이전시에서 제거</DialogTitle>
+            <DialogDescription>
+              {employeeToDelete && (
+                <>
+                  <strong>{employeeToDelete.name}</strong>님을 에이전시에서 제거하시겠습니까?
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 justify-end mt-4">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsDeleteModalOpen(false);
+                setEmployeeToDelete(null);
+              }}
+            >
+              취소
+            </Button>
+            <Button 
+              onClick={handleDeleteEmployee}
+              className="bg-destructive hover:bg-destructive/90 text-white"
+            >
+              제거
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

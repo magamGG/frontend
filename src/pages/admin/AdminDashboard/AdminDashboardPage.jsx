@@ -146,13 +146,8 @@ export function AdminDashboardPage({ onNavigateToSection }) {
     const fetchCurrentAttendanceStatus = async () => {
       try {
         const response = await leaveService.getCurrentStatus();
-        console.log('현재 근태 상태 API 응답:', response);
-        // axios 인터셉터가 이미 response.data를 반환하므로 response 자체가 데이터
         const data = response;
-        console.log('현재 근태 상태 데이터:', data);
-        
         if (data && data.attendanceRequestType) {
-          // DB에서 받아온 타입을 프론트 표시용으로 매핑
           const typeMap = {
             '연차': '휴가',
             '반차': '휴가',
@@ -164,31 +159,25 @@ export function AdminDashboardPage({ onNavigateToSection }) {
             '휴재': '휴가',
           };
           const displayType = typeMap[data.attendanceRequestType] || data.attendanceRequestType;
-          console.log('매핑된 상태 타입:', displayType, '원본 타입:', data.attendanceRequestType);
           setCurrentAttendanceType(displayType);
           setCurrentAttendanceData(data);
         } else {
-          console.log('현재 근태 상태 데이터 없음 - 기본값(출근)으로 설정');
-          // 승인된 근태요청이 없으면 기본값으로 출근 설정
           setCurrentAttendanceType('출근');
           setCurrentAttendanceData(null);
         }
       } catch (error) {
         console.error('현재 근태 상태 조회 실패:', error);
-        console.log('에러 발생 - 기본값(출근)으로 설정');
-        // 에러 발생 시에도 기본값으로 출근 설정
         setCurrentAttendanceType('출근');
         setCurrentAttendanceData(null);
       }
     };
 
     fetchCurrentAttendanceStatus();
-    // 5분마다 상태 갱신 (필요시 조절)
     const interval = setInterval(fetchCurrentAttendanceStatus, 300000);
     return () => clearInterval(interval);
   }, []);
 
-  // 오늘 출근 상태 조회 (페이지 로드 시 및 리다이렉션 시) - DB와 동기화
+  // 오늘 출근 상태 조회 (페이지 로드 시 및 리다이렉션 시)
   useEffect(() => {
     const fetchTodayAttendanceStatus = async () => {
       try {
@@ -356,7 +345,6 @@ export function AdminDashboardPage({ onNavigateToSection }) {
     setShowStopConfirm(true);
   };
 
-  // 출근 종료 확인 핸들러 (퇴근 API 호출 후 상태 갱신)
   const confirmStopWork = async () => {
     try {
       await attendanceService.endAttendance();
@@ -408,21 +396,18 @@ export function AdminDashboardPage({ onNavigateToSection }) {
   const todayString = `${today.getMonth() + 1}월 ${today.getDate()}일`;
   const weekdays = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
   const todayFullDate = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일 ${weekdays[today.getDay()]}`;
-  
-  // 현재 상태 텍스트 가져오기
+
   const getCurrentStatusText = () => {
     const displayType = currentAttendanceType || '출근';
     return `${displayType} 중`;
   };
 
-  // 날짜 포맷 함수 (2026-01-15T00:00:00 -> 1월 15일)
   const formatPeriodDate = (dateString) => {
     if (!dateString) return '';
     const date = new Date(dateString);
     return `${date.getMonth() + 1}월 ${date.getDate()}일`;
   };
 
-  // 현재 근태 상태에 따른 기간 문자열 생성
   const getAttendancePeriod = () => {
     if (!currentAttendanceData) return null;
     const startDate = formatPeriodDate(currentAttendanceData.attendanceRequestStartDate);
@@ -433,7 +418,7 @@ export function AdminDashboardPage({ onNavigateToSection }) {
   const getAttendanceStatusBoxProps = (type) => {
     const period = getAttendancePeriod();
     const location = currentAttendanceData?.workcationLocation;
-    
+
     switch (type) {
       case '출근':
         return {
@@ -523,12 +508,10 @@ export function AdminDashboardPage({ onNavigateToSection }) {
           </AttendanceStartHeader>
 
             {(() => {
-              // 승인된 근태요청이 없으면 기본값으로 출근 설정
               const displayType = currentAttendanceType || '출근';
               const displayProps = getAttendanceStatusBoxProps(displayType);
-              
+
               if (!displayProps) {
-                // 출근 기본값 설정
                 const defaultProps = {
                   bgColor: '#E8F6F8',
                   borderColor: 'rgba(0, 172, 193, 0.2)',
@@ -538,13 +521,13 @@ export function AdminDashboardPage({ onNavigateToSection }) {
                   title: '출근 중',
                   description: '사무실에서 작업 중입니다',
                 };
-                
+                const DefaultIcon = defaultProps.Icon;
                 return (
                   <AttendanceStatusBox $bgColor={defaultProps.bgColor} $borderColor={defaultProps.borderColor}>
                     <AttendanceStatusBoxContent>
                       <AttendanceStatusBoxInfo>
                         <AttendanceStatusBoxIcon $bgColor={defaultProps.iconBgColor}>
-                          <defaultProps.Icon className="w-6 h-6" style={{ color: defaultProps.iconColor }} />
+                          <DefaultIcon className="w-6 h-6" style={{ color: defaultProps.iconColor }} />
                         </AttendanceStatusBoxIcon>
                         <AttendanceStatusBoxText>
                           <AttendanceStatusBoxTitle>{defaultProps.title}</AttendanceStatusBoxTitle>
@@ -555,27 +538,28 @@ export function AdminDashboardPage({ onNavigateToSection }) {
                   </AttendanceStatusBox>
                 );
               }
-              
+
+              const DisplayIcon = displayProps.Icon;
               return (
                 <AttendanceStatusBox $bgColor={displayProps.bgColor} $borderColor={displayProps.borderColor}>
                   <AttendanceStatusBoxContent>
                     <AttendanceStatusBoxInfo>
                       <AttendanceStatusBoxIcon $bgColor={displayProps.iconBgColor}>
-                        <displayProps.Icon className="w-6 h-6" style={{ color: displayProps.iconColor }} />
+                        <DisplayIcon className="w-6 h-6" style={{ color: displayProps.iconColor }} />
                       </AttendanceStatusBoxIcon>
                       <AttendanceStatusBoxText>
                         <AttendanceStatusBoxTitle>{displayProps.title}</AttendanceStatusBoxTitle>
                         <AttendanceStatusBoxDescription>{displayProps.description}</AttendanceStatusBoxDescription>
                       </AttendanceStatusBoxText>
-                      </AttendanceStatusBoxInfo>
-                    </AttendanceStatusBoxContent>
-                    {(displayType === '휴가' || displayType === '워케이션') && currentAttendanceData && displayProps.period && (
-                      <AttendanceStatusBoxPeriod $borderColor={displayProps.borderColor}>
-                        <AttendanceStatusBoxPeriodLabel>{displayType === '휴가' ? '휴가 기간' : '워케이션 기간'}</AttendanceStatusBoxPeriodLabel>
-                        <AttendanceStatusBoxPeriodValue>{displayProps.period}</AttendanceStatusBoxPeriodValue>
-                      </AttendanceStatusBoxPeriod>
-                    )}
-                  </AttendanceStatusBox>
+                    </AttendanceStatusBoxInfo>
+                  </AttendanceStatusBoxContent>
+                  {(displayType === '휴가' || displayType === '워케이션') && currentAttendanceData && displayProps.period && (
+                    <AttendanceStatusBoxPeriod $borderColor={displayProps.borderColor}>
+                      <AttendanceStatusBoxPeriodLabel>{displayType === '휴가' ? '휴가 기간' : '워케이션 기간'}</AttendanceStatusBoxPeriodLabel>
+                      <AttendanceStatusBoxPeriodValue>{displayProps.period}</AttendanceStatusBoxPeriodValue>
+                    </AttendanceStatusBoxPeriod>
+                  )}
+                </AttendanceStatusBox>
               );
             })()}
           </AttendanceStartCard>

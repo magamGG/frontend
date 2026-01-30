@@ -403,8 +403,7 @@ export function ArtistDashboardPage() {
   const todayString = `${today.getMonth() + 1}월 ${today.getDate()}일`;
   const weekdays = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
   const todayFullDate = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일 ${weekdays[today.getDay()]}`;
-  
-  // 현재 상태 텍스트 가져오기
+
   const getCurrentStatusText = () => {
     const displayType = currentAttendanceType || ATTENDANCE_TYPE.OFFICE;
     return `${displayType} 중`;
@@ -430,13 +429,8 @@ export function ArtistDashboardPage() {
     const fetchCurrentAttendanceStatus = async () => {
       try {
         const response = await leaveService.getCurrentStatus();
-        console.log('현재 근태 상태 API 응답:', response);
-        // axios 인터셉터가 이미 response.data를 반환하므로 response 자체가 데이터
         const data = response;
-        console.log('현재 근태 상태 데이터:', data);
-        
         if (data && data.attendanceRequestType) {
-          // DB에서 받아온 타입을 ATTENDANCE_TYPE 상수로 매핑
           const typeMap = {
             '연차': ATTENDANCE_TYPE.LEAVE,
             '반차': ATTENDANCE_TYPE.LEAVE,
@@ -448,24 +442,20 @@ export function ArtistDashboardPage() {
             '휴재': ATTENDANCE_TYPE.LEAVE,
           };
           const displayType = typeMap[data.attendanceRequestType] || data.attendanceRequestType;
-          console.log('매핑된 상태 타입:', displayType, '원본 타입:', data.attendanceRequestType);
           setCurrentAttendanceType(displayType);
           setCurrentAttendanceData(data);
         } else {
-          console.log('현재 근태 상태 데이터 없음 - 기본값(출근)으로 설정');
           setCurrentAttendanceType(null);
           setCurrentAttendanceData(null);
         }
       } catch (error) {
         console.error('현재 근태 상태 조회 실패:', error);
-        console.log('에러 발생 - 기본값(출근)으로 설정');
         setCurrentAttendanceType(null);
         setCurrentAttendanceData(null);
       }
     };
 
     fetchCurrentAttendanceStatus();
-    // 5분마다 상태 갱신 (필요시 조절)
     const interval = setInterval(fetchCurrentAttendanceStatus, 300000);
     return () => clearInterval(interval);
   }, []);
@@ -475,37 +465,25 @@ export function ArtistDashboardPage() {
     const fetchTodayAttendanceStatus = async () => {
       try {
         const response = await attendanceService.getTodayStatus();
-        console.log('오늘 출근 상태 API 응답:', response);
         const data = response;
-        
         if (data && data.isWorking && data.lastAttendanceType === '출근') {
-          // 오늘 날짜의 마지막 이력이 '출근'이면 출근 종료 버튼으로 설정
           setIsWorking(true);
           setHealthCheckCompleted(true);
-          console.log('오늘 출근 상태: 출근 중');
         } else {
-          // 출근 상태가 아니면 초기화
           setIsWorking(false);
           setHealthCheckCompleted(false);
-          console.log('오늘 출근 상태: 미출근');
         }
       } catch (error) {
         console.error('오늘 출근 상태 조회 실패:', error);
-        // 에러 발생 시 기본값으로 설정
         setIsWorking(false);
         setHealthCheckCompleted(false);
       }
     };
 
     fetchTodayAttendanceStatus();
-    // 페이지 포커스 시마다 상태 갱신
-    const handleFocus = () => {
-      fetchTodayAttendanceStatus();
-    };
+    const handleFocus = () => fetchTodayAttendanceStatus();
     window.addEventListener('focus', handleFocus);
-    return () => {
-      window.removeEventListener('focus', handleFocus);
-    };
+    return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
   // localStorage에서 피드백 불러오기
@@ -553,7 +531,6 @@ export function ArtistDashboardPage() {
     setShowStopConfirm(true);
   };
 
-  // 출근 종료 확인 핸들러 (퇴근 API 호출 후 상태 갱신)
   const confirmStopWork = async () => {
     try {
       await attendanceService.endAttendance();
@@ -572,29 +549,22 @@ export function ArtistDashboardPage() {
     return healthSurvey.sleepHours.trim() !== '';
   };
 
-  // 건강 체크 제출 핸들러
   const handleHealthSurveySubmit = async () => {
     if (!isHealthSurveyValid()) {
       toast.error('필수 항목을 모두 입력해주세요.');
       return;
     }
-    
+
     try {
-      // 수면 시간을 숫자로 변환 (예: "7시간" -> 7)
       const sleepHoursMatch = healthSurvey.sleepHours.match(/\d+/);
       const sleepHoursValue = sleepHoursMatch ? parseInt(sleepHoursMatch[0]) : null;
-      
-      // 건강 체크 데이터 준비
       const healthCheckData = {
         healthCondition: healthSurvey.condition,
         sleepHours: sleepHoursValue,
         discomfortLevel: healthSurvey.discomfortLevel,
         healthCheckNotes: healthSurvey.notes || '',
       };
-      
-      // 출근 시작 API 호출 (건강 체크 + 출근 기록)
       await attendanceService.startAttendance(healthCheckData);
-      
       setIsWorking(true);
       setHealthCheckCompleted(true);
       setShowHealthSurvey(false);
@@ -698,14 +668,12 @@ export function ArtistDashboardPage() {
     }
   };
 
-  // 날짜 포맷 함수 (2026-01-15T00:00:00 -> 1월 15일)
   const formatPeriodDate = (dateString) => {
     if (!dateString) return '';
     const date = new Date(dateString);
     return `${date.getMonth() + 1}월 ${date.getDate()}일`;
   };
 
-  // 현재 근태 상태에 따른 기간 문자열 생성
   const getAttendancePeriod = () => {
     if (!currentAttendanceData) return '기간 정보 없음';
     const startDate = formatPeriodDate(currentAttendanceData.attendanceRequestStartDate);
@@ -713,11 +681,9 @@ export function ArtistDashboardPage() {
     return `${startDate} ~ ${endDate}`;
   };
 
-  // 워케이션 장소 가져오기
   const getWorkcationLocation = () => {
     return currentAttendanceData?.workcationLocation || null;
   };
-
 
   return (
     <ArtistDashboardRoot>
@@ -760,11 +726,9 @@ export function ArtistDashboardPage() {
 
               {/* 근태 상태 표시 */}
               {(() => {
-                // 승인된 근태요청이 없으면 기본값으로 출근 설정
                 const displayType = currentAttendanceType || ATTENDANCE_TYPE.OFFICE;
                 const displayConfig = ATTENDANCE_STATUS_CONFIG[displayType];
                 const DisplayIcon = displayConfig.icon;
-                
                 return (
                   <AttendanceStatusCard $bgColor={displayConfig.bgColor} $borderColor={displayConfig.borderColor}>
                     <AttendanceStatusContent>

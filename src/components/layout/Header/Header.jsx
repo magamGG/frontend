@@ -142,6 +142,8 @@ export function Header({
         return 'success';
       case 'REJECTED':
         return 'error';
+      case 'ASSIGNMENT':
+        return 'info';
       default:
         return 'info';
     }
@@ -157,6 +159,8 @@ export function Header({
       case 'APPROVED':
       case 'REJECTED':
         return 'dashboard';
+      case 'ASSIGNMENT':
+        return 'assignment';
       default:
         return 'dashboard';
     }

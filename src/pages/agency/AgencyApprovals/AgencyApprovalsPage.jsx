@@ -57,69 +57,68 @@ export function AgencyApprovalsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const user = useAuthStore((state) => state.user);
   
-  // 에이전시 가입 요청 및 근태 신청 목록 조회 함수
-  const fetchAllRequests = async () => {
-    if (!user?.agencyNo) {
-      return;
-    }
-    
-    setIsLoading(true);
-    try {
-      // 가입 요청과 근태 신청을 병렬로 조회
-      const [joinResponse, attendanceResponse] = await Promise.all([
-        agencyService.getJoinRequests(user.agencyNo),
-        leaveService.getAgencyRequests(user.agencyNo),
-      ]);
-      
-      // 가입 요청 변환
-      const formattedJoinRequests = joinResponse.map((req) => ({
-        id: `join-${req.newRequestNo}`,
-        originalId: req.newRequestNo,
-        type: '가입',
-        category: 'join',
-        requester: req.memberName,
-        role: req.memberRole,
-        email: req.memberEmail,
-        phone: req.memberPhone,
-        reason: `${req.memberRole} 가입 신청`,
-        status: req.newRequestStatus === '대기' ? '대기' : req.newRequestStatus === '승인' ? '승인' : '반려',
-        submittedDate: req.newRequestDate ? new Date(req.newRequestDate).toISOString().split('T')[0] : '',
-        processedDate: req.newRequestStatus !== '대기' ? req.newRequestDate ? new Date(req.newRequestDate).toISOString().split('T')[0] : '' : null,
-      }));
-      
-      // 근태 신청 변환
-      const formattedAttendanceRequests = attendanceResponse.map((req) => ({
-        id: `attendance-${req.attendanceRequestNo}`,
-        originalId: req.attendanceRequestNo,
-        type: req.attendanceRequestType,
-        category: 'attendance',
-        requester: req.memberName,
-        role: '작가', // 기본값
-        startDate: req.attendanceRequestStartDate ? new Date(req.attendanceRequestStartDate).toISOString().split('T')[0] : '',
-        endDate: req.attendanceRequestEndDate ? new Date(req.attendanceRequestEndDate).toISOString().split('T')[0] : '',
-        days: req.attendanceRequestUsingDays,
-        reason: req.attendanceRequestReason || '',
-        workcationLocation: req.workcationLocation,
-        status: req.attendanceRequestStatus === 'PENDING' ? '대기' 
-              : req.attendanceRequestStatus === 'APPROVED' ? '승인' 
-              : req.attendanceRequestStatus === 'REJECTED' ? '반려' : '대기',
-        rejectionReason: req.attendanceRequestRejectReason,
-        submittedDate: req.attendanceRequestCreatedAt ? new Date(req.attendanceRequestCreatedAt).toISOString().split('T')[0] : '',
-        processedDate: req.attendanceRequestUpdatedAt ? new Date(req.attendanceRequestUpdatedAt).toISOString().split('T')[0] : null,
-      }));
-      
-      // 모든 요청 합치기
-      setRequests([...formattedJoinRequests, ...formattedAttendanceRequests]);
-    } catch (error) {
-      console.error('요청 목록 조회 실패:', error);
-      toast.error('요청 목록을 불러오는데 실패했습니다.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
   // 에이전시 가입 요청 및 근태 신청 목록 조회
   useEffect(() => {
+    const fetchAllRequests = async () => {
+      if (!user?.agencyNo) {
+        return;
+      }
+      
+      setIsLoading(true);
+      try {
+        // 가입 요청과 근태 신청을 병렬로 조회
+        const [joinResponse, attendanceResponse] = await Promise.all([
+          agencyService.getJoinRequests(user.agencyNo),
+          leaveService.getAgencyRequests(user.agencyNo),
+        ]);
+        
+        // 가입 요청 변환
+        const formattedJoinRequests = joinResponse.map((req) => ({
+          id: `join-${req.newRequestNo}`,
+          originalId: req.newRequestNo,
+          type: '가입',
+          category: 'join',
+          requester: req.memberName,
+          role: req.memberRole,
+          email: req.memberEmail,
+          phone: req.memberPhone,
+          reason: `${req.memberRole} 가입 신청`,
+          status: req.newRequestStatus === '대기' ? '대기' : req.newRequestStatus === '승인' ? '승인' : '반려',
+          submittedDate: req.newRequestDate ? new Date(req.newRequestDate).toISOString().split('T')[0] : '',
+          processedDate: req.newRequestStatus !== '대기' ? req.newRequestDate ? new Date(req.newRequestDate).toISOString().split('T')[0] : '' : null,
+        }));
+        
+        // 근태 신청 변환
+        const formattedAttendanceRequests = attendanceResponse.map((req) => ({
+          id: `attendance-${req.attendanceRequestNo}`,
+          originalId: req.attendanceRequestNo,
+          type: req.attendanceRequestType,
+          category: 'attendance',
+          requester: req.memberName,
+          role: '작가', // 기본값
+          startDate: req.attendanceRequestStartDate ? new Date(req.attendanceRequestStartDate).toISOString().split('T')[0] : '',
+          endDate: req.attendanceRequestEndDate ? new Date(req.attendanceRequestEndDate).toISOString().split('T')[0] : '',
+          days: req.attendanceRequestUsingDays,
+          reason: req.attendanceRequestReason || '',
+          workcationLocation: req.workcationLocation,
+          status: req.attendanceRequestStatus === 'PENDING' ? '대기' 
+                : req.attendanceRequestStatus === 'APPROVED' ? '승인' 
+                : req.attendanceRequestStatus === 'REJECTED' ? '반려' : '대기',
+          rejectionReason: req.attendanceRequestRejectReason,
+          submittedDate: req.attendanceRequestCreatedAt ? new Date(req.attendanceRequestCreatedAt).toISOString().split('T')[0] : '',
+          processedDate: req.attendanceRequestUpdatedAt ? new Date(req.attendanceRequestUpdatedAt).toISOString().split('T')[0] : null,
+        }));
+        
+        // 모든 요청 합치기
+        setRequests([...formattedJoinRequests, ...formattedAttendanceRequests]);
+      } catch (error) {
+        console.error('요청 목록 조회 실패:', error);
+        toast.error('요청 목록을 불러오는데 실패했습니다.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
     fetchAllRequests();
   }, [user?.agencyNo]);
 
@@ -153,15 +152,18 @@ export function AgencyApprovalsPage() {
         const response = await agencyService.approveJoinRequest(request.originalId);
         console.log('가입 승인 API 응답:', response);
       } else if (request.category === 'attendance') {
-        // 근태 승인 API 호출
-        const response = await leaveService.approveAttendanceRequest(request.originalId);
-        console.log('근태 승인 API 응답:', response);
+        // TODO: 근태 승인 API 구현 필요
+        // 현재는 프론트엔드 상태만 업데이트
+        console.log('근태 승인 처리:', request.originalId);
       }
       
+      // 로컬 상태 업데이트
+      setRequests(requests.map(r => 
+        r.id === request.id 
+          ? { ...r, status: '승인', processedDate: new Date().toISOString().split('T')[0] }
+          : r
+      ));
       toast.success(`${request.requester}의 ${request.type} 신청이 승인되었습니다.`);
-      
-      // 목록 다시 불러오기
-      await fetchAllRequests();
     } catch (error) {
       console.error('승인 API 호출 실패:', error);
       toast.error('승인 처리에 실패했습니다.');
@@ -178,20 +180,17 @@ export function AgencyApprovalsPage() {
     }
 
     try {
-      if (selectedRequest.category === 'join') {
-        // 가입 요청 승인 API 호출
-        const response = await agencyService.approveJoinRequest(selectedRequest.originalId);
-        console.log('가입 승인 API 응답:', response);
-      } else if (selectedRequest.category === 'attendance') {
-        // 근태 승인 API 호출
-        const response = await leaveService.approveAttendanceRequest(selectedRequest.originalId);
-        console.log('근태 승인 API 응답:', response);
-      }
+      // 백엔드 API 호출
+      const response = await agencyService.approveJoinRequest(selectedRequest.id);
+      console.log('승인 API 응답:', response);
       
+      // API 성공 시 로컬 상태 업데이트
+      setRequests(requests.map(r => 
+        r.id === selectedRequest.id 
+          ? { ...r, status: '승인', processedDate: new Date().toISOString().split('T')[0] }
+          : r
+      ));
       toast.success(`${selectedRequest.requester}의 ${selectedRequest.type} 신청이 승인되었습니다.`);
-      
-      // 목록 다시 불러오기
-      await fetchAllRequests();
     } catch (error) {
       console.error('승인 API 호출 실패:', error);
       toast.error('승인 처리에 실패했습니다.');
@@ -243,15 +242,23 @@ export function AgencyApprovalsPage() {
           const response = await agencyService.rejectJoinRequest(selectedRequest.originalId, rejectionReason);
           console.log('가입 거절 API 응답:', response);
         } else if (selectedRequest.category === 'attendance') {
-          // 근태 반려 API 호출
-          const response = await leaveService.rejectAttendanceRequest(selectedRequest.originalId, rejectionReason);
-          console.log('근태 반려 API 응답:', response);
+          // TODO: 근태 반려 API 구현 필요
+          // 현재는 프론트엔드 상태만 업데이트
+          console.log('근태 반려 처리:', selectedRequest.originalId);
         }
         
+        // 로컬 상태 업데이트
+        setRequests(requests.map(r => 
+          r.id === selectedRequest.id 
+            ? { 
+                ...r, 
+                status: '반려', 
+                rejectionReason: rejectionReason,
+                processedDate: new Date().toISOString().split('T')[0]
+              }
+            : r
+        ));
         toast.success(`${selectedRequest.requester}의 ${selectedRequest.type} 신청이 반려되었습니다.`);
-        
-        // 목록 다시 불러오기
-        await fetchAllRequests();
       } catch (error) {
         console.error('거절 API 호출 실패:', error);
         toast.error('반려 처리에 실패했습니다.');

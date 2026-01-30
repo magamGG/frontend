@@ -519,3 +519,25 @@ export const PieChartLabel = styled.div`
   color: #5a6067;
   margin-top: 4px;
 `;
+
+// 빈 상태 컨테이너
+export const EmptyStateContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 32px;
+  background-color: white;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  min-height: 300px;
+`;
+
+export const EmptyStateMessage = styled.p`
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2328;
+  margin: 0;
+  text-align: center;
+`;

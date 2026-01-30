@@ -17,6 +17,15 @@ export const API_ENDPOINTS = {
   MEMBERS: {
     BASE: `/api/members`, // POST: 회원가입
     CURRENT: `/api/members/me`, // GET: 현재 회원 정보 조회
+    BY_AGENCY: (agencyNo) => `/api/members/agency/${agencyNo}`, // GET: 에이전시별 회원 목록
+    DETAILS: (memberNo) => `/api/members/${memberNo}/details`, // GET: 회원 상세 (프로젝트, 건강 체크 등)
+    MANAGERS: (agencyNo) => `/api/members/agency/${agencyNo}/managers`, // GET: 에이전시별 담당자 목록
+    ARTISTS: (agencyNo) => `/api/members/agency/${agencyNo}/artists`, // GET: 에이전시별 작가 목록
+    ARTISTS_BY_MANAGER: (managerNo) => `/api/members/manager/${managerNo}/artists`, // GET: 담당자별 작가 목록
+    ASSIGN: (artistNo, managerNo) => `/api/members/${artistNo}/assign/${managerNo}`, // POST: 작가 배정
+    UNASSIGN: (artistNo) => `/api/members/${artistNo}/assign`, // DELETE: 작가 배정 해제
+    DELETE: (memberNo) => `/api/members/${memberNo}`, // DELETE: 회원 삭제
+    REMOVE_FROM_AGENCY: (memberNo) => `/api/members/${memberNo}/remove-from-agency`, // PUT: 에이전시에서 제거
   },
 
   // 출석/근태 API

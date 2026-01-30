@@ -126,6 +126,10 @@ export const EmployeeNameRow = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-bottom: 4px;
 `;
 

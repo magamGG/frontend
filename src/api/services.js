@@ -20,6 +20,42 @@ export const memberService = {
   getCurrentMember: () => {
     return api.get(API_ENDPOINTS.MEMBERS.CURRENT);
   },
+
+  getMembersByAgency: (agencyNo) => {
+    return api.get(API_ENDPOINTS.MEMBERS.BY_AGENCY(agencyNo));
+  },
+
+  getMemberDetails: (memberNo) => {
+    return api.get(API_ENDPOINTS.MEMBERS.DETAILS(memberNo));
+  },
+
+  getManagersByAgency: (agencyNo) => {
+    return api.get(API_ENDPOINTS.MEMBERS.MANAGERS(agencyNo));
+  },
+
+  getArtistsByAgency: (agencyNo) => {
+    return api.get(API_ENDPOINTS.MEMBERS.ARTISTS(agencyNo));
+  },
+
+  getArtistsByManager: (managerNo) => {
+    return api.get(API_ENDPOINTS.MEMBERS.ARTISTS_BY_MANAGER(managerNo));
+  },
+
+  assignArtistToManager: (artistNo, managerNo) => {
+    return api.post(API_ENDPOINTS.MEMBERS.ASSIGN(artistNo, managerNo));
+  },
+
+  unassignArtistFromManager: (artistNo) => {
+    return api.delete(API_ENDPOINTS.MEMBERS.UNASSIGN(artistNo));
+  },
+
+  deleteMember: (memberNo) => {
+    return api.delete(API_ENDPOINTS.MEMBERS.DELETE(memberNo));
+  },
+
+  removeFromAgency: (memberNo) => {
+    return api.put(API_ENDPOINTS.MEMBERS.REMOVE_FROM_AGENCY(memberNo));
+  },
 };
 
 // 출석/근태 서비스
@@ -28,22 +64,19 @@ export const attendanceService = {
   checkIn: (attendanceData) => {
     return api.post(API_ENDPOINTS.ATTENDANCE.CHECK_IN, attendanceData);
   },
-  
-  // 출근 시작 (건강 체크 + 출근 기록)
+
   startAttendance: (healthCheckData) => {
     return api.post(API_ENDPOINTS.ATTENDANCE.START, healthCheckData);
   },
 
-  // 출근 종료 (퇴근 기록)
   endAttendance: () => {
     return api.post(API_ENDPOINTS.ATTENDANCE.END);
   },
 
-  // 오늘 출근 상태 조회
   getTodayStatus: () => {
     return api.get(API_ENDPOINTS.ATTENDANCE.TODAY_STATUS);
   },
-  
+
   // 출석 이력 조회
   getHistory: (memberNo, startDate, endDate) => {
     return api.get(API_ENDPOINTS.ATTENDANCE.HISTORY(memberNo, startDate, endDate));
@@ -81,18 +114,15 @@ export const leaveService = {
   getAgencyPendingRequests: (agencyNo) => {
     return api.get(API_ENDPOINTS.LEAVE.AGENCY_PENDING(agencyNo));
   },
-  
-  // 현재 적용 중인 근태 상태 조회 (승인된 휴가/워케이션/재택 등)
+
   getCurrentStatus: () => {
     return api.get(API_ENDPOINTS.LEAVE.CURRENT_STATUS);
   },
-  
-  // 근태 신청 승인
+
   approveAttendanceRequest: (attendanceRequestNo) => {
     return api.post(API_ENDPOINTS.LEAVE.APPROVE(attendanceRequestNo));
   },
-  
-  // 근태 신청 반려
+
   rejectAttendanceRequest: (attendanceRequestNo, rejectReason) => {
     return api.post(API_ENDPOINTS.LEAVE.REJECT(attendanceRequestNo), { rejectReason });
   },
