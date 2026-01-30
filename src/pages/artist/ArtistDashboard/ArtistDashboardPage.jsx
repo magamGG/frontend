@@ -57,6 +57,7 @@ import {
   QuickInfoHeader,
   QuickInfoTitle,
   QuickInfoList,
+  ModalTitleWrapper,
   FeedbackItem,
   FeedbackItemHeader,
   FeedbackProject,
@@ -725,6 +726,7 @@ export function ArtistDashboardPage() {
 
 
               {/* 근태 상태 표시 */}
+<<<<<<< HEAD
               {(() => {
                 const displayType = currentAttendanceType || ATTENDANCE_TYPE.OFFICE;
                 const displayConfig = ATTENDANCE_STATUS_CONFIG[displayType];
@@ -763,6 +765,47 @@ export function ArtistDashboardPage() {
                   </AttendanceStatusCard>
                 );
               })()}
+=======
+              {currentAttendanceType && currentStatusConfig ? (
+                <AttendanceStatusCard $bgColor={currentStatusConfig.bgColor} $borderColor={currentStatusConfig.borderColor}>
+                  <AttendanceStatusContent>
+                    <AttendanceStatusLeft>
+                      <AttendanceStatusIconContainer $iconBgColor={currentStatusConfig.iconBgColor} $iconColor={currentStatusConfig.iconColor}>
+                        <StatusIcon className="w-6 h-6" />
+                      </AttendanceStatusIconContainer>
+                      <AttendanceStatusText>
+                        <AttendanceStatusTitle>{currentAttendanceType} 중</AttendanceStatusTitle>
+                        <AttendanceStatusDescription>
+                          {currentAttendanceType === ATTENDANCE_TYPE.OFFICE
+                            ? '사무실에서 작업 중입니다'
+                            : currentAttendanceType === ATTENDANCE_TYPE.REMOTE
+                            ? '자택에서 작업 중입니다'
+                            : currentAttendanceType === ATTENDANCE_TYPE.LEAVE
+                            ? '휴식 중입니다'
+                            : '외부 환경에서 작업 중입니다'}
+                        </AttendanceStatusDescription>
+                      </AttendanceStatusText>
+                    </AttendanceStatusLeft>
+                  </AttendanceStatusContent>
+                  {(currentAttendanceType === ATTENDANCE_TYPE.LEAVE || currentAttendanceType === ATTENDANCE_TYPE.WORKATION) && (
+                    <AttendancePeriodBox $borderColor={currentStatusConfig.borderColor}>
+                      <AttendancePeriodLabel>
+                        {currentAttendanceType === ATTENDANCE_TYPE.LEAVE ? '휴가 기간' : '워케이션 기간'}
+                      </AttendancePeriodLabel>
+                      <AttendancePeriodValue>1월 15일 ~ 1월 22일</AttendancePeriodValue>
+                    </AttendancePeriodBox>
+                  )}
+                </AttendanceStatusCard>
+              ) : (
+                <EmptyStatusCard>
+                  <EmptyStatusIcon>
+                    <Briefcase className="w-8 h-8 text-gray-400" />
+                  </EmptyStatusIcon>
+                  <EmptyStatusTitle>현재 상태를 선택해주세요</EmptyStatusTitle>
+                  <EmptyStatusDescription>위의 드롭다운에서 오늘의 근무 상태를 선택하세요</EmptyStatusDescription>
+                </EmptyStatusCard>
+              )}
+>>>>>>> 94ba2e8b56626352314c5f09b1ec11e24bdb6be9
             </TodayStatusCard>
 
             {/* 피드백/마감일/신청현황 그리드 */}
@@ -820,13 +863,13 @@ export function ArtistDashboardPage() {
 
               {/* 신청 현황 */}
               <QuickInfoCard>
-                <AttendanceRequestCardHeader onClick={() => setShowAttendanceModal(true)} style={{ cursor: 'pointer' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <FileText className="w-4 h-4" style={{ color: 'var(--foreground)' }} />
-                    <QuickInfoTitle style={{ margin: 0 }}>신청 현황</QuickInfoTitle>
+                <AttendanceRequestCardHeader onClick={() => setShowAttendanceModal(true)}>
+                  <div>
+                    <FileText className="w-4 h-4" />
+                    <QuickInfoTitle>신청 현황</QuickInfoTitle>
                   </div>
                   {attendanceRequests.length >= 2 && (
-                    <ChevronRight className="w-4 h-4" style={{ color: 'var(--muted-foreground)' }} />
+                    <ChevronRight className="w-4 h-4" />
                   )}
                 </AttendanceRequestCardHeader>
                 {attendanceRequests.length >= 2 && (
@@ -1013,7 +1056,15 @@ export function ArtistDashboardPage() {
         <WarningBox>
           <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
           <WarningContent>
+<<<<<<< HEAD
             <WarningDescription>출근을 종료하시겠습니까?</WarningDescription>
+=======
+            <WarningDescription>
+              {!healthCheckCompleted 
+                ? '건강 체크를 완료하지 않았습니다. 건강 체크 없이 작업을 종료하시겠습니까?'
+                : '작업을 종료하시겠습니까?'}
+            </WarningDescription>
+>>>>>>> 94ba2e8b56626352314c5f09b1ec11e24bdb6be9
           </WarningContent>
         </WarningBox>
         <ModalActions>
@@ -1241,10 +1292,10 @@ export function ArtistDashboardPage() {
         isOpen={showAttendanceModal} 
         onClose={() => setShowAttendanceModal(false)} 
         title={
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <FileText className="w-5 h-5" style={{ color: 'var(--foreground)' }} />
+          <ModalTitleWrapper>
+            <FileText className="w-5 h-5" />
             <span>신청 현황 목록</span>
-          </div>
+          </ModalTitleWrapper>
         }
         maxWidth="lg"
       >
@@ -1283,7 +1334,6 @@ export function ArtistDashboardPage() {
                               // TODO: 수정 기능 구현
                               toast.info('수정 기능은 준비 중입니다.');
                             }}
-                            style={{ fontSize: '12px', padding: '6px 12px' }}
                           >
                             수정
                           </Button>
@@ -1294,7 +1344,6 @@ export function ArtistDashboardPage() {
                               // TODO: 취소 기능 구현
                               toast.info('취소 기능은 준비 중입니다.');
                             }}
-                            style={{ fontSize: '12px', padding: '6px 12px' }}
                           >
                             취소
                           </Button>

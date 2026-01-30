@@ -1,4 +1,5 @@
 import styled from 'styled-components';
+import { motion } from 'framer-motion';
 
 // 전체 페이지 래퍼 (오버레이 모달)
 export const AdminMyPageOverlay = styled.div`
@@ -30,6 +31,7 @@ export const HeaderBackground = styled.div`
   position: relative;
   background-size: cover;
   background-position: center;
+  background-image: ${props => props.$backgroundImage ? `url(${props.$backgroundImage})` : 'none'};
 `;
 
 // 뒤로가기 버튼
@@ -117,6 +119,18 @@ export const ProfilePhotoContainer = styled.div`
   ${ProfilePhotoButton}:hover & {
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   }
+  
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  svg {
+    width: 64px;
+    height: 64px;
+    color: #9CA3AF;
+  }
 `;
 
 export const ProfilePhotoOverlay = styled.div`
@@ -145,6 +159,12 @@ export const CameraIconContainer = styled.div`
   align-items: center;
   justify-content: center;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  
+  svg {
+    width: 24px;
+    height: 24px;
+    color: #3F4A5A;
+  }
 `;
 
 // 액션 버튼 그룹
@@ -227,6 +247,114 @@ export const ProfileRole = styled.p`
   margin: 0 0 32px 0;
 `;
 
+// 근태 통계 섹션
+export const AttendanceStatsSection = styled.div`
+  margin-bottom: 32px;
+`;
+
+export const AttendanceStatsHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+`;
+
+export const AttendanceStatsTitleRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+export const TitleIndicator = styled.div`
+  width: 4px;
+  height: 20px;
+  background-color: #6366F1;
+  border-radius: 2px;
+`;
+
+export const AttendanceStatsTitle = styled.h3`
+  font-size: 18px;
+  font-weight: 600;
+  color: #1F2328;
+  margin: 0;
+`;
+
+export const AttendanceStatsMonth = styled.p`
+  font-size: 14px;
+  color: #6E8FB3;
+  margin: 0;
+`;
+
+// 파이 차트 및 범례 컨테이너
+export const ChartContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+`;
+
+export const PieChartWrapper = styled.div`
+  width: 160px;
+  height: 160px;
+  position: relative;
+`;
+
+export const ChartCenterText = styled.div`
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+`;
+
+export const ChartCenterValue = styled.p`
+  font-size: 24px;
+  font-weight: bold;
+  color: #1F2328;
+  margin: 0;
+`;
+
+export const ChartCenterLabel = styled.p`
+  font-size: 12px;
+  color: #6E8FB3;
+  margin: 0;
+`;
+
+// 범례 (가로)
+export const LegendContainer = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  flex-wrap: wrap;
+`;
+
+export const LegendItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+export const LegendColor = styled.div`
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: ${props => props.$color};
+`;
+
+export const LegendText = styled.span`
+  font-size: 12px;
+  color: #6E8FB3;
+`;
+
+export const LegendValue = styled.span`
+  font-size: 12px;
+  font-weight: 600;
+  color: #1F2328;
+`;
+
 // 프로필 오른쪽 (기본 정보)
 export const ProfileRight = styled.div`
   flex-shrink: 0;
@@ -249,6 +377,12 @@ export const BasicInfoHeader = styled.div`
   align-items: center;
   gap: 8px;
   margin-bottom: 24px;
+  
+  svg {
+    width: 20px;
+    height: 20px;
+    color: #6366F1;
+  }
 `;
 
 export const BasicInfoTitle = styled.h3`
@@ -336,6 +470,47 @@ export const FormInput = styled.input`
   }
 `;
 
+export const FormHelperText = styled.p`
+  font-size: 12px;
+  color: #6E8FB3;
+  margin-top: 4px;
+  margin-bottom: 0;
+`;
+
+export const BasicInfoContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+`;
+
+export const DeleteModalContent = styled.div`
+  padding: 16px 0;
+`;
+
+export const DeleteModalText = styled.p`
+  font-size: 14px;
+  color: #1F2328;
+  margin-bottom: 16px;
+`;
+
+export const DeleteWarningBox = styled.div`
+  background-color: #FEF2F2;
+  border: 1px solid #FCA5A5;
+  border-radius: 8px;
+  padding: 12px;
+`;
+
+export const DeleteWarningText = styled.p`
+  font-size: 12px;
+  color: #DC2626;
+  margin: 0;
+`;
+
+export const MotionWrapper = styled(motion.div)`
+  width: 100%;
+  max-width: 1280px;
+`;
+
 export const FormTextarea = styled.textarea`
   width: 100%;
   padding: 10px 12px;
@@ -398,9 +573,17 @@ export const ImageSelectIcon = styled.div`
   align-items: center;
   justify-content: center;
   transition: transform 0.2s;
+  background-color: ${props => props.$bgColor || '#3F4A5A'};
+  border-radius: ${props => props.$rounded ? '50%' : '0'};
 
   ${ImageSelectButton}:hover & {
     transform: scale(1.1);
+  }
+  
+  svg {
+    width: 32px;
+    height: 32px;
+    color: white;
   }
 `;
 
