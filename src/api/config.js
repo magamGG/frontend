@@ -22,6 +22,7 @@ export const API_ENDPOINTS = {
     MANAGERS: (agencyNo) => `/api/members/agency/${agencyNo}/managers`,
     ARTISTS: (agencyNo) => `/api/members/agency/${agencyNo}/artists`,
     ARTISTS_BY_MANAGER: (managerNo) => `/api/members/manager/${managerNo}/artists`,
+    WORKING_ARTISTS: (managerNo) => `/api/members/manager/${managerNo}/working-artists`,
     ASSIGN: (artistNo, managerNo) => `/api/members/${artistNo}/assign/${managerNo}`,
     UNASSIGN: (artistNo) => `/api/members/${artistNo}/assign`,
     DELETE: (memberNo) => `/api/members/${memberNo}`,

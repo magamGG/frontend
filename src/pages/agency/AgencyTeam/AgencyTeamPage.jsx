@@ -113,7 +113,7 @@ export function AgencyTeamPage() {
           position: member.memberRole,
           email: member.memberEmail,
           phone: member.memberPhone || '',
-          status: member.memberStatus === 'ACTIVE' ? '근무중' : member.memberStatus === 'ON_LEAVE' ? '휴가' : member.memberStatus === 'SICK_LEAVE' ? '병가' : '근무중',
+          status: member.todayWorkStatus ?? (member.memberStatus === 'ACTIVE' ? '근무중' : member.memberStatus === 'ON_LEAVE' ? '휴가' : member.memberStatus === 'SICK_LEAVE' ? '병가' : '작업 시작전'),
           joinDate: member.memberCreatedAt ? new Date(member.memberCreatedAt).toISOString().split('T')[0] : '',
           avatar: member.memberProfileImage || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
         }));
@@ -135,6 +135,10 @@ export function AgencyTeamPage() {
     switch (status) {
       case '근무중':
         return 'bg-green-500';
+      case '작업 종료':
+        return 'bg-slate-500';
+      case '작업 시작전':
+        return 'bg-gray-400';
       case '휴가':
         return 'bg-yellow-500';
       case '병가':
@@ -817,8 +821,8 @@ export function AgencyTeamPage() {
                           </div>
                         )}
 
-                        {/* 역할이 매칭되지 않을 때 기본 정보 표시 */}
-                        {employee.role !== '작가' && employee.role !== '담당자' && !employee.role?.includes('어시스트') && (
+                        {/* 역할이 매칭되지 않을 때 기본 정보 표시 (작가/담당자/어시스트 제외) */}
+                        {employee.role !== '작가' && !employee.role?.includes('작가') && employee.role !== '담당자' && !employee.role?.includes('어시스트') && (
                           <div className="grid grid-cols-2 gap-6">
                             {/* 왼쪽: 참여중인 프로젝트 */}
                             <div>

@@ -41,6 +41,10 @@ export const memberService = {
     return api.get(API_ENDPOINTS.MEMBERS.ARTISTS_BY_MANAGER(managerNo));
   },
 
+  getWorkingArtistsByManager: (managerNo) => {
+    return api.get(API_ENDPOINTS.MEMBERS.WORKING_ARTISTS(managerNo));
+  },
+
   assignArtistToManager: (artistNo, managerNo) => {
     return api.post(API_ENDPOINTS.MEMBERS.ASSIGN(artistNo, managerNo));
   },

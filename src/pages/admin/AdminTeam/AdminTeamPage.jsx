@@ -6,8 +6,11 @@ import {
   Briefcase,
   Activity,
   Search,
-  ChevronRight
+  ChevronRight,
+  ChevronDown,
+  Heart
 } from 'lucide-react';
+import { Card } from '@/app/components/ui/card';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { memberService } from '@/api';
 import useAuthStore from '@/store/authStore';
@@ -77,9 +80,11 @@ export function AdminTeamPage() {
   const user = useAuthStore((state) => state.user);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [expandedEmployeeId, setExpandedEmployeeId] = useState(null); // 목록에서 펼친 작가 (데일리 설문 등)
   const [employees, setEmployees] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [employeeDetails, setEmployeeDetails] = useState({}); // 직원별 상세 정보 캐시
+  const [loadingDetails, setLoadingDetails] = useState(new Set()); // 상세 로딩 중인 id
 
   // 현재 로그인한 담당자의 managerNo 조회 및 배정된 작가 목록 가져오기
   useEffect(() => {
@@ -144,7 +149,7 @@ export function AdminTeamPage() {
     if (employeeDetails[employeeId]) {
       return; // 이미 캐시된 경우
     }
-
+    setLoadingDetails(prev => new Set(prev).add(employeeId));
     try {
       const response = await memberService.getMemberDetails(employeeId);
       const data = Array.isArray(response) ? response[0] : response;
@@ -187,6 +192,12 @@ export function AdminTeamPage() {
     } catch (error) {
       console.error('직원 상세 정보 조회 실패:', error);
       toast.error('직원 상세 정보를 불러오는데 실패했습니다.');
+    } finally {
+      setLoadingDetails(prev => {
+        const next = new Set(prev);
+        next.delete(employeeId);
+        return next;
+      });
     }
   };
 
@@ -204,13 +215,16 @@ export function AdminTeamPage() {
   });
 
   const handleEmployeeClick = async (employee) => {
-    // 상세 정보가 없으면 먼저 가져오기
-    if (!employeeDetails[employee.id]) {
+    const isExpanding = expandedEmployeeId !== employee.id;
+    setExpandedEmployeeId(isExpanding ? employee.id : null);
+    if (isExpanding && !employeeDetails[employee.id]) {
       await fetchEmployeeDetails(employee.id);
     }
-    // employees에서 최신 정보 가져오기
-    const updatedEmployee = employees.find(emp => emp.id === employee.id);
-    setSelectedEmployee(updatedEmployee || employee);
+  };
+
+  const handleOpenDetail = (employee) => {
+    const updatedEmployee = employees.find(emp => emp.id === employee.id) || employee;
+    setSelectedEmployee(updatedEmployee);
   };
 
   const handleBackToList = () => {
@@ -518,48 +532,106 @@ export function AdminTeamPage() {
           </EmptyStateContainer>
         ) : (
           <EmployeeList>
-            {filteredEmployees.map((employee) => (
-              <EmployeeCard key={employee.id} onClick={() => handleEmployeeClick(employee)}>
-              <EmployeeLeft>
-                <EmployeeAvatar>
-                  <Users className="w-6 h-6" />
-                </EmployeeAvatar>
-                <EmployeeInfo>
-                  <EmployeeName>{employee.name}</EmployeeName>
-                  <EmployeeBadges>
-                    <EmployeeBadge $variant="role">{employee.originalRole || employee.role}</EmployeeBadge>
-                    <EmployeeBadge $variant={employee.status === '근무중' ? 'working' : 'leave'}>
-                      {employee.status}
-                    </EmployeeBadge>
-                  </EmployeeBadges>
-                  <ContactInfo>
-                    <ContactItem>
-                      <ContactIcon>
-                        <Mail className="w-4 h-4" />
-                      </ContactIcon>
-                      <ContactText>{employee.email}</ContactText>
-                    </ContactItem>
-                    <ContactItem>
-                      <ContactIcon>
-                        <Phone className="w-4 h-4" />
-                      </ContactIcon>
-                      <ContactText>{employee.phone}</ContactText>
-                    </ContactItem>
-                  </ContactInfo>
-                </EmployeeInfo>
-              </EmployeeLeft>
-              <EmployeeRight>
-                <ProjectsInfo>
-                  <ProjectsLabel>참여 중인 프로젝트</ProjectsLabel>
-                  <ProjectsCount>{employee.projectCount}개</ProjectsCount>
-                </ProjectsInfo>
-                <ChevronIcon>
-                  <ChevronRight className="w-5 h-5" />
-                </ChevronIcon>
-              </EmployeeRight>
-            </EmployeeCard>
-          ))}
-        </EmployeeList>
+            {filteredEmployees.map((employee) => {
+              const isExpanded = expandedEmployeeId === employee.id;
+              const details = employeeDetails[employee.id];
+              const hc = details?.healthCheck;
+              return (
+                <div key={employee.id}>
+                  <EmployeeCard onClick={() => handleEmployeeClick(employee)}>
+                    <EmployeeLeft>
+                      <EmployeeAvatar>
+                        <Users className="w-6 h-6" />
+                      </EmployeeAvatar>
+                      <EmployeeInfo>
+                        <EmployeeName>{employee.name}</EmployeeName>
+                        <EmployeeBadges>
+                          <EmployeeBadge $variant="role">{employee.originalRole || employee.role}</EmployeeBadge>
+                          <EmployeeBadge $variant={employee.status === '근무중' ? 'working' : 'leave'}>
+                            {employee.status}
+                          </EmployeeBadge>
+                        </EmployeeBadges>
+                        <ContactInfo>
+                          <ContactItem>
+                            <ContactIcon>
+                              <Mail className="w-4 h-4" />
+                            </ContactIcon>
+                            <ContactText>{employee.email}</ContactText>
+                          </ContactItem>
+                          <ContactItem>
+                            <ContactIcon>
+                              <Phone className="w-4 h-4" />
+                            </ContactIcon>
+                            <ContactText>{employee.phone}</ContactText>
+                          </ContactItem>
+                        </ContactInfo>
+                      </EmployeeInfo>
+                    </EmployeeLeft>
+                    <EmployeeRight>
+                      <ProjectsInfo>
+                        <ProjectsLabel>참여 중인 프로젝트</ProjectsLabel>
+                        <ProjectsCount>{loadingDetails.has(employee.id) ? '...' : (details?.projectCount ?? employee.projectCount)}개</ProjectsCount>
+                      </ProjectsInfo>
+                      <ChevronIcon $rotated={isExpanded}>
+                        {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                      </ChevronIcon>
+                    </EmployeeRight>
+                  </EmployeeCard>
+
+                  {/* 펼침: 데일리 설문(건강 체크) 결과 - agency 직원관리와 동일 */}
+                  {isExpanded && (
+                    <Card className="mt-0 p-6 bg-white border-t-0 rounded-t-none" style={{ borderTopLeftRadius: 0, borderTopRightRadius: 0, marginTop: '-1px', border: '1px solid #e2e8f0' }}>
+                      {loadingDetails.has(employee.id) ? (
+                        <div className="text-center py-6 text-sm text-muted-foreground">상세 정보를 불러오는 중...</div>
+                      ) : (
+                        <>
+                          <div className="flex items-center gap-2 mb-3">
+                            <Heart className="w-4 h-4 text-primary" />
+                            <h3 className="text-base font-semibold text-foreground">건강 체크 결과</h3>
+                          </div>
+                          {hc ? (
+                            <div className="space-y-0">
+                              <div className="flex items-center justify-between py-2 border-b border-border">
+                                <span className="text-sm text-muted-foreground">오늘 컨디션</span>
+                                <span className="text-sm font-medium text-foreground">{hc.condition ?? '-'}</span>
+                              </div>
+                              <div className="flex items-center justify-between py-2 border-b border-border">
+                                <span className="text-sm text-muted-foreground">수면 시간</span>
+                                <span className="text-sm font-medium text-foreground">{hc.sleepHours ?? 0}시간</span>
+                              </div>
+                              <div className="flex items-center justify-between py-2 border-b border-border">
+                                <span className="text-sm text-muted-foreground">신체 불편함</span>
+                                <span className="text-sm font-medium text-foreground">{hc.physicalDiscomfort ?? hc.discomfortLevel ?? 0}</span>
+                              </div>
+                              {hc.memo && (
+                                <div className="pt-3 mt-3 border-t border-border">
+                                  <p className="text-xs text-muted-foreground mb-2">메모</p>
+                                  <div className="p-3 bg-muted/30 rounded-lg">
+                                    <p className="text-sm text-foreground">{hc.memo}</p>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="text-center py-8 text-sm text-muted-foreground">검진을 하지 않았습니다</div>
+                          )}
+                          <div className="mt-4 pt-3 border-t border-border">
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); handleOpenDetail(employee); }}
+                              className="text-sm text-primary hover:underline"
+                            >
+                              상세 보기 →
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </Card>
+                  )}
+                </div>
+              );
+            })}
+          </EmployeeList>
         )}
       </AdminTeamBody>
     </AdminTeamRoot>

@@ -22,7 +22,8 @@ import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, 
 import { ProjectListModal } from '@/components/modals/ProjectListModal';
 import { AttendanceListModal } from '@/components/modals/AttendanceListModal';
 import { toast } from 'sonner';
-import { leaveService, attendanceService } from '@/api/services';
+import { leaveService, attendanceService, memberService } from '@/api/services';
+import useAuthStore from '@/store/authStore';
 import svgPaths from '@/imports/svg-oq0e8tu4xb';
 import {
   AdminDashboardRoot,
@@ -202,23 +203,34 @@ export function AdminDashboardPage({ onNavigateToSection }) {
     return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
-  // TODO: Zustand store mapping - 현재 작업 중인 작가 목록
-  const workingArtists = [
-    { id: 1, name: '김작가', project: '로맨스 판타지', startTime: '09:30', status: '작업중' },
-    { id: 2, name: '이작가', project: '액션 웹툰', startTime: '10:00', status: '작업중' },
-    { id: 3, name: '박작가', project: '일상 코미디', startTime: '09:15', status: '작업중' },
-    { id: 4, name: '최작가', project: 'SF 드라마', startTime: '10:30', status: '작업중' },
-    { id: 5, name: '정작가', project: '스릴러 미스터리', startTime: '09:00', status: '작업중' },
-    { id: 6, name: '강작가', project: '학원 로맨스', startTime: '10:15', status: '작업중' },
-    { id: 7, name: '조작가', project: '판타지 액션', startTime: '09:45', status: '작업중' },
-    { id: 8, name: '윤작가', project: '일상 드라마', startTime: '10:45', status: '작업중' },
-    { id: 9, name: '장작가', project: '무협 판타지', startTime: '09:20', status: '작업중' },
-    { id: 10, name: '임작가', project: '현대 로맨스', startTime: '11:00', status: '작업중' },
-    { id: 11, name: '한작가', project: '호러 스릴러', startTime: '09:50', status: '작업중' },
-    { id: 12, name: '오작가', project: '역사 드라마', startTime: '10:20', status: '작업중' },
-    { id: 13, name: '서작가', project: '스포츠 드라마', startTime: '09:35', status: '작업중' },
-    { id: 14, name: '신작가', project: '음악 로맨스', startTime: '11:15', status: '작업중' },
-  ];
+  // 현재 작업 중인 작가: API 연동 (ARTIST_ASSIGNMENT + 오늘 마지막 ATTENDANCE '출근')
+  const user = useAuthStore((state) => state.user);
+  const [workingArtists, setWorkingArtists] = useState([]);
+  const [workingArtistsLoading, setWorkingArtistsLoading] = useState(false);
+  useEffect(() => {
+    const fetchWorkingArtists = async () => {
+      if (!user?.memberNo || !user?.agencyNo) return;
+      setWorkingArtistsLoading(true);
+      try {
+        const managersRes = await memberService.getManagersByAgency(user.agencyNo);
+        const managersList = Array.isArray(managersRes) ? managersRes : managersRes?.data ?? [];
+        const currentManager = managersList.find((m) => Number(m.memberNo) === Number(user.memberNo));
+        if (!currentManager?.managerNo) {
+          setWorkingArtists([]);
+          return;
+        }
+        const res = await memberService.getWorkingArtistsByManager(currentManager.managerNo);
+        const list = Array.isArray(res) ? res : res?.data ?? [];
+        setWorkingArtists(list);
+      } catch (e) {
+        console.error('현재 작업중인 작가 조회 실패:', e);
+        setWorkingArtists([]);
+      } finally {
+        setWorkingArtistsLoading(false);
+      }
+    };
+    fetchWorkingArtists();
+  }, [user?.memberNo, user?.agencyNo]);
 
   // TODO: Zustand store mapping - 담당 프로젝트 목록
   const managedProjects = [
@@ -573,19 +585,33 @@ export function AdminDashboardPage({ onNavigateToSection }) {
             </WorkingArtistsHeader>
 
             <WorkingArtistsGrid>
-              {workingArtists.map((artist) => (
-                <WorkingArtistCard key={artist.id}>
-                  <WorkingArtistHeader>
-                    <WorkingArtistStatusDot />
-                    <WorkingArtistName>{artist.name}</WorkingArtistName>
-                  </WorkingArtistHeader>
-                  <WorkingArtistProject>{artist.project}</WorkingArtistProject>
-                  <WorkingArtistMeta>
-                    <WorkingArtistMetaLabel>시작</WorkingArtistMetaLabel>
-                    <WorkingArtistMetaValue>{artist.startTime}</WorkingArtistMetaValue>
-                  </WorkingArtistMeta>
-                </WorkingArtistCard>
-              ))}
+              {workingArtistsLoading ? (
+                <p className="text-sm text-muted-foreground py-4">조회 중...</p>
+              ) : workingArtists.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4">현재 출근 중인 배정 작가가 없습니다.</p>
+              ) : (
+                workingArtists.map((artist) => (
+                  <WorkingArtistCard key={artist.memberNo}>
+                    <WorkingArtistHeader>
+                      <WorkingArtistStatusDot />
+                      <WorkingArtistName>{artist.memberName}</WorkingArtistName>
+                    </WorkingArtistHeader>
+                    <WorkingArtistProject>-</WorkingArtistProject>
+                    <WorkingArtistMeta>
+                      <WorkingArtistMetaLabel>시작</WorkingArtistMetaLabel>
+                      <WorkingArtistMetaValue>
+                        {artist.clockInTime
+                          ? new Date(artist.clockInTime).toLocaleTimeString('ko-KR', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: false,
+                            })
+                          : '-'}
+                      </WorkingArtistMetaValue>
+                    </WorkingArtistMeta>
+                  </WorkingArtistCard>
+                ))
+              )}
             </WorkingArtistsGrid>
           </WorkingArtistsCard>
         </AdminDashboardTopGrid>
