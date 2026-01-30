@@ -725,8 +725,7 @@ export function ArtistDashboardPage() {
               </TodayStatusHeader>
 
 
-              {/* 근태 상태 표시 */}
-<<<<<<< HEAD
+              {/* 근태 상태 표시 - API(leaveService.getCurrentStatus, attendanceService.getTodayStatus) 연동 */}
               {(() => {
                 const displayType = currentAttendanceType || ATTENDANCE_TYPE.OFFICE;
                 const displayConfig = ATTENDANCE_STATUS_CONFIG[displayType];
@@ -765,47 +764,6 @@ export function ArtistDashboardPage() {
                   </AttendanceStatusCard>
                 );
               })()}
-=======
-              {currentAttendanceType && currentStatusConfig ? (
-                <AttendanceStatusCard $bgColor={currentStatusConfig.bgColor} $borderColor={currentStatusConfig.borderColor}>
-                  <AttendanceStatusContent>
-                    <AttendanceStatusLeft>
-                      <AttendanceStatusIconContainer $iconBgColor={currentStatusConfig.iconBgColor} $iconColor={currentStatusConfig.iconColor}>
-                        <StatusIcon className="w-6 h-6" />
-                      </AttendanceStatusIconContainer>
-                      <AttendanceStatusText>
-                        <AttendanceStatusTitle>{currentAttendanceType} 중</AttendanceStatusTitle>
-                        <AttendanceStatusDescription>
-                          {currentAttendanceType === ATTENDANCE_TYPE.OFFICE
-                            ? '사무실에서 작업 중입니다'
-                            : currentAttendanceType === ATTENDANCE_TYPE.REMOTE
-                            ? '자택에서 작업 중입니다'
-                            : currentAttendanceType === ATTENDANCE_TYPE.LEAVE
-                            ? '휴식 중입니다'
-                            : '외부 환경에서 작업 중입니다'}
-                        </AttendanceStatusDescription>
-                      </AttendanceStatusText>
-                    </AttendanceStatusLeft>
-                  </AttendanceStatusContent>
-                  {(currentAttendanceType === ATTENDANCE_TYPE.LEAVE || currentAttendanceType === ATTENDANCE_TYPE.WORKATION) && (
-                    <AttendancePeriodBox $borderColor={currentStatusConfig.borderColor}>
-                      <AttendancePeriodLabel>
-                        {currentAttendanceType === ATTENDANCE_TYPE.LEAVE ? '휴가 기간' : '워케이션 기간'}
-                      </AttendancePeriodLabel>
-                      <AttendancePeriodValue>1월 15일 ~ 1월 22일</AttendancePeriodValue>
-                    </AttendancePeriodBox>
-                  )}
-                </AttendanceStatusCard>
-              ) : (
-                <EmptyStatusCard>
-                  <EmptyStatusIcon>
-                    <Briefcase className="w-8 h-8 text-gray-400" />
-                  </EmptyStatusIcon>
-                  <EmptyStatusTitle>현재 상태를 선택해주세요</EmptyStatusTitle>
-                  <EmptyStatusDescription>위의 드롭다운에서 오늘의 근무 상태를 선택하세요</EmptyStatusDescription>
-                </EmptyStatusCard>
-              )}
->>>>>>> 94ba2e8b56626352314c5f09b1ec11e24bdb6be9
             </TodayStatusCard>
 
             {/* 피드백/마감일/신청현황 그리드 */}
@@ -1056,15 +1014,7 @@ export function ArtistDashboardPage() {
         <WarningBox>
           <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
           <WarningContent>
-<<<<<<< HEAD
             <WarningDescription>출근을 종료하시겠습니까?</WarningDescription>
-=======
-            <WarningDescription>
-              {!healthCheckCompleted 
-                ? '건강 체크를 완료하지 않았습니다. 건강 체크 없이 작업을 종료하시겠습니까?'
-                : '작업을 종료하시겠습니까?'}
-            </WarningDescription>
->>>>>>> 94ba2e8b56626352314c5f09b1ec11e24bdb6be9
           </WarningContent>
         </WarningBox>
         <ModalActions>

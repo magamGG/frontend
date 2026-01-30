@@ -285,11 +285,7 @@ export function AdminTeamPage() {
                 <EmployeeDetailInfo>
                   <EmployeeDetailName>{selectedEmployee.name}</EmployeeDetailName>
                   <EmployeeDetailBadges>
-<<<<<<< HEAD
                     <EmployeeBadge $variant="role">{selectedEmployee.originalRole || selectedEmployee.role}</EmployeeBadge>
-=======
-                    <EmployeeBadge $variant="role">{selectedEmployee.role}</EmployeeBadge>
->>>>>>> 94ba2e8b56626352314c5f09b1ec11e24bdb6be9
                     <EmployeeBadge $variant={selectedEmployee.status === '근무중' ? 'working' : 'leave'}>
                       {selectedEmployee.status}
                     </EmployeeBadge>
@@ -531,11 +527,7 @@ export function AdminTeamPage() {
                 <EmployeeInfo>
                   <EmployeeName>{employee.name}</EmployeeName>
                   <EmployeeBadges>
-<<<<<<< HEAD
                     <EmployeeBadge $variant="role">{employee.originalRole || employee.role}</EmployeeBadge>
-=======
-                    <EmployeeBadge $variant="role">{employee.role}</EmployeeBadge>
->>>>>>> 94ba2e8b56626352314c5f09b1ec11e24bdb6be9
                     <EmployeeBadge $variant={employee.status === '근무중' ? 'working' : 'leave'}>
                       {employee.status}
                     </EmployeeBadge>
