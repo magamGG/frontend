@@ -2,6 +2,9 @@ import { motion, AnimatePresence } from "motion/react";
 import { Bell, Plus, User, X, ChevronRight } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Badge } from "@/app/components/ui/badge";
+import { memberService } from '@/api/services';
+import { API_BASE_URL } from '@/api/config';
+import useAuthStore from '@/store/authStore';
 import { notificationService } from "@/api/services";
 import { toast } from "sonner";
 import {
@@ -83,9 +86,64 @@ export function Header({
   onAttendanceClick,
   userRole,
 }) {
+  const { user } = useAuthStore();
+  const memberNo = user?.memberNo;
+
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef(null);
-  const [notifications, setNotifications] = useState([]);
+
+  // 사용자 정보 state
+  const [memberName, setMemberName] = useState('');
+  const [memberRole, setMemberRole] = useState('');
+  const [profileImage, setProfileImage] = useState(null);
+
+  const [notifications, setNotifications] = useState([
+    {
+      id: 1,
+      title: "마감 알림",
+      message: "에피소드 42 마감이 오늘입니다.",
+      time: "방금 전",
+      isRead: false,
+      type: "warning",
+      linkedPage: "calendar",
+    },
+    {
+      id: 2,
+      title: "캘린더 알림",
+      message: "내일 편집자 미팅이 예정되어 있습니다.",
+      time: "30분 전",
+      isRead: false,
+      type: "info",
+      linkedPage: "calendar",
+    },
+    {
+      id: 3,
+      title: "승인 완료",
+      message: "워케이션 신청이 승인되었습니다.",
+      time: "2시간 전",
+      isRead: false,
+      type: "success",
+      linkedPage: "attendance",
+    },
+    {
+      id: 4,
+      title: "건강 체크",
+      message: "오늘 건강 설문을 완료하지 않았습니다.",
+      time: "3시간 전",
+      isRead: true,
+      type: "info",
+      linkedPage: "dashboard",
+    },
+    {
+      id: 5,
+      title: "작품 업데이트",
+      message: "새로운 에피소드가 업로드되었습니다.",
+      time: "어제",
+      isRead: true,
+      type: "info",
+      linkedPage: "projects",
+    },
+  ]);
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
 
   // 알림 목록 조회
@@ -174,6 +232,34 @@ export function Header({
   const unreadCount = notifications.filter(
     (n) => !n.isRead,
   ).length;
+
+  // 사용자 정보 로드
+  useEffect(() => {
+    if (!memberNo) return;
+    
+    const loadUserInfo = async () => {
+      try {
+        const myPageData = await memberService.getMyPageInfo(memberNo);
+        setMemberName(myPageData.memberName || '');
+        setMemberRole(myPageData.memberRole || '');
+        
+        // 프로필 이미지 URL 설정
+        const imageBaseUrl = API_BASE_URL || 'http://localhost:8888';
+        if (myPageData.memberProfileImage) {
+          setProfileImage(`${imageBaseUrl}/uploads/${myPageData.memberProfileImage}`);
+        } else {
+          setProfileImage(null);
+        }
+      } catch (error) {
+        console.error('사용자 정보 로드 실패:', error);
+        // 에러 발생 시 기본값 사용
+        setMemberName(user?.memberName || '');
+        setMemberRole(user?.memberRole || '');
+      }
+    };
+    
+    loadUserInfo();
+  }, [memberNo, user]);
 
   // Close notification panel when clicking outside
   useEffect(() => {
@@ -464,14 +550,27 @@ export function Header({
             onClick={onProfileClick}
           >
             <ProfileAvatar>
-              <User style={{ width: '16px', height: '16px', color: 'var(--primary-foreground)' }} />
+              {profileImage ? (
+                <img 
+                  src={profileImage} 
+                  alt="Profile" 
+                  style={{ 
+                    width: '100%', 
+                    height: '100%', 
+                    objectFit: 'cover',
+                    borderRadius: '50%'
+                  }} 
+                />
+              ) : (
+                <User style={{ width: '16px', height: '16px', color: 'var(--primary-foreground)' }} />
+              )}
             </ProfileAvatar>
             <ProfileInfo>
               <ProfileName>
-                김작가
+                {memberName || user?.memberName || '사용자'}
               </ProfileName>
               <ProfileRole>
-                에이전시 대표
+                {memberRole || user?.memberRole || ''}
               </ProfileRole>
             </ProfileInfo>
             <ProfileChevron as={ChevronRight} />

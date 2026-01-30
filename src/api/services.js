@@ -56,6 +56,34 @@ export const memberService = {
   removeFromAgency: (memberNo) => {
     return api.put(API_ENDPOINTS.MEMBERS.REMOVE_FROM_AGENCY(memberNo));
   },
+
+  getMyPageInfo: (memberNo) => {
+    return api.get(API_ENDPOINTS.MEMBERS.MY_PAGE(memberNo));
+  },
+
+  updateProfile: (memberNo, memberData) => {
+    return api.put(API_ENDPOINTS.MEMBERS.UPDATE_PROFILE(memberNo), memberData);
+  },
+
+  uploadProfileImage: (memberNo, file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post(API_ENDPOINTS.MEMBERS.UPLOAD_PROFILE_IMAGE(memberNo), formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+
+  uploadBackgroundImage: (memberNo, file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post(API_ENDPOINTS.MEMBERS.UPLOAD_BACKGROUND_IMAGE(memberNo), formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+
+  getEmployeeStatistics: (agencyNo) => {
+    return api.get(API_ENDPOINTS.MEMBERS.EMPLOYEE_STATISTICS(agencyNo));
+  },
 };
 
 // 출석/근태 서비스
@@ -80,6 +108,11 @@ export const attendanceService = {
   // 출석 이력 조회
   getHistory: (memberNo, startDate, endDate) => {
     return api.get(API_ENDPOINTS.ATTENDANCE.HISTORY(memberNo, startDate, endDate));
+  },
+  
+  // 근태 통계 조회
+  getStatistics: (memberNo, year, month) => {
+    return api.get(API_ENDPOINTS.ATTENDANCE.STATISTICS(memberNo, year, month));
   },
 };
 
