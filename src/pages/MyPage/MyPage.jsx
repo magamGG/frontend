@@ -91,6 +91,12 @@ export function MyPage({ onClose, onLogout }) {
   const { user } = useAuthStore();
   const memberNo = user?.memberNo;
   
+  console.log('🔍 MyPage 컴포넌트 렌더링:', { 
+    user, 
+    memberNo, 
+    userMemberName: user?.memberName 
+  });
+  
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isImageSelectModalOpen, setIsImageSelectModalOpen] = useState(false);
@@ -114,20 +120,45 @@ export function MyPage({ onClose, onLogout }) {
 
   // Load user data from API
   useEffect(() => {
-    if (!memberNo) return;
+    console.log('🚀 MyPage useEffect 실행:', { memberNo, user });
+    
+    if (!memberNo) {
+      console.log('❌ memberNo가 없어서 종료');
+      return;
+    }
     
     const loadMyPageData = async () => {
       try {
         setIsLoading(true);
         
+        console.log('📡 API 호출 시작: getMyPageInfo', { memberNo });
         // 마이페이지 정보 조회
         const myPageData = await memberService.getMyPageInfo(memberNo);
+        console.log('✅ API 응답 받음:', {
+          memberName: myPageData.memberName,
+          memberEmail: myPageData.memberEmail,
+          memberPhone: myPageData.memberPhone,
+          memberAddress: myPageData.memberAddress,
+          agencyName: myPageData.agencyName,
+          memberRole: myPageData.memberRole,
+          전체데이터: myPageData
+        });
+        
         setUserName(myPageData.memberName || '');
         setEmail(myPageData.memberEmail || '');
         setPhone(myPageData.memberPhone || '');
         setLocation(myPageData.memberAddress || '');
         setStudio(myPageData.agencyName || '');
         setMemberRole(myPageData.memberRole || '');
+        
+        console.log('✅ State 업데이트 완료:', {
+          userName: myPageData.memberName || '',
+          email: myPageData.memberEmail || '',
+          phone: myPageData.memberPhone || '',
+          location: myPageData.memberAddress || '',
+          studio: myPageData.agencyName || '',
+          memberRole: myPageData.memberRole || ''
+        });
         
         // 이미지 URL 설정
         const imageBaseUrl = API_BASE_URL || 'http://localhost:8888';
@@ -170,12 +201,25 @@ export function MyPage({ onClose, onLogout }) {
   }, [memberNo]);
 
   const handleSaveProfile = async () => {
-    if (!memberNo) return;
+    if (!memberNo) {
+      console.error('❌ memberNo가 없습니다.');
+      return;
+    }
     
     if (password && password !== confirmPassword) {
       toast.error('비밀번호가 일치하지 않습니다.');
       return;
     }
+    
+    console.log('💾 프로필 저장 시작:', {
+      memberNo,
+      updateData: {
+        memberName: userName,
+        memberPhone: phone,
+        memberAddress: location,
+        memberPassword: password ? '***' : undefined
+      }
+    });
     
     try {
       const updateData = {
@@ -186,14 +230,26 @@ export function MyPage({ onClose, onLogout }) {
         // 작가는 소속 수정 불가 (agencyName 제외)
       };
       
+      console.log('📤 API 호출: updateProfile', { memberNo, updateData });
       await memberService.updateProfile(memberNo, updateData);
+      console.log('✅ 프로필 업데이트 성공');
       toast.success('프로필이 성공적으로 업데이트되었습니다.');
       setIsEditModalOpen(false);
       setPassword('');
       setConfirmPassword('');
       
       // 데이터 다시 로드
+      console.log('🔄 DB에서 최신 데이터 다시 조회:', { memberNo });
       const myPageData = await memberService.getMyPageInfo(memberNo);
+      console.log('✅ 최신 데이터 조회 완료:', {
+        memberName: myPageData.memberName,
+        memberEmail: myPageData.memberEmail,
+        memberPhone: myPageData.memberPhone,
+        memberAddress: myPageData.memberAddress,
+        agencyName: myPageData.agencyName,
+        memberRole: myPageData.memberRole
+      });
+      
       setUserName(myPageData.memberName || '');
       setEmail(myPageData.memberEmail || '');
       setPhone(myPageData.memberPhone || '');
@@ -201,7 +257,12 @@ export function MyPage({ onClose, onLogout }) {
       setStudio(myPageData.agencyName || '');
       setMemberRole(myPageData.memberRole || '');
     } catch (error) {
-      console.error('프로필 수정 실패:', error);
+      console.error('❌ 프로필 수정 실패:', error);
+      console.error('에러 상세:', {
+        message: error?.message,
+        response: error?.response?.data,
+        status: error?.response?.status
+      });
       toast.error('프로필 수정에 실패했습니다.');
     }
   };
