@@ -513,6 +513,22 @@ export function AgencyWorkcationPage() {
                       <Progress value={avgProgress} className="h-3" />
                     </div>
                   )}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-muted-foreground">전체 작업 진행률</span>
+                      <span className="text-2xl font-bold text-foreground">{avgProgress}%</span>
+                    </div>
+                    <div className="relative h-4 w-full overflow-hidden rounded-full bg-gray-100">
+                      <div
+                        className="h-full rounded-full transition-all duration-500 ease-out shadow-sm"
+                        style={{
+                          width: `${avgProgress}%`,
+                          background: 'linear-gradient(90deg, #A855F7 0%, #9333EA 50%, #7C3AED 100%)',
+                          boxShadow: '0 2px 4px rgba(147, 51, 234, 0.3)',
+                        }}
+                      />
+                    </div>
+                  </div>
 
                   {/* Tasks Summary */}
                   <MemberCardTasks>

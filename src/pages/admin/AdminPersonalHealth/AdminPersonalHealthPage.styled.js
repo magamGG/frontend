@@ -265,13 +265,17 @@ export const SurveyModalContent = styled.div`
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 16px 0;
+  padding: 24px;
+  background-color: #F5F5F5;
 `;
 
 export const SurveyDescription = styled.div`
   font-size: 14px;
   color: #6e8fb3;
   line-height: 1.6;
+  padding: 16px;
+  background-color: #E5E5E5;
+  border-radius: 8px;
 `;
 
 export const SurveyDivider = styled.div`
@@ -307,31 +311,34 @@ export const SurveyQuestionDesc = styled.p`
 export const SurveyAnswerButtons = styled.div`
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  gap: 4px;
+  flex-wrap: nowrap;
+  justify-content: space-between;
+  width: 100%;
 `;
 
 export const SurveyAnswerButton = styled.button`
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  border: 1px solid ${props => (props.$isSelected ? '#3F4A5A' : '#DADDE1')};
-  background-color: ${props => (props.$isSelected ? '#3F4A5A' : 'white')};
-  color: ${props => (props.$isSelected ? 'white' : '#1F2328')};
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  border-radius: 4px;
+  border: 1px solid ${props => (props.$isSelected ? '#2563EB' : '#D1D5DB')};
+  background-color: ${props => (props.$isSelected ? '#2563EB' : '#F3F4F6')};
+  color: ${props => (props.$isSelected ? 'white' : '#374151')};
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
 
   &:hover {
-    border-color: ${props => (props.$isSelected ? '#3F4A5A' : '#6E8FB3')};
+    border-color: ${props => (props.$isSelected ? '#2563EB' : '#9CA3AF')};
+    background-color: ${props => (props.$isSelected ? '#2563EB' : '#E5E7EB')};
   }
 `;
 
 export const SurveyInfoBox = styled.div`
-  padding: 12px;
-  background-color: #eff6ff;
-  border: 1px solid #bfdbfe;
+  padding: 16px;
+  background-color: #E5E5E5;
   border-radius: 8px;
 `;
 
@@ -346,6 +353,6 @@ export const SurveyModalActions = styled.div`
   display: flex;
   gap: 8px;
   justify-content: flex-end;
-  padding-top: 16px;
-  border-top: 1px solid #dadde1;
+  padding: 24px;
+  background-color: white;
 `;

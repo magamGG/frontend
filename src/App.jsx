@@ -380,7 +380,12 @@ export default function App() {
   return (
     <DndProvider backend={HTML5Backend}>
       <ProjectProvider>
-        <Toaster position="top-right" />
+        <Toaster 
+          position="top-right" 
+          duration={1000}
+          closeButton={false}
+          className="toast-custom"
+        />
         
         {authView === 'login' && (
           <LoginPage 
