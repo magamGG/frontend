@@ -99,7 +99,6 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
 
     setIsLoading(true);
     try {
-      // 가이드 문서에 따른 요청 변수명
       const requestData = {
         agencyCode: agencyCodeInput.trim(),
         memberName: userData.name,
@@ -109,6 +108,7 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
 
       await agencyService.requestJoinAgency(requestData);
       toast.success('에이전시 가입 요청이 전송되었습니다!');
+      // 요청 완료 화면으로 전환. 대시보드 이동은 "완료" 버튼 클릭 시에만 handleComplete → onSuccess 로 처리.
       setStep('success');
     } catch (error) {
       const errorMessage = error?.message || '에이전시 가입 요청 전송에 실패했습니다. 다시 시도해주세요.';
@@ -120,63 +120,69 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
   };
 
   const handleComplete = () => {
+    // "완료" 클릭 시 로그인 화면으로만 이동. 대시보드 이동은 에이전시가 new_request 승인 후 사용자가 다시 로그인할 때.
     onSuccess();
   };
 
+  // 요청 완료 화면: "완료" 클릭 시 대시보드로 가지 않고 로그인 화면으로 이동. 에이전시 승인 후 재로그인 시 대시보드로 이동.
   if (step === 'success') {
     return (
       <JoinAgencyRequestRoot>
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-          style={{ width: '100%', maxWidth: '512px' }}
-        >
-          <Card>
-            <SuccessCard>
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-              >
-                <SuccessIconWrapper>
-                  <div>
-                    <CheckCircle2 size={48} />
-                  </div>
-                </SuccessIconWrapper>
-              </motion.div>
+        <BackgroundPattern />
+        <JoinAgencyRequestContainer style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100%' }}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+            style={{ width: '100%', maxWidth: '512px' }}
+          >
+            <Card>
+              <SuccessCard>
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                >
+                  <SuccessIconWrapper>
+                    <div>
+                      <CheckCircle2 size={48} />
+                    </div>
+                  </SuccessIconWrapper>
+                </motion.div>
 
-              <SuccessTitle>요청이 전송되었습니다!</SuccessTitle>
-              <SuccessDescription>
-                에이전시 담당자가 검토 후 승인하면<br />
-                알림을 받으실 수 있습니다.
-              </SuccessDescription>
+                <SuccessTitle>요청이 전송되었습니다!</SuccessTitle>
+                <SuccessDescription>
+                  에이전시 담당자가 검토 후 승인하면 알림을 받으실 수 있습니다.
+                  <br />
+                  승인 후 다시 로그인하시면 대시보드로 이동합니다.
+                </SuccessDescription>
 
-              <SuccessInfoBox>
-                <InfoRow>
-                  <InfoLabel>이름</InfoLabel>
-                  <InfoValue>{userData.name}</InfoValue>
-                </InfoRow>
-                <InfoRow>
-                  <InfoLabel>이메일</InfoLabel>
-                  <InfoValue>{userData.email}</InfoValue>
-                </InfoRow>
-                <InfoRow>
-                  <InfoLabel>연락처</InfoLabel>
-                  <InfoValue>{userData.phone}</InfoValue>
-                </InfoRow>
-                <InfoRow>
-                  <InfoLabel>회사 코드</InfoLabel>
-                  <InfoValue>{agencyCodeInput || '미입력'}</InfoValue>
-                </InfoRow>
-              </SuccessInfoBox>
+                <SuccessInfoBox>
+                  <InfoRow>
+                    <InfoLabel>이름</InfoLabel>
+                    <InfoValue>{userData.name}</InfoValue>
+                  </InfoRow>
+                  <InfoRow>
+                    <InfoLabel>이메일</InfoLabel>
+                    <InfoValue>{userData.email}</InfoValue>
+                  </InfoRow>
+                  <InfoRow>
+                    <InfoLabel>연락처</InfoLabel>
+                    <InfoValue>{userData.phone}</InfoValue>
+                  </InfoRow>
+                  <InfoRow>
+                    <InfoLabel>회사 코드</InfoLabel>
+                    <InfoValue>{agencyCodeInput || '미입력'}</InfoValue>
+                  </InfoRow>
+                </SuccessInfoBox>
 
-              <Button onClick={handleComplete} style={{ width: '100%', padding: '24px' }}>
-                완료
-              </Button>
-            </SuccessCard>
-          </Card>
-        </motion.div>
+                <Button onClick={handleComplete} style={{ width: '100%', padding: '24px' }}>
+                  로그인 화면으로
+                </Button>
+              </SuccessCard>
+            </Card>
+          </motion.div>
+        </JoinAgencyRequestContainer>
       </JoinAgencyRequestRoot>
     );
   }

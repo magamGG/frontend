@@ -152,10 +152,10 @@ export default function App() {
     setAuthView('login');
   };
 
-  const handleJoinRequestSuccess = () => {
-    // After successful join request, go to dashboard
-    setHasAgency(true);
-    setAuthView('dashboard');
+  const handleJoinRequestAck = () => {
+    // 요청 완료 화면에서 "완료" 클릭 시: 대시보드로 가지 않고 로그인 화면으로만 이동.
+    // 에이전시가 new_request를 승인한 뒤, 사용자가 다시 로그인할 때 agencyNo가 있으므로 그때 대시보드로 이동.
+    setAuthView('login');
   };
 
   // Define sections based on user role
@@ -406,7 +406,7 @@ export default function App() {
         {authView === 'join-request' && (
           <JoinAgencyRequestPage 
             onBack={handleBackToLogin}
-            onSuccess={handleJoinRequestSuccess}
+            onSuccess={handleJoinRequestAck}
           />
         )}
 
