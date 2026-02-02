@@ -6,6 +6,10 @@ import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { toast } from 'sonner';
 import { motion } from 'motion/react';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { memberService, attendanceService } from '@/api/services';
+import { API_BASE_URL } from '@/api/config';
+import useAuthStore from '@/store/authStore';
 import {
   AdminMyPageOverlay,
   AdminMyPageContainer,
@@ -23,6 +27,22 @@ import {
   ProfileCenter,
   ProfileName,
   ProfileRole,
+  AttendanceStatsSection,
+  AttendanceStatsHeader,
+  AttendanceStatsTitleRow,
+  TitleIndicator,
+  AttendanceStatsTitle,
+  AttendanceStatsMonth,
+  ChartContainer,
+  PieChartWrapper,
+  ChartCenterText,
+  ChartCenterValue,
+  ChartCenterLabel,
+  LegendContainer,
+  LegendItem,
+  LegendColor,
+  LegendText,
+  LegendValue,
   ProfileRight,
   BasicInfoSection,
   BasicInfoHeader,
@@ -37,115 +57,312 @@ import {
   FormLabel,
   FormInput,
   FormTextarea,
+  FormHelperText,
   ModalActions,
   ImageSelectGrid,
   ImageSelectButton,
   ImageSelectIcon,
   ImageSelectLabel,
+  BasicInfoContent,
+  DeleteModalContent,
+  DeleteModalText,
+  DeleteWarningBox,
+  DeleteWarningText,
+  MotionWrapper,
 } from './AdminMyPage.styled';
 
+// 근태 타입 정의 및 색상 매핑
+const ATTENDANCE_TYPE_COLORS = {
+  '출근': '#00ACC1',
+  '휴가': '#757575',
+  '재택근무': '#FF9800',
+  '워케이션': '#9C27B0',
+};
+
+// Custom tooltip for the pie chart
+/**
+ * @param {Object} props
+ * @param {boolean} props.active
+ * @param {Array} props.payload
+ */
+const CustomTooltip = ({ active, payload }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white px-4 py-2 rounded-lg shadow-lg border border-[#DADDE1]">
+        <p className="text-sm font-semibold text-[#1F2328]">{payload[0].name}</p>
+        <p className="text-sm text-[#6E8FB3]">{payload[0].value}일</p>
+      </div>
+    );
+  }
+  return null;
+};
+
 export function AdminMyPage({ onClose, onLogout }) {
+  const { user } = useAuthStore();
+  const memberNo = user?.memberNo;
+  
+  console.log('🔍 AdminMyPage 컴포넌트 렌더링:', { 
+    user, 
+    memberNo, 
+    userMemberName: user?.memberName 
+  });
+  
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isImageSelectModalOpen, setIsImageSelectModalOpen] = useState(false);
-  const [userName, setUserName] = useState('김담당자');
-  const [email, setEmail] = useState('kim.manager@example.com');
-  const [phone, setPhone] = useState('010-1234-5678');
-  const [location, setLocation] = useState('서울특별시 강남구');
-  const [studio, setStudio] = useState('스튜디오 아방가르');
+  const [isLoading, setIsLoading] = useState(true);
+  const [userName, setUserName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [location, setLocation] = useState('');
+  const [studio, setStudio] = useState('');
   const [profileImage, setProfileImage] = useState(null);
   const [backgroundImage, setBackgroundImage] = useState(null);
+  const [attendanceData, setAttendanceData] = useState([]);
+  const [totalDays, setTotalDays] = useState(0);
+  const [memberRole, setMemberRole] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteError, setDeleteError] = useState('');
+  
+  const currentMonth = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' });
 
-  // TODO: Zustand store mapping - 사용자 데이터 로드
+  // Load user data from API
   useEffect(() => {
-    const savedUserData = localStorage.getItem('managerUserData');
-    if (savedUserData) {
-      const userData = JSON.parse(savedUserData);
-      setUserName(userData.name || '김담당자');
-      setEmail(userData.email || 'kim.manager@example.com');
-      setPhone(userData.phone || '010-1234-5678');
-      setLocation(userData.location || '서울특별시 강남구');
-      setStudio(userData.studio || '스튜디오 아방가르');
-      setProfileImage(userData.profileImage || null);
-      setBackgroundImage(userData.backgroundImage || null);
+    console.log('🚀 AdminMyPage useEffect 실행:', { memberNo, user });
+    
+    if (!memberNo) {
+      console.log('❌ memberNo가 없어서 종료');
+      return;
     }
-  }, []);
-
-  const handleSaveProfile = () => {
-    const userData = {
-      name: userName,
-      email,
-      phone,
-      location,
-      studio,
-      profileImage,
-      backgroundImage
+    
+    const loadMyPageData = async () => {
+      try {
+        setIsLoading(true);
+        
+        console.log('📡 API 호출 시작: getMyPageInfo', { memberNo });
+        // 마이페이지 정보 조회
+        const myPageData = await memberService.getMyPageInfo(memberNo);
+        console.log('✅ API 응답 받음:', {
+          memberName: myPageData.memberName,
+          memberEmail: myPageData.memberEmail,
+          memberPhone: myPageData.memberPhone,
+          memberAddress: myPageData.memberAddress,
+          agencyName: myPageData.agencyName,
+          memberRole: myPageData.memberRole,
+          전체데이터: myPageData
+        });
+        
+        setUserName(myPageData.memberName || '');
+        setEmail(myPageData.memberEmail || '');
+        setPhone(myPageData.memberPhone || '');
+        setLocation(myPageData.memberAddress || '');
+        setStudio(myPageData.agencyName || '');
+        setMemberRole(myPageData.memberRole || '');
+        
+        console.log('✅ State 업데이트 완료:', {
+          userName: myPageData.memberName || '',
+          email: myPageData.memberEmail || '',
+          phone: myPageData.memberPhone || '',
+          location: myPageData.memberAddress || '',
+          studio: myPageData.agencyName || '',
+          memberRole: myPageData.memberRole || ''
+        });
+        
+        // 이미지 URL 설정
+        const imageBaseUrl = API_BASE_URL || 'http://localhost:8888';
+        if (myPageData.memberProfileImage) {
+          setProfileImage(`${imageBaseUrl}/uploads/${myPageData.memberProfileImage}`);
+        }
+        if (myPageData.memberProfileBannerImage) {
+          setBackgroundImage(`${imageBaseUrl}/uploads/${myPageData.memberProfileBannerImage}`);
+        }
+        
+        // 근태 통계 조회
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth() + 1;
+        
+        try {
+          const statistics = await attendanceService.getStatistics(memberNo, year, month);
+          const formattedData = statistics.typeCounts.map(item => ({
+            name: item.type,
+            value: Number(item.count), // Long을 Number로 변환
+            color: ATTENDANCE_TYPE_COLORS[item.type] || '#6E8FB3',
+          }));
+          
+          setAttendanceData(formattedData);
+          setTotalDays(statistics.totalCount || 0);
+        } catch (error) {
+          console.error('근태 통계 조회 실패:', error);
+          setAttendanceData([]);
+          setTotalDays(0);
+        }
+      } catch (error) {
+        console.error('마이페이지 데이터 로드 실패:', error);
+        toast.error('데이터를 불러오는데 실패했습니다.');
+      } finally {
+        setIsLoading(false);
+      }
     };
-    localStorage.setItem('managerUserData', JSON.stringify(userData));
-    toast.success('프로필이 성공적으로 업데이트되었습니다.');
-    setIsEditModalOpen(false);
+    
+    loadMyPageData();
+  }, [memberNo]);
+
+  const handleSaveProfile = async () => {
+    if (!memberNo) {
+      console.error('❌ memberNo가 없습니다.');
+      return;
+    }
+    
+    if (password && password !== confirmPassword) {
+      toast.error('비밀번호가 일치하지 않습니다.');
+      return;
+    }
+    
+    console.log('💾 프로필 저장 시작:', {
+      memberNo,
+      updateData: {
+        memberName: userName,
+        memberPhone: phone,
+        memberAddress: location,
+        memberPassword: password ? '***' : undefined
+      }
+    });
+    
+    try {
+      const updateData = {
+        memberName: userName,
+        memberPhone: phone,
+        memberAddress: location,
+        memberPassword: password || undefined, // 비밀번호가 있으면 전송
+        // 담당자는 소속 수정 불가 (agencyName 제외)
+      };
+      
+      console.log('📤 API 호출: updateProfile', { memberNo, updateData });
+      await memberService.updateProfile(memberNo, updateData);
+      console.log('✅ 프로필 업데이트 성공');
+      toast.success('프로필이 성공적으로 업데이트되었습니다.');
+      setIsEditModalOpen(false);
+      setPassword('');
+      setConfirmPassword('');
+      
+      // 데이터 다시 로드
+      console.log('🔄 DB에서 최신 데이터 다시 조회:', { memberNo });
+      const myPageData = await memberService.getMyPageInfo(memberNo);
+      console.log('✅ 최신 데이터 조회 완료:', {
+        memberName: myPageData.memberName,
+        memberEmail: myPageData.memberEmail,
+        memberPhone: myPageData.memberPhone,
+        memberAddress: myPageData.memberAddress,
+        agencyName: myPageData.agencyName,
+        memberRole: myPageData.memberRole
+      });
+      
+      setUserName(myPageData.memberName || '');
+      setEmail(myPageData.memberEmail || '');
+      setPhone(myPageData.memberPhone || '');
+      setLocation(myPageData.memberAddress || '');
+      setStudio(myPageData.agencyName || '');
+      setMemberRole(myPageData.memberRole || '');
+    } catch (error) {
+      console.error('❌ 프로필 수정 실패:', error);
+      console.error('에러 상세:', {
+        message: error?.message,
+        response: error?.response?.data,
+        status: error?.response?.status
+      });
+      toast.error('프로필 수정에 실패했습니다.');
+    }
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('managerUserData');
+    localStorage.removeItem('artistUserData');
     localStorage.removeItem('userRole');
     localStorage.removeItem('hasAgency');
     toast.success('로그아웃되었습니다.');
     onLogout();
   };
 
-  const handleDeleteAccount = () => {
-    localStorage.clear();
-    toast.success('회원 탈퇴가 완료되었습니다.');
-    setIsDeleteModalOpen(false);
-    onLogout();
+  const handleDeleteAccount = async () => {
+    if (!memberNo) return;
+    
+    // 에러 메시지 초기화
+    setDeleteError('');
+    
+    if (!deletePassword || deletePassword.trim() === '') {
+      setDeleteError('비밀번호를 입력해주세요.');
+      return;
+    }
+    
+    try {
+      await memberService.deleteMember(memberNo, deletePassword);
+      toast.success('회원 탈퇴가 완료되었습니다.');
+      setIsDeleteModalOpen(false);
+      setDeletePassword('');
+      setDeleteError('');
+      onLogout();
+    } catch (error) {
+      console.error('회원 탈퇴 실패:', error);
+      const errorMessage = error?.response?.data?.message || error?.message || '회원 탈퇴에 실패했습니다.';
+      setDeleteError(errorMessage);
+    }
   };
 
   const handleImageTypeSelect = (type) => {
-    setIsImageSelectModalOpen(false);
+    if (!memberNo) return;
     
+    setIsImageSelectModalOpen(false);
+
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    input.onchange = (e) => {
+    input.onchange = async (e) => {
       const file = e.target.files?.[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const newImage = reader.result;
-          const savedUserData = localStorage.getItem('managerUserData');
-          const userData = savedUserData ? JSON.parse(savedUserData) : {};
-          
-          if (type === 'background') {
-            setBackgroundImage(newImage);
-            userData.backgroundImage = newImage;
-            toast.success('배경 이미지가 변경되었습니다.');
-          } else {
-            setProfileImage(newImage);
-            userData.profileImage = newImage;
-            toast.success('프로필 사진이 변경되었습니다.');
-          }
-          
-          localStorage.setItem('managerUserData', JSON.stringify(userData));
-        };
-        reader.readAsDataURL(file);
+      if (!file) return;
+      
+      try {
+        const imageBaseUrl = API_BASE_URL || 'http://localhost:8888';
+        let fileName;
+        if (type === 'background') {
+          fileName = await memberService.uploadBackgroundImage(memberNo, file);
+          setBackgroundImage(`${imageBaseUrl}/uploads/${fileName}`);
+          toast.success('배경 이미지가 변경되었습니다.');
+        } else {
+          fileName = await memberService.uploadProfileImage(memberNo, file);
+          setProfileImage(`${imageBaseUrl}/uploads/${fileName}`);
+          toast.success('프로필 사진이 변경되었습니다.');
+        }
+      } catch (error) {
+        console.error('이미지 업로드 실패:', error);
+        toast.error('이미지 업로드에 실패했습니다.');
       }
     };
     input.click();
   };
 
+  if (isLoading) {
+    return (
+      <AdminMyPageOverlay>
+        <div className="text-center">
+          <p className="text-[#6E8FB3]">로딩 중...</p>
+        </div>
+      </AdminMyPageOverlay>
+    );
+  }
+
   return (
     <AdminMyPageOverlay>
-      <motion.div
+      <MotionWrapper
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 20 }}
         transition={{ duration: 0.3 }}
-        style={{ width: '100%', maxWidth: '1280px' }}
       >
         <AdminMyPageContainer>
           {/* Header */}
-          <HeaderBackground style={backgroundImage ? { backgroundImage: `url(${backgroundImage})` } : {}}>
+          <HeaderBackground $backgroundImage={backgroundImage}>
             <BackButton onClick={onClose}>
               <ArrowLeft className="w-5 h-5" />
             </BackButton>
@@ -160,14 +377,14 @@ export function AdminMyPage({ onClose, onLogout }) {
                 <ProfilePhotoButton onClick={() => setIsImageSelectModalOpen(true)} aria-label="프로필 사진 변경">
                   <ProfilePhotoContainer>
                     {profileImage ? (
-                      <img src={profileImage} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <img src={profileImage} alt="Profile" />
                     ) : (
-                      <User className="w-16 h-16" style={{ color: '#9CA3AF' }} />
+                      <User className="w-16 h-16" />
                     )}
                   </ProfilePhotoContainer>
                   <ProfilePhotoOverlay>
                     <CameraIconContainer>
-                      <Camera className="w-6 h-6" style={{ color: '#3F4A5A' }} />
+                      <Camera className="w-6 h-6" />
                     </CameraIconContainer>
                   </ProfilePhotoOverlay>
                 </ProfilePhotoButton>
@@ -186,21 +403,69 @@ export function AdminMyPage({ onClose, onLogout }) {
                 </ActionButtonsGroup>
               </ProfileLeft>
 
-              {/* Center: Name and Role */}
+              {/* Center: Name, Role, and Stats */}
               <ProfileCenter>
                 <ProfileName>{userName}</ProfileName>
-                <ProfileRole>담당자</ProfileRole>
+                <ProfileRole>{memberRole || '담당자'}</ProfileRole>
+
+                {/* Attendance Stats */}
+                <AttendanceStatsSection>
+                  <AttendanceStatsHeader>
+                    <AttendanceStatsTitleRow>
+                      <TitleIndicator />
+                      <AttendanceStatsTitle>근태 통계</AttendanceStatsTitle>
+                    </AttendanceStatsTitleRow>
+                    <AttendanceStatsMonth>{currentMonth}</AttendanceStatsMonth>
+                  </AttendanceStatsHeader>
+
+                  <ChartContainer>
+                    <PieChartWrapper>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={attendanceData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={40}
+                            outerRadius={60}
+                            paddingAngle={2}
+                            dataKey="value"
+                          >
+                            {attendanceData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip content={<CustomTooltip />} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <ChartCenterText>
+                        <ChartCenterValue>{totalDays}</ChartCenterValue>
+                        <ChartCenterLabel>일</ChartCenterLabel>
+                      </ChartCenterText>
+                    </PieChartWrapper>
+
+                    <LegendContainer>
+                      {attendanceData.map((item, index) => (
+                        <LegendItem key={index}>
+                          <LegendColor $color={item.color} />
+                          <LegendText>{item.name}</LegendText>
+                          <LegendValue>{item.value}일</LegendValue>
+                        </LegendItem>
+                      ))}
+                    </LegendContainer>
+                  </ChartContainer>
+                </AttendanceStatsSection>
               </ProfileCenter>
 
               {/* Right: Basic Info */}
               <ProfileRight>
                 <BasicInfoSection>
                   <BasicInfoHeader>
-                    <User className="w-5 h-5" style={{ color: '#6366F1' }} />
+                    <User className="w-5 h-5" />
                     <BasicInfoTitle>기본 정보</BasicInfoTitle>
                   </BasicInfoHeader>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <BasicInfoContent>
                     {/* Email */}
                     <InfoItem>
                       <InfoIcon>
@@ -244,16 +509,48 @@ export function AdminMyPage({ onClose, onLogout }) {
                         <InfoValue>{studio}</InfoValue>
                       </InfoContent>
                     </InfoItem>
-                  </div>
+                  </BasicInfoContent>
                 </BasicInfoSection>
               </ProfileRight>
             </ProfileSection>
           </MainContent>
         </AdminMyPageContainer>
-      </motion.div>
+      </MotionWrapper>
 
       {/* Edit Profile Modal */}
-      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+      <Dialog 
+        open={isEditModalOpen} 
+        onOpenChange={async (open) => {
+          setIsEditModalOpen(open);
+          if (open && memberNo) {
+            // 모달이 열릴 때 DB에서 최신 데이터 조회
+            console.log('📂 모달 열기 - DB에서 최신 데이터 조회 시작:', { memberNo });
+            try {
+              const myPageData = await memberService.getMyPageInfo(memberNo);
+              console.log('✅ 모달 열기 - 최신 데이터 조회 완료:', {
+                memberName: myPageData.memberName,
+                memberPhone: myPageData.memberPhone,
+                memberAddress: myPageData.memberAddress,
+                agencyName: myPageData.agencyName,
+                memberEmail: myPageData.memberEmail,
+                memberRole: myPageData.memberRole
+              });
+              
+              setUserName(myPageData.memberName || '');
+              setPhone(myPageData.memberPhone || '');
+              setLocation(myPageData.memberAddress || '');
+              setStudio(myPageData.agencyName || '');
+              setEmail(myPageData.memberEmail || '');
+              setMemberRole(myPageData.memberRole || '');
+              setPassword('');
+              setConfirmPassword('');
+            } catch (error) {
+              console.error('❌ 모달 열기 시 데이터 조회 실패:', error);
+              toast.error('데이터를 불러오는데 실패했습니다.');
+            }
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-[500px] bg-white">
           <DialogHeader>
             <DialogTitle className="text-lg text-[#1F2328] font-bold">프로필 수정</DialogTitle>
@@ -276,7 +573,29 @@ export function AdminMyPage({ onClose, onLogout }) {
                 id="edit-email"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                disabled
+                className="bg-gray-100 cursor-not-allowed"
+              />
+              <FormHelperText>이메일은 변경할 수 없습니다.</FormHelperText>
+            </FormRow>
+            <FormRow>
+              <FormLabel htmlFor="edit-password">비밀번호 변경</FormLabel>
+              <FormInput
+                id="edit-password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="변경할 비밀번호 (변경하지 않으려면 비워두세요)"
+              />
+            </FormRow>
+            <FormRow>
+              <FormLabel htmlFor="edit-confirm-password">비밀번호 확인</FormLabel>
+              <FormInput
+                id="edit-confirm-password"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="비밀번호 확인"
               />
             </FormRow>
             <FormRow>
@@ -301,9 +620,8 @@ export function AdminMyPage({ onClose, onLogout }) {
                 id="edit-code"
                 value={studio}
                 disabled
-                style={{ backgroundColor: '#F3F4F6', cursor: 'not-allowed' }}
               />
-              <p style={{ fontSize: '12px', color: '#6E8FB3', marginTop: '4px' }}>소속은 변경할 수 없습니다.</p>
+              <FormHelperText>소속은 변경할 수 없습니다.</FormHelperText>
             </FormRow>
           </ModalForm>
           <ModalActions>
@@ -318,7 +636,13 @@ export function AdminMyPage({ onClose, onLogout }) {
       </Dialog>
 
       {/* Delete Account Confirmation Modal */}
-      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+      <Dialog open={isDeleteModalOpen} onOpenChange={(open) => {
+        setIsDeleteModalOpen(open);
+        if (!open) {
+          setDeletePassword('');
+          setDeleteError('');
+        }
+      }}>
         <DialogContent className="sm:max-w-[400px] bg-white">
           <DialogHeader>
             <DialogTitle className="text-lg text-[#1F2328] font-bold">회원 탈퇴</DialogTitle>
@@ -326,18 +650,43 @@ export function AdminMyPage({ onClose, onLogout }) {
               정말로 회원 탈퇴를 하시겠습니까?
             </DialogDescription>
           </DialogHeader>
-          <div style={{ padding: '16px 0' }}>
-            <p style={{ fontSize: '14px', color: '#1F2328', marginBottom: '16px' }}>
+          <DeleteModalContent>
+            <DeleteModalText>
               탈퇴 시 모든 데이터가 삭제되며, 복구할 수 없습니다.
-            </p>
-            <div style={{ backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: '8px', padding: '12px' }}>
-              <p style={{ fontSize: '12px', color: '#DC2626' }}>
-                ⚠️ 진행 중인 프로젝트와 모든 기록이 영구적으로 삭제됩니다.
-              </p>
+            </DeleteModalText>
+            <div className="space-y-2 mb-4">
+              <Label htmlFor="delete-password" className="text-sm text-[#1F2328]">
+                비밀번호 확인
+              </Label>
+              <Input
+                id="delete-password"
+                type="password"
+                value={deletePassword}
+                onChange={(e) => {
+                  setDeletePassword(e.target.value);
+                  setDeleteError('');
+                }}
+                placeholder="비밀번호를 입력하세요"
+                className={`bg-white border-[#DADDE1] text-[#1F2328] ${
+                  deleteError ? 'border-red-500' : ''
+                }`}
+              />
+              {deleteError && (
+                <p className="text-xs text-red-600 mt-1">{deleteError}</p>
+              )}
             </div>
-          </div>
+            <DeleteWarningBox>
+              <DeleteWarningText>
+                ⚠️ 진행 중인 프로젝트와 모든 기록이 영구적으로 삭제됩니다.
+              </DeleteWarningText>
+            </DeleteWarningBox>
+          </DeleteModalContent>
           <ModalActions>
-            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
+            <Button variant="outline" onClick={() => {
+              setIsDeleteModalOpen(false);
+              setDeletePassword('');
+              setDeleteError('');
+            }}>
               취소
             </Button>
             <Button 
@@ -361,15 +710,15 @@ export function AdminMyPage({ onClose, onLogout }) {
           </DialogHeader>
           <ImageSelectGrid>
             <ImageSelectButton onClick={() => handleImageTypeSelect('background')}>
-              <ImageSelectIcon style={{ backgroundColor: '#3F4A5A' }}>
-                <Camera className="w-8 h-8" style={{ color: 'white' }} />
+              <ImageSelectIcon $bgColor="#3F4A5A">
+                <Camera className="w-8 h-8" />
               </ImageSelectIcon>
               <ImageSelectLabel>배경 이미지</ImageSelectLabel>
             </ImageSelectButton>
             
             <ImageSelectButton onClick={() => handleImageTypeSelect('profile')}>
-              <ImageSelectIcon style={{ backgroundColor: '#6E8FB3', borderRadius: '50%' }}>
-                <User className="w-8 h-8" style={{ color: 'white' }} />
+              <ImageSelectIcon $bgColor="#6E8FB3" $rounded>
+                <User className="w-8 h-8" />
               </ImageSelectIcon>
               <ImageSelectLabel>프로필 사진</ImageSelectLabel>
             </ImageSelectButton>

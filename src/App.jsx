@@ -55,59 +55,23 @@ export default function App() {
   // Zustand store에서 저장된 인증 정보 가져오기
   const { user, token, isAuthenticated, logout: storeLogout } = useAuthStore();
 
-  // 새로고침 시 저장된 세션 복구
+  // 새로고침 시 로그인 화면으로 이동
   useEffect(() => {
     const restoreSession = () => {
-      // localStorage에 저장된 토큰이 있고 인증된 상태면 자동 로그인
-      if (token && isAuthenticated && user) {
-        console.log('세션 복구: 저장된 로그인 정보 발견', user);
-        
-        // 역할에 따라 화면 설정
-        const memberRole = user.memberRole;
-        const agencyNo = user.agencyNo;
-        
-        const artistAndManagerRoles = [
-          '웹툰 작가',
-          '웹소설 작가',
-          '어시스트 - 채색',
-          '어시스트 - 조명',
-          '어시스트 - 배경',
-          '어시스트 - 선화',
-          '어시스트- 기타',
-          '담당자'
-        ];
-        
-        let roleType = null;
-        let userHasAgency = agencyNo !== null && agencyNo !== undefined;
-        
-        if (memberRole === '에이전시 관리자') {
-          roleType = 'agency';
-          setAuthView('dashboard');
-        } else if (artistAndManagerRoles.includes(memberRole)) {
-          if (!userHasAgency) {
-            roleType = memberRole === '담당자' ? 'manager' : 'individual';
-            setAuthView('join-request');
-          } else {
-            roleType = memberRole === '담당자' ? 'manager' : 'individual';
-            setAuthView('dashboard');
-          }
-        } else {
-          roleType = 'individual';
-          setAuthView('dashboard');
-        }
-        
-        setUserRole(roleType);
-        setHasAgency(userHasAgency);
-      } else {
-        // 저장된 정보 없으면 로그인 화면
-        setAuthView('login');
+      // 새로고침 시 항상 로그인 화면으로 이동
+      // localStorage에 저장된 인증 정보 초기화
+      if (token || isAuthenticated || user) {
+        storeLogout();
       }
       
+      setAuthView('login');
+      setUserRole(null);
+      setHasAgency(false);
       setIsLoading(false);
     };
     
     restoreSession();
-  }, [token, isAuthenticated, user]);
+  }, []);
 
   /**
    * @param {string} memberRole - 백엔드에서 받은 실제 MEMBER_ROLE 값 (예: "웹툰 작가", "담당자", "에이전시 관리자")
@@ -416,7 +380,12 @@ export default function App() {
   return (
     <DndProvider backend={HTML5Backend}>
       <ProjectProvider>
-        <Toaster position="top-right" />
+        <Toaster 
+          position="top-right" 
+          duration={1000}
+          closeButton={false}
+          className="toast-custom"
+        />
         
         {authView === 'login' && (
           <LoginPage 

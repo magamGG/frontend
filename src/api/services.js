@@ -20,6 +20,74 @@ export const memberService = {
   getCurrentMember: () => {
     return api.get(API_ENDPOINTS.MEMBERS.CURRENT);
   },
+
+  getMembersByAgency: (agencyNo) => {
+    return api.get(API_ENDPOINTS.MEMBERS.BY_AGENCY(agencyNo));
+  },
+
+  getMemberDetails: (memberNo) => {
+    return api.get(API_ENDPOINTS.MEMBERS.DETAILS(memberNo));
+  },
+
+  getManagersByAgency: (agencyNo) => {
+    return api.get(API_ENDPOINTS.MEMBERS.MANAGERS(agencyNo));
+  },
+
+  getArtistsByAgency: (agencyNo) => {
+    return api.get(API_ENDPOINTS.MEMBERS.ARTISTS(agencyNo));
+  },
+
+  getArtistsByManager: (managerNo) => {
+    return api.get(API_ENDPOINTS.MEMBERS.ARTISTS_BY_MANAGER(managerNo));
+  },
+
+  getWorkingArtistsByManager: (managerNo) => {
+    return api.get(API_ENDPOINTS.MEMBERS.WORKING_ARTISTS(managerNo));
+  },
+
+  assignArtistToManager: (artistNo, managerNo) => {
+    return api.post(API_ENDPOINTS.MEMBERS.ASSIGN(artistNo, managerNo));
+  },
+
+  unassignArtistFromManager: (artistNo) => {
+    return api.delete(API_ENDPOINTS.MEMBERS.UNASSIGN(artistNo));
+  },
+
+  deleteMember: (memberNo) => {
+    return api.delete(API_ENDPOINTS.MEMBERS.DELETE(memberNo));
+  },
+
+  removeFromAgency: (memberNo) => {
+    return api.put(API_ENDPOINTS.MEMBERS.REMOVE_FROM_AGENCY(memberNo));
+  },
+
+  getMyPageInfo: (memberNo) => {
+    return api.get(API_ENDPOINTS.MEMBERS.MY_PAGE(memberNo));
+  },
+
+  updateProfile: (memberNo, memberData) => {
+    return api.put(API_ENDPOINTS.MEMBERS.UPDATE_PROFILE(memberNo), memberData);
+  },
+
+  uploadProfileImage: (memberNo, file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post(API_ENDPOINTS.MEMBERS.UPLOAD_PROFILE_IMAGE(memberNo), formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+
+  uploadBackgroundImage: (memberNo, file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post(API_ENDPOINTS.MEMBERS.UPLOAD_BACKGROUND_IMAGE(memberNo), formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+
+  getEmployeeStatistics: (agencyNo) => {
+    return api.get(API_ENDPOINTS.MEMBERS.EMPLOYEE_STATISTICS(agencyNo));
+  },
 };
 
 // 출석/근태 서비스
@@ -28,10 +96,27 @@ export const attendanceService = {
   checkIn: (attendanceData) => {
     return api.post(API_ENDPOINTS.ATTENDANCE.CHECK_IN, attendanceData);
   },
-  
+
+  startAttendance: (healthCheckData) => {
+    return api.post(API_ENDPOINTS.ATTENDANCE.START, healthCheckData);
+  },
+
+  endAttendance: () => {
+    return api.post(API_ENDPOINTS.ATTENDANCE.END);
+  },
+
+  getTodayStatus: () => {
+    return api.get(API_ENDPOINTS.ATTENDANCE.TODAY_STATUS);
+  },
+
   // 출석 이력 조회
   getHistory: (memberNo, startDate, endDate) => {
     return api.get(API_ENDPOINTS.ATTENDANCE.HISTORY(memberNo, startDate, endDate));
+  },
+  
+  // 근태 통계 조회
+  getStatistics: (memberNo, year, month) => {
+    return api.get(API_ENDPOINTS.ATTENDANCE.STATISTICS(memberNo, year, month));
   },
 };
 
@@ -65,6 +150,18 @@ export const leaveService = {
   // 에이전시 소속 대기 중인 근태 신청 목록 조회
   getAgencyPendingRequests: (agencyNo) => {
     return api.get(API_ENDPOINTS.LEAVE.AGENCY_PENDING(agencyNo));
+  },
+
+  getCurrentStatus: () => {
+    return api.get(API_ENDPOINTS.LEAVE.CURRENT_STATUS);
+  },
+
+  approveAttendanceRequest: (attendanceRequestNo) => {
+    return api.post(API_ENDPOINTS.LEAVE.APPROVE(attendanceRequestNo));
+  },
+
+  rejectAttendanceRequest: (attendanceRequestNo, rejectReason) => {
+    return api.post(API_ENDPOINTS.LEAVE.REJECT(attendanceRequestNo), { rejectReason });
   },
 };
 

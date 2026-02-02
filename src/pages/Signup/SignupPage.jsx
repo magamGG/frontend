@@ -76,12 +76,14 @@ export function SignupPage({ onSignup, onBackToLogin }) {
   const [artistSpecialization, setArtistSpecialization] = useState(null);
   const [customSpecializationInput, setCustomSpecializationInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSelectOpen, setIsSelectOpen] = useState(false);
   const [signupFormData, setSignupFormData] = useState({
     name: '',
     email: '',
     password: '',
     confirmPassword: '',
     phone: '',
+    address: '',
     organization: '',
   });
 
@@ -122,6 +124,7 @@ export function SignupPage({ onSignup, onBackToLogin }) {
         memberPassword: signupFormData.password,
         memberEmail: signupFormData.email, // UNIQUE, 로그인 ID로 사용
         memberPhone: signupFormData.phone,
+        memberAddress: signupFormData.address?.trim() || '',
         memberRole: selectedRole === USER_ROLES.ARTIST 
           ? (artistSpecialization === 'webtoon-writer' ? '웹툰 작가'
             : artistSpecialization === 'webnovel-writer' ? '웹소설 작가'
@@ -296,10 +299,13 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                         <InputLabel>세부 직무 선택 *</InputLabel>
                         <Select 
                           value={artistSpecialization || ''} 
+                          open={isSelectOpen}
+                          onOpenChange={setIsSelectOpen}
                           onValueChange={(value) => {
                             setArtistSpecialization(value);
+                            setIsSelectOpen(false); // 선택 시 즉시 닫기
                             if (value !== 'assistant-other') {
-                              setCustomSpecialization('');
+                              setCustomSpecializationInput('');
                             }
                           }}
                         >
@@ -380,6 +386,19 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                       </InputWrapper>
                     </InputGroup>
                   </FormGrid>
+
+                  <InputGroup>
+                    <InputLabel>주소</InputLabel>
+                    <InputWrapper>
+                      <InputField
+                        type="text"
+                        name="address"
+                        value={signupFormData.address}
+                        onChange={handleInputChange}
+                        placeholder="주소를 입력하세요 (예: 서울시 강남구 역삼동 123-45)"
+                      />
+                    </InputWrapper>
+                  </InputGroup>
 
                   <InputGroup>
                     <InputLabel>이메일 *</InputLabel>

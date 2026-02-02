@@ -107,13 +107,14 @@ export const ManagerCardHeader = styled.div`
 export const ManagerAvatar = styled.div`
   width: 48px;
   height: 48px;
-  background-color: var(--primary);
-  opacity: 0.2;
+  background-color: ${props => props.$hasImage ? 'transparent' : 'var(--primary)'};
+  opacity: ${props => props.$hasImage ? 1 : 0.2};
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  overflow: hidden;
 `;
 
 export const ManagerInfo = styled.div`

@@ -63,7 +63,7 @@ const REQUEST_STATUS = {
 export function AgencyDashboardPage() {
   const [selectedSection, setSelectedSection] = useState(null);
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
-  
+
   // TODO: Zustand store mapping - 마감 임박 현황 데이터
   const deadlineData = [
     { day: '오늘', count: 2 },
@@ -225,9 +225,9 @@ export function AgencyDashboardPage() {
                     <Icon className="w-5 h-5" />
                   </MetricIcon>
                 </MetricCardContent>
-              </MetricCard>
-            );
-          })}
+            </MetricCard>
+          );
+        })}
         </MetricsGrid>
 
         {/* 그래프 섹션 */}

@@ -7,7 +7,7 @@ export const AdminTeamRoot = styled.div`
   display: flex;
   justify-content: center;
   padding: 32px 32px 96px;
-  background-color: #f0f2f5;
+  background-color: transparent;
   overflow-y: auto;
 `;
 
@@ -80,6 +80,12 @@ export const StatCardIcon = styled.div`
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  
+  svg {
+    width: 24px;
+    height: 24px;
+    color: ${props => props.$iconColor || '#6E8FB3'};
+  }
 `;
 
 export const StatCardContent = styled.div`
@@ -219,20 +225,6 @@ export const EmployeeBadge = styled.span`
         color: #1f2328;
       `;
     }
-    if (props.$variant === 'position') {
-      if (props.$position === '메인 작가') {
-        return `
-          background-color: #D4F4DD;
-          color: #1f2328;
-        `;
-      }
-      if (props.$position === '시니어 작가') {
-        return `
-          background-color: #FFF4D4;
-          color: #1f2328;
-        `;
-      }
-    }
     if (props.$variant === 'working') {
       return `
         background-color: #22C55E;
@@ -314,6 +306,11 @@ export const ChevronIcon = styled.div`
   align-items: center;
   justify-content: center;
   color: #5a6067;
+  cursor: pointer;
+  
+  svg {
+    transform: ${props => props.$rotated ? 'rotate(180deg)' : 'none'};
+  }
 `;
 
 // 직원 상세 뷰
@@ -518,4 +515,26 @@ export const PieChartLabel = styled.div`
   font-size: 12px;
   color: #5a6067;
   margin-top: 4px;
+`;
+
+// 빈 상태 컨테이너
+export const EmptyStateContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 32px;
+  background-color: white;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  min-height: 300px;
+`;
+
+export const EmptyStateMessage = styled.p`
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2328;
+  margin: 0;
+  text-align: center;
 `;

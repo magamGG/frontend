@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/app/components/ui/dialog';
-import { CheckCircle, Calendar, Clock, FileText, AlertCircle, Activity } from 'lucide-react';
+import { CheckCircle, Calendar, Clock, FileText, AlertCircle, Activity, Shield, Stethoscope, X } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   AdminPersonalHealthRoot,
@@ -74,6 +74,19 @@ export function AdminPersonalHealthPage() {
     daysUntilMental: 7,
     daysUntilPhysical: 14,
   });
+
+  // 기본 닫기 버튼 숨기기
+  useEffect(() => {
+    if (isPhysicalDeepCheckOpen) {
+      const timer = setTimeout(() => {
+        const closeButton = document.querySelector('.physical-deep-check-modal [data-slot="dialog-close"]');
+        if (closeButton) {
+          (closeButton).style.display = 'none';
+        }
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [isPhysicalDeepCheckOpen]);
 
   // TODO: Zustand store mapping - 심층 검진 검사 데이터
   const [deepCheckupData, setDeepCheckupData] = useState({
@@ -483,20 +496,32 @@ export function AdminPersonalHealthPage() {
           }
         }}
       >
-        <DialogContent className="sm:max-w-[500px] bg-white max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-lg text-[#1F2328] font-bold">신체 건강 심층 검진</DialogTitle>
-            <DialogDescription className="text-sm text-[#6E8FB3]">
-              표준화된 신체 건강 도구를 활용한 전문 건강 검진입니다.
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="sm:max-w-[700px] bg-[#F5F5F5] max-h-[85vh] overflow-y-auto p-0 modal-scrollbar-transparent physical-deep-check-modal">
+          {/* 헤더 */}
+          <div className="flex items-start justify-between p-6 pb-4 bg-white">
+            <div className="flex items-start gap-3 flex-1">
+              <div className="relative">
+                <Shield className="w-8 h-8 text-blue-600" />
+                <Stethoscope className="w-6 h-6 text-blue-600 absolute -top-1 -right-1" />
+              </div>
+              <div className="flex-1">
+                <DialogTitle className="text-xl text-[#1F2328] font-bold mb-1">신체 건강 심층 검진</DialogTitle>
+                <DialogDescription className="text-sm text-[#6E8FB3]">
+                  표준화된 신체 건강 도구를 활용한 전문 건강 검진입니다.
+                </DialogDescription>
+              </div>
+            </div>
+            <button
+              onClick={() => setIsPhysicalDeepCheckOpen(false)}
+              className="text-[#6E8FB3] hover:text-[#1F2328] transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
 
           <SurveyModalContent>
             <SurveyDescription>
-              <p className="mb-2">본 검진은 표준화된 신체 건강 도구를 활용하여</p>
-              <p className="mb-2">직원 본인의 신체 상태를 정기적으로 점검합니다.</p>
-              <p>본 검사는 정확한 심층 평가를 위한 도구이며,</p>
-              <p>검사 결과는 전문 상담이 필요한 경우 의료 전문가에게 전달됩니다.</p>
+              <p>본 검진은 표준화된 신체 건강 도구를 활용하여 직원 본인의 신체 상태를 정기적으로 점검합니다. 본 검사는 정확한 심층 평가를 위한 도구이며, 검사 결과는 전문 상담이 필요한 경우 의료 전문가에게 전달됩니다.</p>
             </SurveyDescription>
 
             <SurveyDivider />
@@ -505,9 +530,9 @@ export function AdminPersonalHealthPage() {
 
             <SurveyQuestionList>
               {[
-                { q: '1. 손목이나 손가락의 통증 및 불편감이 있었나요?', desc: '0 (전혀 없음) ~ 10 (매우 심함)' },
-                { q: '2. 목, 어깨, 등의 통증 및 결림이 있었나요?', desc: '0 (전혀 없음) ~ 10 (매우 심함)' },
-                { q: '3. 허리 통증 및 불편감이 있었나요?', desc: '0 (전혀 없음) ~ 10 (매우 심함)' },
+                { q: '1. 손목이나 손가락의 통증 및 불편감이 있습니까?', desc: '0 (전혀 없음) ~ 10 (매우 심함)' },
+                { q: '2. 목, 어깨, 등의 통증 및 결림이 있습니까?', desc: '0 (전혀 없음) ~ 10 (매우 심함)' },
+                { q: '3. 허리 통증 및 불편감이 있습니까?', desc: '0 (전혀 없음) ~ 10 (매우 심함)' },
                 { q: '4. 전반적인 피로도와 무기력함을 느꼈나요?', desc: '0 (전혀 없음) ~ 10 (매우 심함)' },
               ].map((item, index) => (
                 <SurveyQuestion key={index}>
@@ -534,8 +559,7 @@ export function AdminPersonalHealthPage() {
 
             <SurveyInfoBox>
               <SurveyInfoText>
-                <p>※ 본 검사는 전문 검사 도구로, 개인정보로 엄격 관리됩니다.</p>
-                <p className="mt-1">15점 이상 시 담당자에게 즉시 알림 발송 및 전문 상담 연계가 권장됩니다.</p>
+                <p>※ 본 검사는 전문 검사 도구로, 개인정보는 엄격하게 관리됩니다. 15점 이상 시 담당자에게 즉시 알림 발송 및 전문 상담 연계가 권장됩니다.</p>
               </SurveyInfoText>
             </SurveyInfoBox>
           </SurveyModalContent>
@@ -543,6 +567,7 @@ export function AdminPersonalHealthPage() {
           <SurveyModalActions>
             <Button
               variant="outline"
+              className="bg-gray-200 hover:bg-gray-300 text-gray-700 border-gray-300"
               onClick={() => {
                 setIsPhysicalDeepCheckOpen(false);
                 setPhysicalDeepAnswers([null, null, null, null]);
@@ -550,7 +575,7 @@ export function AdminPersonalHealthPage() {
             >
               취소
             </Button>
-            <Button className="bg-[#3F4A5A] hover:bg-[#3F4A5A]/90" onClick={handleSubmitPhysicalDeep}>
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleSubmitPhysicalDeep}>
               제출
             </Button>
           </SurveyModalActions>

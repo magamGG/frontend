@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
 import { Button } from '@/app/components/ui/button';
@@ -17,7 +17,10 @@ import {
   FileText,
   ArrowUpDown
 } from 'lucide-react';
-import { mockWorkcationMembers } from '@/data/mockData';
+import { memberService, leaveService } from '@/api/services';
+import { API_BASE_URL } from '@/api/config';
+import useAuthStore from '@/store/authStore';
+import { toast } from 'sonner';
 import {
   AgencyWorkcationRoot,
   AgencyWorkcationBody,
@@ -77,17 +80,183 @@ import {
 } from './AgencyWorkcationPage.styled';
 
 export function AgencyWorkcationPage() {
+  const { user } = useAuthStore();
+  const agencyNo = user?.agencyNo;
+  
   const [selectedMember, setSelectedMember] = useState(null);
   const [sortType, setSortType] = useState(null);
   const [sortOrder, setSortOrder] = useState('asc');
+  const [members, setMembers] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // DB에서 워케이션/재택근무 중인 직원 조회
+  useEffect(() => {
+    const fetchWorkcationMembers = async () => {
+      if (!agencyNo) {
+        console.log('❌ agencyNo가 없어서 종료');
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        console.log('📡 워케이션/재택근무 직원 조회 시작:', { agencyNo });
+        
+        // 1. 에이전시 소속 근태 신청 목록 조회
+        const response = await leaveService.getAgencyRequests(agencyNo);
+        const requestsList = Array.isArray(response?.data) 
+          ? response.data 
+          : Array.isArray(response) 
+            ? response 
+            : [];
+        
+        console.log('📋 근태 신청 목록:', requestsList);
+        
+        // 2. 승인된 재택근무/워케이션 신청 필터링 (현재 날짜가 기간 내에 있는 것만)
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const activeRequests = requestsList.filter(request => {
+          // 승인된 신청만 (백엔드 필드명: attendanceRequestStatus)
+          const status = request.attendanceRequestStatus || request.status;
+          if (status !== 'APPROVED' && status !== '승인') {
+            return false;
+          }
+          
+          // 재택근무 또는 워케이션 타입만 (백엔드 필드명: attendanceRequestType)
+          const attendanceType = request.attendanceRequestType || request.attendanceType || request.type;
+          if (attendanceType !== '재택근무' && 
+              attendanceType !== '워케이션' && 
+              attendanceType !== 'REMOTE' && 
+              attendanceType !== 'WORKATION') {
+            return false;
+          }
+          
+          // 현재 날짜가 신청 기간 내에 있는지 확인
+          // 백엔드 필드명: attendanceRequestStartDate, attendanceRequestEndDate
+          const startDateStr = request.attendanceRequestStartDate || request.startDate;
+          const endDateStr = request.attendanceRequestEndDate || request.endDate;
+          
+          if (!startDateStr || !endDateStr) {
+            return false;
+          }
+          
+          // LocalDateTime 문자열 파싱 (예: "2026-01-15T00:00:00" 또는 "2026-01-15")
+          const startDate = new Date(startDateStr);
+          const endDate = new Date(endDateStr);
+          
+          if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+            console.warn('날짜 파싱 실패:', { startDateStr, endDateStr });
+            return false;
+          }
+          
+          startDate.setHours(0, 0, 0, 0);
+          endDate.setHours(23, 59, 59, 999);
+          
+          return today >= startDate && today <= endDate;
+        });
+        
+        console.log('✅ 활성 워케이션/재택근무 신청:', activeRequests);
+        
+        // 3. 각 회원의 상세 정보 조회
+        const membersData = await Promise.all(
+          activeRequests.map(async (request) => {
+            try {
+              // 백엔드 필드명: memberNo
+              const memberNo = request.memberNo;
+              if (!memberNo) {
+                console.warn('memberNo가 없음:', request);
+                return null;
+              }
+              
+              // 회원 상세 정보 조회
+              const memberInfo = await memberService.getMyPageInfo(memberNo);
+              
+              // 프로필 이미지 URL 구성
+              let profileImageUrl = null;
+              if (memberInfo.memberProfileImage) {
+                const imageBaseUrl = API_BASE_URL || 'http://localhost:8888';
+                if (memberInfo.memberProfileImage.startsWith('http://') || 
+                    memberInfo.memberProfileImage.startsWith('https://')) {
+                  profileImageUrl = memberInfo.memberProfileImage;
+                } else if (memberInfo.memberProfileImage.startsWith('/uploads/')) {
+                  profileImageUrl = `${imageBaseUrl}${memberInfo.memberProfileImage}`;
+                } else {
+                  profileImageUrl = `${imageBaseUrl}/uploads/${memberInfo.memberProfileImage}`;
+                }
+              }
+              
+              // 근태 타입 매핑
+              const attendanceType = request.attendanceRequestType || request.attendanceType || request.type;
+              const workcationType = attendanceType === '재택근무' || attendanceType === 'REMOTE' 
+                ? '재택근무' 
+                : '워케이션';
+              
+              // 날짜 포맷팅 (LocalDateTime -> YYYY-MM-DD)
+              const formatDate = (dateStr) => {
+                if (!dateStr) return '';
+                const date = new Date(dateStr);
+                if (isNaN(date.getTime())) return '';
+                return date.toISOString().split('T')[0];
+              };
+              
+              const startDate = formatDate(request.attendanceRequestStartDate || request.startDate);
+              const endDate = formatDate(request.attendanceRequestEndDate || request.endDate);
+              
+              return {
+                id: memberNo,
+                name: memberInfo.memberName || request.memberName || '',
+                email: memberInfo.memberEmail || '',
+                phone: memberInfo.memberPhone || '',
+                role: memberInfo.memberRole || '',
+                avatar: profileImageUrl,
+                // 백엔드 필드명: workcationLocation
+                location: request.workcationLocation || request.location || '위치 정보 없음',
+                startDate: startDate,
+                endDate: endDate,
+                workcationType: workcationType,
+                // TODO: 프로젝트, 작업, 일일 리포트는 별도 API로 조회 필요
+                projectNames: [], // 추후 프로젝트 API로 조회
+                tasks: [], // 추후 작업 API로 조회
+                dailyReport: null, // 추후 일일 리포트 API로 조회
+                contact: {
+                  email: memberInfo.memberEmail || '',
+                  phone: memberInfo.memberPhone || '',
+                },
+              };
+            } catch (error) {
+              console.error(`회원 ${request.memberNo} 정보 조회 실패:`, error);
+              return null;
+            }
+          })
+        );
+        
+        // null 제거
+        const validMembers = membersData.filter(m => m !== null);
+        
+        console.log('✅ 워케이션/재택근무 직원 목록:', validMembers);
+        setMembers(validMembers);
+      } catch (error) {
+        console.error('워케이션/재택근무 직원 조회 실패:', error);
+        toast.error('데이터를 불러오는데 실패했습니다.');
+        setMembers([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchWorkcationMembers();
+  }, [agencyNo]);
 
   // Calculate days remaining for each member
   const getDaysRemaining = (endDate) => {
-    const today = new Date('2026-01-16');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
     const diffTime = end.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
+    return diffDays > 0 ? diffDays : 0;
   };
 
   // Get role display name
@@ -133,7 +302,7 @@ export function AgencyWorkcationPage() {
   };
 
   // Sort members
-  const sortedMembers = [...mockWorkcationMembers].sort((a, b) => {
+  const sortedMembers = [...members].sort((a, b) => {
     if (!sortType) return 0;
 
     if (sortType === 'alphabetical') {
@@ -151,13 +320,15 @@ export function AgencyWorkcationPage() {
 
   // Calculate statistics
   const stats = {
-    total: mockWorkcationMembers.length,
-    avgProgress: Math.round(
-      mockWorkcationMembers.reduce((acc, m) => acc + (m.dailyReport?.progress || 0), 0) / mockWorkcationMembers.length
-    ),
-    totalTasks: mockWorkcationMembers.reduce((acc, m) => acc + m.tasks.length, 0),
-    completedTasks: mockWorkcationMembers.reduce(
-      (acc, m) => acc + m.tasks.filter(t => t.progress === 100).length, 
+    total: members.length,
+    avgProgress: members.length > 0 
+      ? Math.round(
+          members.reduce((acc, m) => acc + (m.dailyReport?.progress || 0), 0) / members.length
+        )
+      : 0,
+    totalTasks: members.reduce((acc, m) => acc + (m.tasks?.length || 0), 0),
+    completedTasks: members.reduce(
+      (acc, m) => acc + (m.tasks?.filter(t => t.progress === 100).length || 0), 
       0
     ),
   };
@@ -239,8 +410,13 @@ export function AgencyWorkcationPage() {
         </StatisticsGrid>
 
         {/* Workcation Members Grid */}
-        <MembersGrid>
-          {sortedMembers.map((member) => {
+        {isLoading ? (
+          <div style={{ textAlign: 'center', padding: '2rem' }}>
+            <p>워케이션/재택근무 직원 목록을 불러오는 중...</p>
+          </div>
+        ) : (
+          <MembersGrid>
+            {sortedMembers.map((member) => {
             const daysRemaining = getDaysRemaining(member.endDate);
             const avgProgress = Math.round(
               member.tasks.reduce((acc, t) => acc + t.progress, 0) / member.tasks.length
@@ -265,16 +441,28 @@ export function AgencyWorkcationPage() {
                     
                     <MemberCardInfo>
                       <MemberCardAvatar>
-                        <img
-                          src={member.avatar}
-                          alt={member.name}
-                          className="w-16 h-16 rounded-full border-4 border-white/20 object-cover"
-                        />
+                        {member.avatar ? (
+                          <img
+                            src={member.avatar}
+                            alt={member.name}
+                            className="w-16 h-16 rounded-full border-4 border-white/20 object-cover"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'block';
+                            }}
+                          />
+                        ) : null}
+                        <div 
+                          className="w-16 h-16 rounded-full border-4 border-white/20 bg-white/20 flex items-center justify-center"
+                          style={{ display: member.avatar ? 'none' : 'flex' }}
+                        >
+                          <Briefcase className="w-8 h-8 text-white" />
+                        </div>
                       </MemberCardAvatar>
                       <div>
                         <MemberCardName>{member.name}</MemberCardName>
                         <MemberCardRole>
-                          {getRoleDisplay(member.role, member.customRole)}
+                          {member.role || '역할 정보 없음'}
                         </MemberCardRole>
                       </div>
                     </MemberCardInfo>
@@ -292,41 +480,61 @@ export function AgencyWorkcationPage() {
                     <MemberCardDate>
                       <Calendar className="w-4 h-4 text-muted-foreground" />
                       <span className="text-sm text-muted-foreground">
-                        {member.startDate.slice(5)} ~ {member.endDate.slice(5)}
+                        {member.startDate ? member.startDate.slice(5) : ''} ~ {member.endDate ? member.endDate.slice(5) : ''}
                       </span>
                     </MemberCardDate>
                   </div>
 
                   {/* Projects */}
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-2">담당 작품</p>
-                    <MemberCardProjects>
-                      {member.projectNames.map((project, idx) => (
-                        <Badge 
-                          key={idx}
-                          variant="outline" 
-                          className="text-xs border-border text-foreground"
-                        >
-                          {project}
-                        </Badge>
-                      ))}
-                    </MemberCardProjects>
-                  </div>
+                  {member.projectNames && member.projectNames.length > 0 && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-2">담당 작품</p>
+                      <MemberCardProjects>
+                        {member.projectNames.map((project, idx) => (
+                          <Badge 
+                            key={idx}
+                            variant="outline" 
+                            className="text-xs border-border text-foreground"
+                          >
+                            {project}
+                          </Badge>
+                        ))}
+                      </MemberCardProjects>
+                    </div>
+                  )}
 
                   {/* Progress */}
+                  {member.tasks && member.tasks.length > 0 && (
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm text-muted-foreground">전체 작업 진행률</span>
+                        <span className="text-2xl font-bold text-foreground">{avgProgress}%</span>
+                      </div>
+                      <Progress value={avgProgress} className="h-3" />
+                    </div>
+                  )}
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm text-muted-foreground">전체 작업 진행률</span>
                       <span className="text-2xl font-bold text-foreground">{avgProgress}%</span>
                     </div>
-                    <Progress value={avgProgress} className="h-3" />
+                    <div className="relative h-4 w-full overflow-hidden rounded-full bg-gray-100">
+                      <div
+                        className="h-full rounded-full transition-all duration-500 ease-out shadow-sm"
+                        style={{
+                          width: `${avgProgress}%`,
+                          background: 'linear-gradient(90deg, #A855F7 0%, #9333EA 50%, #7C3AED 100%)',
+                          boxShadow: '0 2px 4px rgba(147, 51, 234, 0.3)',
+                        }}
+                      />
+                    </div>
                   </div>
 
                   {/* Tasks Summary */}
                   <MemberCardTasks>
                     <div className="flex items-center gap-4 text-sm">
                       <span className="text-muted-foreground">
-                        작업 <span className="font-semibold text-foreground">{member.tasks.length}개</span>
+                        작업 <span className="font-semibold text-foreground">{member.tasks?.length || 0}개</span>
                       </span>
                     </div>
                     <Button 
@@ -342,7 +550,8 @@ export function AgencyWorkcationPage() {
               </MemberCard>
             );
           })}
-        </MembersGrid>
+          </MembersGrid>
+        )}
 
         {/* Empty State */}
         {sortedMembers.length === 0 && (
@@ -371,16 +580,28 @@ export function AgencyWorkcationPage() {
                   <DetailMemberHeader>
                     <DetailMemberInfo>
                       <DetailMemberAvatar>
-                        <img
-                          src={selectedMember.avatar}
-                          alt={selectedMember.name}
-                          className="w-20 h-20 rounded-full border-4 border-white/20 object-cover"
-                        />
+                        {selectedMember.avatar ? (
+                          <img
+                            src={selectedMember.avatar}
+                            alt={selectedMember.name}
+                            className="w-20 h-20 rounded-full border-4 border-white/20 object-cover"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+                        <div 
+                          className="w-20 h-20 rounded-full border-4 border-white/20 bg-white/20 flex items-center justify-center"
+                          style={{ display: selectedMember.avatar ? 'none' : 'flex' }}
+                        >
+                          <Briefcase className="w-10 h-10 text-white" />
+                        </div>
                       </DetailMemberAvatar>
                       <div>
                         <DetailMemberName>{selectedMember.name}</DetailMemberName>
                         <DetailMemberRole>
-                          {getRoleDisplay(selectedMember.role, selectedMember.customRole)}
+                          {selectedMember.role || '역할 정보 없음'}
                         </DetailMemberRole>
                       </div>
                     </DetailMemberInfo>
@@ -471,13 +692,14 @@ export function AgencyWorkcationPage() {
                 )}
 
                 {/* Tasks List */}
-                <div>
-                  <h4 className="font-semibold text-foreground mb-4 flex items-center gap-2">
-                    <Briefcase className="w-5 h-5 text-muted-foreground" />
-                    담당 작업 목록
-                  </h4>
-                  <TasksList>
-                    {selectedMember.tasks.map((task) => (
+                {selectedMember.tasks && selectedMember.tasks.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+                      <Briefcase className="w-5 h-5 text-muted-foreground" />
+                      담당 작업 목록
+                    </h4>
+                    <TasksList>
+                      {selectedMember.tasks.map((task) => (
                       <TaskCard key={task.id}>
                         <TaskCardHeader>
                           <div className="flex-1">
@@ -513,25 +735,28 @@ export function AgencyWorkcationPage() {
                           </div>
                         )}
                       </TaskCard>
-                    ))}
-                  </TasksList>
-                </div>
+                      ))}
+                    </TasksList>
+                  </div>
+                )}
 
                 {/* Projects */}
-                <ProjectsSection>
-                  <h4 className="font-semibold text-foreground mb-4">참여 작품</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedMember.projectNames.map((project, idx) => (
-                      <Badge 
-                        key={idx}
-                        variant="outline"
-                        className="px-4 py-2 text-sm border-border text-foreground"
-                      >
-                        {project}
-                      </Badge>
-                    ))}
-                  </div>
-                </ProjectsSection>
+                {selectedMember.projectNames && selectedMember.projectNames.length > 0 && (
+                  <ProjectsSection>
+                    <h4 className="font-semibold text-foreground mb-4">참여 작품</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedMember.projectNames.map((project, idx) => (
+                        <Badge 
+                          key={idx}
+                          variant="outline"
+                          className="px-4 py-2 text-sm border-border text-foreground"
+                        >
+                          {project}
+                        </Badge>
+                      ))}
+                    </div>
+                  </ProjectsSection>
+                )}
               </DetailModalContent>
             </>
           )}

@@ -1,17 +1,21 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
 import { Input } from '@/app/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/app/components/ui/dialog';
 import { toast } from 'sonner';
+import { memberService } from '@/api';
+import { API_BASE_URL } from '@/api/config';
+import useAuthStore from '@/store/authStore';
 import { 
   Search,
   Users,
   UserPlus,
   X,
   Mail,
-  Briefcase
+  Briefcase,
+  User
 } from 'lucide-react';
 import {
   AgencyAssignmentRoot,
@@ -37,87 +41,153 @@ import {
   EmptyStateText,
 } from './AgencyAssignmentPage.styled';
 
-// TODO: Zustand store mapping - 담당자 및 작가 목록
-const initialManagers = [
-  { id: 1, name: '김담당자', email: 'kim@agency.com', position: '담당자', assignedArtists: 5 },
-  { id: 2, name: '이담당자', email: 'lee@agency.com', position: '담당자', assignedArtists: 3 },
-  { id: 3, name: '박담당자', email: 'park@agency.com', position: '담당자', assignedArtists: 2 },
-  { id: 4, name: '최담당자', email: 'choi@agency.com', position: '담당자', assignedArtists: 4 },
-  { id: 5, name: '정담당자', email: 'jung@agency.com', position: '담당자', assignedArtists: 6 },
-];
-
-const initialArtists = [
-  {
-    id: 1,
-    name: '김작가',
-    email: 'kim.artist@agency.com',
-    phone: '010-1111-2222',
-    projects: 2,
-    status: '활동중',
-    assignedManager: initialManagers[0]
-  },
-  {
-    id: 2,
-    name: '이작가',
-    email: 'lee.artist@agency.com',
-    phone: '010-2222-3333',
-    projects: 3,
-    status: '활동중',
-    assignedManager: initialManagers[1]
-  },
-  {
-    id: 3,
-    name: '박작가',
-    email: 'park.artist@agency.com',
-    phone: '010-3333-4444',
-    projects: 1,
-    status: '활동중',
-    assignedManager: initialManagers[2]
-  },
-  {
-    id: 4,
-    name: '최작가',
-    email: 'choi.artist@agency.com',
-    phone: '010-4444-5555',
-    projects: 0,
-    status: '신인',
-    assignedManager: undefined
-  },
-  {
-    id: 5,
-    name: '정작가',
-    email: 'jung.artist@agency.com',
-    phone: '010-5555-6666',
-    projects: 2,
-    status: '휴식',
-    assignedManager: initialManagers[0]
-  },
-  {
-    id: 6,
-    name: '한작가',
-    email: 'han.artist@agency.com',
-    phone: '010-6666-7777',
-    projects: 4,
-    status: '활동중',
-    assignedManager: initialManagers[1]
-  },
-  {
-    id: 7,
-    name: '강작가',
-    email: 'kang.artist@agency.com',
-    phone: '010-7777-8888',
-    projects: 1,
-    status: '신인',
-    assignedManager: undefined
-  },
-];
-
 export function AgencyAssignmentPage() {
+  const user = useAuthStore((state) => state.user);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedManager, setSelectedManager] = useState(null);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
-  const [managers, setManagers] = useState(initialManagers);
-  const [artists, setArtists] = useState(initialArtists);
+  const [managers, setManagers] = useState([]);
+  const [artists, setArtists] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // 담당자 및 작가 목록 조회
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user?.agencyNo) {
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        // 담당자 목록 조회 (MANAGER 테이블에서 조회)
+        const managersResponse = await memberService.getManagersByAgency(user.agencyNo);
+        console.log('담당자 목록 응답:', managersResponse);
+        
+        // 응답 데이터 처리 (응답이 객체로 감싸져 있을 수 있음)
+        let managersList = [];
+        if (Array.isArray(managersResponse)) {
+          managersList = managersResponse;
+        } else if (managersResponse?.data && Array.isArray(managersResponse.data)) {
+          managersList = managersResponse.data;
+        } else if (managersResponse?.data?.data && Array.isArray(managersResponse.data.data)) {
+          managersList = managersResponse.data.data;
+        }
+        
+        console.log('처리된 담당자 목록:', managersList);
+        
+        // 작가 목록 조회
+        const artistsResponse = await memberService.getArtistsByAgency(user.agencyNo);
+        console.log('작가 목록 응답:', artistsResponse);
+        
+        // 작가 응답 데이터 처리
+        let artistsList = [];
+        if (Array.isArray(artistsResponse)) {
+          artistsList = artistsResponse;
+        } else if (artistsResponse?.data && Array.isArray(artistsResponse.data)) {
+          artistsList = artistsResponse.data;
+        } else if (artistsResponse?.data?.data && Array.isArray(artistsResponse.data.data)) {
+          artistsList = artistsResponse.data.data;
+        }
+        
+        console.log('처리된 작가 목록:', artistsList);
+
+        // 담당자 데이터 변환 (MANAGER 테이블의 데이터 사용)
+        const imageBaseUrl = API_BASE_URL || 'http://localhost:8888';
+        const mappedManagers = managersList.map((manager) => {
+          // 작가 목록에서 해당 담당자에게 배정된 작가 수 계산
+          // managerNo는 MANAGER 테이블의 MANAGER_NO를 의미
+          const assignedCount = artistsList.filter(
+            (artist) => artist.managerNo === manager.managerNo
+          ).length;
+          
+          // 프로필 이미지 URL 구성
+          let profileImageUrl = null;
+          if (manager.memberProfileImage) {
+            if (manager.memberProfileImage.startsWith('http://') || manager.memberProfileImage.startsWith('https://')) {
+              profileImageUrl = manager.memberProfileImage;
+            } else if (manager.memberProfileImage.startsWith('/uploads/')) {
+              profileImageUrl = `${imageBaseUrl}${manager.memberProfileImage}`;
+            } else {
+              profileImageUrl = `${imageBaseUrl}/uploads/${manager.memberProfileImage}`;
+            }
+          }
+          
+          return {
+            id: manager.managerNo, // MANAGER 테이블의 MANAGER_NO 사용
+            memberNo: manager.memberNo, // MEMBER 테이블의 MEMBER_NO도 함께 저장
+            name: manager.memberName,
+            email: manager.memberEmail,
+            position: manager.memberRole,
+            assignedArtists: assignedCount,
+            profileImage: profileImageUrl, // 프로필 이미지 URL
+          };
+        });
+        
+        console.log('매핑된 담당자 목록:', mappedManagers);
+
+        // 작가 데이터 변환
+        const mappedArtists = artistsList.map((artist) => {
+          // 상태는 memberStatus를 기반으로 매핑
+          let status = '활동중';
+          if (artist.memberStatus === 'ACTIVE') {
+            status = '활동중';
+          } else if (artist.memberStatus === 'BLOCKED') {
+            status = '휴식';
+          }
+
+          // ARTIST_ASSIGNMENT에 없는 작가는 managerNo가 null이거나 undefined
+          // 명시적으로 null/undefined 체크하여 미배정 작가로 처리
+          const managerNo = artist.managerNo || null;
+          const assignedManager = managerNo 
+            ? mappedManagers.find(m => m.id === managerNo) 
+            : undefined;
+
+          // 프로필 이미지 URL 구성
+          let profileImageUrl = null;
+          if (artist.memberProfileImage) {
+            if (artist.memberProfileImage.startsWith('http://') || artist.memberProfileImage.startsWith('https://')) {
+              profileImageUrl = artist.memberProfileImage;
+            } else if (artist.memberProfileImage.startsWith('/uploads/')) {
+              profileImageUrl = `${imageBaseUrl}${artist.memberProfileImage}`;
+            } else {
+              profileImageUrl = `${imageBaseUrl}/uploads/${artist.memberProfileImage}`;
+            }
+          }
+
+          return {
+            id: artist.memberNo,
+            name: artist.memberName,
+            email: artist.memberEmail,
+            phone: artist.memberPhone || '',
+            projects: 0, // 프로젝트 수는 필요시 별도 조회
+            status: status,
+            managerNo: managerNo, // 명시적으로 저장
+            assignedManager: assignedManager, // 배정된 담당자 (없으면 undefined)
+            profileImage: profileImageUrl, // 프로필 이미지 URL
+          };
+        });
+        
+        console.log('매핑된 작가 목록:', mappedArtists);
+        console.log('미배정 작가 수:', mappedArtists.filter(a => !a.assignedManager).length);
+
+        setManagers(mappedManagers);
+        setArtists(mappedArtists);
+        
+        if (mappedManagers.length === 0) {
+          console.warn('MANAGER 테이블에 담당자가 없습니다. member_role이 "담당자"인 멤버가 MANAGER 테이블에 등록되어 있는지 확인하세요.');
+          toast.warning('담당자가 없습니다. MANAGER 테이블에 담당자를 등록해주세요.');
+        }
+      } catch (error) {
+        console.error('담당자/작가 목록 조회 실패:', error);
+        console.error('에러 상세:', error.response?.data || error.message);
+        toast.error(`담당자/작가 목록을 불러오는데 실패했습니다: ${error.response?.data?.message || error.message}`);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [user?.agencyNo]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -132,41 +202,98 @@ export function AgencyAssignmentPage() {
     }
   };
 
-  const handleAssignArtist = (artistId) => {
-    if (!selectedManager) return;
+  const handleAssignArtist = async (artistId) => {
+    if (!selectedManager) {
+      toast.error('담당자를 선택해주세요.');
+      return;
+    }
 
-    setArtists(prev => prev.map(artist =>
-      artist.id === artistId
-        ? { ...artist, assignedManager: selectedManager }
-        : artist
-    ));
+    try {
+      console.log('작가 배정 시작:', {
+        artistId,
+        managerNo: selectedManager.id, // MANAGER 테이블의 MANAGER_NO
+        managerName: selectedManager.name
+      });
 
-    setManagers(prev => prev.map(manager =>
-      manager.id === selectedManager.id
-        ? { ...manager, assignedArtists: manager.assignedArtists + 1 }
-        : manager
-    ));
+      // 백엔드 API 호출: ARTIST_ASSIGNMENT 테이블에 등록
+      // managerNo는 MANAGER 테이블의 MANAGER_NO를 전달
+      await memberService.assignArtistToManager(artistId, selectedManager.id);
+      
+      console.log('작가 배정 성공:', {
+        artistId,
+        managerNo: selectedManager.id
+      });
 
-    toast.success(`${artists.find(a => a.id === artistId)?.name}를 ${selectedManager.name}에게 배정했습니다.`);
+      // 상태 업데이트: 작가의 managerNo와 assignedManager 설정
+      setArtists(prev => prev.map(artist =>
+        artist.id === artistId
+          ? { 
+              ...artist, 
+              managerNo: selectedManager.id, // MANAGER 테이블의 MANAGER_NO
+              assignedManager: selectedManager 
+            }
+          : artist
+      ));
+
+      // 담당자의 담당 작가 수 업데이트
+      setManagers(prev => prev.map(manager =>
+        manager.id === selectedManager.id
+          ? { ...manager, assignedArtists: manager.assignedArtists + 1 }
+          : manager
+      ));
+
+      toast.success(`${artists.find(a => a.id === artistId)?.name}를 ${selectedManager.name}에게 배정했습니다.`);
+    } catch (error) {
+      console.error('작가 배정 실패:', error);
+      console.error('에러 상세:', error.response?.data || error.message);
+      toast.error(`작가 배정에 실패했습니다: ${error.response?.data?.message || error.message}`);
+    }
   };
 
-  const handleUnassignArtist = (artistId) => {
+  const handleUnassignArtist = async (artistId) => {
     const artist = artists.find(a => a.id === artistId);
-    if (!artist || !artist.assignedManager || !selectedManager) return;
+    if (!artist || !artist.assignedManager) {
+      toast.error('배정된 담당자가 없습니다.');
+      return;
+    }
 
-    setArtists(prev => prev.map(a =>
-      a.id === artistId
-        ? { ...a, assignedManager: undefined }
-        : a
-    ));
+    try {
+      console.log('작가 배정 해제 시작:', {
+        artistId,
+        artistName: artist.name,
+        currentManagerNo: artist.managerNo
+      });
 
-    setManagers(prev => prev.map(manager =>
-      manager.id === artist.assignedManager.id
-        ? { ...manager, assignedArtists: Math.max(0, manager.assignedArtists - 1) }
-        : manager
-    ));
+      // 백엔드 API 호출: ARTIST_ASSIGNMENT 테이블에서 삭제
+      await memberService.unassignArtistFromManager(artistId);
+      
+      console.log('작가 배정 해제 성공:', artistId);
 
-    toast.success(`${artist.name}의 담당자 배정을 해제했습니다.`);
+      // 상태 업데이트: managerNo를 null로 설정하고 assignedManager를 undefined로 설정
+      const previousManager = artist.assignedManager;
+      setArtists(prev => prev.map(a =>
+        a.id === artistId
+          ? { 
+              ...a, 
+              managerNo: null, // 명시적으로 null로 설정하여 미배정 작가로 표시
+              assignedManager: undefined 
+            }
+          : a
+      ));
+
+      // 담당자의 담당 작가 수 업데이트
+      setManagers(prev => prev.map(manager =>
+        manager.id === previousManager.id
+          ? { ...manager, assignedArtists: Math.max(0, manager.assignedArtists - 1) }
+          : manager
+      ));
+
+      toast.success(`${artist.name}의 담당자 배정을 해제했습니다.`);
+    } catch (error) {
+      console.error('작가 배정 해제 실패:', error);
+      console.error('에러 상세:', error.response?.data || error.message);
+      toast.error(`작가 배정 해제에 실패했습니다: ${error.response?.data?.message || error.message}`);
+    }
   };
 
   const openAssignModal = (manager) => {
@@ -186,8 +313,25 @@ export function AgencyAssignmentPage() {
     ? artists.filter(artist => artist.assignedManager?.id === selectedManager.id)
     : [];
 
-  // Get unassigned artists
-  const unassignedArtists = artists.filter(artist => !artist.assignedManager);
+  // Get unassigned artists (ARTIST_ASSIGNMENT에 없는 작가 = managerNo가 null이거나 undefined인 작가)
+  // artist_assignment 테이블에 없는 작가는 전부 미배정 작가로 표시
+  const unassignedArtists = artists.filter(artist => {
+    // managerNo가 null, undefined, 0이거나 assignedManager가 없는 경우 미배정 작가로 처리
+    const hasNoManagerNo = artist.managerNo === null || artist.managerNo === undefined || artist.managerNo === 0;
+    const hasNoAssignedManager = !artist.assignedManager;
+    const isUnassigned = hasNoManagerNo || hasNoAssignedManager;
+    
+    return isUnassigned;
+  });
+  
+  console.log('전체 작가 수:', artists.length);
+  console.log('미배정 작가 수:', unassignedArtists.length);
+  console.log('미배정 작가 목록:', unassignedArtists.map(a => ({ 
+    id: a.id, 
+    name: a.name, 
+    managerNo: a.managerNo, 
+    assignedManager: a.assignedManager 
+  })));
 
   return (
     <AgencyAssignmentRoot>
@@ -213,8 +357,16 @@ export function AgencyAssignmentPage() {
         </SearchBarContainer>
 
         {/* Manager Cards */}
-        <ManagersGrid>
-          {filteredManagers.map((manager) => (
+        {isLoading ? (
+          <EmptyStateCard>
+            <EmptyStateIcon>
+              <Users className="w-12 h-12 text-muted-foreground animate-pulse" />
+            </EmptyStateIcon>
+            <EmptyStateText>담당자 목록을 불러오는 중...</EmptyStateText>
+          </EmptyStateCard>
+        ) : (
+          <ManagersGrid>
+            {filteredManagers.map((manager) => (
             <ManagerCard 
               key={manager.id}
               onClick={() => openAssignModal(manager)}
@@ -222,8 +374,19 @@ export function AgencyAssignmentPage() {
               <ManagerCardContent>
                 <ManagerCardHeader>
                   <div className="flex items-center gap-3">
-                    <ManagerAvatar>
-                      <Users className="w-6 h-6 text-primary" />
+                    <ManagerAvatar $hasImage={!!manager.profileImage}>
+                      {manager.profileImage ? (
+                        <img 
+                          src={manager.profileImage} 
+                          alt={manager.name}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'block';
+                          }}
+                        />
+                      ) : null}
+                      <Users className="w-6 h-6 text-primary" style={{ display: manager.profileImage ? 'none' : 'block' }} />
                     </ManagerAvatar>
                     <ManagerInfo>
                       <ManagerName>{manager.name}</ManagerName>
@@ -244,10 +407,11 @@ export function AgencyAssignmentPage() {
                 </ManagerDetails>
               </ManagerCardContent>
             </ManagerCard>
-          ))}
-        </ManagersGrid>
+            ))}
+          </ManagersGrid>
+        )}
 
-        {filteredManagers.length === 0 && (
+        {!isLoading && filteredManagers.length === 0 && (
           <EmptyStateCard>
             <EmptyStateIcon>
               <Users className="w-12 h-12 text-muted-foreground" />
@@ -282,16 +446,32 @@ export function AgencyAssignmentPage() {
                       key={artist.id}
                       className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
                     >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium text-foreground">{artist.name}</span>
-                          <Badge className={getStatusColor(artist.status)} style={{ fontSize: '10px' }}>
-                            {artist.status}
-                          </Badge>
+                      <div className="flex items-center gap-3 flex-1">
+                        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
+                          {artist.profileImage ? (
+                            <img 
+                              src={artist.profileImage} 
+                              alt={artist.name}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'block';
+                              }}
+                            />
+                          ) : null}
+                          <User className="w-5 h-5 text-muted-foreground" style={{ display: artist.profileImage ? 'none' : 'block' }} />
                         </div>
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                          <span>{artist.email}</span>
-                          <span>프로젝트: {artist.projects}개</span>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-medium text-foreground">{artist.name}</span>
+                            <Badge className={getStatusColor(artist.status)} style={{ fontSize: '10px' }}>
+                              {artist.status}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                            <span>{artist.email}</span>
+                            <span>프로젝트: {artist.projects}개</span>
+                          </div>
                         </div>
                       </div>
                       <Button
@@ -327,16 +507,32 @@ export function AgencyAssignmentPage() {
                       key={artist.id}
                       className="flex items-center justify-between p-3 bg-blue-50/50 rounded-lg border border-blue-100"
                     >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium text-foreground">{artist.name}</span>
-                          <Badge className={getStatusColor(artist.status)} style={{ fontSize: '10px' }}>
-                            {artist.status}
-                          </Badge>
+                      <div className="flex items-center gap-3 flex-1">
+                        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
+                          {artist.profileImage ? (
+                            <img 
+                              src={artist.profileImage} 
+                              alt={artist.name}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'block';
+                              }}
+                            />
+                          ) : null}
+                          <User className="w-5 h-5 text-muted-foreground" style={{ display: artist.profileImage ? 'none' : 'block' }} />
                         </div>
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                          <span>{artist.email}</span>
-                          <span>프로젝트: {artist.projects}개</span>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-medium text-foreground">{artist.name}</span>
+                            <Badge className={getStatusColor(artist.status)} style={{ fontSize: '10px' }}>
+                              {artist.status}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                            <span>{artist.email}</span>
+                            <span>프로젝트: {artist.projects}개</span>
+                          </div>
                         </div>
                       </div>
                       <Button

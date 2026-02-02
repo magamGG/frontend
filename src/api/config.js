@@ -17,13 +17,33 @@ export const API_ENDPOINTS = {
   MEMBERS: {
     BASE: `/api/members`, // POST: 회원가입
     CURRENT: `/api/members/me`, // GET: 현재 회원 정보 조회
+    BY_AGENCY: (agencyNo) => `/api/members/agency/${agencyNo}`,
+    DETAILS: (memberNo) => `/api/members/${memberNo}/details`,
+    MANAGERS: (agencyNo) => `/api/members/agency/${agencyNo}/managers`,
+    ARTISTS: (agencyNo) => `/api/members/agency/${agencyNo}/artists`,
+    ARTISTS_BY_MANAGER: (managerNo) => `/api/members/manager/${managerNo}/artists`,
+    WORKING_ARTISTS: (managerNo) => `/api/members/manager/${managerNo}/working-artists`,
+    ASSIGN: (artistNo, managerNo) => `/api/members/${artistNo}/assign/${managerNo}`,
+    UNASSIGN: (artistNo) => `/api/members/${artistNo}/assign`,
+    DELETE: (memberNo) => `/api/members/${memberNo}`,
+    REMOVE_FROM_AGENCY: (memberNo) => `/api/members/${memberNo}/remove-from-agency`,
+    MY_PAGE: (memberNo) => `/api/members/${memberNo}`,
+    UPDATE_PROFILE: (memberNo) => `/api/members/${memberNo}`,
+    UPLOAD_PROFILE_IMAGE: (memberNo) => `/api/members/${memberNo}/profile-image`,
+    UPLOAD_BACKGROUND_IMAGE: (memberNo) => `/api/members/${memberNo}/background-image`,
+    EMPLOYEE_STATISTICS: (agencyNo) => `/api/members/agency/${agencyNo}/statistics`,
   },
 
   // 출석/근태 API
   ATTENDANCE: {
     CHECK_IN: `/api/attendance/check-in`, // POST: 출근 체크
+    START: `/api/attendance/start`, // POST: 출근 시작 (건강 체크 + 출근 기록)
+    END: `/api/attendance/end`, // POST: 출근 종료 (퇴근 기록)
+    TODAY_STATUS: `/api/attendance/today-status`, // GET: 오늘 출근 상태 조회
     HISTORY: (memberNo, startDate, endDate) => 
       `/api/attendance/history?memberNo=${memberNo}&startDate=${startDate}&endDate=${endDate}`, // GET: 출석 이력 조회
+    STATISTICS: (memberNo, year, month) => 
+      `/api/attendance/statistics/${memberNo}?year=${year}&month=${month}`, // GET: 근태 통계 조회
   },
 
   // 연차/휴가 API
@@ -34,6 +54,9 @@ export const API_ENDPOINTS = {
     MY_REQUESTS: `/api/leave/my-requests`, // GET: 내 근태 신청 목록 조회
     AGENCY_REQUESTS: (agencyNo) => `/api/leave/agency/${agencyNo}`, // GET: 에이전시 소속 근태 신청 목록
     AGENCY_PENDING: (agencyNo) => `/api/leave/agency/${agencyNo}/pending`, // GET: 에이전시 소속 대기 중 근태 신청
+    CURRENT_STATUS: `/api/leave/current-status`, // GET: 현재 적용 중인 근태 상태 조회
+    APPROVE: (attendanceRequestNo) => `/api/leave/${attendanceRequestNo}/approve`, // POST: 근태 신청 승인
+    REJECT: (attendanceRequestNo) => `/api/leave/${attendanceRequestNo}/reject`, // POST: 근태 신청 반려
   },
 
   // 프로젝트 API
