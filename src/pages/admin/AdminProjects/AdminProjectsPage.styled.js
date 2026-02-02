@@ -245,6 +245,12 @@ export const AdminProjectMeta = styled.div`
   font-size: 14px;
 `;
 
+export const AdminProjectMetaGroup = styled.span`
+  display: flex;
+  align-items: center;
+  gap: 15px;
+`;
+
 export const AdminProjectMetaItem = styled.span`
   display: flex;
   align-items: center;

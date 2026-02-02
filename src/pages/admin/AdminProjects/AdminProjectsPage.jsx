@@ -7,6 +7,9 @@ import { BookOpen, Users, Calendar, AlertCircle, Plus, ArrowUpDown } from 'lucid
 import { toast } from 'sonner';
 import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
 import { ProjectDetailPage } from '@/pages/ProjectDetail';
+import useAuthStore from '@/store/authStore';
+import { memberService, projectService } from '@/api/services';
+import { getProjectThumbnailUrl, PROJECT_THUMBNAIL_PLACEHOLDER } from '@/api/config';
 import {
   AdminProjectsRoot,
   AdminProjectsBody,
@@ -34,6 +37,7 @@ import {
   AdminProjectMeta,
   AdminProjectMetaItem,
   AdminProjectMetaDivider,
+  AdminProjectMetaGroup,
   AdminProjectStatus,
   AdminProjectStatusText,
   AdminProjectEpisodeText,
@@ -82,93 +86,123 @@ export function AdminProjectsPage() {
     thumbnailFile: null,
   });
 
-  // TODO: Zustand store mapping - 작가 목록
-  const [artists] = useState([
-    { id: 1, name: '김작가' },
-    { id: 2, name: '이작가' },
-    { id: 3, name: '박작가' },
-    { id: 4, name: '최작가' },
-    { id: 5, name: '정작가' },
-  ]);
+  const { user } = useAuthStore();
+  const agencyNo = user?.agencyNo;
 
-  // TODO: Zustand store mapping - 프로젝트 목록
-  const [projects, setProjects] = useState([
-    {
-      id: 1,
-      title: '로맨스 판타지',
-      platform: '네이버 웹툰',
-      status: 'urgent',
-      serialStatus: '연재중',
-      currentEpisode: 42,
-      deadline: 'D-2',
-      genre: '로맨스/판타지',
-      description: '매주 일요일 업데이트. 현재 스토리보드 단계입니다.',
-      schedule: '매주 일요일 오전 10시',
-      thumbnail: 'https://images.unsplash.com/photo-1591788806059-cb6e2f6a2498?w=400',
-      artistName: '김작가',
-      artistId: 1,
-    },
-    {
-      id: 2,
-      title: '학원물',
-      platform: '카카오페이지',
+  // 작가 목록 (API에서 조회)
+  const [artists, setArtists] = useState([]);
+  const [artistsLoading, setArtistsLoading] = useState(false);
+
+  const [projects, setProjects] = useState([]);
+  const [projectsLoading, setProjectsLoading] = useState(false);
+
+  const memberNo = user?.memberNo;
+
+  const formatDate = (date) => {
+    if (!date) return null;
+    const d = new Date(date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const calculateNextScheduleDate = (startDate, scheduleDays) => {
+    if (!startDate || !scheduleDays || isNaN(scheduleDays)) return null;
+    const start = new Date(startDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    start.setHours(0, 0, 0, 0);
+    const daysDiff = Math.floor((today - start) / (1000 * 60 * 60 * 24));
+    if (daysDiff < 0) return start;
+    const cyclesPassed = Math.floor(daysDiff / scheduleDays);
+    const nextDate = new Date(start);
+    nextDate.setDate(start.getDate() + (cyclesPassed + 1) * scheduleDays);
+    return nextDate;
+  };
+
+  const getDeadlineDn = (date) => {
+    if (!date) return '미정';
+    const next = new Date(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    next.setHours(0, 0, 0, 0);
+    const daysDiff = Math.round((next - today) / (1000 * 60 * 60 * 24));
+    if (daysDiff > 0) return `D-${daysDiff}`;
+    if (daysDiff === 0) return 'D-Day';
+    return `D+${Math.abs(daysDiff)}`;
+  };
+
+  const mapApiProjectToFrontend = (p) => {
+    const startDateStr = p.projectStartedAt
+      ? (typeof p.projectStartedAt === 'string'
+          ? p.projectStartedAt.slice(0, 10)
+          : null)
+      : null;
+    const nextDate = calculateNextScheduleDate(startDateStr, p.projectCycle);
+    const deadlineDn = nextDate ? getDeadlineDn(nextDate) : '미정';
+    return {
+      id: p.projectNo,
+      title: p.projectName,
+      platform: p.platform || '미정',
       status: 'normal',
-      serialStatus: '연재중',
-      currentEpisode: 15,
-      deadline: 'D-5',
-      genre: '학원/일상',
-      description: '매주 수요일 업데이트. 러프 스케치 단계입니다.',
-      schedule: '매주 수요일 오후 2시',
-      thumbnail: 'https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?w=400',
-      artistName: '이작가',
-      artistId: 2,
-    },
-    {
-      id: 3,
-      title: '미스터리 스릴러',
-      platform: '레진코믹스',
-      status: 'normal',
-      serialStatus: '휴재',
-      currentEpisode: 28,
-      deadline: '휴재중',
-      genre: '미스터리/스릴러',
-      description: '2025년 3월 재연재 예정',
-      schedule: '휴재중 (3월 재개 예정)',
-      thumbnail: 'https://images.unsplash.com/photo-1618556662146-0c86c2466516?w=400',
-      artistName: '박작가',
-      artistId: 3,
-    },
-    {
-      id: 4,
-      title: '액션 판타지',
-      platform: '네이버 시리즈',
-      status: 'completed',
-      serialStatus: '완결',
-      currentEpisode: 120,
-      deadline: '완결',
-      genre: '액션/판타지',
-      description: '총 120화 완결. 조회수 2.5M을 기록했습니다.',
-      schedule: '완결 (2024년 12월)',
-      thumbnail: 'https://images.unsplash.com/photo-1618519764620-7403abdbdfe9?w=400',
-      artistName: '최작가',
-      artistId: 4,
-    },
-    {
-      id: 5,
-      title: '일상 코미디',
-      platform: '카카오웹툰',
-      status: 'normal',
-      serialStatus: '연재중',
-      currentEpisode: 35,
-      deadline: 'D-7',
-      genre: '일상/코미디',
-      description: '매주 금요일 업데이트',
-      schedule: '매주 금요일 오후 6시',
-      thumbnail: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=400',
-      artistName: '김작가',
-      artistId: 1,
-    },
-  ]);
+      serialStatus: p.projectStatus || '연재중',
+      currentEpisode: 0,
+      deadline: deadlineDn,
+      genre: p.projectGenre || '',
+      schedule: p.projectCycle ? `${p.projectCycle}일` : '미정',
+      scheduleDays: p.projectCycle ?? null,
+      startDate: startDateStr,
+      nextScheduleDate: nextDate ? formatDate(nextDate) : null,
+      thumbnail: p.thumbnailFile || null,
+      artistName: p.artistName || '',
+      artistId: p.artistMemberNo,
+      projectColor: p.projectColor || '#6E8FB3',
+    };
+  };
+
+  // 프로젝트 목록 API 조회
+  useEffect(() => {
+    if (!memberNo) return;
+    const fetchProjects = async () => {
+      setProjectsLoading(true);
+      try {
+        const list = await projectService.getProjects(0, 100);
+        const arr = Array.isArray(list) ? list : list?.content ?? list?.data ?? [];
+        setProjects(arr.map((p) => mapApiProjectToFrontend(p)));
+      } catch (err) {
+        toast.error('프로젝트 목록을 불러오는데 실패했습니다.');
+        setProjects([]);
+      } finally {
+        setProjectsLoading(false);
+      }
+    };
+    fetchProjects();
+  }, [memberNo]);
+
+  // 작가 목록 API 조회 (에이전시별)
+  useEffect(() => {
+    if (!agencyNo) return;
+    const fetchArtists = async () => {
+      setArtistsLoading(true);
+      try {
+        const response = await memberService.getArtistsByAgency(agencyNo);
+        const list = Array.isArray(response) ? response : response?.data ?? [];
+        setArtists(
+          list.map((m) => ({
+            id: m.memberNo,
+            name: m.memberName || m.memberEmail,
+          }))
+        );
+      } catch (err) {
+        toast.error('작가 목록을 불러오는데 실패했습니다.');
+        setArtists([]);
+      } finally {
+        setArtistsLoading(false);
+      }
+    };
+    fetchArtists();
+  }, [agencyNo]);
 
   useEffect(() => {
     const headerTitle = document.querySelector('h1.text-2xl.font-bold');
@@ -196,68 +230,6 @@ export function AdminProjectsPage() {
     }
   }, [projects, showDetailPage]);
 
-  useEffect(() => {
-    const stored = localStorage.getItem('adminProjectsData');
-    if (stored) {
-      const data = JSON.parse(stored);
-      if (data.length > 0) {
-        setProjects(data);
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem('adminProjectsData', JSON.stringify(projects));
-  }, [projects]);
-
-  // 다음 연재 일정 계산 함수
-  const calculateNextScheduleDate = (startDate, scheduleDays) => {
-    if (!startDate || !scheduleDays || isNaN(scheduleDays)) {
-      return null;
-    }
-
-    const start = new Date(startDate);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    start.setHours(0, 0, 0, 0);
-
-    // 시작일부터 오늘까지 경과한 일수 계산
-    const daysDiff = Math.floor((today - start) / (1000 * 60 * 60 * 24));
-    
-    // 다음 연재일 계산 (시작일 + (경과일수 / 주기 + 1) * 주기)
-    const cyclesPassed = Math.floor(daysDiff / scheduleDays);
-    const nextDate = new Date(start);
-    nextDate.setDate(start.getDate() + (cyclesPassed + 1) * scheduleDays);
-
-    // 오늘이 시작일보다 이전이면 시작일 반환
-    if (daysDiff < 0) {
-      return start;
-    }
-
-    return nextDate;
-  };
-
-  // 날짜 포맷팅 함수
-  const formatDate = (date) => {
-    if (!date) return null;
-    const d = new Date(date);
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
-  // 프로젝트 렌더링 시 다음 연재 일정 계산 (렌더링 시점에 계산)
-  const getNextScheduleDate = (project) => {
-    if (project.nextScheduleDate) {
-      return project.nextScheduleDate;
-    }
-    if (project.startDate && project.schedule && !isNaN(project.schedule)) {
-      const nextDate = calculateNextScheduleDate(project.startDate, Number(project.schedule));
-      return nextDate ? formatDate(nextDate) : null;
-    }
-    return null;
-  };
 
   // 상태 필터 선택 핸들러 (단일 선택)
   const handleFilterChange = (filter) => {
@@ -296,9 +268,11 @@ export function AdminProjectsPage() {
     return `${month}월 ${day}일 (${weekday})`;
   };
 
-  const handleAddProject = () => {
+  const [isCreateLoading, setIsCreateLoading] = useState(false);
+
+  const handleAddProject = async () => {
     if (!newProjectForm.artistId || !newProjectForm.title || !newProjectForm.genre) {
-      toast.error('필수 항목을 모두 입력해주세요.');
+      toast.error('필수 항목(작가, 프로젝트명, 장르)을 모두 입력해주세요.');
       return;
     }
 
@@ -308,40 +282,71 @@ export function AdminProjectsPage() {
       return;
     }
 
-    // 다음 연재 일정 계산
-    const scheduleDays = newProjectForm.schedule ? Number(newProjectForm.schedule) : null;
-    const nextScheduleDate = calculateNextScheduleDate(newProjectForm.startDate, scheduleDays);
+    const scheduleNum = newProjectForm.schedule ? Number(newProjectForm.schedule) : null;
+    const startDate = newProjectForm.startDate
+      ? `${newProjectForm.startDate}T00:00:00`
+      : null;
 
-    const newProject = {
-      id: Date.now(),
-      title: newProjectForm.title,
-      platform: newProjectForm.platform,
-      status: 'normal',
-      serialStatus: '연재중',
-      currentEpisode: 1,
-      deadline: 'D-7',
-      genre: newProjectForm.genre,
-      schedule: newProjectForm.schedule || '미정',
-      startDate: newProjectForm.startDate || null,
-      nextScheduleDate: nextScheduleDate ? formatDate(nextScheduleDate) : null,
-      thumbnail: newProjectForm.thumbnail || 'https://images.unsplash.com/photo-1591788806059-cb6e2f6a2498?w=400',
-      artistName: selectedArtist.name,
-      artistId: newProjectForm.artistId,
-    };
+    setIsCreateLoading(true);
+    try {
+      let thumbnailFileName = null;
+      if (newProjectForm.thumbnailFile) {
+        const uploadRes = await projectService.uploadThumbnail(newProjectForm.thumbnailFile);
+        thumbnailFileName = uploadRes?.data ?? null;
+      }
 
-    setProjects([...projects, newProject]);
-    setIsAddModalOpen(false);
-    setNewProjectForm({
-      artistId: 0,
-      title: '',
-      platform: '네이버 웹툰',
-      genre: '',
-      schedule: '',
-      startDate: '',
-      thumbnail: '',
-      thumbnailFile: null,
-    });
-    toast.success('작품이 추가되었습니다.');
+      const response = await projectService.createProject({
+        projectName: newProjectForm.title,
+        artistMemberNo: newProjectForm.artistId,
+        projectStatus: '연재',
+        projectColor: '기본색',
+        projectCycle: scheduleNum || undefined,
+        projectStartedAt: startDate || undefined,
+        projectGenre: newProjectForm.genre || undefined,
+        platform: newProjectForm.platform || undefined,
+        thumbnailFile: thumbnailFileName || undefined,
+      });
+
+      const nextScheduleDate = calculateNextScheduleDate(newProjectForm.startDate, scheduleNum);
+      const deadlineDn = nextScheduleDate ? getDeadlineDn(nextScheduleDate) : '미정';
+      const newProject = {
+        id: response.projectNo,
+        title: response.projectName,
+        platform: response.platform || '미정',
+        status: 'normal',
+        serialStatus: response.projectStatus || '연재중',
+        currentEpisode: 1,
+        deadline: deadlineDn,
+        genre: response.projectGenre || '',
+        schedule: newProjectForm.schedule || '미정',
+        scheduleDays: scheduleNum ?? null,
+        startDate: newProjectForm.startDate || null,
+        nextScheduleDate: nextScheduleDate ? formatDate(nextScheduleDate) : null,
+        thumbnail: response.thumbnailFile || null,
+        artistName: response.artistName || selectedArtist.name,
+        artistId: response.artistMemberNo || newProjectForm.artistId,
+        projectColor: response.projectColor || '#6E8FB3',
+      };
+
+      setProjects((prev) => [newProject, ...prev]);
+      setIsAddModalOpen(false);
+      setNewProjectForm({
+        artistId: 0,
+        title: '',
+        platform: '네이버 웹툰',
+        genre: '',
+        schedule: '',
+        startDate: '',
+        thumbnail: '',
+        thumbnailFile: null,
+      });
+      toast.success('프로젝트가 추가되었습니다.');
+    } catch (err) {
+      const msg = err?.message || '프로젝트 추가에 실패했습니다.';
+      toast.error(msg);
+    } finally {
+      setIsCreateLoading(false);
+    }
   };
 
   const handleThumbnailChange = (e) => {
@@ -382,8 +387,30 @@ export function AdminProjectsPage() {
   };
 
 
+  const handleProjectUpdate = (updatedProject) => {
+    setProjects((prev) =>
+      prev.map((p) => (p.id === updatedProject.id ? { ...p, ...updatedProject } : p))
+    );
+    setSelectedProject((prev) => (prev?.id === updatedProject.id ? { ...prev, ...updatedProject } : prev));
+  };
+
+  const handleProjectDelete = () => {
+    if (selectedProject) {
+      setProjects((prev) => prev.filter((p) => p.id !== selectedProject.id));
+      setSelectedProject(null);
+    }
+    setShowDetailPage(false);
+  };
+
   if (showDetailPage && selectedProject) {
-    return <ProjectDetailPage project={selectedProject} onBack={() => setShowDetailPage(false)} />;
+    return (
+      <ProjectDetailPage
+        project={selectedProject}
+        onBack={() => setShowDetailPage(false)}
+        onProjectUpdate={handleProjectUpdate}
+        onProjectDelete={handleProjectDelete}
+      />
+    );
   }
 
   return (
@@ -473,12 +500,21 @@ export function AdminProjectsPage() {
 
         {/* 작품 리스트 */}
         <AdminProjectsList>
+          {projectsLoading ? (
+            <AdminProjectsEmpty>
+              <AdminProjectsEmptyIcon>
+                <AlertCircle />
+              </AdminProjectsEmptyIcon>
+              <AdminProjectsEmptyText>프로젝트 목록을 불러오는 중...</AdminProjectsEmptyText>
+            </AdminProjectsEmpty>
+          ) : (
+          <>
           {filteredProjects.map((project) => (
             <AdminProjectCard key={project.id} onClick={() => handleProjectClick(project)}>
               <AdminProjectCardContent>
                 <AdminProjectThumbnail>
                   <ThumbnailImage
-                    src={project.thumbnail || 'https://images.unsplash.com/photo-1591788806059-cb6e2f6a2498?w=400'}
+                    src={getProjectThumbnailUrl(project.thumbnail) || PROJECT_THUMBNAIL_PLACEHOLDER}
                     alt={project.title}
                   />
                 </AdminProjectThumbnail>
@@ -495,20 +531,13 @@ export function AdminProjectsPage() {
                       <BookOpen className="w-3 h-3" />
                       {project.platform}
                     </AdminProjectMetaItem>
-                    <AdminProjectMetaDivider>•</AdminProjectMetaDivider>
-                    <AdminProjectMetaItem>
-                      <Calendar className="w-3 h-3" />
-                      {project.schedule && !isNaN(project.schedule) ? `${project.schedule}일` : project.schedule || '미정'}
-                    </AdminProjectMetaItem>
-                    {getNextScheduleDate(project) && (
-                      <>
-                        <AdminProjectMetaDivider>•</AdminProjectMetaDivider>
-                        <AdminProjectMetaItem>
-                          <Calendar className="w-3 h-3" />
-                          다음: {formatDateKorean(getNextScheduleDate(project))}
-                        </AdminProjectMetaItem>
-                      </>
-                    )}
+                    <AdminProjectMetaGroup>
+                      <AdminProjectMetaDivider>•</AdminProjectMetaDivider>
+                      <AdminProjectMetaItem>
+                        <Calendar className="w-3 h-3" />
+                        {project.schedule && !isNaN(project.schedule) ? `${project.schedule}일` : project.schedule || '미정'}
+                      </AdminProjectMetaItem>
+                    </AdminProjectMetaGroup>
                   </AdminProjectMeta>
                 </AdminProjectInfo>
                 <AdminProjectStatus>
@@ -527,6 +556,8 @@ export function AdminProjectsPage() {
               <AdminProjectsEmptyText>해당 조건의 작품이 없습니다</AdminProjectsEmptyText>
             </AdminProjectsEmpty>
           )}
+          </>
+          )}
         </AdminProjectsList>
       </AdminProjectsBody>
 
@@ -538,8 +569,14 @@ export function AdminProjectsPage() {
             <AdminProjectModalLabel>
               작가 선택 <RequiredMark>*</RequiredMark>
             </AdminProjectModalLabel>
-            <AdminProjectModalSelect value={newProjectForm.artistId} onChange={(e) => setNewProjectForm({ ...newProjectForm, artistId: Number(e.target.value) })}>
-              <option value={0}>작가를 선택하세요</option>
+            <AdminProjectModalSelect
+              value={newProjectForm.artistId}
+              onChange={(e) => setNewProjectForm({ ...newProjectForm, artistId: Number(e.target.value) })}
+              disabled={artistsLoading}
+            >
+              <option value={0}>
+                {artistsLoading ? '작가 목록 불러오는 중...' : artists.length === 0 ? '등록된 작가가 없습니다' : '작가를 선택하세요'}
+              </option>
               {artists.map((artist) => (
                 <option key={artist.id} value={artist.id}>
                   {artist.name}
@@ -628,11 +665,11 @@ export function AdminProjectsPage() {
 
           {/* 버튼 */}
           <AdminProjectModalActions>
-            <FullWidthButton variant="outline" onClick={() => setIsAddModalOpen(false)}>
+            <FullWidthButton variant="outline" onClick={() => setIsAddModalOpen(false)} disabled={isCreateLoading}>
               취소
             </FullWidthButton>
-            <FullWidthButton onClick={handleAddProject} as={PrimaryButton}>
-              등록
+            <FullWidthButton onClick={handleAddProject} as={PrimaryButton} disabled={isCreateLoading}>
+              {isCreateLoading ? '등록 중...' : '등록'}
             </FullWidthButton>
           </AdminProjectModalActions>
         </AdminProjectModalForm>

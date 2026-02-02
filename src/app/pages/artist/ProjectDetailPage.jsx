@@ -23,6 +23,7 @@ import {
 import { toast } from 'sonner';
 import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
 import { useDrag, useDrop } from 'react-dnd';
+import { getProjectThumbnailUrl, PROJECT_THUMBNAIL_PLACEHOLDER } from '@/api/config';
 
 
 
@@ -748,7 +749,7 @@ export function ProjectDetailPage({
                     onClick={isEditMode ? handleChangeThumbnail : undefined}
                   >
                     <ImageWithFallback
-                      src={editedProject.thumbnail || 'https://images.unsplash.com/photo-1591788806059-cb6e2f6a2498?w=400'}
+                      src={getProjectThumbnailUrl(editedProject.thumbnail) || PROJECT_THUMBNAIL_PLACEHOLDER}
                       alt={editedProject.title}
                       className="w-32 h-44 object-cover rounded-lg border-2 border-border shadow-md"
                     />

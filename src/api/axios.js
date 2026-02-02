@@ -15,6 +15,10 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     try {
+      // FormData 전송 시 Content-Type 제거 → multipart/form-data + boundary 자동 설정
+      if (config.data instanceof FormData) {
+        delete config.headers['Content-Type'];
+      }
       // Zustand store에서 직접 state 가져오기
       const state = useAuthStore.getState();
       const token = state.token;

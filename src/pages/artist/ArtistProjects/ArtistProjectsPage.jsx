@@ -5,6 +5,9 @@ import { Badge } from '@/app/components/ui/badge';
 import { BookOpen, Calendar, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
+import useAuthStore from '@/store/authStore';
+import { projectService } from '@/api/services';
+import { getProjectThumbnailUrl, PROJECT_THUMBNAIL_PLACEHOLDER } from '@/api/config';
 // TODO: ProjectDetailPage 리팩터링 후 경로 수정 필요
 import { ProjectDetailPage } from '@/pages/ProjectDetail';
 import {
@@ -44,67 +47,90 @@ const PROJECT_SERIAL_STATUS = {
   COMPLETED: '완결',
 };
 
-// TODO: Zustand store mapping - 작가 작품 목록
-const initialProjects = [
-  {
-    id: 1,
-    title: '로맨스 판타지',
-    platform: '네이버 웹툰',
-    status: 'urgent',
-    serialStatus: PROJECT_SERIAL_STATUS.SERIALIZING,
-    currentEpisode: 42,
-    deadline: 'D-2',
-    genre: '로맨스/판타지',
-    description: '매주 일요일 업데이트. 현재 스토리보드 단계입니다.',
-    schedule: '매주 일요일 오전 10시',
-    thumbnail: 'https://images.unsplash.com/photo-1591788806059-cb6e2f6a2498?w=400',
-  },
-  {
-    id: 2,
-    title: '학원물',
-    platform: '카카오페이지',
-    status: 'normal',
-    serialStatus: PROJECT_SERIAL_STATUS.SERIALIZING,
-    currentEpisode: 15,
-    deadline: 'D-5',
-    genre: '학원/일상',
-    description: '매주 수요일 업데이트. 러프 스케치 단계입니다.',
-    schedule: '매주 수요일 오후 2시',
-    thumbnail: 'https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?w=400',
-  },
-  {
-    id: 3,
-    title: '미스터리 스릴러',
-    platform: '레진코믹스',
-    status: 'normal',
-    serialStatus: PROJECT_SERIAL_STATUS.ON_BREAK,
-    currentEpisode: 28,
-    deadline: '휴재중',
-    genre: '미스터리/스릴러',
-    description: '2025년 3월 재연재 예정',
-    schedule: '휴재중 (3월 재개 예정)',
-    thumbnail: 'https://images.unsplash.com/photo-1618556662146-0c86c2466516?w=400',
-  },
-  {
-    id: 4,
-    title: '액션 판타지',
-    platform: '네이버 시리즈',
-    status: 'completed',
-    serialStatus: PROJECT_SERIAL_STATUS.COMPLETED,
-    currentEpisode: 120,
-    deadline: '완결',
-    genre: '액션/판타지',
-    description: '총 120화 완결. 조회수 2.5M을 기록했습니다.',
-    schedule: '완결 (2024년 12월)',
-    thumbnail: 'https://images.unsplash.com/photo-1618519764620-7403abdbdfe9?w=400',
-  },
-];
-
 export function ArtistProjectsPage() {
+  const { user } = useAuthStore();
+  const memberNo = user?.memberNo;
+
   const [selectedProject, setSelectedProject] = useState(null);
   const [showDetailPage, setShowDetailPage] = useState(false);
   const [statusFilter, setStatusFilter] = useState('전체');
-  const [projects, setProjects] = useState(initialProjects);
+  const [projects, setProjects] = useState([]);
+  const [projectsLoading, setProjectsLoading] = useState(false);
+
+  const formatDate = (date) => {
+    if (!date) return null;
+    const d = new Date(date);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+
+  const calculateNextScheduleDate = (startDate, scheduleDays) => {
+    if (!startDate || !scheduleDays || isNaN(scheduleDays)) return null;
+    const start = new Date(startDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    start.setHours(0, 0, 0, 0);
+    const daysDiff = Math.floor((today - start) / (1000 * 60 * 60 * 24));
+    if (daysDiff < 0) return start;
+    const cyclesPassed = Math.floor(daysDiff / scheduleDays);
+    const nextDate = new Date(start);
+    nextDate.setDate(start.getDate() + (cyclesPassed + 1) * scheduleDays);
+    return nextDate;
+  };
+
+  const getDeadlineDn = (date) => {
+    if (!date) return '미정';
+    const next = new Date(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    next.setHours(0, 0, 0, 0);
+    const daysDiff = Math.round((next - today) / (1000 * 60 * 60 * 24));
+    if (daysDiff > 0) return `D-${daysDiff}`;
+    if (daysDiff === 0) return 'D-Day';
+    return `D+${Math.abs(daysDiff)}`;
+  };
+
+  const mapApiProjectToFrontend = (p) => {
+    const startDateStr = p.projectStartedAt
+      ? (typeof p.projectStartedAt === 'string' ? p.projectStartedAt.slice(0, 10) : null)
+      : null;
+    const nextDate = calculateNextScheduleDate(startDateStr, p.projectCycle);
+    const deadlineDn = nextDate ? getDeadlineDn(nextDate) : '미정';
+    return {
+      id: p.projectNo,
+      title: p.projectName,
+      platform: p.platform || '미정',
+      status: 'normal',
+      serialStatus: p.projectStatus || '연재중',
+      currentEpisode: 0,
+      deadline: deadlineDn,
+      genre: p.projectGenre || '',
+      schedule: p.projectCycle ? `${p.projectCycle}일` : '미정',
+      startDate: startDateStr,
+      nextScheduleDate: nextDate ? formatDate(nextDate) : null,
+      thumbnail: p.thumbnailFile || null,
+      artistName: p.artistName || '',
+      artistId: p.artistMemberNo,
+      projectColor: p.projectColor || '#6E8FB3',
+    };
+  };
+
+  useEffect(() => {
+    if (!memberNo) return;
+    const fetchProjects = async () => {
+      setProjectsLoading(true);
+      try {
+        const list = await projectService.getProjects(0, 100);
+        const arr = Array.isArray(list) ? list : list?.content ?? list?.data ?? [];
+        setProjects(arr.map((p) => mapApiProjectToFrontend(p)));
+      } catch (err) {
+        toast.error('프로젝트 목록을 불러오는데 실패했습니다.');
+        setProjects([]);
+      } finally {
+        setProjectsLoading(false);
+      }
+    };
+    fetchProjects();
+  }, [memberNo]);
 
   // 페이지 제목 변경을 위한 헤더 업데이트
   useEffect(() => {
@@ -117,22 +143,6 @@ export function ArtistProjectsPage() {
       }
     }
   }, [showDetailPage]);
-
-  // localStorage에서 작품 데이터 로드
-  useEffect(() => {
-    const stored = localStorage.getItem('projectsData');
-    if (stored) {
-      const data = JSON.parse(stored);
-      if (data.length > 0) {
-        setProjects(data);
-      }
-    }
-  }, []);
-
-  // 작품 데이터가 변경될 때마다 localStorage에 저장
-  useEffect(() => {
-    localStorage.setItem('projectsData', JSON.stringify(projects));
-  }, [projects]);
 
   // 필터 선택 핸들러 (단일 선택)
   const handleFilterChange = (filter) => {
@@ -151,7 +161,7 @@ export function ArtistProjectsPage() {
   };
 
   const handleDeleteProject = (projectId) => {
-    setProjects((prevProjects) => prevProjects.filter((project) => project.id !== projectId));
+    setProjects((prev) => prev.filter((p) => p.id !== projectId));
     toast.success('작품이 삭제되었습니다.');
   };
 
@@ -252,11 +262,20 @@ export function ArtistProjectsPage() {
 
         {/* 작품 리스트 */}
         <ProjectsList>
+          {projectsLoading ? (
+            <EmptyState>
+              <EmptyStateIcon>
+                <AlertCircle className="w-12 h-12" />
+              </EmptyStateIcon>
+              <EmptyStateText>프로젝트 목록을 불러오는 중...</EmptyStateText>
+            </EmptyState>
+          ) : (
+          <>
           {filteredProjects.map((project) => (
             <ProjectCard key={project.id} onClick={() => handleProjectClick(project)}>
               <ProjectThumbnail>
                 <ImageWithFallback
-                  src={project.thumbnail || 'https://images.unsplash.com/photo-1591788806059-cb6e2f6a2498?w=400'}
+                  src={getProjectThumbnailUrl(project.thumbnail) || PROJECT_THUMBNAIL_PLACEHOLDER}
                   alt={project.title}
                 />
               </ProjectThumbnail>
@@ -299,6 +318,8 @@ export function ArtistProjectsPage() {
               </EmptyStateIcon>
               <EmptyStateText>해당 상태의 작품이 없습니다</EmptyStateText>
             </EmptyState>
+          )}
+          </>
           )}
         </ProjectsList>
       </ArtistProjectsBody>

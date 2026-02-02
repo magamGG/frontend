@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
@@ -15,6 +15,9 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
+import { getProjectThumbnailUrl, getMemberProfileUrl, PROJECT_THUMBNAIL_PLACEHOLDER, MEMBER_AVATAR_PLACEHOLDER } from '@/api/config';
+import { projectService } from '@/api/services';
+import { toast } from 'sonner';
 import {
   AgencyProjectDetailRoot,
   AgencyProjectDetailBody,
@@ -116,79 +119,114 @@ function ReadOnlyBoardComponent({ board }) {
 }
 
 export function AgencyProjectDetailPage({ project, onBack }) {
-  // TODO: Zustand store mapping - 팀원 및 프로젝트 데이터
-  const teamMembersData = [
-    {
-      id: 1,
-      name: '김작가',
-      role: '메인 작가',
-      email: 'kim@example.com',
-      phone: '010-1234-5678',
-      status: '출근',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
-    },
-    {
-      id: 2,
-      name: '이채색',
-      role: '채색 담당',
-      email: 'lee@example.com',
-      phone: '010-2345-6789',
-      status: '출근',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-    },
-  ];
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [teamMembersLoading, setTeamMembersLoading] = useState(false);
 
-  const [teamMembers] = useState(teamMembersData);
+  useEffect(() => {
+    if (!project?.id) return;
+    const fetchMembers = async () => {
+      setTeamMembersLoading(true);
+      try {
+        const result = await projectService.getProjectMembers(project.id);
+        const list = Array.isArray(result) ? result : result?.content ?? result?.data ?? [];
+        setTeamMembers(
+          list.map((m) => ({
+            id: m.memberNo,
+            name: m.memberName || m.memberEmail || '-',
+            role: m.projectMemberRole || '-',
+            email: m.memberEmail || '',
+            phone: m.memberPhone || '',
+            status: m.memberStatus === '휴면' ? '휴면' : '출근',
+            avatar: getMemberProfileUrl(m.memberProfileImage),
+          }))
+        );
+      } catch (err) {
+        toast.error('팀원 목록을 불러오는데 실패했습니다.');
+        setTeamMembers([]);
+      } finally {
+        setTeamMembersLoading(false);
+      }
+    };
+    fetchMembers();
+  }, [project?.id]);
 
-  // 칸반 보드 데이터 - localStorage에서 로드 (읽기 전용)
-  const [boards] = useState(() => {
-    const saved = localStorage.getItem(`kanban_boards_${project.id}`);
-    if (saved) {
-      const parsedBoards = JSON.parse(saved);
-      // 담당자 정보를 팀원 데이터와 매칭
-      return parsedBoards.map(board => ({
-        ...board,
-        cards: board.cards.map(card => ({
-          ...card,
-          assignedTo: card.assignedTo ? teamMembersData.find(m => m.id === card.assignedTo.id || m.name === card.assignedTo.name) : null
-        }))
-      }));
+  // 칸반 보드 데이터 - DB(KANBAN_BOARD, KANBAN_CARD)에서 로드 (읽기 전용)
+  const [boards, setBoards] = useState([]);
+  const [boardsLoading, setBoardsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!project?.id) return;
+    const fetchBoards = async () => {
+      setBoardsLoading(true);
+      try {
+        const result = await projectService.getKanbanBoard(project.id);
+        const list = Array.isArray(result) ? result : result?.content ?? result?.data ?? [];
+        const mapped = list.map((b) => ({
+          id: b.id,
+          title: b.title || '',
+          cards: (b.cards || []).map((c) => ({
+            id: c.id,
+            title: c.title || '',
+            description: c.description || '',
+            startDate: c.startDate || '',
+            dueDate: c.dueDate || '',
+            boardId: c.boardId ?? b.id,
+            completed: !!c.completed,
+            assignedTo: c.assignedTo
+              ? {
+                  id: c.assignedTo.id,
+                  name: c.assignedTo.name,
+                  role: c.assignedTo.role,
+                  email: c.assignedTo.email,
+                  avatar: getMemberProfileUrl(c.assignedTo.avatar),
+                }
+              : null,
+          })),
+        }));
+        setBoards(mapped);
+      } catch (err) {
+        toast.error('업무 보드를 불러오는데 실패했습니다.');
+        setBoards([]);
+      } finally {
+        setBoardsLoading(false);
+      }
+    };
+    fetchBoards();
+  }, [project?.id]);
+
+  // 이번 주 팀 일정 - 칸반 카드 기반 (시작일~마감일 사이 모든 날짜에 표시)
+  const weeklySchedule = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+    const schedule = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
+      const dateStr = `${d.getMonth() + 1}/${d.getDate()}`;
+      const dayName = i === 0 ? `오늘 (${dayNames[d.getDay()]})` : dayNames[d.getDay()];
+      const yyyyMmDd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const events = [];
+      boards.forEach((board) => {
+        (board.cards || []).forEach((card) => {
+          const startStr = card.startDate ? String(card.startDate).slice(0, 10) : null;
+          const dueStr = card.dueDate ? String(card.dueDate).slice(0, 10) : null;
+          const assigneeName = card.assignedTo?.name || '';
+          if (startStr && dueStr) {
+            if (yyyyMmDd >= startStr && yyyyMmDd <= dueStr) {
+              events.push({ title: card.title, assigneeName });
+            }
+          } else if (startStr && startStr === yyyyMmDd) {
+            events.push({ title: card.title, assigneeName });
+          } else if (dueStr && dueStr === yyyyMmDd) {
+            events.push({ title: card.title, assigneeName });
+          }
+        });
+      });
+      schedule.push({ date: dateStr, day: dayName, events });
     }
-    return [
-      {
-        id: 1,
-        title: '할 일',
-        cards: [
-          { id: 1, title: '43화 스토리보드', description: '스토리 구성 및 콘티 작업', startDate: '2026-01-15', dueDate: '2026-01-20', boardId: 1, comments: [], assignedTo: teamMembersData[0], completed: false },
-        ],
-      },
-      {
-        id: 2,
-        title: '진행중',
-        cards: [
-          { id: 3, title: '42화 채색', description: '메인 씬 채색 작업', startDate: '2026-01-16', dueDate: '2026-01-18', boardId: 2, comments: [], assignedTo: teamMembersData[1], completed: false },
-        ],
-      },
-      {
-        id: 3,
-        title: '완료',
-        cards: [
-          { id: 4, title: '41화 업로드', description: '네이버 웹툰 업로드 완료', startDate: '2026-01-13', dueDate: '2026-01-14', boardId: 3, comments: [], assignedTo: teamMembersData[0], completed: true },
-        ],
-      },
-    ];
-  });
-
-  // 주간 캘린더
-  const [weeklySchedule] = useState([
-    { date: '1/19', day: '오늘 (월)', events: ['42화 채색 마감', '팀 미팅 3PM'] },
-    { date: '1/20', day: '화', events: ['43화 스토리보드 시작'] },
-    { date: '1/21', day: '수', events: [] },
-    { date: '1/22', day: '목', events: ['42화 최종 검수'] },
-    { date: '1/23', day: '금', events: ['42화 업로드'] },
-    { date: '1/24', day: '토', events: ['43화 스토리보드 마감'] },
-    { date: '1/25', day: '일', events: ['44화 기획 회의'] },
-  ]);
+    return schedule;
+  }, [boards]);
 
   // 모달 상태
   const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
@@ -203,6 +241,8 @@ export function AgencyProjectDetailPage({ project, onBack }) {
         return 'bg-red-500 hover:bg-red-600';
       case '재택근무':
         return 'bg-blue-500 hover:bg-blue-600';
+      case '휴면':
+        return 'bg-gray-500 hover:bg-gray-600';
       default:
         return 'bg-blue-500 hover:bg-blue-600';
     }
@@ -228,7 +268,7 @@ export function AgencyProjectDetailPage({ project, onBack }) {
             {/* 작품 표지 */}
             <ProjectThumbnail>
               <ImageWithFallback
-                src={project.thumbnail || 'https://images.unsplash.com/photo-1591788806059-cb6e2f6a2498?w=400'}
+                src={getProjectThumbnailUrl(project.thumbnail) || PROJECT_THUMBNAIL_PLACEHOLDER}
                 alt={project.title}
                 className="w-32 h-44 object-cover rounded-lg border-2 border-border shadow-md"
               />
@@ -253,12 +293,13 @@ export function AgencyProjectDetailPage({ project, onBack }) {
                 <ProjectTeamHeader>
                   <Users className="w-4 h-4" style={{ color: 'var(--muted-foreground)' }} />
                   <span style={{ color: 'var(--foreground)', fontSize: '0.875rem' }}>
-                    팀원 ({teamMembers.length}명)
+                    팀원 ({teamMembersLoading ? '...' : `${teamMembers.length}명`})
                   </span>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setIsTeamModalOpen(true)}
+                    disabled={teamMembersLoading}
                     style={{ 
                       marginLeft: '8px',
                       backgroundColor: 'var(--muted)',
@@ -281,9 +322,15 @@ export function AgencyProjectDetailPage({ project, onBack }) {
               <ProjectManagementTitle>업무 일정 보드</ProjectManagementTitle>
 
               <KanbanBoardsContainer>
-                {boards.map((board) => (
-                  <ReadOnlyBoardComponent key={board.id} board={board} />
-                ))}
+                {boardsLoading ? (
+                  <p className="text-sm text-muted-foreground">업무 보드 불러오는 중...</p>
+                ) : boards.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">등록된 보드가 없습니다.</p>
+                ) : (
+                  boards.map((board) => (
+                    <ReadOnlyBoardComponent key={board.id} board={board} />
+                  ))
+                )}
               </KanbanBoardsContainer>
             </ProjectManagementSection>
           </ContentGridLeft>
@@ -305,7 +352,10 @@ export function AgencyProjectDetailPage({ project, onBack }) {
                         {schedule.events.map((event, eventIndex) => (
                           <WeeklyScheduleEvent key={eventIndex}>
                             <Circle className="w-2 h-2 fill-primary text-primary flex-shrink-0" />
-                            <span className="text-xs text-muted-foreground">{event}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {event.title}
+                              {event.assigneeName && ` (${event.assigneeName})`}
+                            </span>
                           </WeeklyScheduleEvent>
                         ))}
                       </WeeklyScheduleEvents>
@@ -344,7 +394,7 @@ export function AgencyProjectDetailPage({ project, onBack }) {
                 >
                   {/* 프로필 사진 */}
                   <ImageWithFallback
-                    src={member.avatar || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150'}
+                    src={member.avatar || MEMBER_AVATAR_PLACEHOLDER}
                     alt={member.name}
                     className="w-12 h-12 rounded-full object-cover flex-shrink-0"
                   />
@@ -377,7 +427,7 @@ export function AgencyProjectDetailPage({ project, onBack }) {
           <div className="space-y-6">
             <div className="flex items-center gap-4">
               <ImageWithFallback
-                src={selectedMember.avatar || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150'}
+                src={selectedMember.avatar || MEMBER_AVATAR_PLACEHOLDER}
                 alt={selectedMember.name}
                 className="w-20 h-20 rounded-full object-cover"
               />

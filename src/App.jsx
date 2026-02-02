@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Toaster } from 'sonner';
 import { FullPageLayout } from '@/components/layout/FullPageLayout';
 import { LoginPage } from '@/pages/Login';
@@ -10,36 +10,46 @@ import { HTML5Backend } from 'react-dnd-html5-backend';
 import { ProjectProvider } from '@/contexts/ProjectContext';
 import useAuthStore from '@/store/authStore';
 
-// Import artist pages
-import { ArtistDashboardPage } from '@/pages/artist/ArtistDashboard';
-import { ArtistProjectsPage } from '@/pages/artist/ArtistProjects';
-import { ArtistCalendarPage } from '@/pages/artist/ArtistCalendar';
-import { ArtistWorkationPage } from '@/pages/artist/ArtistWorkation';
-import { ArtistTeamPage } from '@/pages/artist/ArtistTeam';
-import { ArtistHealthPage } from '@/pages/artist/ArtistHealth';
-import { AttendancePage } from '@/pages/Attendance';
+// Lazy load artist pages
+const ArtistDashboardPage = lazy(() => import('@/pages/artist/ArtistDashboard').then(m => ({ default: m.ArtistDashboardPage })));
+const ArtistProjectsPage = lazy(() => import('@/pages/artist/ArtistProjects').then(m => ({ default: m.ArtistProjectsPage })));
+const ArtistCalendarPage = lazy(() => import('@/pages/artist/ArtistCalendar').then(m => ({ default: m.ArtistCalendarPage })));
+const ArtistWorkationPage = lazy(() => import('@/pages/artist/ArtistWorkation').then(m => ({ default: m.ArtistWorkationPage })));
+const ArtistTeamPage = lazy(() => import('@/pages/artist/ArtistTeam').then(m => ({ default: m.ArtistTeamPage })));
+const ArtistHealthPage = lazy(() => import('@/pages/artist/ArtistHealth').then(m => ({ default: m.ArtistHealthPage })));
+const AttendancePage = lazy(() => import('@/pages/Attendance').then(m => ({ default: m.AttendancePage })));
 
-// Import admin pages
-import { AdminDashboardPage } from '@/pages/admin/AdminDashboard';
-import { AdminProjectsPage } from '@/pages/admin/AdminProjects';
-import { AdminCalendarPage } from '@/pages/admin/AdminCalendar';
-import { AdminTeamPage } from '@/pages/admin/AdminTeam';
-import { AdminHealthPage } from '@/pages/admin/AdminHealth';
-import { AdminPersonalHealthPage } from '@/pages/admin/AdminPersonalHealth';
-import { AdminAbsenteePage } from '@/pages/admin/AdminAbsentee';
-import { AdminMyPage } from '@/pages/admin/AdminMyPage';
-import { AdminWorkcationPage } from '@/pages/admin/AdminWorkcation';
+// Lazy load admin pages
+const AdminDashboardPage = lazy(() => import('@/pages/admin/AdminDashboard').then(m => ({ default: m.AdminDashboardPage })));
+const AdminProjectsPage = lazy(() => import('@/pages/admin/AdminProjects').then(m => ({ default: m.AdminProjectsPage })));
+const AdminCalendarPage = lazy(() => import('@/pages/admin/AdminCalendar').then(m => ({ default: m.AdminCalendarPage })));
+const AdminTeamPage = lazy(() => import('@/pages/admin/AdminTeam').then(m => ({ default: m.AdminTeamPage })));
+const AdminHealthPage = lazy(() => import('@/pages/admin/AdminHealth').then(m => ({ default: m.AdminHealthPage })));
+const AdminPersonalHealthPage = lazy(() => import('@/pages/admin/AdminPersonalHealth').then(m => ({ default: m.AdminPersonalHealthPage })));
+const AdminAbsenteePage = lazy(() => import('@/pages/admin/AdminAbsentee').then(m => ({ default: m.AdminAbsenteePage })));
+const AdminMyPage = lazy(() => import('@/pages/admin/AdminMyPage').then(m => ({ default: m.AdminMyPage })));
+const AdminWorkcationPage = lazy(() => import('@/pages/admin/AdminWorkcation').then(m => ({ default: m.AdminWorkcationPage })));
 
-// Import agency pages
-import { AgencyDashboardPage } from '@/pages/agency/AgencyDashboard';
-import { AgencyProjectsPage } from '@/pages/agency/AgencyProjects';
-import { AgencyTeamPage } from '@/pages/agency/AgencyTeam';
-import { AgencyApprovalsPage } from '@/pages/agency/AgencyApprovals';
-import { AgencyWorkcationPage } from '@/pages/agency/AgencyWorkcation';
-import { AgencyMyPage } from '@/pages/agency/AgencyMyPage';
-import { AgencyHealthPage } from '@/pages/agency/AgencyHealth';
-import { AgencyAssignmentPage } from '@/pages/agency/AgencyAssignment';
-import { AgencyLeaveSettingsPage } from '@/pages/agency/AgencyLeaveSettings';
+// Lazy load agency pages
+const AgencyDashboardPage = lazy(() => import('@/pages/agency/AgencyDashboard').then(m => ({ default: m.AgencyDashboardPage })));
+const AgencyProjectsPage = lazy(() => import('@/pages/agency/AgencyProjects').then(m => ({ default: m.AgencyProjectsPage })));
+const AgencyTeamPage = lazy(() => import('@/pages/agency/AgencyTeam').then(m => ({ default: m.AgencyTeamPage })));
+const AgencyApprovalsPage = lazy(() => import('@/pages/agency/AgencyApprovals').then(m => ({ default: m.AgencyApprovalsPage })));
+const AgencyWorkcationPage = lazy(() => import('@/pages/agency/AgencyWorkcation').then(m => ({ default: m.AgencyWorkcationPage })));
+const AgencyMyPage = lazy(() => import('@/pages/agency/AgencyMyPage').then(m => ({ default: m.AgencyMyPage })));
+const AgencyHealthPage = lazy(() => import('@/pages/agency/AgencyHealth').then(m => ({ default: m.AgencyHealthPage })));
+const AgencyAssignmentPage = lazy(() => import('@/pages/agency/AgencyAssignment').then(m => ({ default: m.AgencyAssignmentPage })));
+const AgencyLeaveSettingsPage = lazy(() => import('@/pages/agency/AgencyLeaveSettings').then(m => ({ default: m.AgencyLeaveSettingsPage })));
+
+// Loading fallback component
+const PageLoadingFallback = () => (
+  <div className="flex items-center justify-center h-screen bg-gray-50">
+    <div className="text-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+      <p className="text-gray-600">페이지 로딩 중...</p>
+    </div>
+  </div>
+);
 
 /**
  * @typedef {'login' | 'signup' | 'forgot-password' | 'dashboard' | 'join-request'} AuthView
@@ -411,7 +421,9 @@ export default function App() {
         )}
 
         {authView === 'dashboard' && (
-          <FullPageLayout sections={sections} onLogout={handleLogout} userRole={userRole} />
+          <Suspense fallback={<PageLoadingFallback />}>
+            <FullPageLayout sections={sections} onLogout={handleLogout} userRole={userRole} />
+          </Suspense>
         )}
       </ProjectProvider>
     </DndProvider>
