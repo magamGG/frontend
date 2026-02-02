@@ -5,6 +5,7 @@ import { Badge } from '@/app/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/app/components/ui/dialog';
 import { CheckCircle, Calendar, Clock, FileText, AlertCircle, Activity, Shield, Stethoscope, X } from 'lucide-react';
 import { toast } from 'sonner';
+import useAuthStore from '@/store/authStore';
 import {
   ArtistHealthRoot,
   ArtistHealthBody,
@@ -69,8 +70,8 @@ const initialDeepCheckupData = {
   mental: {
     lastCheckDate: '2026.01.15',
     score: 8,
-    status: '주의',
-    isCompleted: true,
+    status: '미완료',
+    isCompleted: false,
     nextCheckDate: '2026.01.25',
   },
   physical: {
@@ -83,6 +84,9 @@ const initialDeepCheckupData = {
 };
 
 export function ArtistHealthPage() {
+  const { user } = useAuthStore();
+  const memberNo = user?.memberNo;
+
   const [isMentalSelfCheckOpen, setIsMentalSelfCheckOpen] = useState(false);
   const [isPhysicalSelfCheckOpen, setIsPhysicalSelfCheckOpen] = useState(false);
   const [isMentalDeepCheckOpen, setIsMentalDeepCheckOpen] = useState(false);
@@ -95,6 +99,94 @@ export function ArtistHealthPage() {
 
   const [nextCheckupDate] = useState(initialNextCheckupDate);
   const [deepCheckupData, setDeepCheckupData] = useState(initialDeepCheckupData);
+
+  // 신체 건강 심층 검사 질문 데이터 state
+  const [physicalDeepQuestions, setPhysicalDeepQuestions] = useState([]);
+  const [isLoadingPhysicalQuestions, setIsLoadingPhysicalQuestions] = useState(false);
+
+  // 정신 건강 심층 검사 질문 데이터 state
+  const [mentalDeepQuestions, setMentalDeepQuestions] = useState([]);
+  const [isLoadingMentalQuestions, setIsLoadingMentalQuestions] = useState(false);
+
+  // API 호출 함수 - 신체 건강 심층 검사 질문 가져오기
+  const fetchPhysicalDeepQuestions = async () => {
+    try {
+      setIsLoadingPhysicalQuestions(true);
+      // 백엔드 API 호출 - "월간 신체" 타입으로 질문 조회
+      const response = await fetch('/api/health-surveys/type/월간 신체/questions', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('질문을 불러오는데 실패했습니다.');
+      }
+      
+      const questions = await response.json();
+      // healthSurveyOrder 순서로 정렬
+      const sortedQuestions = questions.sort((a, b) => 
+        (a.healthSurveyOrder || 0) - (b.healthSurveyOrder || 0)
+      );
+      setPhysicalDeepQuestions(sortedQuestions);
+      
+      // 답변 배열 초기화 (질문 개수에 맞게)
+      setPhysicalDeepAnswers(new Array(sortedQuestions.length).fill(null));
+    } catch (error) {
+      console.error('질문 로드 실패:', error);
+      toast.error('질문을 불러오는데 실패했습니다.');
+    } finally {
+      setIsLoadingPhysicalQuestions(false);
+    }
+  };
+
+  // API 호출 함수 - 정신 건강 심층 검사 질문 가져오기
+  const fetchMentalDeepQuestions = async () => {
+    try {
+      setIsLoadingMentalQuestions(true);
+      // 백엔드 API 호출 - "월간 정신" 타입으로 질문 조회
+      const response = await fetch('/api/health-surveys/type/월간 정신/questions', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('질문을 불러오는데 실패했습니다.');
+      }
+      
+      const questions = await response.json();
+      // healthSurveyOrder 순서로 정렬
+      const sortedQuestions = questions.sort((a, b) => 
+        (a.healthSurveyOrder || 0) - (b.healthSurveyOrder || 0)
+      );
+      setMentalDeepQuestions(sortedQuestions);
+      
+      // 답변 배열 초기화 (질문 개수에 맞게)
+      setMentalDeepAnswers(new Array(sortedQuestions.length).fill(null));
+    } catch (error) {
+      console.error('질문 로드 실패:', error);
+      toast.error('질문을 불러오는데 실패했습니다.');
+    } finally {
+      setIsLoadingMentalQuestions(false);
+    }
+  };
+
+  // 모달이 열릴 때 질문 로드
+  useEffect(() => {
+    if (isPhysicalDeepCheckOpen) {
+      fetchPhysicalDeepQuestions();
+    }
+  }, [isPhysicalDeepCheckOpen]);
+
+  // 정신 건강 심층 검진 모달이 열릴 때 질문 로드
+  useEffect(() => {
+    if (isMentalDeepCheckOpen) {
+      fetchMentalDeepQuestions();
+    }
+  }, [isMentalDeepCheckOpen]);
 
   // 기본 닫기 버튼 숨기기
   useEffect(() => {
@@ -157,51 +249,162 @@ export function ArtistHealthPage() {
     setPhysicalSelfAnswers([null, null, null, null]);
   };
 
-  const handleSubmitMentalDeep = () => {
+  const handleSubmitMentalDeep = async () => {
     // 모든 문항이 선택되었는지 확인
     if (mentalDeepAnswers.some(answer => answer === null)) {
       toast.error('모든 문항에 답변해주세요.');
       return;
     }
-    toast.success('정신 건강 심층 검진이 제출되었습니다.');
-    setIsMentalDeepCheckOpen(false);
-    setMentalDeepAnswers([null, null, null, null]);
+
+    if (!memberNo) {
+      toast.error('회원 정보를 찾을 수 없습니다.');
+      return;
+    }
+
+    if (mentalDeepQuestions.length === 0) {
+      toast.error('질문 정보를 찾을 수 없습니다.');
+      return;
+    }
+
+    try {
+      // healthSurveyNo를 질문 데이터에서 가져오기
+      const healthSurveyNo = mentalDeepQuestions[0]?.healthSurveyNo;
+      if (!healthSurveyNo) {
+        toast.error('설문 정보를 찾을 수 없습니다.');
+        return;
+      }
+
+      // 각 문항별 점수의 총합 계산 (프론트엔드에서 로직 처리)
+      const totalScore = mentalDeepAnswers.reduce((sum, score) => sum + (score || 0), 0);
+
+      // API 호출 (총점만 전송, 백엔드에서 HEALTH_SURVEY_QUESTION_ITEM_ANSWER_SCORE에 저장)
+      const response = await fetch(`/api/health-surveys/${healthSurveyNo}/responses`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          memberNo: memberNo,
+          totalScore: totalScore
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || '제출에 실패했습니다.');
+      }
+
+      const result = await response.json();
+      
+      // 완료 상태 업데이트
+      const today = new Date();
+      const formattedDate = `${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')}`;
+
+      let status = '정상';
+      if (result.riskLevel === '위험') {
+        status = '위험';
+      } else if (result.riskLevel === '주의') {
+        status = '주의';
+      }
+
+      setDeepCheckupData({
+        ...deepCheckupData,
+        mental: {
+          lastCheckDate: formattedDate,
+          score: result.totalScore || 0,
+          status: status,
+          isCompleted: true,
+          nextCheckDate: deepCheckupData.mental.nextCheckDate,
+        },
+      });
+
+      toast.success('정신 건강 심층 검진이 제출되었습니다.');
+      setIsMentalDeepCheckOpen(false);
+      setMentalDeepAnswers([]);
+      setMentalDeepQuestions([]);
+    } catch (error) {
+      console.error('제출 실패:', error);
+      toast.error(error.message || '제출에 실패했습니다.');
+    }
   };
 
-  const handleSubmitPhysicalDeep = () => {
+  const handleSubmitPhysicalDeep = async () => {
     // 모든 문항이 선택되었는지 확인
     if (physicalDeepAnswers.some(answer => answer === null)) {
       toast.error('모든 문항에 답변해주세요.');
       return;
     }
-    const totalScore = physicalDeepAnswers.reduce((sum, score) => sum + score, 0);
-    const averageScore = Math.round(totalScore / physicalDeepAnswers.length);
-    const finalScore = Math.max(7, averageScore);
 
-    let status = '정상';
-    if (finalScore >= 8) {
-      status = '위험';
-    } else if (finalScore >= 5) {
-      status = '주의';
+    if (!memberNo) {
+      toast.error('회원 정보를 찾을 수 없습니다.');
+      return;
     }
 
-    const today = new Date();
-    const formattedDate = `${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')}`;
+    if (physicalDeepQuestions.length === 0) {
+      toast.error('질문 정보를 찾을 수 없습니다.');
+      return;
+    }
 
-    setDeepCheckupData({
-      ...deepCheckupData,
-      physical: {
-        lastCheckDate: formattedDate,
-        score: finalScore,
-        status: status,
-        isCompleted: true,
-        nextCheckDate: deepCheckupData.physical.nextCheckDate,
-      },
-    });
+    try {
+      // healthSurveyNo를 질문 데이터에서 가져오기
+      const healthSurveyNo = physicalDeepQuestions[0]?.healthSurveyNo;
+      if (!healthSurveyNo) {
+        toast.error('설문 정보를 찾을 수 없습니다.');
+        return;
+      }
 
-    toast.success('신체 건강 심층 검진이 제출되었습니다.');
-    setIsPhysicalDeepCheckOpen(false);
-    setPhysicalDeepAnswers([null, null, null, null]);
+      // 각 문항별 점수의 총합 계산 (프론트엔드에서 로직 처리)
+      const totalScore = physicalDeepAnswers.reduce((sum, score) => sum + (score || 0), 0);
+
+      // API 호출 (총점만 전송, 백엔드에서 HEALTH_SURVEY_QUESTION_ITEM_ANSWER_SCORE에 저장)
+      const response = await fetch(`/api/health-surveys/${healthSurveyNo}/responses`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          memberNo: memberNo,
+          totalScore: totalScore
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || '제출에 실패했습니다.');
+      }
+
+      const result = await response.json();
+      
+      // 완료 상태 업데이트
+      const today = new Date();
+      const formattedDate = `${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')}`;
+
+      let status = '정상';
+      if (result.riskLevel === '위험') {
+        status = '위험';
+      } else if (result.riskLevel === '주의') {
+        status = '주의';
+      }
+
+      setDeepCheckupData({
+        ...deepCheckupData,
+        physical: {
+          lastCheckDate: formattedDate,
+          score: result.totalScore || 0,
+          status: status,
+          isCompleted: true,
+          nextCheckDate: deepCheckupData.physical.nextCheckDate,
+        },
+      });
+
+      toast.success('신체 건강 심층 검진이 제출되었습니다.');
+      setIsPhysicalDeepCheckOpen(false);
+      setPhysicalDeepAnswers([]);
+      setPhysicalDeepQuestions([]);
+    } catch (error) {
+      console.error('제출 실패:', error);
+      toast.error(error.message || '제출에 실패했습니다.');
+    }
   };
 
   const getStatusBadgeClass = (status) => {
@@ -331,19 +534,21 @@ export function ArtistHealthPage() {
                 </Button>
               </div>
             ) : (
-              <IncompleteStatusBox>
-                <IncompleteStatusIcon>
-                  <Activity className="w-12 h-12" />
+              <IncompleteStatusBox $isWarning $isPurple>
+                <IncompleteStatusIcon $isWarning $isPurple>
+                  <AlertCircle className="w-14 h-14" />
                 </IncompleteStatusIcon>
-                <IncompleteStatusText>아직 검사를 진행하지 않았습니다.</IncompleteStatusText>
+                <IncompleteStatusText $isWarning $isPurple>검사가 아직 완료되지 않았습니다</IncompleteStatusText>
+                <IncompleteStatusSubtext>{deepCheckupData.mental.nextCheckDate}까지 검사를 완료해주세요</IncompleteStatusSubtext>
                 <Button 
                   onClick={() => {
-                    setMentalDeepAnswers([null, null, null, null]);
+                    setMentalDeepAnswers([]);
+                    setMentalDeepQuestions([]);
                     setIsMentalDeepCheckOpen(true);
                   }} 
-                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                  className="bg-purple-600 hover:bg-purple-700 text-white font-semibold shadow-md"
                 >
-                  검사하기
+                  검사 시작하기
                 </Button>
               </IncompleteStatusBox>
             )}
@@ -420,7 +625,8 @@ export function ArtistHealthPage() {
                 <IncompleteStatusSubtext>2026.02.01까지 검사를 완료해주세요</IncompleteStatusSubtext>
                 <Button 
                   onClick={() => {
-                    setPhysicalDeepAnswers([null, null, null, null]);
+                    setPhysicalDeepAnswers([]);
+                    setPhysicalDeepQuestions([]);
                     setIsPhysicalDeepCheckOpen(true);
                   }} 
                   className="bg-orange-500 hover:bg-orange-600 text-white font-semibold shadow-md"
@@ -617,8 +823,9 @@ export function ArtistHealthPage() {
         open={isMentalDeepCheckOpen} 
         onOpenChange={(open) => {
           setIsMentalDeepCheckOpen(open);
-          if (open) {
-            setMentalDeepAnswers([null, null, null, null]);
+          if (!open) {
+            setMentalDeepAnswers([]);
+            setMentalDeepQuestions([]);
           }
         }}
       >
@@ -642,34 +849,50 @@ export function ArtistHealthPage() {
 
             <p className="text-sm text-[#1F2328] font-medium">지난 2주간을 기준으로 응답해주세요.</p>
 
-            <SurveyQuestionList>
-              {[
-                { q: '1. 일 또는 여가 활동을 하는 데 흥미나 즐거움을 느끼지 못함', desc: '0 (전혀 없음) ~ 10 (거의 매일)' },
-                { q: '2. 기분이 가라앉거나 우울하거나 희망이 없다고 느낌', desc: '0 (전혀 없음) ~ 10 (거의 매일)' },
-                { q: '3. 잠들기 어렵거나 자주 깨거나 너무 많이 잠', desc: '0 (전혀 없음) ~ 10 (거의 매일)' },
-                { q: '4. 피곤하다고 느끼거나 기력이 거의 없음', desc: '0 (전혀 없음) ~ 10 (거의 매일)' },
-              ].map((item, index) => (
-                <SurveyQuestion key={index}>
-                  <SurveyQuestionText>{item.q}</SurveyQuestionText>
-                  <SurveyQuestionDesc>{item.desc}</SurveyQuestionDesc>
-                  <SurveyAnswerButtons>
-                    {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
-                      <SurveyAnswerButton
-                        key={num}
-                        onClick={() => {
-                          const newAnswers = [...mentalDeepAnswers];
-                          newAnswers[index] = num;
-                          setMentalDeepAnswers(newAnswers);
-                        }}
-                        $isSelected={mentalDeepAnswers[index] === num}
-                      >
-                        {num}
-                      </SurveyAnswerButton>
-                    ))}
-                  </SurveyAnswerButtons>
-                </SurveyQuestion>
-              ))}
-            </SurveyQuestionList>
+            {isLoadingMentalQuestions ? (
+              <div className="flex justify-center items-center py-8">
+                <p className="text-[#6E8FB3]">질문을 불러오는 중...</p>
+              </div>
+            ) : (
+              <SurveyQuestionList>
+                {mentalDeepQuestions.map((question, index) => {
+                  const minScore = question.healthSurveyQuestionMinScore || 0;
+                  const maxScore = question.healthSurveyQuestionMaxScore || 10;
+                  const scoreOptions = [];
+                  
+                  // 최소값부터 최대값까지 배열 생성
+                  for (let i = minScore; i <= maxScore; i++) {
+                    scoreOptions.push(i);
+                  }
+                  
+                  return (
+                    <SurveyQuestion key={question.healthSurveyQuestionNo || index}>
+                      <SurveyQuestionText>
+                        {question.healthSurveyOrder}. {question.healthSurveyQuestionContent}
+                      </SurveyQuestionText>
+                      <SurveyQuestionDesc>
+                        {minScore} (전혀 없음) ~ {maxScore} (거의 매일)
+                      </SurveyQuestionDesc>
+                      <SurveyAnswerButtons>
+                        {scoreOptions.map((num) => (
+                          <SurveyAnswerButton
+                            key={num}
+                            onClick={() => {
+                              const newAnswers = [...mentalDeepAnswers];
+                              newAnswers[index] = num;
+                              setMentalDeepAnswers(newAnswers);
+                            }}
+                            $isSelected={mentalDeepAnswers[index] === num}
+                          >
+                            {num}
+                          </SurveyAnswerButton>
+                        ))}
+                      </SurveyAnswerButtons>
+                    </SurveyQuestion>
+                  );
+                })}
+              </SurveyQuestionList>
+            )}
 
             <SurveyInfoBox>
               <SurveyInfoText>
@@ -684,7 +907,8 @@ export function ArtistHealthPage() {
               variant="outline"
               onClick={() => {
                 setIsMentalDeepCheckOpen(false);
-                setMentalDeepAnswers([null, null, null, null]);
+                setMentalDeepAnswers([]);
+                setMentalDeepQuestions([]);
               }}
             >
               취소
@@ -701,8 +925,9 @@ export function ArtistHealthPage() {
         open={isPhysicalDeepCheckOpen} 
         onOpenChange={(open) => {
           setIsPhysicalDeepCheckOpen(open);
-          if (open) {
-            setPhysicalDeepAnswers([null, null, null, null]);
+          if (!open) {
+            setPhysicalDeepAnswers([]);
+            setPhysicalDeepQuestions([]);
           }
         }}
       >
@@ -738,34 +963,50 @@ export function ArtistHealthPage() {
 
             <p className="text-sm text-[#1F2328] font-medium">지난 1개월을 기준으로 응답해주세요.</p>
 
-            <SurveyQuestionList>
-              {[
-                { q: '1. 손목이나 손가락의 통증 및 불편감이 있습니까?', desc: '0 (전혀 없음) ~ 10 (매우 심함)' },
-                { q: '2. 목, 어깨, 등의 통증 및 결림이 있습니까?', desc: '0 (전혀 없음) ~ 10 (매우 심함)' },
-                { q: '3. 허리 통증 및 불편감이 있습니까?', desc: '0 (전혀 없음) ~ 10 (매우 심함)' },
-                { q: '4. 전반적인 피로도와 무기력함을 느꼈나요?', desc: '0 (전혀 없음) ~ 10 (매우 심함)' },
-              ].map((item, index) => (
-                <SurveyQuestion key={index}>
-                  <SurveyQuestionText>{item.q}</SurveyQuestionText>
-                  <SurveyQuestionDesc>{item.desc}</SurveyQuestionDesc>
-                  <SurveyAnswerButtons>
-                    {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
-                      <SurveyAnswerButton
-                        key={num}
-                        onClick={() => {
-                          const newAnswers = [...physicalDeepAnswers];
-                          newAnswers[index] = num;
-                          setPhysicalDeepAnswers(newAnswers);
-                        }}
-                        $isSelected={physicalDeepAnswers[index] === num}
-                      >
-                        {num}
-                      </SurveyAnswerButton>
-                    ))}
-                  </SurveyAnswerButtons>
-                </SurveyQuestion>
-              ))}
-            </SurveyQuestionList>
+            {isLoadingPhysicalQuestions ? (
+              <div className="flex justify-center items-center py-8">
+                <p className="text-[#6E8FB3]">질문을 불러오는 중...</p>
+              </div>
+            ) : (
+              <SurveyQuestionList>
+                {physicalDeepQuestions.map((question, index) => {
+                  const minScore = question.healthSurveyQuestionMinScore || 0;
+                  const maxScore = question.healthSurveyQuestionMaxScore || 10;
+                  const scoreOptions = [];
+                  
+                  // 최소값부터 최대값까지 배열 생성
+                  for (let i = minScore; i <= maxScore; i++) {
+                    scoreOptions.push(i);
+                  }
+                  
+                  return (
+                    <SurveyQuestion key={question.healthSurveyQuestionNo || index}>
+                      <SurveyQuestionText>
+                        {question.healthSurveyOrder}. {question.healthSurveyQuestionContent}
+                      </SurveyQuestionText>
+                      <SurveyQuestionDesc>
+                        {minScore} (전혀 없음) ~ {maxScore} (매우 심함)
+                      </SurveyQuestionDesc>
+                      <SurveyAnswerButtons>
+                        {scoreOptions.map((num) => (
+                          <SurveyAnswerButton
+                            key={num}
+                            onClick={() => {
+                              const newAnswers = [...physicalDeepAnswers];
+                              newAnswers[index] = num;
+                              setPhysicalDeepAnswers(newAnswers);
+                            }}
+                            $isSelected={physicalDeepAnswers[index] === num}
+                          >
+                            {num}
+                          </SurveyAnswerButton>
+                        ))}
+                      </SurveyAnswerButtons>
+                    </SurveyQuestion>
+                  );
+                })}
+              </SurveyQuestionList>
+            )}
 
             <SurveyInfoBox>
               <SurveyInfoText>
@@ -780,7 +1021,8 @@ export function ArtistHealthPage() {
               className="bg-gray-200 hover:bg-gray-300 text-gray-700 border-gray-300"
               onClick={() => {
                 setIsPhysicalDeepCheckOpen(false);
-                setPhysicalDeepAnswers([null, null, null, null]);
+                setPhysicalDeepAnswers([]);
+                setPhysicalDeepQuestions([]);
               }}
             >
               취소
