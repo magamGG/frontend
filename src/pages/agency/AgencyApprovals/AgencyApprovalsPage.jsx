@@ -9,6 +9,7 @@ import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { agencyService, leaveService } from '@/api';
 import useAuthStore from '@/store/authStore';
+import { RequestDetailModal } from '@/components/modals/RequestDetailModal/RequestDetailModal';
 import {
   AgencyApprovalsRoot,
   AgencyApprovalsBody,
@@ -49,6 +50,7 @@ export function AgencyApprovalsPage() {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [showCancelConfirmModal, setShowCancelConfirmModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [approvedDays, setApprovedDays] = useState('');
@@ -101,6 +103,9 @@ export function AgencyApprovalsPage() {
           days: req.attendanceRequestUsingDays,
           reason: req.attendanceRequestReason || '',
           workcationLocation: req.workcationLocation,
+          medicalFileUrl: req.medicalFileUrl,
+          attachedFile: req.medicalFileUrl ? req.medicalFileUrl.split('/').pop() : null,
+          projectName: req.projectName,
           status: req.attendanceRequestStatus === 'PENDING' ? '대기' 
                 : req.attendanceRequestStatus === 'APPROVED' ? '승인' 
                 : req.attendanceRequestStatus === 'REJECTED' ? '반려' : '대기',
@@ -240,6 +245,11 @@ export function AgencyApprovalsPage() {
   const handleOpenRejectModal = (request) => {
     setSelectedRequest(request);
     setShowRejectModal(true);
+  };
+
+  const handleOpenDetailModal = (request) => {
+    setSelectedRequest(request);
+    setShowDetailModal(true);
   };
 
   const handleReject = async () => {
@@ -425,7 +435,7 @@ export function AgencyApprovalsPage() {
                 </EmptyStateCard>
               ) : (
                 pendingRequests.map((request) => (
-                  <RequestCard key={request.id}>
+                  <RequestCard key={request.id} onClick={() => handleOpenDetailModal(request)} style={{ cursor: 'pointer' }}>
                     <RequestCardHeader>
                       <div className="flex-1">
                         <RequestCardTitle>
@@ -503,7 +513,7 @@ export function AgencyApprovalsPage() {
                       </div>
                     </RequestCardHeader>
 
-                    <RequestCardActions>
+                    <RequestCardActions onClick={(e) => e.stopPropagation()}>
                       <Button
                         size="sm"
                         className="flex-1 bg-[#4CAF50] hover:bg-[#45a049] text-white"
@@ -545,7 +555,8 @@ export function AgencyApprovalsPage() {
                 processedRequests.map((request) => (
                   <div 
                     key={request.id} 
-                    className={`p-4 rounded-lg border bg-white ${
+                    onClick={() => handleOpenDetailModal(request)}
+                    className={`p-4 rounded-lg border bg-white cursor-pointer ${
                       request.status === '승인' 
                         ? 'border-[#A5D6A7]' 
                         : request.status === '반려'
@@ -602,7 +613,8 @@ export function AgencyApprovalsPage() {
                       </div>
                       {request.status === '승인' && (
                         <button
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setSelectedRequest(request);
                             setShowCancelConfirmModal(true);
                           }}
@@ -748,6 +760,13 @@ export function AgencyApprovalsPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* 상세보기 모달 */}
+      <RequestDetailModal
+        open={showDetailModal}
+        onOpenChange={setShowDetailModal}
+        request={selectedRequest}
+      />
     </AgencyApprovalsRoot>
   );
 }

@@ -163,6 +163,14 @@ export const leaveService = {
   rejectAttendanceRequest: (attendanceRequestNo, rejectReason) => {
     return api.post(API_ENDPOINTS.LEAVE.REJECT(attendanceRequestNo), { rejectReason });
   },
+
+  // 근태 신청 첨부 파일 다운로드
+  downloadFile: async (fileName) => {
+    const response = await api.get(API_ENDPOINTS.LEAVE.DOWNLOAD_FILE(fileName), {
+      responseType: 'blob', // Blob으로 응답 받기
+    });
+    return response;
+  },
 };
 
 // 프로젝트 서비스

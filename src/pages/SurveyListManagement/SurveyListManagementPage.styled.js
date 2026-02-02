@@ -89,8 +89,8 @@ export const TabButton = styled.button`
   transition: all 0.2s;
   cursor: pointer;
   border: 1px solid var(--border);
-  background-color: ${props => props.variant === 'default' ? 'var(--primary)' : 'transparent'};
-  color: ${props => props.variant === 'default' ? 'var(--primary-foreground)' : 'var(--foreground)'};
+  background-color: ${props => props.$variant === 'default' ? 'var(--primary)' : 'transparent'};
+  color: ${props => props.$variant === 'default' ? 'var(--primary-foreground)' : 'var(--foreground)'};
 
   &:hover {
     opacity: 0.8;
