@@ -122,10 +122,27 @@ export function AgencyApprovalsPage() {
     fetchAllRequests();
   }, [user?.agencyNo]);
 
-  // 카테고리별 필터링
-  const filteredRequests = selectedCategory === 'all' 
-    ? requests 
-    : requests.filter(r => r.category === selectedCategory);
+  // 카테고리별 필터링 (근태 하위 타입은 type으로 필터)
+  const filteredRequests = selectedCategory === 'all'
+    ? requests
+    : selectedCategory === 'join'
+      ? requests.filter(r => r.category === 'join')
+      : selectedCategory === 'attendance'
+        ? requests.filter(r => r.category === 'attendance')
+        : requests.filter(r => {
+            if (r.category !== 'attendance') return false;
+            const typeMap = {
+              annual: '연차',
+              half: ['반차', '반반차'],
+              sick: '병가',
+              workation: '워케이션',
+              remote: '재택근무',
+              vacation: '휴가',
+            };
+            const typeFilter = typeMap[selectedCategory];
+            if (!typeFilter) return false;
+            return Array.isArray(typeFilter) ? typeFilter.includes(r.type) : r.type === typeFilter;
+          });
   const pendingRequests = filteredRequests.filter(r => r.status === '대기');
   const processedRequests = filteredRequests.filter(r => r.status !== '대기')
     .sort((a, b) => {
@@ -136,8 +153,8 @@ export function AgencyApprovalsPage() {
 
   const handleOpenApproveModal = (request) => {
     setSelectedRequest(request);
-    // 병가인 경우에만 모달 표시, 아니면 바로 승인
-    if (request.category === 'sick') {
+    // 병가인 경우에만 모달 표시(인정 일 수 입력), 아니면 바로 승인
+    if (request.type === '병가') {
       setShowApproveModal(true);
       setApprovedDays('');
     } else {
@@ -148,52 +165,48 @@ export function AgencyApprovalsPage() {
   const handleApproveDirect = async (request) => {
     try {
       if (request.category === 'join') {
-        // 가입 요청 승인 API 호출
-        const response = await agencyService.approveJoinRequest(request.originalId);
-        console.log('가입 승인 API 응답:', response);
+        await agencyService.approveJoinRequest(request.originalId);
       } else if (request.category === 'attendance') {
-        // TODO: 근태 승인 API 구현 필요
-        // 현재는 프론트엔드 상태만 업데이트
-        console.log('근태 승인 처리:', request.originalId);
+        await leaveService.approveAttendanceRequest(request.originalId);
       }
-      
-      // 로컬 상태 업데이트
-      setRequests(requests.map(r => 
-        r.id === request.id 
+
+      setRequests(requests.map(r =>
+        r.id === request.id
           ? { ...r, status: '승인', processedDate: new Date().toISOString().split('T')[0] }
           : r
       ));
       toast.success(`${request.requester}의 ${request.type} 신청이 승인되었습니다.`);
     } catch (error) {
       console.error('승인 API 호출 실패:', error);
-      toast.error('승인 처리에 실패했습니다.');
+      toast.error(error.response?.data?.message || '승인 처리에 실패했습니다.');
     }
   };
 
   const handleApprove = async () => {
     if (!selectedRequest) return;
-    
-    // 병가인 경우 인정 일 수 확인
-    if (selectedRequest.category === 'sick' && !approvedDays.trim()) {
+
+    const isSick = selectedRequest.category === 'sick' || selectedRequest.type === '병가';
+    if (isSick && !approvedDays.trim()) {
       toast.error('인정 일 수를 입력해주세요.');
       return;
     }
 
     try {
-      // 백엔드 API 호출
-      const response = await agencyService.approveJoinRequest(selectedRequest.id);
-      console.log('승인 API 응답:', response);
-      
-      // API 성공 시 로컬 상태 업데이트
-      setRequests(requests.map(r => 
-        r.id === selectedRequest.id 
+      if (selectedRequest.category === 'join') {
+        await agencyService.approveJoinRequest(selectedRequest.originalId);
+      } else if (selectedRequest.category === 'attendance' || selectedRequest.category === 'sick') {
+        await leaveService.approveAttendanceRequest(selectedRequest.originalId);
+      }
+
+      setRequests(requests.map(r =>
+        r.id === selectedRequest.id
           ? { ...r, status: '승인', processedDate: new Date().toISOString().split('T')[0] }
           : r
       ));
       toast.success(`${selectedRequest.requester}의 ${selectedRequest.type} 신청이 승인되었습니다.`);
     } catch (error) {
       console.error('승인 API 호출 실패:', error);
-      toast.error('승인 처리에 실패했습니다.');
+      toast.error(error.response?.data?.message || '승인 처리에 실패했습니다.');
     }
 
     setShowApproveModal(false);
@@ -242,17 +255,14 @@ export function AgencyApprovalsPage() {
           const response = await agencyService.rejectJoinRequest(selectedRequest.originalId, rejectionReason);
           console.log('가입 거절 API 응답:', response);
         } else if (selectedRequest.category === 'attendance') {
-          // TODO: 근태 반려 API 구현 필요
-          // 현재는 프론트엔드 상태만 업데이트
-          console.log('근태 반려 처리:', selectedRequest.originalId);
+          await leaveService.rejectAttendanceRequest(selectedRequest.originalId, rejectionReason);
         }
-        
-        // 로컬 상태 업데이트
-        setRequests(requests.map(r => 
-          r.id === selectedRequest.id 
-            ? { 
-                ...r, 
-                status: '반려', 
+
+        setRequests(requests.map(r =>
+          r.id === selectedRequest.id
+            ? {
+                ...r,
+                status: '반려',
                 rejectionReason: rejectionReason,
                 processedDate: new Date().toISOString().split('T')[0]
               }

@@ -170,7 +170,9 @@ export function LeaveRequestModal({ open, onOpenChange }) {
 
     // 남은 연차 확인 (연차/반차)
     if ((selectedType === '연차' || selectedType === '반차') && remainingLeave !== null) {
-      const requestedDays = selectedType === '반차' ? 0.5 : calculateDays();
+      const requestedDays = selectedType === '반차'
+        ? (halfDayType === '반반차' ? 0.25 : 0.5)
+        : calculateDays();
       if (requestedDays > remainingLeave) {
         toast.error(`남은 연차(${remainingLeave}일)보다 많은 일수를 신청할 수 없습니다.`);
         return;
@@ -230,8 +232,12 @@ export function LeaveRequestModal({ open, onOpenChange }) {
     };
 
     // API 요청 데이터 구성 (DB 필드명 기준 camelCase)
+    // 반차 유형이 반반차면 백엔드에 '반반차'로 보내서 0.25일 차감되도록 함
+    const requestTypeForApi = selectedType === '반차' && (halfDayType === '반차' || halfDayType === '반반차')
+      ? halfDayType
+      : selectedType;
     const requestData = {
-      attendanceRequestType: selectedType,
+      attendanceRequestType: requestTypeForApi,
       attendanceRequestStartDate: startDate,
       attendanceRequestEndDate: endDate,
       attendanceRequestUsingDays: selectedType === '반차' ? 1 : days,
@@ -246,7 +252,7 @@ export function LeaveRequestModal({ open, onOpenChange }) {
       
       console.log('근태 신청 API 응답:', response);
       
-      // 연차/반차 신청인 경우 로컬 스토리지의 연차 정보도 업데이트 (UI 동기화용)
+      // 연차/반차/반반차 신청인 경우 로컬 스토리지의 연차 정보도 업데이트 (UI 동기화용)
       if (selectedType === '연차' || selectedType === '반차') {
         const memberName = getMemberName();
         const employees = JSON.parse(localStorage.getItem('agencyEmployees') || '[]');
@@ -254,7 +260,9 @@ export function LeaveRequestModal({ open, onOpenChange }) {
         if (memberName && employees.length > 0) {
           const updatedEmployees = employees.map(emp => {
             if (emp.name === memberName) {
-              const leaveDays = selectedType === '반차' ? 0.5 : days;
+              const leaveDays = selectedType === '반차'
+                ? (halfDayType === '반반차' ? 0.25 : 0.5)
+                : days;
               const newUsedLeave = emp.usedLeave + leaveDays;
               const newRemainingLeave = emp.totalLeave - newUsedLeave;
               return {
@@ -356,7 +364,9 @@ export function LeaveRequestModal({ open, onOpenChange }) {
               </div>
               <p className="text-2xl font-bold text-blue-600">{remainingLeave}일</p>
               {(() => {
-                const requestedDays = selectedType === '반차' ? 0.5 : calculateDays();
+                const requestedDays = selectedType === '반차'
+                  ? (halfDayType === '반반차' ? 0.25 : 0.5)
+                  : calculateDays();
                 if (requestedDays > remainingLeave) {
                   return (
                     <div className="mt-2 flex items-start gap-2 text-red-600 text-xs">
@@ -451,7 +461,9 @@ export function LeaveRequestModal({ open, onOpenChange }) {
               />
             </DateGrid>
             <DaysInfo>
-              총 {selectedType === '반차' ? '1일' : calculateDays() + '일'} 사용 예정
+              총 {selectedType === '반차'
+                ? (halfDayType === '반반차' ? '0.25일' : '0.5일')
+                : calculateDays() + '일'} 사용 예정
               {selectedType === '반차' && ' (반차/반반차는 하루만 선택 가능)'}
             </DaysInfo>
           </FormGroup>

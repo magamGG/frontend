@@ -21,6 +21,34 @@ export const AgencyHealthBody = styled.div`
   gap: 12px;
 `;
 
+// 헤더 영역
+export const HeaderSection = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  margin-bottom: 8px;
+`;
+
+export const HeaderTitle = styled.h1`
+  font-size: 2rem;
+  font-weight: bold;
+  color: var(--foreground);
+  margin: 0;
+`;
+
+export const HeaderSubtitle = styled.p`
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  margin: 0;
+`;
+
+export const HeaderActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+`;
+
 // 검진 예정일 그리드 (데스크탑: 2열)
 export const CheckupDateGrid = styled.div`
   display: grid;

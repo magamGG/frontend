@@ -4,8 +4,8 @@ import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/app/components/ui/dialog';
-import { Calendar, User, ChevronRight, Clock, CheckCircle2, FileText, Plus, Edit2, Trash2, X } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/app/components/ui/dialog';
+import { Calendar, User, ChevronRight, Clock, CheckCircle2, FileText, Plus, Edit2, Trash2, X, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { MentalHealthDetailPage } from '@/pages/MentalHealthDetail';
 import { PhysicalHealthDetailPage } from '@/pages/PhysicalHealthDetail';
@@ -17,6 +17,10 @@ import { PieChart, Pie, Cell, Tooltip } from 'recharts';
 import {
   AgencyHealthRoot,
   AgencyHealthBody,
+  HeaderSection,
+  HeaderTitle,
+  HeaderSubtitle,
+  HeaderActions,
   CheckupDateGrid,
   CheckupItem,
   CheckupItemHeader,
@@ -212,7 +216,12 @@ export function AgencyHealthPage() {
   const [deepCheckupData] = useState(initialDeepCheckupData);
   const [unscreenedData] = useState(initialUnscreenedData);
   const [surveys, setSurveys] = useState(initialSurveys);
-  
+
+  // 건강 검진 설정 모달 (HEALTH_SURVEY_PERIOD, HEALTH_SURVEY_CYCLE)
+  const [isSurveySettingsModalOpen, setIsSurveySettingsModalOpen] = useState(false);
+  const [surveyPeriod, setSurveyPeriod] = useState(15);   // HEALTH_SURVEY_PERIOD (설문 기간, 일)
+  const [surveyCycle, setSurveyCycle] = useState(30);    // HEALTH_SURVEY_CYCLE (설문 주기, 일)
+
   // 모달 상태
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -334,6 +343,23 @@ export function AgencyHealthPage() {
     toast.success('설문이 수정되었습니다');
   };
 
+  // 건강 검진 설정 저장 (HEALTH_SURVEY_PERIOD, HEALTH_SURVEY_CYCLE)
+  const handleSurveySettingsSave = () => {
+    const period = Number(surveyPeriod);
+    const cycle = Number(surveyCycle);
+    if (Number.isNaN(period) || period < 1 || period > 365) {
+      toast.error('설문 기간은 1~365일 사이로 입력해주세요.');
+      return;
+    }
+    if (Number.isNaN(cycle) || cycle < 1 || cycle > 365) {
+      toast.error('설문 주기는 1~365일 사이로 입력해주세요.');
+      return;
+    }
+    // TODO: API 연동 시 healthSurvey period/cycle 업데이트 호출
+    setIsSurveySettingsModalOpen(false);
+    toast.success('건강 검진 설정이 저장되었습니다.');
+  };
+
   // 상세 페이지 표시 조건부 렌더링
   if (currentView === 'mental-detail') {
     return <MentalHealthDetailPage onBack={() => setCurrentView('main')} />;
@@ -362,6 +388,29 @@ export function AgencyHealthPage() {
   return (
     <AgencyHealthRoot>
       <AgencyHealthBody>
+        {/* Header */}
+        <HeaderSection>
+          <div>
+            <HeaderTitle>건강관리</HeaderTitle>
+            <HeaderSubtitle>정신·신체 검진 현황과 미검진 인원을 확인하고 관리합니다</HeaderSubtitle>
+          </div>
+          <HeaderActions>
+            <Button
+              variant="outline"
+              size="default"
+              onClick={() => setIsSurveySettingsModalOpen(true)}
+              style={{
+                borderColor: 'var(--border)',
+                backgroundColor: 'var(--card)',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              설정
+            </Button>
+          </HeaderActions>
+        </HeaderSection>
+
         {/* 상단: 검진 예정일 및 심층 검사 */}
         <CheckupDateGrid>
           {/* 정신 건강 검진 예정일 */}
@@ -585,6 +634,64 @@ export function AgencyHealthPage() {
           </UnscreenedCard>
         </MonitoringGrid>
       </AgencyHealthBody>
+
+      {/* 건강 검진 설정 모달 (HEALTH_SURVEY_PERIOD, HEALTH_SURVEY_CYCLE) */}
+      <Dialog open={isSurveySettingsModalOpen} onOpenChange={setIsSurveySettingsModalOpen}>
+        <DialogContent className="sm:max-w-[440px]">
+          <DialogHeader>
+            <DialogTitle>건강 검진 설정</DialogTitle>
+            <DialogDescription>
+              설문 기간과 설문 주기를 설정합니다.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="survey-period">설문 기간 (일)</Label>
+              <Input
+                id="survey-period"
+                type="number"
+                min={1}
+                max={365}
+                value={surveyPeriod}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === '') return;
+                  const n = parseInt(v, 10);
+                  if (!Number.isNaN(n)) setSurveyPeriod(Math.max(1, Math.min(365, n)));
+                }}
+                placeholder="15"
+              />
+              <p className="text-xs text-muted-foreground">설문이 진행되는 기간(일 단위)</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="survey-cycle">설문 주기 (일)</Label>
+              <Input
+                id="survey-cycle"
+                type="number"
+                min={1}
+                max={365}
+                value={surveyCycle}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === '') return;
+                  const n = parseInt(v, 10);
+                  if (!Number.isNaN(n)) setSurveyCycle(Math.max(1, Math.min(365, n)));
+                }}
+                placeholder="30"
+              />
+              <p className="text-xs text-muted-foreground">설문이 반복되는 주기(일 단위)</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSurveySettingsModalOpen(false)}>
+              취소
+            </Button>
+            <Button onClick={handleSurveySettingsSave}>
+              저장
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AgencyHealthRoot>
   );
 }
