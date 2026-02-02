@@ -44,6 +44,11 @@ api.interceptors.request.use(
 // Response 인터셉터 - 응답 통일 및 에러 처리
 api.interceptors.response.use(
   (response) => {
+    // Blob 응답인 경우 원본 response 반환 (다운로드 등)
+    if (response.config.responseType === 'blob') {
+      return response;
+    }
+    
     // 성공 응답 처리
     // API 문서에 따라 success 필드가 있는 경우 data 추출
     if (response.data && response.data.success !== undefined) {

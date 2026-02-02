@@ -57,6 +57,7 @@ export const API_ENDPOINTS = {
     CURRENT_STATUS: `/api/leave/current-status`, // GET: 현재 적용 중인 근태 상태 조회
     APPROVE: (attendanceRequestNo) => `/api/leave/${attendanceRequestNo}/approve`, // POST: 근태 신청 승인
     REJECT: (attendanceRequestNo) => `/api/leave/${attendanceRequestNo}/reject`, // POST: 근태 신청 반려
+    DOWNLOAD_FILE: (fileName) => `/api/leave/file/${fileName}`, // GET: 근태 신청 첨부 파일 다운로드
   },
 
   // 프로젝트 API

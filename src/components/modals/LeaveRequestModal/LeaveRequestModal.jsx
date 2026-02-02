@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Upload, FileText, Calendar, AlertCircle } from 'lucide-react';
 import useAuthStore from '@/store/authStore';
-import { leaveService } from '@/api/services';
+import { leaveService, memberService } from '@/api/services';
 import {
   ModalHeader,
   ModalTitle,
@@ -30,7 +30,7 @@ import {
 } from './LeaveRequestModal.styled';
 
 /**
- * @typedef {'연차' | '병가' | '워케이션' | '재택근무' | '휴가'} LeaveType
+ * @typedef {'연차' | '병가' | '워케이션' | '재택근무' | '휴재'} LeaveType
  */
 
 // 현재 날짜를 YYYY-MM-DD 형식으로 반환
@@ -101,7 +101,7 @@ export function LeaveRequestModal({ open, onOpenChange }) {
     }
   }, [selectedType, getMemberName]);
 
-  const leaveTypes = ['연차', '반차', '병가', '워케이션', '재택근무', '휴가'];
+  const leaveTypes = ['연차', '반차', '병가', '워케이션', '재택근무', '휴재'];
 
   const projectOptions = ['선택 안 함', ...projects.map(p => `${p.title} (${p.currentEpisode})`)];
 
@@ -219,6 +219,25 @@ export function LeaveRequestModal({ open, onOpenChange }) {
 
     const days = calculateDays();
     
+    // 파일이 있으면 먼저 업로드
+    let uploadedFileName = null;
+    if (attachedFile) {
+      try {
+        const memberName = getMemberName();
+        const employees = JSON.parse(localStorage.getItem('agencyEmployees') || '[]');
+        const employee = employees.find(emp => emp.name === memberName);
+        const memberNo = employee?.memberNo || 1; // 기본값 사용
+        
+        // 파일 업로드 (프로필 이미지 업로드 API 재사용)
+        uploadedFileName = await memberService.uploadProfileImage(memberNo, attachedFile);
+        toast.success('파일이 업로드되었습니다.');
+      } catch (error) {
+        console.error('파일 업로드 실패:', error);
+        toast.error('파일 업로드에 실패했습니다. 파일 없이 신청하시겠습니까?');
+        return;
+      }
+    }
+    
     // 타입 매핑 (디자인용)
     const typeMap = {
       '연차': 'break',
@@ -226,7 +245,7 @@ export function LeaveRequestModal({ open, onOpenChange }) {
       '병가': 'break',
       '워케이션': 'workation',
       '재택근무': 'remote',
-      '휴가': 'break',
+      '휴재': 'break',
     };
 
     // API 요청 데이터 구성 (DB 필드명 기준 camelCase)
@@ -237,7 +256,7 @@ export function LeaveRequestModal({ open, onOpenChange }) {
       attendanceRequestUsingDays: selectedType === '반차' ? 1 : days,
       attendanceRequestReason: reason,
       workcationLocation: selectedType === '워케이션' ? location : null,
-      medicalFileUrl: attachedFile?.name || null,
+      medicalFileUrl: uploadedFileName || null,
     };
 
     try {
@@ -312,8 +331,8 @@ export function LeaveRequestModal({ open, onOpenChange }) {
         return '워케이션 관련 제출 자료가 있으면 첨부할 수 있습니다.';
       case '재택근무':
         return '재택근무 관련 공지/승인 자료가 있으면 첨부할 수 있습니다.';
-      case '휴가':
-        return '휴가 사유 관련 자료가 있다면 첨부할 수 있습니다.';
+      case '휴재':
+        return '휴재 사유 관련 자료가 있다면 첨부할 수 있습니다.';
       default:
         return '';
     }
@@ -507,8 +526,8 @@ export function LeaveRequestModal({ open, onOpenChange }) {
             </FormGroup>
           )}
 
-          {/* 작품(선택) (휴가 선택시만) */}
-          {selectedType === '휴가' && (
+          {/* 작품(선택) (휴재 선택시만) */}
+          {selectedType === '휴재' && (
             <FormGroup>
               <Label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>작품(선택)</Label>
               <div style={{ position: 'relative' }}>
@@ -545,7 +564,7 @@ export function LeaveRequestModal({ open, onOpenChange }) {
                   </DropdownMenu>
                 )}
               </div>
-              <DaysInfo>휴가는 특정 작품과 연결할 수 있으요.</DaysInfo>
+              <DaysInfo>휴재는 특정 작품과 연결할 수 있습니다.</DaysInfo>
             </FormGroup>
           )}
 
