@@ -347,7 +347,7 @@ export function ArtistDashboardPage() {
     }
   }, []);
 
-  // 오늘 할 일 (캘린더 DB 연동) - 오늘 마감 + 앞으로 할 일
+  // 오늘 할 일 (칸반 카드 DB 연동) - 담당 배정 + 미완료(N) 카드 전부, 마감일 가까운 순
   useEffect(() => {
     const fetchTasks = async () => {
       const memberNo = useAuthStore.getState().user?.memberNo;
@@ -355,39 +355,42 @@ export function ArtistDashboardPage() {
 
       setIsLoadingTasks(true);
       try {
-        const response = await calendarService.getUpcomingEvents(20);
+        const response = await projectService.getMyTodayTasks();
         const list = Array.isArray(response) ? response : [];
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
         const mapped = list.map((item) => {
-          const endDate = item.calendarEventEndedAt ? new Date(item.calendarEventEndedAt) : null;
-          endDate?.setHours(0, 0, 0, 0);
-          const isToday = endDate && endDate.getTime() === today.getTime();
+          const endDate = item.dueDate ? new Date(item.dueDate) : null;
+          if (endDate) endDate.setHours(0, 0, 0, 0);
           const daysLeft = endDate ? Math.ceil((endDate - today) / (1000 * 60 * 60 * 24)) : null;
 
           let badge = '일정';
           let badgeColor = 'blue';
-          if (isToday) {
-            badge = 'D-0 마감';
-            badgeColor = 'destructive';
-          } else if (daysLeft !== null && daysLeft > 0) {
-            badge = `D-${daysLeft}`;
-            badgeColor = 'blue';
-          } else if (daysLeft !== null && daysLeft < 0) {
-            badge = '기한 경과';
-            badgeColor = 'destructive';
+          if (daysLeft !== null) {
+            if (daysLeft === 0) {
+              badge = 'D-0 마감';
+              badgeColor = 'destructive';
+            } else if (daysLeft > 0) {
+              badge = `D-${daysLeft}`;
+              badgeColor = 'blue';
+            } else {
+              badge = '기한 경과';
+              badgeColor = 'destructive';
+            }
           }
 
           return {
-            id: item.calendarEventNo,
-            project: item.calendarEventType || '일정',
-            title: item.calendarEventName || '일정',
-            description: item.calendarEventContent || '',
-            daysLeft,
+            id: item.id,
+            projectNo: item.projectNo,
+            boardId: item.boardId,
+            project: item.projectName || '업무',
+            title: item.title || '업무 카드',
+            description: item.description || '',
+            daysLeft: daysLeft ?? 999,
             badge,
             badgeColor,
-            urgent: !!isToday,
+            urgent: daysLeft !== null && daysLeft <= 0,
           };
         });
 
@@ -989,7 +992,7 @@ export function ArtistDashboardPage() {
                     <EmptyStateIcon>
                       <Briefcase className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
                     </EmptyStateIcon>
-                    <EmptyStateText>아직 할 일이 없습니다. 캘린더에 일정을 추가해보세요.</EmptyStateText>
+                    <EmptyStateText>오늘 마감인 미완료 업무가 없습니다.</EmptyStateText>
                   </EmptyState>
                 ) : (
                   [...tasks]

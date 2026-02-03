@@ -132,7 +132,7 @@ function DraggableCard({
     <DraggableCardContainer
       ref={drag}
       $borderColor={projectColor}
-      isDragging={isDragging}
+      $isDragging={isDragging}
     >
       <div className="flex items-start justify-between gap-2 mb-2">
         {/* 체크 버튼과 제목 */}
@@ -999,7 +999,7 @@ export function ProjectDetailPage({
 
     try {
       const result = await projectService.createComment(project.id, editingCard.id, newComment.trim());
-      const authorName = useAuthStore.getState().user?.memberName || '작성자';
+      const authorName = result.authorName || useAuthStore.getState().user?.memberName || '작성자';
       const comment = {
         id: result.id,
         author: authorName,
@@ -1354,7 +1354,7 @@ export function ProjectDetailPage({
                               setCardComments(list.map((c) => ({
                                 id: c.id,
                                 content: c.content || '',
-                                author: '작성자',
+                                author: c.authorName || '작성자',
                                 createdAt: c.commentCreatedAt || '-',
                               })));
                             } catch {

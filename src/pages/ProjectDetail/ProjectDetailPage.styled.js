@@ -283,7 +283,7 @@ export const DraggableCardContainer = styled.div`
   margin-bottom: 8px;
   cursor: move;
   transition: all 0.2s;
-  opacity: ${props => (props.isDragging ? 0.5 : 1)};
+  opacity: ${props => (props.$isDragging ? 0.5 : 1)};
 
   &:hover {
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);

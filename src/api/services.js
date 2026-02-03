@@ -264,6 +264,11 @@ export const projectService = {
     return api.get(API_ENDPOINTS.PROJECTS.FEEDBACK(limit));
   },
 
+  // 아티스트 대시보드 오늘 할 일 - 담당 배정 + 마감일 오늘 + 미완료(N) 칸반 카드만
+  getMyTodayTasks: () => {
+    return api.get(API_ENDPOINTS.PROJECTS.TODAY_TASKS);
+  },
+
   // 칸반 보드 추가 (KANBAN_BOARD INSERT)
   createKanbanBoard: (projectNo, title) => {
     return api.post(API_ENDPOINTS.PROJECTS.KANBAN_BOARDS(projectNo), { title });
