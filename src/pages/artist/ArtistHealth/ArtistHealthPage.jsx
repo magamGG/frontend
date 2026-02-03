@@ -113,6 +113,10 @@ export function ArtistHealthPage() {
     try {
       setIsLoadingPhysicalQuestions(true);
       // 백엔드 API 호출 - "월간 신체" 타입으로 질문 조회
+      // 백엔드 처리: HealthSurveyController.getQuestionsBySurveyType() 
+      // → HealthSurveyServiceImpl.getQuestionsBySurveyType()
+      // → HealthSurveyQuestionRepository.findByHealthSurveyQuestionTypeOrderByHealthSurveyOrderAsc()
+      // HEALTH_SURVEY_QUESTION_TYPE 컬럼으로 타입 구분하여 조회
       const response = await fetch('/api/health-surveys/type/월간 신체/questions', {
         method: 'GET',
         headers: {
@@ -146,6 +150,10 @@ export function ArtistHealthPage() {
     try {
       setIsLoadingMentalQuestions(true);
       // 백엔드 API 호출 - "월간 정신" 타입으로 질문 조회
+      // 백엔드 처리: HealthSurveyController.getQuestionsBySurveyType() 
+      // → HealthSurveyServiceImpl.getQuestionsBySurveyType()
+      // → HealthSurveyQuestionRepository.findByHealthSurveyQuestionTypeOrderByHealthSurveyOrderAsc()
+      // HEALTH_SURVEY_QUESTION_TYPE 컬럼으로 타입 구분하여 조회
       const response = await fetch('/api/health-surveys/type/월간 정신/questions', {
         method: 'GET',
         headers: {
@@ -278,6 +286,9 @@ export function ArtistHealthPage() {
       const totalScore = mentalDeepAnswers.reduce((sum, score) => sum + (score || 0), 0);
 
       // API 호출 (총점만 전송, 백엔드에서 HEALTH_SURVEY_QUESTION_ITEM_ANSWER_SCORE에 저장)
+      // 백엔드 처리: HealthSurveyController.submitSurveyResponse()
+      // → HealthSurveyServiceImpl.submitSurveyResponse()
+      // → HealthSurveyQuestion의 HEALTH_SURVEY_QUESTION_TYPE으로 위험도 평가
       const response = await fetch(`/api/health-surveys/${healthSurveyNo}/responses`, {
         method: 'POST',
         headers: {
@@ -300,12 +311,8 @@ export function ArtistHealthPage() {
       const today = new Date();
       const formattedDate = `${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')}`;
 
-      let status = '정상';
-      if (result.riskLevel === '위험') {
-        status = '위험';
-      } else if (result.riskLevel === '주의') {
-        status = '주의';
-      }
+      // 백엔드에서 반환하는 riskLevel: "정상", "주의", "경고", "위험"
+      let status = result.riskLevel || '정상';
 
       setDeepCheckupData({
         ...deepCheckupData,
@@ -357,6 +364,9 @@ export function ArtistHealthPage() {
       const totalScore = physicalDeepAnswers.reduce((sum, score) => sum + (score || 0), 0);
 
       // API 호출 (총점만 전송, 백엔드에서 HEALTH_SURVEY_QUESTION_ITEM_ANSWER_SCORE에 저장)
+      // 백엔드 처리: HealthSurveyController.submitSurveyResponse()
+      // → HealthSurveyServiceImpl.submitSurveyResponse()
+      // → HealthSurveyQuestion의 HEALTH_SURVEY_QUESTION_TYPE으로 위험도 평가
       const response = await fetch(`/api/health-surveys/${healthSurveyNo}/responses`, {
         method: 'POST',
         headers: {
@@ -379,12 +389,8 @@ export function ArtistHealthPage() {
       const today = new Date();
       const formattedDate = `${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')}`;
 
-      let status = '정상';
-      if (result.riskLevel === '위험') {
-        status = '위험';
-      } else if (result.riskLevel === '주의') {
-        status = '주의';
-      }
+      // 백엔드에서 반환하는 riskLevel: "정상", "주의", "경고", "위험"
+      let status = result.riskLevel || '정상';
 
       setDeepCheckupData({
         ...deepCheckupData,
@@ -411,6 +417,8 @@ export function ArtistHealthPage() {
     switch (status) {
       case '위험':
         return 'bg-red-100 text-red-600';
+      case '경고':
+        return 'bg-yellow-100 text-yellow-600';
       case '주의':
         return 'bg-orange-100 text-orange-600';
       case '정상':
