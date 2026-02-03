@@ -80,9 +80,12 @@ export const API_ENDPOINTS = {
     MY_REQUESTS: `/api/leave/my-requests`, // GET: 내 근태 신청 목록 조회
     AGENCY_REQUESTS: (agencyNo) => `/api/leave/agency/${agencyNo}`, // GET: 에이전시 소속 근태 신청 목록
     AGENCY_PENDING: (agencyNo) => `/api/leave/agency/${agencyNo}/pending`, // GET: 에이전시 소속 대기 중 근태 신청
+    MANAGER_WEEKLY: `/api/leave/manager/weekly`, // GET: 담당자 대시보드 금주 근태 예정
     CURRENT_STATUS: `/api/leave/current-status`, // GET: 현재 적용 중인 근태 상태 조회
     APPROVE: (attendanceRequestNo) => `/api/leave/${attendanceRequestNo}/approve`, // POST: 근태 신청 승인
     REJECT: (attendanceRequestNo) => `/api/leave/${attendanceRequestNo}/reject`, // POST: 근태 신청 반려
+    CANCEL: (attendanceRequestNo) => `/api/leave/${attendanceRequestNo}/cancel`, // POST: 근태 신청 취소
+    UPDATE: (attendanceRequestNo) => `/api/leave/${attendanceRequestNo}`, // PUT: 근태 신청 수정
     DOWNLOAD_FILE: (fileName) => `/api/leave/file/${fileName}`, // GET: 근태 신청 첨부 파일 다운로드
     AGENCY_BALANCES: (agencyNo) => `/api/leave/agency/${agencyNo}/balances`, // GET: 에이전시 소속 회원 연차 잔액 목록
     AGENCY_HISTORY: (agencyNo) => `/api/leave/agency/${agencyNo}/history`, // GET: 에이전시 소속 연차 변경 이력
@@ -100,6 +103,7 @@ export const API_ENDPOINTS = {
     MEMBERS: (projectNo) => `/api/projects/${projectNo}/members`, // GET: 프로젝트 멤버 목록, POST: 팀원 추가
     ADDABLE_MEMBERS: (projectNo) => `/api/projects/${projectNo}/addable-members`, // GET: 추가 가능 팀원 (담당자/작가 제외, 미소속)
     KANBAN: (projectNo) => `/api/projects/${projectNo}/kanban`, // GET: 칸반 보드 조회
+    MANAGED: `/api/projects/managed`, // GET: 담당자 대시보드 담당 프로젝트 현황
     KANBAN_BOARDS: (projectNo) => `/api/projects/${projectNo}/kanban-board`, // POST: 칸반 보드 추가
     KANBAN_BOARD_UPDATE: (projectNo, boardId) => `/api/projects/${projectNo}/kanban-board/${boardId}`, // PUT: 칸반 보드 상태 수정
     KANBAN_CARD: (projectNo) => `/api/projects/${projectNo}/kanban-card`, // POST: 칸반 카드 추가
@@ -112,6 +116,9 @@ export const API_ENDPOINTS = {
   CALENDAR: {
     CREATE_EVENT: `/api/calendar/events`, // POST: 일정 생성
     EVENTS_BY_MONTH: (year, month) => `/api/calendar/events?year=${year}&month=${month}`, // GET: 월별 일정 조회
+    UPCOMING_EVENTS: (limit = 10) => `/api/calendar/events/upcoming?limit=${limit}`, // GET: 다가오는 일정 (작가 대시보드용)
+    DEADLINE_COUNTS: `/api/calendar/deadline-counts`, // GET: 담당자 대시보드 마감 임박 현황
+    DEADLINE_COUNTS_BY_AGENCY: (agencyNo) => `/api/calendar/deadline-counts/agency/${agencyNo}`, // GET: 에이전시 대시보드 마감 임박 현황
   },
 
   // 알림 API
@@ -134,6 +141,11 @@ export const API_ENDPOINTS = {
     JOIN_REQUESTS: (agencyNo) => `/api/agency/${agencyNo}/join-requests`, // GET: 에이전시 가입 요청 목록 조회
     APPROVE_JOIN_REQUEST: (newRequestNo) => `/api/agency/join-requests/${newRequestNo}/approve`, // POST: 가입 요청 승인
     REJECT_JOIN_REQUEST: (newRequestNo) => `/api/agency/join-requests/${newRequestNo}/reject`, // POST: 가입 요청 거절
+    DASHBOARD_METRICS: (agencyNo) => `/api/agency/${agencyNo}/dashboard-metrics`, // GET: 에이전시 대시보드 메트릭
+    COMPLIANCE_TREND: (agencyNo) => `/api/agency/${agencyNo}/compliance-trend`, // GET: 평균 마감 준수율 추이
+    ARTIST_DISTRIBUTION: (agencyNo) => `/api/agency/${agencyNo}/artist-distribution`, // GET: 작품별 아티스트 분포
+    ATTENDANCE_DISTRIBUTION: (agencyNo) => `/api/agency/${agencyNo}/attendance-distribution`, // GET: 금일 출석 현황
+    HEALTH_DISTRIBUTION: (agencyNo) => `/api/agency/${agencyNo}/health-distribution`, // GET: 건강 인원 분포
   },
 };
 
