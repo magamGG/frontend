@@ -90,8 +90,10 @@ export function AgencyApprovalsPage() {
           processedDate: req.newRequestStatus !== '대기' ? req.newRequestDate ? new Date(req.newRequestDate).toISOString().split('T')[0] : '' : null,
         }));
         
-        // 근태 신청 변환
-        const formattedAttendanceRequests = attendanceResponse.map((req) => ({
+        // 근태 신청 변환 (취소된 건 제외 - 작가가 삭제한 신청은 목록에서 제거)
+        const formattedAttendanceRequests = attendanceResponse
+          .filter((req) => req.attendanceRequestStatus !== 'CANCELLED')
+          .map((req) => ({
           id: `attendance-${req.attendanceRequestNo}`,
           originalId: req.attendanceRequestNo,
           type: req.attendanceRequestType,
@@ -125,6 +127,11 @@ export function AgencyApprovalsPage() {
     };
     
     fetchAllRequests();
+
+    // 창 포커스 시 재조회 (작가가 삭제한 요청 등 반영)
+    const handleFocus = () => fetchAllRequests();
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, [user?.agencyNo]);
 
   // 카테고리별 필터링 (근태 하위 타입은 type으로 필터)
@@ -202,7 +209,6 @@ export function AgencyApprovalsPage() {
       } else if (selectedRequest.category === 'attendance' || selectedRequest.category === 'sick') {
         await leaveService.approveAttendanceRequest(selectedRequest.originalId);
       }
-
       setRequests(requests.map(r =>
         r.id === selectedRequest.id
           ? { ...r, status: '승인', processedDate: new Date().toISOString().split('T')[0] }

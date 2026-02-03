@@ -250,7 +250,7 @@ export function LeaveRequestModal({ open, onOpenChange }) {
       '휴재': 'break',
     };
 
-    // API 요청 데이터 구성 (DB 필드명 기준 camelCase)
+    // API 요청 데이터 구성 (DB 필드명 기준 camelCase, 가이드 준수)
     // 반차 유형이 반반차면 백엔드에 '반반차'로 보내서 0.25일 차감되도록 함
     const requestTypeForApi = selectedType === '반차' && (halfDayType === '반차' || halfDayType === '반반차')
       ? halfDayType
@@ -261,7 +261,7 @@ export function LeaveRequestModal({ open, onOpenChange }) {
       attendanceRequestEndDate: endDate,
       attendanceRequestUsingDays: selectedType === '반차' ? 1 : days,
       attendanceRequestReason: reason,
-      workcationLocation: selectedType === '워케이션' ? location : null,
+      workcationLocation: selectedType === '워케이션' ? (location || null) : null,
       medicalFileUrl: uploadedFileName || null,
     };
 
@@ -297,6 +297,9 @@ export function LeaveRequestModal({ open, onOpenChange }) {
       }
 
       toast.success('근태 신청이 완료되었습니다.');
+      
+      // 작가 대시보드 신청 현황 새로고침용 이벤트 (가이드: 기존 로직 유지, 연동만 추가)
+      window.dispatchEvent(new CustomEvent('leaveRequestSuccess'));
       
       // 폼 초기화
       resetForm();
