@@ -132,7 +132,7 @@ function DraggableCard({
     <DraggableCardContainer
       ref={drag}
       $borderColor={projectColor}
-      isDragging={isDragging}
+      $isDragging={isDragging}
     >
       <div className="flex items-start justify-between gap-2 mb-2">
         {/* 체크 버튼과 제목 */}
