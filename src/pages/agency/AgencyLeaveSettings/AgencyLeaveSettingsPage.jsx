@@ -167,92 +167,22 @@ const getInitialCompanyPolicy = () => {
   };
 };
 
-// 직원 목록 초기값 가져오기
+// 직원 목록 초기값 (API 로드 전까지 빈 배열, agencyNo 없을 때만 localStorage 사용)
 const getInitialEmployees = () => {
   const stored = localStorage.getItem('agencyEmployees');
   if (stored) {
-    return JSON.parse(stored);
+    try {
+      return JSON.parse(stored);
+    } catch (_) {
+      return [];
+    }
   }
-  return [
-    {
-      id: 1,
-      name: '김작가',
-      position: '웹툰',
-      totalLeave: 18,
-      usedLeave: 2,
-      remainingLeave: 16,
-      startDate: '2024-01-01',
-      adjustmentDetails: '우수 사원 포상',
-    },
-    {
-      id: 2,
-      name: '이담당',
-      position: 'PD',
-      totalLeave: 10,
-      usedLeave: 8,
-      remainingLeave: 2,
-      startDate: '2024-01-01',
-      adjustmentDetails: '징계 (지각 누적)',
-    },
-    {
-      id: 3,
-      name: '박대리',
-      position: '어시스트',
-      totalLeave: 12,
-      usedLeave: 1,
-      remainingLeave: 11,
-      startDate: '2024-01-01',
-      adjustmentDetails: '',
-    },
-    {
-      id: 4,
-      name: '최작가',
-      position: '웹툰',
-      totalLeave: 15,
-      usedLeave: 13,
-      remainingLeave: 2,
-      startDate: '2024-01-01',
-      adjustmentDetails: '',
-    },
-    {
-      id: 5,
-      name: '정담당',
-      position: 'PD',
-      totalLeave: 15,
-      usedLeave: 0,
-      remainingLeave: 15,
-      startDate: '2024-01-01',
-      adjustmentDetails: '',
-    },
-  ];
+  return [];
 };
 
-// 연차 변경 로그 초기값 가져오기
+// 연차 변경 로그 초기값 (API에서 로드하므로 더미 없음)
 const getInitialLeaveLogs = () => {
-  const stored = localStorage.getItem('agencyLeaveLogs');
-  if (stored) {
-    return JSON.parse(stored);
-  }
-  return [
-    {
-      id: 1,
-      date: '2023-11-15 14:30',
-      target: '박대리',
-      type: '포상',
-      changedDays: 3,
-      reason: '우수 사원 포상',
-      processor: '최관리자',
-    },
-    {
-      id: 2,
-      date: '2023-11-10 08:15',
-      target: '김대리',
-      type: '징계',
-      changedDays: 1,
-      reason: '징계 (지각 누적)',
-      processor: '최관리자',
-    },
-  ];
+  return [];
 };
 
 // 현재 월 기준 권장 소진율 계산
@@ -274,39 +204,54 @@ const getExpectedUsageRate = (currentMonth) => {
   return monthlyExpectedRates[currentMonth] || 0;
 };
 
-// 소진율 계산
+// 소진율 계산 (잔여 연차 기준: total - remaining. 징계로 감소한 연차도 소진으로 반영)
+// 포상 등으로 잔여 > 전체가 되면 음수가 나오므로 0~100%로 제한
 const calculateUsageRate = (employee) => {
-  if (!employee.totalLeave || employee.totalLeave === 0) return 0;
-  return (employee.usedLeave / employee.totalLeave) * 100;
+  const total = employee.totalLeave ?? 0;
+  if (!total) return 0;
+  const remaining = employee.remainingLeave ?? 0;
+  const consumed = total - remaining;
+  const pct = (consumed / total) * 100;
+  return Math.min(100, Math.max(0, pct));
 };
 
-// 위험군 분류 (시기별 가중치 적용)
+// 분기별 번아웃/이탈 기준 (1분기 연초 15%, 2분기 55%, 3분기 80%, 4분기 100% / 이탈은 그 반대)
+const getQuarterThresholds = (currentMonth) => {
+  const month = Number(currentMonth) || new Date().getMonth() + 1;
+  if (month <= 3) return { burnoutBelow: 15, turnoverAbove: 85 };   // 1분기
+  if (month <= 6) return { burnoutBelow: 55, turnoverAbove: 45 };   // 2분기
+  if (month <= 9) return { burnoutBelow: 80, turnoverAbove: 20 };   // 3분기
+  return { burnoutBelow: 100, turnoverAbove: 100 };                  // 4분기 (이탈 = 100%만)
+};
+
+// 위험군 분류 (분기별 기준 적용)
 const categorizeRiskGroup = (employee, currentMonth) => {
   const usageRate = calculateUsageRate(employee);
-  
-  if (usageRate < 30) {
+  const { burnoutBelow, turnoverAbove } = getQuarterThresholds(currentMonth);
+
+  if (usageRate < burnoutBelow) {
     return { 
       group: '위험군', 
       color: '#DC2626', 
       description: '번아웃 위험',
-      range: '0~30% 사용'
+      range: `0~${burnoutBelow}% 사용`
     };
-  } else if (usageRate < 80) {
-    return { 
-      group: '적정군', 
-      color: '#16A34A', 
-      description: '안정',
-      range: '30~80% 사용'
-    };
-  } else {
-    const isEarlyYear = currentMonth <= 6;
+  }
+  const isTurnover = turnoverAbove >= 100 ? usageRate >= 100 : usageRate > turnoverAbove;
+  if (isTurnover) {
     return { 
       group: '완료군', 
       color: '#2563EB', 
-      description: isEarlyYear ? '퇴사 우려/급격한 소진' : '완료',
-      range: '80~100% 사용'
+      description: '이탈 위험',
+      range: `${turnoverAbove}~100% 사용`
     };
   }
+  return { 
+    group: '적정군', 
+    color: '#16A34A', 
+    description: '안정',
+    range: `${burnoutBelow}~${turnoverAbove}% 사용`
+  };
 };
 
 // 위험 카테고리 상수 (Dashboard.md에서 변환)
@@ -491,25 +436,65 @@ export function AgencyLeaveSettingsPage() {
 
   const seasonInfo = getSeasonInfo();
 
-  // 초기 데이터 로드
+  // 초기 데이터 로드 (에이전시 연차 잔액 API + localStorage 정책)
+  const agencyNo = currentUser?.agencyNo;
   useEffect(() => {
     const loadLeaveData = async () => {
       setIsLoading(true);
       try {
-        // TODO: 실제 API 호출로 변경
-        // const leaveSettingsData = await leaveService.getLeaveSettings();
-        // const employeeListData = await leaveService.getLeaveStatistics();
-        // setCompanyPolicy(leaveSettingsData);
-        // setEmployeeList(employeeListData.employees || []);
-        
-        // 임시: localStorage에서 로드 (API 연동 전까지)
-        const storedEmployees = localStorage.getItem('agencyEmployees');
+        // 회사 기본 연차 정책: localStorage에서 로드 (에이전시 기본 연차 API 연동 시 교체 가능)
         const storedPolicy = localStorage.getItem('agencyLeavePolicy');
-        if (storedEmployees) {
-          setEmployeeList(JSON.parse(storedEmployees));
-        }
         if (storedPolicy) {
           setCompanyPolicy(JSON.parse(storedPolicy));
+        }
+
+        // 에이전시 소속 회원 연차 잔액 목록 API (axios 인터셉터가 response.data를 반환하므로 반환값이 배열)
+        if (agencyNo) {
+          const list = await leaveService.getAgencyLeaveBalances(agencyNo);
+          const arr = Array.isArray(list) ? list : [];
+          const mapped = arr.map((item) => ({
+            id: item.memberNo,
+            memberNo: item.memberNo,
+            name: item.memberName ?? '-',
+            position: item.memberRole ?? '-',
+            totalLeave: item.leaveBalanceTotalDays ?? 0,
+            usedLeave: item.leaveBalanceUsedDays ?? 0,
+            remainingLeave: Math.round(Number(item.leaveBalanceRemainDays ?? 0)),
+            startDate: '',
+            adjustmentDetails: '',
+            currentYearAdjustmentTotal: item.currentYearAdjustmentTotal ?? 0,
+          }));
+          setEmployeeList(mapped);
+          // 에이전시 소속 연차 변경 이력 API (변경 로그)
+          try {
+            const historyList = await leaveService.getLeaveHistoryByAgency(agencyNo);
+            const historyArr = Array.isArray(historyList) ? historyList : [];
+            const historyMapped = historyArr.map((item) => ({
+              id: item.id,
+              date: item.date ?? '',
+              target: item.target ?? '-',
+              type: item.type ?? '',
+              changedDays: item.changedDays ?? 0,
+              reason: item.reason ?? '',
+              processor: '',
+            }));
+            setLeaveLogList(historyMapped);
+          } catch (_) {
+            setLeaveLogList([]);
+          }
+        } else {
+          // agencyNo 없으면 localStorage 또는 빈 배열
+          const storedEmployees = localStorage.getItem('agencyEmployees');
+          if (storedEmployees) {
+            try {
+              setEmployeeList(JSON.parse(storedEmployees));
+            } catch (_) {
+              setEmployeeList([]);
+            }
+          } else {
+            setEmployeeList([]);
+          }
+          setLeaveLogList([]);
         }
       } catch (error) {
         console.error('Failed to load leave data:', error);
@@ -520,7 +505,7 @@ export function AgencyLeaveSettingsPage() {
     };
 
     loadLeaveData();
-  }, []);
+  }, [agencyNo]);
 
   // 데이터 변경 시 localStorage 저장 (API 연동 전까지 임시)
   useEffect(() => {
@@ -574,6 +559,10 @@ export function AgencyLeaveSettingsPage() {
     const variance = analyzedEmployeeList.reduce((acc, curr) => acc + Math.pow(curr.usagePercentage - avg, 2), 0) / analyzedEmployeeList.length;
     const sd = Math.sqrt(variance);
 
+    const { burnoutBelow, turnoverAbove } = getQuarterThresholds(currentMonth);
+    const riskEnd = Math.min(burnoutBelow, turnoverAbove);
+    const completeStart = Math.max(burnoutBelow, turnoverAbove);
+
     // 2. 5% 구간별로 데이터 그룹화
     const binSize = 5;
     const bins = [];
@@ -582,27 +571,26 @@ export function AgencyLeaveSettingsPage() {
       const min = i;
       const max = i + binSize;
       const mid = (min + max) / 2;
+      const isLastBin = max >= 100;
+      // 해당 구간의 직원 필터링 (마지막 구간 95~100%는 100% 포함)
+      const employeesInBin = analyzedEmployeeList.filter((employee) => {
+        const pct = employee.usagePercentage;
+        return pct >= min && (isLastBin ? pct <= 100 : pct < max);
+      });
       
-      // 해당 구간의 직원 필터링
-      const employeesInBin = analyzedEmployeeList.filter((employee) => employee.usagePercentage >= min && employee.usagePercentage < max);
-      
-      // 구간의 대표 위험 카테고리 결정 (구간 중간값 기준)
-      // 위험군: 0~30% → 빨간색, 적정군: 30~80% → 초록색, 완료군: 80~100% → 파란색
-      let fillColor = '#16A34A'; // 기본값: 초록색 (적정군)
-      if (mid < 30) {
-        fillColor = '#DC2626'; // 빨간색 (위험군 - 연차 소진율 낮음)
-      } else if (mid >= 80) {
-        fillColor = '#2563EB'; // 파란색 (완료군)
-      } else {
-        fillColor = '#16A34A'; // 초록색 (적정군 - 안정권)
-      }
+      // 구간의 대표 위험 카테고리 (분기별 기준)
+      let fillColor = '#16A34A';
+      if (mid < riskEnd) fillColor = '#DC2626';
+      else if (mid >= completeStart || (completeStart >= 100 && max >= 100)) fillColor = '#2563EB';
+      else fillColor = '#16A34A';
 
+      const riskCategory = mid < riskEnd ? '위험군' : (mid >= completeStart || (completeStart >= 100 && max >= 100)) ? '완료군' : '적정군';
       bins.push({
         x: mid, // 구간 중간값
         y: employeesInBin.length, // 인원 수
         rangeLabel: `${min}% - ${max}%`,
         employees: employeesInBin.map((employee) => ({ name: employee.name, role: employee.position || '직무 없음' })),
-        riskCategory: mid < 30 ? '위험군' : mid >= 80 ? '완료군' : '적정군',
+        riskCategory,
         fill: fillColor,
       });
     }
@@ -631,6 +619,15 @@ export function AgencyLeaveSettingsPage() {
       turnover: turnoverRiskCount // 이탈 위험군 (과다 사용) = 완료군
     };
   }, [employeeList, currentMonth]);
+
+  // 차트 구간 배경용 분기별 기준 (번아웃/이탈)
+  const chartZones = useMemo(() => {
+    const { burnoutBelow, turnoverAbove } = getQuarterThresholds(currentMonth);
+    const riskEnd = Math.min(burnoutBelow, turnoverAbove);
+    const completeStart = Math.max(burnoutBelow, turnoverAbove);
+    const completeStartVisible = completeStart >= 100 ? 99 : completeStart;
+    return { riskEnd, completeStart, completeStartVisible };
+  }, [currentMonth]);
 
   // 정책 저장
   const handleSavePolicy = async () => {
@@ -685,60 +682,63 @@ export function AgencyLeaveSettingsPage() {
       return;
     }
 
-    const newTotalLeave = selectedEmployeeData.totalLeave + adjustFormData.adjustment;
-    if (newTotalLeave < 0) {
-      toast.error('총 연차는 0 이상이어야 합니다.');
+    const memberNo = selectedEmployeeData.memberNo ?? selectedEmployeeData.id;
+    if (!memberNo) {
+      toast.error('대상 회원 정보가 없습니다.');
       return;
     }
 
-    const newRemainingLeave = newTotalLeave - selectedEmployeeData.usedLeave;
-
     try {
-      // TODO: 실제 API 호출로 변경
-      // 가이드 문서에 따른 변수명: memberNo 사용
-      // await leaveService.adjustLeave(selectedEmployeeData.memberNo, {
-      //   adjustment: adjustFormData.adjustment,
-      //   reason: adjustFormData.reason,
-      //   note: adjustFormData.note,
-      // });
+      // 연차 조정 API (LeaveBalance 갱신 + LeaveHistory 생성)
+      const res = await leaveService.adjustLeaveBalance({
+        memberNo,
+        adjustment: adjustFormData.adjustment,
+        reason: adjustFormData.reason,
+        note: adjustFormData.note ?? '',
+      });
+      // axios 인터셉터가 response.data(LeaveBalanceResponse) 반환
+      const updated = res && typeof res === 'object' ? res : {};
 
-      // 직원 데이터 업데이트
+      // 직원 목록: API 응답으로 잔여 연차 반영 (백엔드는 remain만 변경, total/used 유지)
+      const newRemain = updated?.leaveBalanceRemainDays != null
+        ? Math.round(Number(updated.leaveBalanceRemainDays))
+        : selectedEmployeeData.remainingLeave + adjustFormData.adjustment;
       const updatedEmployeeList = employeeList.map((employee) =>
-        employee.id === selectedEmployeeData.id
+        (employee.memberNo ?? employee.id) === memberNo
           ? {
               ...employee,
-              totalLeave: newTotalLeave,
-              remainingLeave: newRemainingLeave >= 0 ? newRemainingLeave : 0,
+              totalLeave: updated?.leaveBalanceTotalDays ?? selectedEmployeeData.totalLeave,
+              usedLeave: updated?.leaveBalanceUsedDays ?? selectedEmployeeData.usedLeave,
+              remainingLeave: newRemain >= 0 ? newRemain : 0,
               adjustmentDetails: adjustFormData.reason,
+              currentYearAdjustmentTotal: (selectedEmployeeData.currentYearAdjustmentTotal ?? 0) + adjustFormData.adjustment,
             }
           : employee
       );
       setEmployeeList(updatedEmployeeList);
 
-      // 로그 추가
-      const newLogEntry = {
-        id: Date.now(),
-        date: new Date().toLocaleString('ko-KR', { 
-          year: 'numeric', 
-          month: '2-digit', 
-          day: '2-digit', 
-          hour: '2-digit', 
-          minute: '2-digit' 
-        }),
-        target: selectedEmployeeData.name,
-        type: adjustFormData.reason === '포상' ? '포상' : adjustFormData.reason === '징계' ? '징계' : '경력인정',
-        changedDays: Math.abs(adjustFormData.adjustment),
-        reason: adjustFormData.note || adjustFormData.reason,
-        processor: currentUser?.memberName || '관리자',
-      };
-      setLeaveLogList([newLogEntry, ...leaveLogList]);
+      // 변경 로그: LeaveHistory에서 다시 조회하여 반영
+      if (agencyNo) {
+        const historyList = await leaveService.getLeaveHistoryByAgency(agencyNo);
+        const historyArr = Array.isArray(historyList) ? historyList : [];
+        const historyMapped = historyArr.map((item) => ({
+          id: item.id,
+          date: item.date ?? '',
+          target: item.target ?? '-',
+          type: item.type ?? '',
+          changedDays: item.changedDays ?? 0,
+          reason: item.reason ?? '',
+          processor: '',
+        }));
+        setLeaveLogList(historyMapped);
+      }
 
       toast.success(`${selectedEmployeeData.name}님의 연차가 조정되었습니다.`);
       setIsAdjustModalOpen(false);
       setSelectedEmployeeData(null);
     } catch (error) {
       console.error('Failed to adjust leave:', error);
-      toast.error('연차 조정에 실패했습니다.');
+      toast.error(error?.message ?? '연차 조정에 실패했습니다.');
     }
   };
 
@@ -858,11 +858,10 @@ export function AgencyLeaveSettingsPage() {
                 <div style={{ position: 'relative', zIndex: 1, width: '100%', height: '100%' }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart margin={{ top: 20, right: 30, left: 10, bottom: 20 }}>
-                      {/* 구간별 배경색 - ReferenceArea 사용 */}
-                      {/* ReferenceArea는 Recharts에서 CSS 변수를 직접 사용할 수 없으므로 하드코딩 유지 */}
+                      {/* 구간별 배경색 - 분기별 번아웃/이탈 기준 적용 */}
                       <ReferenceArea 
                         x1={0} 
-                        x2={30} 
+                        x2={chartZones.riskEnd} 
                         y1={0} 
                         y2={maxYValue + 1} 
                         fill="#FEE2E2" 
@@ -870,18 +869,20 @@ export function AgencyLeaveSettingsPage() {
                         stroke="none"
                         ifOverflow="visible"
                       />
+                      {chartZones.riskEnd < chartZones.completeStart && (
+                        <ReferenceArea 
+                          x1={chartZones.riskEnd} 
+                          x2={chartZones.completeStartVisible} 
+                          y1={0} 
+                          y2={maxYValue + 1} 
+                          fill="#DCFCE7" 
+                          fillOpacity={0.5}
+                          stroke="none"
+                          ifOverflow="visible"
+                        />
+                      )}
                       <ReferenceArea 
-                        x1={30} 
-                        x2={80} 
-                        y1={0} 
-                        y2={maxYValue + 1} 
-                        fill="#DCFCE7" 
-                        fillOpacity={0.5}
-                        stroke="none"
-                        ifOverflow="visible"
-                      />
-                      <ReferenceArea 
-                        x1={80} 
+                        x1={chartZones.completeStartVisible} 
                         x2={100} 
                         y1={0} 
                         y2={maxYValue + 1} 
@@ -1076,23 +1077,36 @@ export function AgencyLeaveSettingsPage() {
                   </tr>
                 </EmployeeTableHeader>
                 <tbody>
+                  {filteredEmployeeList.length === 0 && !isLoading && (
+                    <EmployeeTableRow>
+                      <EmployeeTableCell colSpan={5} style={{ textAlign: 'center', color: 'var(--muted-foreground)', padding: theme.spacing[8] }}>
+                        {agencyNo ? '등록된 직원이 없거나 연차 데이터를 불러오는 중입니다.' : '에이전시에 로그인하면 직원 연차 목록이 표시됩니다.'}
+                      </EmployeeTableCell>
+                    </EmployeeTableRow>
+                  )}
                   {filteredEmployeeList.map((employee) => {
                     if (!employee) return null;
                     const usageRate = calculateUsageRate(employee);
                     const category = categorizeRiskGroup(employee, currentMonth);
                     return (
-                      <EmployeeTableRow key={employee.id}>
+                      <EmployeeTableRow key={employee.id ?? employee.memberNo}>
                         <EmployeeTableCell>{employee.name || '-'}</EmployeeTableCell>
                         <EmployeeTableCell>{employee.position || '-'}</EmployeeTableCell>
                         <EmployeeTableCell>
                           <div>
-                            <div style={{ fontWeight: 500 }}>{employee.totalLeave || 0}일</div>
+                            <div style={{ fontWeight: 500 }}>
+                              전체 {employee.totalLeave ?? 0}일 / 잔여 {employee.remainingLeave ?? 0}일
+                            </div>
                             <div style={{ fontSize: '12px', color: category.color, marginTop: '2px' }}>
                               소진율 {usageRate.toFixed(1)}%
                             </div>
                           </div>
                         </EmployeeTableCell>
-                        <EmployeeTableCell>{employee.adjustmentDetails || '-'}</EmployeeTableCell>
+                        <EmployeeTableCell>
+                          {employee.currentYearAdjustmentTotal != null && employee.currentYearAdjustmentTotal !== 0
+                            ? (employee.currentYearAdjustmentTotal > 0 ? '+' : '') + employee.currentYearAdjustmentTotal + '일'
+                            : '-'}
+                        </EmployeeTableCell>
                         <EmployeeTableCell>
                           <Button
                             variant="outline"
@@ -1130,6 +1144,13 @@ export function AgencyLeaveSettingsPage() {
                   </tr>
                 </LogTableHeader>
                 <tbody>
+                  {leaveLogList.length === 0 && !isLoading && (
+                    <LogTableRow>
+                      <LogTableCell colSpan={5} style={{ textAlign: 'center', color: 'var(--muted-foreground)', padding: theme.spacing[8] }}>
+                        연차 변경 이력이 없습니다.
+                      </LogTableCell>
+                    </LogTableRow>
+                  )}
                   {leaveLogList.map((logEntry) => (
                     <LogTableRow key={logEntry.id}>
                       <LogTableCell>{logEntry.date}</LogTableCell>

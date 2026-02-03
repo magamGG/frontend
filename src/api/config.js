@@ -84,6 +84,9 @@ export const API_ENDPOINTS = {
     APPROVE: (attendanceRequestNo) => `/api/leave/${attendanceRequestNo}/approve`, // POST: 근태 신청 승인
     REJECT: (attendanceRequestNo) => `/api/leave/${attendanceRequestNo}/reject`, // POST: 근태 신청 반려
     DOWNLOAD_FILE: (fileName) => `/api/leave/file/${fileName}`, // GET: 근태 신청 첨부 파일 다운로드
+    AGENCY_BALANCES: (agencyNo) => `/api/leave/agency/${agencyNo}/balances`, // GET: 에이전시 소속 회원 연차 잔액 목록
+    AGENCY_HISTORY: (agencyNo) => `/api/leave/agency/${agencyNo}/history`, // GET: 에이전시 소속 연차 변경 이력
+    ADJUST_BALANCE: `/api/leave/adjust-balance`, // POST: 회원 연차 조정 (LeaveBalance + LeaveHistory)
   },
 
   // 프로젝트 API
