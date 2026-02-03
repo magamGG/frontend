@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { CheckCircle, Calendar, Clock, FileText, AlertCircle, Activity, Shield, Stethoscope, X } from 'lucide-react';
 import { toast } from 'sonner';
 import useAuthStore from '@/store/authStore';
+import api from '@/api/axios';
 import {
   ArtistHealthRoot,
   ArtistHealthBody,
@@ -57,12 +58,108 @@ import {
   SurveyModalActions,
 } from './ArtistHealthPage.styled';
 
-// TODO: Zustand store mapping - 다음 검진 예정일 데이터
-const initialNextCheckupDate = {
-  mentalCheckup: '2026.01.25',
-  physicalCheckup: '2026.02.01',
-  daysUntilMental: 7,
-  daysUntilPhysical: 14,
+// 정신 건강 단계별 메시지
+const mentalHealthMessages = {
+  정상: {
+    color: '#16a34a', // green-600
+    text: '정상',
+    iconColor: 'text-green-600',
+    bgColor: '#dcfce7', // 연한 초록
+    borderColor: '#16a34a', // 초록 테두리
+    messages: [
+      '현재 정신 건강 상태가 양호합니다.',
+      '지금처럼 규칙적인 생활 패턴을 유지하세요.',
+      '정기적인 검진을 통해 건강을 관리하세요.'
+    ]
+  },
+  주의: {
+    color: '#ea580c', // orange-600
+    text: '주의',
+    iconColor: 'text-orange-600',
+    bgColor: '#ffedd5', // 연한 주황
+    borderColor: '#ea580c', // 주황 테두리
+    messages: [
+      '스트레스 관리와 충분한 휴식이 필요합니다.',
+      '정기적인 운동과 취미 활동을 권장합니다.',
+      '증상이 지속되면 전문가 상담을 받으시기 바랍니다.'
+    ]
+  },
+  경고: {
+    color: '#ca8a04', // yellow-600
+    text: '경고',
+    iconColor: 'text-yellow-600',
+    bgColor: '#fef9c3', // 연한 노랑
+    borderColor: '#ca8a04', // 노랑 테두리
+    messages: [
+      '정신 건강 상태에 주의가 필요합니다.',
+      '즉시 전문가 상담을 받으시기 바랍니다.',
+      '충분한 휴식과 스트레스 해소가 필요합니다.'
+    ]
+  },
+  위험: {
+    color: '#dc2626', // red-600
+    text: '위험',
+    iconColor: 'text-red-600',
+    bgColor: '#fee2e2', // 연한 빨강
+    borderColor: '#dc2626', // 빨강 테두리
+    messages: [
+      '즉시 전문가 상담이 필요합니다.',
+      '담당자에게 연락하여 전문 상담을 받으시기 바랍니다.',
+      '건강 관리를 위해 적극적인 조치가 필요합니다.'
+    ]
+  }
+};
+
+// 신체 건강 단계별 메시지
+const physicalHealthMessages = {
+  정상: {
+    color: '#16a34a',
+    text: '정상',
+    iconColor: 'text-green-600',
+    bgColor: '#dcfce7', // 연한 초록
+    borderColor: '#16a34a', // 초록 테두리
+    messages: [
+      '현재 신체 건강 상태가 양호합니다.',
+      '지금처럼 올바른 자세와 규칙적인 운동을 유지하세요.',
+      '정기적인 검진을 통해 건강을 관리하세요.'
+    ]
+  },
+  주의: {
+    color: '#ea580c',
+    text: '주의',
+    iconColor: 'text-orange-600',
+    bgColor: '#ffedd5', // 연한 주황
+    borderColor: '#ea580c', // 주황 테두리
+    messages: [
+      '손목/손가락 통증에 주의가 필요합니다.',
+      '정기적인 스트레칭과 바른 자세를 유지하세요.',
+      '증상이 심해지면 의료 전문가와 상담하세요.'
+    ]
+  },
+  경고: {
+    color: '#ca8a04',
+    text: '경고',
+    iconColor: 'text-yellow-600',
+    bgColor: '#fef9c3', // 연한 노랑
+    borderColor: '#ca8a04', // 노랑 테두리
+    messages: [
+      '신체 건강 상태에 주의가 필요합니다.',
+      '즉시 의료 전문가 상담을 받으시기 바랍니다.',
+      '무리한 작업을 피하고 충분한 휴식을 취하세요.'
+    ]
+  },
+  위험: {
+    color: '#dc2626',
+    text: '위험',
+    iconColor: 'text-red-600',
+    bgColor: '#fee2e2', // 연한 빨강
+    borderColor: '#dc2626', // 빨강 테두리
+    messages: [
+      '즉시 의료 전문가 상담이 필요합니다.',
+      '담당자에게 연락하여 전문 상담을 받으시기 바랍니다.',
+      '작업 중단 및 치료가 필요할 수 있습니다.'
+    ]
+  }
 };
 
 // TODO: Zustand store mapping - 심층 검진 검사 데이터
@@ -97,7 +194,6 @@ export function ArtistHealthPage() {
   const [mentalDeepAnswers, setMentalDeepAnswers] = useState([null, null, null, null]);
   const [physicalDeepAnswers, setPhysicalDeepAnswers] = useState([null, null, null, null]);
 
-  const [nextCheckupDate] = useState(initialNextCheckupDate);
   const [deepCheckupData, setDeepCheckupData] = useState(initialDeepCheckupData);
 
   // 신체 건강 심층 검사 질문 데이터 state
@@ -125,18 +221,10 @@ export function ArtistHealthPage() {
       // → HealthSurveyServiceImpl.getQuestionsBySurveyType()
       // → HealthSurveyQuestionRepository.findByHealthSurvey_Agency_AgencyNoAndHealthSurveyQuestionTypeOrderByHealthSurveyOrderAsc()
       // AgencyNo와 HEALTH_SURVEY_QUESTION_TYPE 컬럼으로 필터링하여 조회
-      const response = await fetch(`/api/health-surveys/type/월간 신체/questions?agencyNo=${agencyNo}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      const questions = await api.get(`/api/health-surveys/type/월간 신체/questions`, {
+        params: { agencyNo }
       });
       
-      if (!response.ok) {
-        throw new Error('질문을 불러오는데 실패했습니다.');
-      }
-      
-      const questions = await response.json();
       // healthSurveyOrder 순서로 정렬
       const sortedQuestions = questions.sort((a, b) => 
         (a.healthSurveyOrder || 0) - (b.healthSurveyOrder || 0)
@@ -170,18 +258,10 @@ export function ArtistHealthPage() {
       // → HealthSurveyServiceImpl.getQuestionsBySurveyType()
       // → HealthSurveyQuestionRepository.findByHealthSurvey_Agency_AgencyNoAndHealthSurveyQuestionTypeOrderByHealthSurveyOrderAsc()
       // AgencyNo와 HEALTH_SURVEY_QUESTION_TYPE 컬럼으로 필터링하여 조회
-      const response = await fetch(`/api/health-surveys/type/월간 정신/questions?agencyNo=${agencyNo}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      const questions = await api.get(`/api/health-surveys/type/월간 정신/questions`, {
+        params: { agencyNo }
       });
       
-      if (!response.ok) {
-        throw new Error('질문을 불러오는데 실패했습니다.');
-      }
-      
-      const questions = await response.json();
       // healthSurveyOrder 순서로 정렬
       const sortedQuestions = questions.sort((a, b) => 
         (a.healthSurveyOrder || 0) - (b.healthSurveyOrder || 0)
@@ -197,6 +277,147 @@ export function ArtistHealthPage() {
       setIsLoadingMentalQuestions(false);
     }
   };
+
+  // 설문 완료 상태 조회 함수 (재사용 가능하도록 분리)
+  const fetchSurveyStatus = async () => {
+    if (!memberNo) {
+      console.log('memberNo가 없어서 설문 상태 조회를 건너뜁니다.');
+      return;
+    }
+
+    try {
+      console.log('설문 상태 조회 시작:', memberNo);
+      
+      // 정신 건강 설문 상태 조회
+      const mentalStatus = await api.get(`/api/health-surveys/member/${memberNo}/responses`, {
+        params: { type: '월간 정신' }
+      });
+      
+      console.log('정신 건강 설문 상태:', mentalStatus);
+      
+      // Jackson이 boolean 필드를 직렬화할 때 isCompleted -> completed로 변환될 수 있음
+      const mentalIsCompleted = mentalStatus.isCompleted ?? mentalStatus.completed ?? false;
+      
+      if (mentalIsCompleted) {
+        const checkDate = new Date(mentalStatus.lastCheckDate);
+        const formattedDate = `${checkDate.getFullYear()}.${String(checkDate.getMonth() + 1).padStart(2, '0')}.${String(checkDate.getDate()).padStart(2, '0')}`;
+        
+        // 다음 검진일 포맷팅
+        let nextCheckupDateFormatted = '';
+        let daysRemaining = null;
+        if (mentalStatus.nextCheckupDate) {
+          const nextDate = new Date(mentalStatus.nextCheckupDate);
+          nextCheckupDateFormatted = `${nextDate.getFullYear()}.${String(nextDate.getMonth() + 1).padStart(2, '0')}.${String(nextDate.getDate()).padStart(2, '0')}`;
+          daysRemaining = mentalStatus.daysRemaining ?? null;
+        }
+        
+        console.log('정신 건강 설문 완료 - 날짜:', formattedDate, '점수:', mentalStatus.totalScore, '남은 일수:', daysRemaining);
+        
+        setDeepCheckupData(prev => ({
+          ...prev,
+          mental: {
+            ...prev.mental,
+            lastCheckDate: formattedDate,
+            score: mentalStatus.totalScore || 0,
+            status: mentalStatus.riskLevel || '정상',
+            isCompleted: true,
+            nextCheckDate: nextCheckupDateFormatted,
+            daysRemaining: daysRemaining,
+          },
+        }));
+      } else {
+        // 미완료 상태일 때 마감일과 남은 일수 표시
+        let deadlineDateFormatted = '';
+        let daysRemaining = null;
+        if (mentalStatus.deadlineDate) {
+          const deadline = new Date(mentalStatus.deadlineDate);
+          deadlineDateFormatted = `${deadline.getFullYear()}.${String(deadline.getMonth() + 1).padStart(2, '0')}.${String(deadline.getDate()).padStart(2, '0')}`;
+          daysRemaining = mentalStatus.daysRemaining ?? null;
+        }
+        
+        console.log('정신 건강 설문 미완료 - 마감일:', deadlineDateFormatted, '남은 일수:', daysRemaining);
+        
+        setDeepCheckupData(prev => ({
+          ...prev,
+          mental: {
+            ...prev.mental,
+            isCompleted: false,
+            deadlineDate: deadlineDateFormatted,
+            daysRemaining: daysRemaining,
+          },
+        }));
+      }
+
+      // 신체 건강 설문 상태 조회
+      const physicalStatus = await api.get(`/api/health-surveys/member/${memberNo}/responses`, {
+        params: { type: '월간 신체' }
+      });
+      
+      console.log('신체 건강 설문 상태:', physicalStatus);
+      
+      // Jackson이 boolean 필드를 직렬화할 때 isCompleted -> completed로 변환될 수 있음
+      const physicalIsCompleted = physicalStatus.isCompleted ?? physicalStatus.completed ?? false;
+      
+      if (physicalIsCompleted) {
+        const checkDate = new Date(physicalStatus.lastCheckDate);
+        const formattedDate = `${checkDate.getFullYear()}.${String(checkDate.getMonth() + 1).padStart(2, '0')}.${String(checkDate.getDate()).padStart(2, '0')}`;
+        
+        // 다음 검진일 포맷팅
+        let nextCheckupDateFormatted = '';
+        let daysRemaining = null;
+        if (physicalStatus.nextCheckupDate) {
+          const nextDate = new Date(physicalStatus.nextCheckupDate);
+          nextCheckupDateFormatted = `${nextDate.getFullYear()}.${String(nextDate.getMonth() + 1).padStart(2, '0')}.${String(nextDate.getDate()).padStart(2, '0')}`;
+          daysRemaining = physicalStatus.daysRemaining ?? null;
+        }
+        
+        console.log('신체 건강 설문 완료 - 날짜:', formattedDate, '점수:', physicalStatus.totalScore, '남은 일수:', daysRemaining);
+        
+        setDeepCheckupData(prev => ({
+          ...prev,
+          physical: {
+            ...prev.physical,
+            lastCheckDate: formattedDate,
+            score: physicalStatus.totalScore || 0,
+            status: physicalStatus.riskLevel || '정상',
+            isCompleted: true,
+            nextCheckDate: nextCheckupDateFormatted,
+            daysRemaining: daysRemaining,
+          },
+        }));
+      } else {
+        // 미완료 상태일 때 마감일과 남은 일수 표시
+        let deadlineDateFormatted = '';
+        let daysRemaining = null;
+        if (physicalStatus.deadlineDate) {
+          const deadline = new Date(physicalStatus.deadlineDate);
+          deadlineDateFormatted = `${deadline.getFullYear()}.${String(deadline.getMonth() + 1).padStart(2, '0')}.${String(deadline.getDate()).padStart(2, '0')}`;
+          daysRemaining = physicalStatus.daysRemaining ?? null;
+        }
+        
+        console.log('신체 건강 설문 미완료 - 마감일:', deadlineDateFormatted, '남은 일수:', daysRemaining);
+        
+        setDeepCheckupData(prev => ({
+          ...prev,
+          physical: {
+            ...prev.physical,
+            isCompleted: false,
+            deadlineDate: deadlineDateFormatted,
+            daysRemaining: daysRemaining,
+          },
+        }));
+      }
+    } catch (error) {
+      console.error('설문 상태 조회 실패:', error);
+      console.error('에러 상세:', error.response?.data || error.message);
+      // 에러가 발생해도 기본 상태 유지
+    }
+  };
+
+  // 페이지 로드 시 설문 완료 상태 조회
+  useEffect(() => {
+    fetchSurveyStatus();
+  }, [memberNo]);
 
   // 모달이 열릴 때 질문 로드
   useEffect(() => {
@@ -305,41 +526,13 @@ export function ArtistHealthPage() {
       // 백엔드 처리: HealthSurveyController.submitSurveyResponse()
       // → HealthSurveyServiceImpl.submitSurveyResponse()
       // → HealthSurveyQuestion의 HEALTH_SURVEY_QUESTION_TYPE으로 위험도 평가
-      const response = await fetch(`/api/health-surveys/${healthSurveyNo}/responses`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          memberNo: memberNo,
-          totalScore: totalScore
-        })
+      const result = await api.post(`/api/health-surveys/${healthSurveyNo}/responses`, {
+        memberNo: memberNo,
+        totalScore: totalScore
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || '제출에 실패했습니다.');
-      }
-
-      const result = await response.json();
-      
-      // 완료 상태 업데이트
-      const today = new Date();
-      const formattedDate = `${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')}`;
-
-      // 백엔드에서 반환하는 riskLevel: "정상", "주의", "경고", "위험"
-      let status = result.riskLevel || '정상';
-
-      setDeepCheckupData({
-        ...deepCheckupData,
-        mental: {
-          lastCheckDate: formattedDate,
-          score: result.totalScore || 0,
-          status: status,
-          isCompleted: true,
-          nextCheckDate: deepCheckupData.mental.nextCheckDate,
-        },
-      });
+      // 설문 제출 성공 후 상태 조회 함수 호출하여 최신 상태 가져오기
+      await fetchSurveyStatus();
 
       toast.success('정신 건강 심층 검진이 제출되었습니다.');
       setIsMentalDeepCheckOpen(false);
@@ -383,41 +576,13 @@ export function ArtistHealthPage() {
       // 백엔드 처리: HealthSurveyController.submitSurveyResponse()
       // → HealthSurveyServiceImpl.submitSurveyResponse()
       // → HealthSurveyQuestion의 HEALTH_SURVEY_QUESTION_TYPE으로 위험도 평가
-      const response = await fetch(`/api/health-surveys/${healthSurveyNo}/responses`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          memberNo: memberNo,
-          totalScore: totalScore
-        })
+      const result = await api.post(`/api/health-surveys/${healthSurveyNo}/responses`, {
+        memberNo: memberNo,
+        totalScore: totalScore
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || '제출에 실패했습니다.');
-      }
-
-      const result = await response.json();
-      
-      // 완료 상태 업데이트
-      const today = new Date();
-      const formattedDate = `${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')}`;
-
-      // 백엔드에서 반환하는 riskLevel: "정상", "주의", "경고", "위험"
-      let status = result.riskLevel || '정상';
-
-      setDeepCheckupData({
-        ...deepCheckupData,
-        physical: {
-          lastCheckDate: formattedDate,
-          score: result.totalScore || 0,
-          status: status,
-          isCompleted: true,
-          nextCheckDate: deepCheckupData.physical.nextCheckDate,
-        },
-      });
+      // 설문 제출 성공 후 상태 조회 함수 호출하여 최신 상태 가져오기
+      await fetchSurveyStatus();
 
       toast.success('신체 건강 심층 검진이 제출되었습니다.');
       setIsPhysicalDeepCheckOpen(false);
@@ -463,13 +628,22 @@ export function ArtistHealthPage() {
               <NextCheckupItemHeader>
                 <NextCheckupItemContent>
                   <NextCheckupItemLabel $color="#9333ea">정신 건강 심층 검진</NextCheckupItemLabel>
-                  <NextCheckupItemDate>{nextCheckupDate.mentalCheckup}</NextCheckupItemDate>
+                  <NextCheckupItemDate>
+                    {deepCheckupData.mental.nextCheckDate || deepCheckupData.mental.deadlineDate || '미정'}
+                  </NextCheckupItemDate>
                 </NextCheckupItemContent>
-                <Badge className="bg-green-600 text-white text-xs px-2 py-1">완료</Badge>
+                <Badge className={deepCheckupData.mental.isCompleted ? "bg-green-600 text-white text-xs px-2 py-1" : "bg-orange-600 text-white text-xs px-2 py-1"}>
+                  {deepCheckupData.mental.isCompleted ? '완료' : '미완료'}
+                </Badge>
               </NextCheckupItemHeader>
               <NextCheckupItemMeta>
                 <Clock className="w-3.5 h-3.5" />
-                <span>다음 검진까지 {nextCheckupDate.daysUntilMental}일 남음</span>
+                <span>
+                  {deepCheckupData.mental.isCompleted 
+                    ? `다음 검진까지 ${deepCheckupData.mental.daysRemaining !== null ? deepCheckupData.mental.daysRemaining : '-'}일 남음`
+                    : `${deepCheckupData.mental.deadlineDate || deepCheckupData.mental.nextCheckDate || '미정'}까지 검사 완료 필요`
+                  }
+                </span>
               </NextCheckupItemMeta>
             </NextCheckupItem>
 
@@ -481,13 +655,25 @@ export function ArtistHealthPage() {
               <NextCheckupItemHeader>
                 <NextCheckupItemContent>
                   <NextCheckupItemLabel $color="#2563eb">신체 건강 심층 검진</NextCheckupItemLabel>
-                  <NextCheckupItemDate>{nextCheckupDate.physicalCheckup}</NextCheckupItemDate>
+                  <NextCheckupItemDate>
+                    {deepCheckupData.physical.nextCheckDate || deepCheckupData.physical.deadlineDate || '미정'}
+                  </NextCheckupItemDate>
                 </NextCheckupItemContent>
-                <Badge className="bg-orange-600 text-white text-xs px-2 py-1">D-{nextCheckupDate.daysUntilPhysical}</Badge>
+                <Badge className={deepCheckupData.physical.isCompleted ? "bg-green-600 text-white text-xs px-2 py-1" : "bg-orange-600 text-white text-xs px-2 py-1"}>
+                  {deepCheckupData.physical.isCompleted 
+                    ? '완료' 
+                    : `D-${deepCheckupData.physical.daysRemaining !== null ? deepCheckupData.physical.daysRemaining : '-'}`
+                  }
+                </Badge>
               </NextCheckupItemHeader>
               <NextCheckupItemMeta>
                 <Clock className="w-3.5 h-3.5" />
-                <span>{nextCheckupDate.physicalCheckup}까지 검사 완료 필요</span>
+                <span>
+                  {deepCheckupData.physical.isCompleted 
+                    ? `다음 검진까지 ${deepCheckupData.physical.daysRemaining !== null ? deepCheckupData.physical.daysRemaining : '-'}일 남음`
+                    : `${deepCheckupData.physical.deadlineDate || deepCheckupData.physical.nextCheckDate || '미정'}까지 검사 완료 필요`
+                  }
+                </span>
               </NextCheckupItemMeta>
             </NextCheckupItem>
           </NextCheckupGrid>
@@ -531,18 +717,25 @@ export function ArtistHealthPage() {
                   <ResultDetailTitle>검사 결과</ResultDetailTitle>
                   <ResultDetailText>
                     귀하의 정신 건강 점수는 <strong style={{ color: '#1f2328' }}>{deepCheckupData.mental.score}점</strong>으로{' '}
-                    <strong style={{ color: '#ea580c' }}>주의</strong> 단계입니다.
+                    <strong style={{ color: mentalHealthMessages[deepCheckupData.mental.status]?.color || '#1f2328' }}>
+                      {deepCheckupData.mental.status || '미정'}
+                    </strong> 단계입니다.
                   </ResultDetailText>
-                  <ResultDetailAlert>
-                    <ResultDetailAlertContent>
-                      <AlertCircle className="w-4 h-4 text-orange-600" style={{ marginTop: '2px', flexShrink: 0 }} />
-                      <ResultDetailAlertText>
-                        <p>• 스트레스 관리와 충분한 휴식이 필요합니다.</p>
-                        <p>• 정기적인 운동과 취미 활동을 권장합니다.</p>
-                        <p>• 증상이 지속되면 전문가 상담을 받으시기 바랍니다.</p>
-                      </ResultDetailAlertText>
-                    </ResultDetailAlertContent>
-                  </ResultDetailAlert>
+                  {(() => {
+                    const statusInfo = mentalHealthMessages[deepCheckupData.mental.status] || mentalHealthMessages['정상'];
+                    return (
+                      <ResultDetailAlert style={{ backgroundColor: statusInfo.bgColor, borderColor: statusInfo.borderColor, borderWidth: '1px', borderStyle: 'solid' }}>
+                        <ResultDetailAlertContent>
+                          <AlertCircle className={`w-4 h-4 ${statusInfo.iconColor}`} style={{ marginTop: '2px', flexShrink: 0 }} />
+                          <ResultDetailAlertText>
+                            {statusInfo.messages.map((message, index) => (
+                              <p key={index}>• {message}</p>
+                            ))}
+                          </ResultDetailAlertText>
+                        </ResultDetailAlertContent>
+                      </ResultDetailAlert>
+                    );
+                  })()}
                 </ResultDetailBox>
 
                 <NextCheckupDateBox $bgColor="#faf5ff" $borderColor="rgba(168, 85, 247, 0.2)">
@@ -550,7 +743,14 @@ export function ArtistHealthPage() {
                     <Calendar className="w-4 h-4" style={{ color: '#9333ea' }} />
                     <span>다음 검진일</span>
                   </NextCheckupDateLabel>
-                  <NextCheckupDateValue $color="#9333ea">{deepCheckupData.mental.nextCheckDate}</NextCheckupDateValue>
+                  <NextCheckupDateValue $color="#9333ea">
+                    {deepCheckupData.mental.nextCheckDate}
+                    {deepCheckupData.mental.daysRemaining !== null && (
+                      <span style={{ marginLeft: '8px', fontSize: '0.875rem', fontWeight: '600' }}>
+                        (D-{deepCheckupData.mental.daysRemaining})
+                      </span>
+                    )}
+                  </NextCheckupDateValue>
                 </NextCheckupDateBox>
 
                 <Button variant="outline" className="w-full" disabled>
@@ -563,7 +763,14 @@ export function ArtistHealthPage() {
                   <AlertCircle className="w-14 h-14" />
                 </IncompleteStatusIcon>
                 <IncompleteStatusText $isWarning $isPurple>검사가 아직 완료되지 않았습니다</IncompleteStatusText>
-                <IncompleteStatusSubtext>{deepCheckupData.mental.nextCheckDate}까지 검사를 완료해주세요</IncompleteStatusSubtext>
+                <IncompleteStatusSubtext>
+                  {deepCheckupData.mental.deadlineDate || deepCheckupData.mental.nextCheckDate}까지 검사를 완료해주세요
+                  {deepCheckupData.mental.daysRemaining !== null && (
+                    <span style={{ marginLeft: '8px', fontWeight: '600' }}>
+                      (D-{deepCheckupData.mental.daysRemaining})
+                    </span>
+                  )}
+                </IncompleteStatusSubtext>
                 <Button 
                   onClick={() => {
                     setMentalDeepAnswers([]);
@@ -614,18 +821,25 @@ export function ArtistHealthPage() {
                   <ResultDetailTitle>검사 결과</ResultDetailTitle>
                   <ResultDetailText>
                     귀하의 신체 건강 점수는 <strong style={{ color: '#1f2328' }}>{deepCheckupData.physical.score}점</strong>으로{' '}
-                    <strong style={{ color: '#ea580c' }}>주의</strong> 단계입니다.
+                    <strong style={{ color: physicalHealthMessages[deepCheckupData.physical.status]?.color || '#1f2328' }}>
+                      {deepCheckupData.physical.status || '미정'}
+                    </strong> 단계입니다.
                   </ResultDetailText>
-                  <ResultDetailAlert>
-                    <ResultDetailAlertContent>
-                      <AlertCircle className="w-4 h-4 text-orange-600" style={{ marginTop: '2px', flexShrink: 0 }} />
-                      <ResultDetailAlertText>
-                        <p>• 손목/손가락 통증에 주의가 필요합니다.</p>
-                        <p>• 정기적인 스트레칭과 바른 자세를 유지하세요.</p>
-                        <p>• 증상이 심해지면 의료 전문가와 상담하세요.</p>
-                      </ResultDetailAlertText>
-                    </ResultDetailAlertContent>
-                  </ResultDetailAlert>
+                  {(() => {
+                    const statusInfo = physicalHealthMessages[deepCheckupData.physical.status] || physicalHealthMessages['정상'];
+                    return (
+                      <ResultDetailAlert style={{ backgroundColor: statusInfo.bgColor, borderColor: statusInfo.borderColor, borderWidth: '1px', borderStyle: 'solid' }}>
+                        <ResultDetailAlertContent>
+                          <AlertCircle className={`w-4 h-4 ${statusInfo.iconColor}`} style={{ marginTop: '2px', flexShrink: 0 }} />
+                          <ResultDetailAlertText>
+                            {statusInfo.messages.map((message, index) => (
+                              <p key={index}>• {message}</p>
+                            ))}
+                          </ResultDetailAlertText>
+                        </ResultDetailAlertContent>
+                      </ResultDetailAlert>
+                    );
+                  })()}
                 </ResultDetailBox>
 
                 <NextCheckupDateBox $bgColor="#eff6ff" $borderColor="rgba(59, 130, 246, 0.2)">
@@ -633,7 +847,14 @@ export function ArtistHealthPage() {
                     <Calendar className="w-4 h-4" style={{ color: '#2563eb' }} />
                     <span>다음 검진일</span>
                   </NextCheckupDateLabel>
-                  <NextCheckupDateValue $color="#2563eb">{deepCheckupData.physical.nextCheckDate}</NextCheckupDateValue>
+                  <NextCheckupDateValue $color="#2563eb">
+                    {deepCheckupData.physical.nextCheckDate}
+                    {deepCheckupData.physical.daysRemaining !== null && (
+                      <span style={{ marginLeft: '8px', fontSize: '0.875rem', fontWeight: '600' }}>
+                        (D-{deepCheckupData.physical.daysRemaining})
+                      </span>
+                    )}
+                  </NextCheckupDateValue>
                 </NextCheckupDateBox>
 
                 <Button variant="outline" className="w-full" disabled>
@@ -646,7 +867,14 @@ export function ArtistHealthPage() {
                   <AlertCircle className="w-14 h-14" />
                 </IncompleteStatusIcon>
                 <IncompleteStatusText $isWarning>검사가 아직 완료되지 않았습니다</IncompleteStatusText>
-                <IncompleteStatusSubtext>2026.02.01까지 검사를 완료해주세요</IncompleteStatusSubtext>
+                <IncompleteStatusSubtext>
+                  {deepCheckupData.physical.deadlineDate || deepCheckupData.physical.nextCheckDate || '2026.02.01'}까지 검사를 완료해주세요
+                  {deepCheckupData.physical.daysRemaining !== null && (
+                    <span style={{ marginLeft: '8px', fontWeight: '600' }}>
+                      (D-{deepCheckupData.physical.daysRemaining})
+                    </span>
+                  )}
+                </IncompleteStatusSubtext>
                 <Button 
                   onClick={() => {
                     setPhysicalDeepAnswers([]);
