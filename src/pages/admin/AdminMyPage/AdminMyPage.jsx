@@ -390,14 +390,14 @@ export function AdminMyPage({ onClose, onLogout }) {
                 </ProfilePhotoButton>
 
                 <ActionButtonsGroup>
-                  <ActionButton variant="primary" onClick={() => setIsEditModalOpen(true)}>
+                  <ActionButton $variant="primary" onClick={() => setIsEditModalOpen(true)}>
                     <Edit className="w-4 h-4" />
                     프로필 수정
                   </ActionButton>
-                  <ActionButton variant="secondary" onClick={handleLogout}>
+                  <ActionButton $variant="secondary" onClick={handleLogout}>
                     로그아웃
                   </ActionButton>
-                  <ActionButton variant="danger" onClick={() => setIsDeleteModalOpen(true)}>
+                  <ActionButton $variant="danger" onClick={() => setIsDeleteModalOpen(true)}>
                     회원탈퇴
                   </ActionButton>
                 </ActionButtonsGroup>

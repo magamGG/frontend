@@ -15,6 +15,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
+import { getProjectThumbnailUrl, PROJECT_THUMBNAIL_PLACEHOLDER } from '@/api/config';
 
 
 
@@ -206,7 +207,7 @@ export function AgencyProjectDetailPage({
                 {/* 작품 표지 */}
                 <div className="flex-shrink-0">
                   <ImageWithFallback
-                    src={project.thumbnail || 'https://images.unsplash.com/photo-1591788806059-cb6e2f6a2498?w=400'}
+                    src={getProjectThumbnailUrl(project.thumbnail) || PROJECT_THUMBNAIL_PLACEHOLDER}
                     alt={project.title}
                     className="w-32 h-44 object-cover rounded-lg border-2 border-border shadow-md"
                   />

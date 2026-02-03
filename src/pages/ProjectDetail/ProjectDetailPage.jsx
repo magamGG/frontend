@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Card } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
@@ -22,6 +22,9 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
+import { projectService } from '@/api/services';
+import useAuthStore from '@/store/authStore';
+import { getProjectThumbnailUrl, getMemberProfileUrl, PROJECT_THUMBNAIL_PLACEHOLDER, MEMBER_AVATAR_PLACEHOLDER } from '@/api/config';
 import { useDrag, useDrop } from 'react-dnd';
 import { DraggableCardContainer } from './ProjectDetailPage.styled';
 
@@ -99,14 +102,14 @@ const ITEM_TYPE = 'KANBAN_CARD';
  * @param {Object} props
  * @param {KanbanCard} props.card
  * @param {(card: KanbanCard) => void} props.onEdit
- * @param {(cardId: number) => void} props.onDelete
+ * @param {(card: KanbanCard) => void} props.onRequestDeleteCard
  * @param {(cardId: number) => void} props.onToggleComplete
  * @param {string} props.projectColor
  */
 function DraggableCard({ 
   card, 
   onEdit, 
-  onDelete,
+  onRequestDeleteCard,
   onToggleComplete,
   projectColor
 }) {
@@ -162,9 +165,10 @@ function DraggableCard({
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onDelete(card.id);
+              onRequestDeleteCard?.(card);
             }}
             className="text-muted-foreground hover:text-destructive p-1"
+            title="카드 삭제"
           >
             <Trash2 className="w-3 h-3" />
           </button>
@@ -190,20 +194,20 @@ function DraggableCard({
  * @param {KanbanBoard} props.board
  * @param {(cardId: number, sourceBoardId: number, targetBoardId: number) => void} props.onCardDrop
  * @param {(card: KanbanCard) => void} props.onEdit
- * @param {(cardId: number) => void} props.onDelete
+ * @param {(card: KanbanCard) => void} props.onRequestDeleteCard
  * @param {(cardId: number) => void} props.onToggleComplete
  * @param {(boardId: number) => void} props.onAddCard
- * @param {(boardId: number) => void} props.onDeleteBoard
+ * @param {(board: { id: number, title: string }) => void} props.onRequestDeleteBoard
  * @param {string} props.projectColor
  */
 function DroppableBoard({
   board,
   onCardDrop,
   onEdit,
-  onDelete,
+  onRequestDeleteCard,
   onToggleComplete,
   onAddCard,
-  onDeleteBoard,
+  onRequestDeleteBoard,
   projectColor
 }) {
   const [{ isOver }, drop] = useDrop({
@@ -228,8 +232,9 @@ function DroppableBoard({
       <div className="flex items-center justify-between mb-4 flex-shrink-0">
         <h3 className="font-bold text-foreground">{board.title}</h3>
         <button
-          onClick={() => onDeleteBoard(board.id)}
+          onClick={() => onRequestDeleteBoard?.(board)}
           className="text-muted-foreground hover:text-destructive p-1"
+          title="보드 삭제"
         >
           <Trash2 className="w-4 h-4" />
         </button>
@@ -241,7 +246,7 @@ function DroppableBoard({
             key={card.id}
             card={card}
             onEdit={onEdit}
-            onDelete={onDelete}
+            onRequestDeleteCard={onRequestDeleteCard}
             onToggleComplete={onToggleComplete}
             projectColor={projectColor}
           />
@@ -265,20 +270,35 @@ function DroppableBoard({
  * @param {Object} props
  * @param {Project} props.project
  * @param {() => void} props.onBack
+ * @param {(updatedProject: Project) => void} [props.onProjectUpdate] - 저장 후 호출 (목록 갱신용)
+ * @param {() => void} [props.onProjectDelete] - 삭제 후 호출
  * @param {boolean} [props.isArtistView]
  */
 export function ProjectDetailPage({ 
   project, 
   onBack,
+  onProjectUpdate,
+  onProjectDelete,
   isArtistView = false,
 }) {
   // 편집 모드 상태
   const [isEditMode, setIsEditMode] = useState(false);
   const [editedProject, setEditedProject] = useState(project);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // 프로젝트 색상 상태
-  const [projectColor, setProjectColor] = useState('#6E8FB3'); // 기본 색상
+  // DB 색상 문자열 → hex 매핑 (기본색 등)
+  const resolveProjectColor = (c) => {
+    if (!c) return '#6E8FB3';
+    if (c.startsWith('#')) return c;
+    const nameToHex = { 기본색: '#6E8FB3', 블루: '#6E8FB3', 퍼플: '#9B59B6', 그린: '#27AE60', 오렌지: '#E67E22', 레드: '#E74C3C', 핑크: '#EC407A', 브라운: '#8D6E63', 인디고: '#5C6BC0', 틸: '#26A69A', 라임: '#9CCC65', 앰버: '#FFA726', 그레이: '#78909C' };
+    return nameToHex[c] || '#6E8FB3';
+  };
+  const [projectColor, setProjectColor] = useState(() => resolveProjectColor(project?.projectColor));
   const [showColorPicker, setShowColorPicker] = useState(false);
+
+  useEffect(() => {
+    setProjectColor(resolveProjectColor(project?.projectColor));
+  }, [project?.id, project?.projectColor]);
 
   // 색상 팔레트 (구글 캘린더 스타일)
   const colorPalette = [
@@ -296,128 +316,163 @@ export function ProjectDetailPage({
     { name: '그레이', color: '#78909C' },
   ];
 
-  // 팀원 데이터
-  const [teamMembers, setTeamMembers] = useState([
-    {
-      id: 1,
-      name: '김작가',
-      role: '메인 작가',
-      email: 'kim@example.com',
-      phone: '010-1234-5678',
-      status: '출근',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
-    },
-    {
-      id: 2,
-      name: '이채색',
-      role: '채색 담당',
-      email: 'lee@example.com',
-      phone: '010-2345-6789',
-      status: '출근',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-    },
-    {
-      id: 3,
-      name: '박배경',
-      role: '배경 작가',
-      email: 'park@example.com',
-      phone: '010-3456-7890',
-      status: '워케이션',
-      avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150',
-    },
-    {
-      id: 4,
-      name: '최스토리',
-      role: '스토리 작가',
-      email: 'choi@example.com',
-      phone: '010-4567-8901',
-      status: '재택근무',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150',
-    },
-  ]);
+  // 팀원 데이터 (DB PROJECT_MEMBER에서 조회)
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [teamMembersLoading, setTeamMembersLoading] = useState(false);
 
-  // 추가 가능한 팀원 리스트
-  const [availableMembers] = useState([
-    {
-      id: 5,
-      name: '정어시',
-      role: '어시스턴트',
-      email: 'jung@example.com',
-      phone: '010-5678-9012',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-    },
-    {
-      id: 6,
-      name: '한효과',
-      role: '효과 담당',
-      email: 'han@example.com',
-      phone: '010-6789-0123',
-      avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150',
-    },
-    {
-      id: 7,
-      name: '송편집',
-      role: '편집 담당',
-      email: 'song@example.com',
-      phone: '010-7890-1234',
-      avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150',
-    },
-  ]);
+  // 프로젝트 멤버 API 조회 (GET /api/projects/{id}/members)
+  useEffect(() => {
+    if (!project?.id) return;
+    const fetchMembers = async () => {
+      setTeamMembersLoading(true);
+      try {
+        const result = await projectService.getProjectMembers(project.id);
+        const list = Array.isArray(result) ? result : result?.content ?? result?.data ?? [];
+        setTeamMembers(
+          list.map((m) => ({
+            id: m.memberNo,
+            projectMemberNo: m.projectMemberNo,
+            name: m.memberName || m.memberEmail || '-',
+            role: m.memberRole || m.projectMemberRole || '-',
+            email: m.memberEmail || '',
+            phone: m.memberPhone || '',
+            status: m.memberStatus === '휴면' ? '휴면' : '출근',
+            avatar: getMemberProfileUrl(m.memberProfileImage),
+          }))
+        );
+      } catch (err) {
+        toast.error('팀원 목록을 불러오는데 실패했습니다.');
+        setTeamMembers([]);
+      } finally {
+        setTeamMembersLoading(false);
+      }
+    };
+    fetchMembers();
+  }, [project?.id]);
 
-  // 칸반 보드 데이터 - localStorage에서 로드
-  const [boards, setBoards] = useState(() => {
-    const saved = localStorage.getItem(`kanban_boards_${project.id}`);
-    if (saved) {
-      return JSON.parse(saved);
-    }
-    return [
-      {
-        id: 1,
-        title: '할 일',
-        cards: [
-          { id: 1, title: '43화 스토리보드', description: '스토리 구성 및 콘티 작업', startDate: '2025-01-15', dueDate: '2025-01-20', boardId: 1, completed: false },
-          { id: 2, title: '44화 스크립트 검토', description: '작가와 스크립트 회의', startDate: '2025-01-17', dueDate: '2025-01-22', boardId: 1, completed: false },
-        ],
-      },
-      {
-        id: 2,
-        title: '진행중',
-        cards: [
-          { id: 3, title: '42화 채색', description: '메인 씬 채색 작업', startDate: '2025-01-16', dueDate: '2025-01-18', boardId: 2, completed: false },
-        ],
-      },
-      {
-        id: 3,
-        title: '완료',
-        cards: [
-          { id: 4, title: '41화 업로드', description: '네이버 웹툰 업로드 완료', startDate: '2025-01-13', dueDate: '2025-01-14', boardId: 3, completed: true },
-        ],
-      },
-    ];
-  });
+  // 추가 가능한 팀원 (DB: MEMBER_ROLE != 담당자/작가, 프로젝트 미소속)
+  const [availableMembers, setAvailableMembers] = useState([]);
+  const [addableMembersLoading, setAddableMembersLoading] = useState(false);
+  const [isAddTeamMemberModalOpen, setIsAddTeamMemberModalOpen] = useState(false);
 
-  // 보드 상태를 localStorage에 저장하는 함수
+  // 팀원 추가 모달 열릴 때 추가 가능 회원 API 조회
+  useEffect(() => {
+    if (!isAddTeamMemberModalOpen || !project?.id) return;
+    const fetchAddable = async () => {
+      setAddableMembersLoading(true);
+      try {
+        const result = await projectService.getAddableMembers(project.id);
+        const list = Array.isArray(result) ? result : result?.content ?? result?.data ?? [];
+        setAvailableMembers(
+          list.map((m) => ({
+            id: m.memberNo,
+            name: m.memberName || m.memberEmail || '-',
+            role: m.memberRole || m.projectMemberRole || '-',
+            email: m.memberEmail || '',
+            phone: m.memberPhone || '',
+            avatar: getMemberProfileUrl(m.memberProfileImage),
+          }))
+        );
+      } catch (err) {
+        toast.error('추가 가능한 팀원 목록을 불러오는데 실패했습니다.');
+        setAvailableMembers([]);
+      } finally {
+        setAddableMembersLoading(false);
+      }
+    };
+    fetchAddable();
+  }, [isAddTeamMemberModalOpen, project?.id]);
+
+  // 칸반 보드 데이터 - DB(KANBAN_BOARD, KANBAN_CARD)에서 로드
+  const [boards, setBoards] = useState([]);
+  const [boardsLoading, setBoardsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!project?.id) return;
+    const fetchBoards = async () => {
+      setBoardsLoading(true);
+      try {
+        const result = await projectService.getKanbanBoard(project.id);
+        const list = Array.isArray(result) ? result : result?.content ?? result?.data ?? [];
+        const mapped = list.map((b) => ({
+          id: b.id,
+          title: b.title || '',
+          cards: (b.cards || []).map((c) => ({
+            id: c.id,
+            title: c.title || '',
+            description: c.description || '',
+            startDate: c.startDate || '',
+            dueDate: c.dueDate || '',
+            boardId: c.boardId ?? b.id,
+            completed: !!c.completed,
+            createdAt: c.createdAt || null,
+            assignedTo: c.assignedTo
+              ? {
+                  id: c.assignedTo.id,
+                  name: c.assignedTo.name,
+                  role: c.assignedTo.role,
+                  email: c.assignedTo.email,
+                  avatar: getMemberProfileUrl(c.assignedTo.avatar),
+                }
+              : null,
+          })),
+        }));
+        setBoards(mapped);
+      } catch (err) {
+        toast.error('업무 보드를 불러오는데 실패했습니다.');
+        setBoards([]);
+      } finally {
+        setBoardsLoading(false);
+      }
+    };
+    fetchBoards();
+  }, [project?.id]);
+
+  // 보드 상태를 localStorage에 저장하는 함수 (로컬 편집용 - 추후 API 연동 시 대체)
   const saveBoardsToLocalStorage = (updatedBoards) => {
-    localStorage.setItem(`kanban_boards_${project.id}`, JSON.stringify(updatedBoards));
+    localStorage.setItem(`kanban_boards_${project?.id}`, JSON.stringify(updatedBoards));
   };
 
-  // 주간 일정
-  const [weeklySchedule] = useState([
-    { date: '1/15', day: '오늘 (수)', events: ['42화 채색 마감', '팀 미팅 3PM'] },
-    { date: '1/16', day: '목', events: ['43화 스토리보드 시작'] },
-    { date: '1/17', day: '금', events: [] },
-    { date: '1/18', day: '토', events: ['42화 최종 검수'] },
-    { date: '1/19', day: '일', events: ['42화 업로드'] },
-    { date: '1/20', day: '월', events: ['43화 스토리보드 마감'] },
-    { date: '1/21', day: '화', events: ['44화 기획 회의'] },
-  ]);
+  // 이번 주 팀 일정 - 칸반 카드 기반 (시작일~마감일 사이 모든 날짜에 표시)
+  const weeklySchedule = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+    const schedule = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
+      const dateStr = `${d.getMonth() + 1}/${d.getDate()}`;
+      const dayName = i === 0 ? `오늘 (${dayNames[d.getDay()]})` : dayNames[d.getDay()];
+      const yyyyMmDd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const events = [];
+      boards.forEach((board) => {
+        (board.cards || []).forEach((card) => {
+          const startStr = card.startDate ? String(card.startDate).slice(0, 10) : null;
+          const dueStr = card.dueDate ? String(card.dueDate).slice(0, 10) : null;
+          // 시작일~마감일 사이에 있으면 해당 날짜에 표시
+          const assigneeName = card.assignedTo?.name || '';
+          if (startStr && dueStr) {
+            if (yyyyMmDd >= startStr && yyyyMmDd <= dueStr) {
+              events.push({ title: card.title, assigneeName });
+            }
+          } else if (startStr && startStr === yyyyMmDd) {
+            events.push({ title: card.title, assigneeName });
+          } else if (dueStr && dueStr === yyyyMmDd) {
+            events.push({ title: card.title, assigneeName });
+          }
+        });
+      });
+      schedule.push({ date: dateStr, day: dayName, events });
+    }
+    return schedule;
+  }, [boards]);
 
   // 모달 상태
   const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
   const [isCardModalOpen, setIsCardModalOpen] = useState(false);
   const [isBoardModalOpen, setIsBoardModalOpen] = useState(false);
-  const [isAddTeamMemberModalOpen, setIsAddTeamMemberModalOpen] = useState(false);
   const [editingCard, setEditingCard] = useState(null);
   const [currentBoardId, setCurrentBoardId] = useState(null);
   const [selectedMemberIds, setSelectedMemberIds] = useState([]);
@@ -441,13 +496,77 @@ export function ProjectDetailPage({
   });
 
   const [newBoardTitle, setNewBoardTitle] = useState('');
+  const [isDeleteProjectModalOpen, setIsDeleteProjectModalOpen] = useState(false);
+  const [pendingDeleteBoard, setPendingDeleteBoard] = useState(null);
+  const [pendingDeleteCard, setPendingDeleteCard] = useState(null);
+  const [pendingDeleteComment, setPendingDeleteComment] = useState(null);
+  const [pendingDeleteTeamMember, setPendingDeleteTeamMember] = useState(null);
 
   // 편집 모드 토글
-  const handleToggleEditMode = () => {
+  const handleToggleEditMode = async () => {
     if (isEditMode) {
-      // 저장
-      toast.success('변경사항이 저장되었습니다.');
-      setIsEditMode(false);
+      // 저장 - API 호출
+      setIsSaving(true);
+      try {
+        const startDateStr = editedProject.startDate
+          ? (typeof editedProject.startDate === 'string' && editedProject.startDate.length >= 10
+              ? editedProject.startDate.slice(0, 10)
+              : null)
+          : null;
+        const payload = {
+          projectName: editedProject.title,
+          projectStatus: editedProject.serialStatus || '연재중',
+          projectColor: projectColor || '기본색',
+          platform: editedProject.platform,
+          projectGenre: editedProject.genre || undefined,
+          projectCycle: editedProject.scheduleDays ? Number(editedProject.scheduleDays) : undefined,
+          projectStartedAt: startDateStr ? `${startDateStr}T00:00:00` : undefined,
+          thumbnailFile: editedProject.thumbnail || undefined,
+        };
+        const data = await projectService.updateProject(project.id, payload);
+        const savedStartDateStr = data?.projectStartedAt ? String(data.projectStartedAt).slice(0, 10) : null;
+        const scheduleDays = data?.projectCycle ?? null;
+        const deadlineDn = (() => {
+          if (!savedStartDateStr || !scheduleDays) return '미정';
+          const start = new Date(savedStartDateStr);
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          start.setHours(0, 0, 0, 0);
+          const daysDiff = Math.floor((today - start) / (1000 * 60 * 60 * 24));
+          if (daysDiff < 0) return '미정';
+          const cyclesPassed = Math.floor(daysDiff / scheduleDays);
+          const nextDate = new Date(start);
+          nextDate.setDate(start.getDate() + (cyclesPassed + 1) * scheduleDays);
+          const next = nextDate;
+          const daysUntil = Math.round((next - today) / (1000 * 60 * 60 * 24));
+          if (daysUntil > 0) return `D-${daysUntil}`;
+          if (daysUntil === 0) return 'D-Day';
+          return `D+${Math.abs(daysUntil)}`;
+        })();
+        const updatedProject = {
+          id: data?.projectNo ?? project.id,
+          title: data?.projectName ?? editedProject.title,
+          platform: data?.platform || '미정',
+          serialStatus: data?.projectStatus || '연재중',
+          genre: data?.projectGenre || '',
+          schedule: data?.projectCycle ? `${data.projectCycle}일` : '미정',
+          scheduleDays,
+          startDate: savedStartDateStr,
+          thumbnail: data?.thumbnailFile ?? editedProject.thumbnail ?? null,
+          artistName: data?.artistName ?? editedProject.artistName ?? '',
+          artistId: data?.artistMemberNo ?? editedProject.artistId,
+          deadline: deadlineDn,
+          projectColor: data?.projectColor ?? projectColor ?? project?.projectColor ?? '#6E8FB3',
+        };
+        setEditedProject(updatedProject);
+        setIsEditMode(false);
+        toast.success('변경사항이 저장되었습니다.');
+        onProjectUpdate?.(updatedProject);
+      } catch (err) {
+        toast.error(err?.response?.data?.message || '저장에 실패했습니다.');
+      } finally {
+        setIsSaving(false);
+      }
     } else {
       // 편집 모드 시작
       setEditedProject(project);
@@ -462,11 +581,47 @@ export function ProjectDetailPage({
     toast.info('편집이 취소되었습니다.');
   };
 
-  // 표지 이미지 변경
+  // 프로젝트 삭제
+  const handleDeleteProject = async () => {
+    setIsSaving(true);
+    try {
+      await projectService.deleteProject(project.id);
+      setIsDeleteProjectModalOpen(false);
+      toast.success('프로젝트가 삭제되었습니다.');
+      onProjectDelete?.();
+      onBack();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || '삭제에 실패했습니다.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const thumbnailInputRef = useRef(null);
+
+  // 표지 이미지 변경 (편집 모드에서만 - 파일 선택)
   const handleChangeThumbnail = () => {
-    const newUrl = prompt('새 이미지 URL을 입력하세요:', editedProject.thumbnail);
-    if (newUrl) {
-      setEditedProject({ ...editedProject, thumbnail: newUrl });
+    if (!isEditMode) return;
+    thumbnailInputRef.current?.click();
+  };
+
+  const handleThumbnailFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('이미지 파일만 업로드 가능합니다.');
+      return;
+    }
+    e.target.value = '';
+    try {
+      const result = await projectService.uploadThumbnail(file);
+      const fileName = typeof result === 'string' ? result : result?.data ?? result?.fileName ?? null;
+      if (fileName) {
+        setEditedProject((prev) => ({ ...prev, thumbnail: fileName }));
+        toast.success('썸네일이 변경되었습니다. 저장 버튼을 눌러 적용해주세요.');
+      }
+    } catch (err) {
+      toast.error(err?.message || '썸네일 업로드에 실패했습니다.');
     }
   };
 
@@ -479,21 +634,38 @@ export function ProjectDetailPage({
     setEditingTeamMembers(editingTeamMembers.filter(m => m.id !== memberId));
   };
 
-  // 팀원 추가 (수정 모드에서만 임시 상태에 적용)
-  const handleAddTeamMembers = () => {
+  // 팀원 추가 - DB PROJECT_MEMBER에 저장 후 팀원 목록 갱신
+  const handleAddTeamMembers = async () => {
     if (selectedMemberIds.length === 0) {
       toast.error('추가할 팀원을 선택해주세요.');
       return;
     }
+    if (!project?.id) return;
 
-    const newMembers = availableMembers
-      .filter(m => selectedMemberIds.includes(m.id))
-      .map(m => ({ ...m, status: '출근' }));
+    const memberNosToAdd = selectedMemberIds;
+    try {
+      await projectService.addProjectMembers(project.id, memberNosToAdd);
+      toast.success(`${memberNosToAdd.length}명의 팀원이 추가되었습니다.`);
+      setIsAddTeamMemberModalOpen(false);
+      setSelectedMemberIds([]);
 
-    setEditingTeamMembers([...editingTeamMembers, ...newMembers]);
-    setIsAddTeamMemberModalOpen(false);
-    setSelectedMemberIds([]);
-    toast.success(`${newMembers.length}명의 팀원이 추가되었습니다.`);
+      // 팀원 목록 API 재조회
+      const result = await projectService.getProjectMembers(project.id);
+      const list = Array.isArray(result) ? result : result?.content ?? result?.data ?? [];
+      const refreshed = list.map((m) => ({
+        id: m.memberNo,
+        name: m.memberName || m.memberEmail || '-',
+        role: m.projectMemberRole || '-',
+        email: m.memberEmail || '',
+        phone: m.memberPhone || '',
+        status: m.memberStatus === '휴면' ? '휴면' : '출근',
+        avatar: getMemberProfileUrl(m.memberProfileImage),
+      }));
+      setTeamMembers(refreshed);
+      setEditingTeamMembers(refreshed);
+    } catch (err) {
+      toast.error(err?.message || '팀원 추가에 실패했습니다.');
+    }
   };
 
   // 팀원 수정 모드 시작
@@ -525,9 +697,10 @@ export function ProjectDetailPage({
     );
   };
 
-  // 이미 추가된 팀원 제외한 리스트
+  // 이미 추가된 팀원 제외한 리스트 (편집 모드에서는 편집 중 리스트 기준)
+  const currentTeam = isTeamEditMode ? editingTeamMembers : teamMembers;
   const notAddedMembers = availableMembers.filter(
-    am => !teamMembers.some(tm => tm.id === am.id)
+    am => !currentTeam.some(tm => tm.id === am.id)
   );
 
   // 상태별 테두리 색상
@@ -539,6 +712,8 @@ export function ProjectDetailPage({
         return 'border-red-500';
       case '재택근무':
         return 'border-blue-500';
+      case '휴면':
+        return 'border-gray-400';
       default:
         return 'border-border';
     }
@@ -551,6 +726,8 @@ export function ProjectDetailPage({
         return 'bg-green-500 hover:bg-green-600';
       case '워케이션':
         return 'bg-red-500 hover:bg-red-600';
+      case '휴면':
+        return 'bg-gray-500 hover:bg-gray-600';
       case '재택근무':
         return 'bg-blue-500 hover:bg-blue-600';
       default:
@@ -558,86 +735,177 @@ export function ProjectDetailPage({
     }
   };
 
-  // 카드 완료 상태 토글 핸들러
-  const handleToggleComplete = (cardId) => {
-    setBoards((prevBoards) => {
-      const newBoards = prevBoards.map((board) => ({
-        ...board,
-        cards: board.cards.map((card) =>
-          card.id === cardId
-            ? { ...card, completed: !card.completed }
-            : card
-        ),
-      }));
-      saveBoardsToLocalStorage(newBoards);
-      return newBoards;
-    });
+  // 카드 완료 상태 토글 핸들러 (Y <-> N, API 호출)
+  const handleToggleComplete = async (cardId) => {
+    if (!project?.id) return;
+    const board = boards.flatMap((b) => (b.cards || []).map((c) => ({ ...c, boardId: b.id }))).find((c) => c.id === cardId);
+    if (!board) return;
+    const newCompleted = !board.completed;
+    try {
+      const result = await projectService.updateKanbanCard(project.id, cardId, { completed: newCompleted });
+      setBoards((prevBoards) =>
+        prevBoards.map((b) => ({
+          ...b,
+          cards: (b.cards || []).map((c) =>
+            c.id === cardId ? { ...c, completed: !!(result?.completed ?? newCompleted) } : c
+          ),
+        }))
+      );
+      toast.success(newCompleted ? '완료 처리되었습니다.' : '완료가 취소되었습니다.');
+    } catch (err) {
+      toast.error(err?.message || '상태 변경에 실패했습니다.');
+    }
   };
 
-  // 카드 드롭 핸들러
-  const handleCardDrop = (cardId, sourceBoardId, targetBoardId) => {
-    setBoards((prevBoards) => {
-      const newBoards = [...prevBoards];
-      const sourceBoard = newBoards.find(b => b.id === sourceBoardId);
-      const targetBoard = newBoards.find(b => b.id === targetBoardId);
+  // 카드 드롭 핸들러 (KANBAN_CARD.BOARD_NO 업데이트)
+  const handleCardDrop = async (cardId, sourceBoardId, targetBoardId) => {
+    if (sourceBoardId === targetBoardId) return;
+    if (!project?.id) return;
 
-      if (sourceBoard && targetBoard) {
-        const cardIndex = sourceBoard.cards.findIndex(c => c.id === cardId);
-        if (cardIndex !== -1) {
-          const [card] = sourceBoard.cards.splice(cardIndex, 1);
-          card.boardId = targetBoardId;
-          targetBoard.cards.push(card);
+    try {
+      await projectService.updateKanbanCard(project.id, cardId, { boardId: targetBoardId });
+      setBoards((prevBoards) => {
+        const newBoards = prevBoards.map((b) => ({ ...b, cards: [...(b.cards || [])] }));
+        const sourceBoard = newBoards.find((b) => b.id === sourceBoardId);
+        const targetBoard = newBoards.find((b) => b.id === targetBoardId);
+
+        if (sourceBoard && targetBoard) {
+          const cardIndex = sourceBoard.cards.findIndex((c) => c.id === cardId);
+          if (cardIndex !== -1) {
+            const [card] = sourceBoard.cards.splice(cardIndex, 1);
+            targetBoard.cards.push({ ...card, boardId: targetBoardId });
+          }
         }
-      }
-
-      saveBoardsToLocalStorage(newBoards);
-      return newBoards;
-    });
-    toast.success('카드가 이동되었습니다.');
+        return newBoards;
+      });
+      toast.success('카드가 이동되었습니다.');
+    } catch (err) {
+      toast.error(err?.message || '카드 이동에 실패했습니다.');
+    }
   };
 
   // 카드 추가/수정
-  const handleSaveCard = () => {
-    if (!cardForm.title || !cardForm.dueDate) {
-      toast.error('제목과 날짜를 입력해주세요.');
+  const handleSaveCard = async () => {
+    if (!cardForm.title?.trim()) {
+      toast.error('제목을 입력해주세요.');
+      return;
+    }
+    if (!cardForm.dueDate) {
+      toast.error('마감일을 입력해주세요.');
       return;
     }
 
-    if (editingCard) {
-      // 수정
-      setBoards((prevBoards) => {
-        const newBoards = prevBoards.map((board) => ({
-          ...board,
-          cards: board.cards.map((card) =>
-            card.id === editingCard.id
-              ? { ...card, ...cardForm, assignedTo: selectedAssignee, completed: card.completed || false }
-              : card
-          ),
-        }));
-        saveBoardsToLocalStorage(newBoards);
-        return newBoards;
-      });
-      toast.success('카드가 수정되었습니다.');
-    } else if (currentBoardId !== null) {
-      // 추가
-      const newCard = {
-        id: Date.now(),
-        ...cardForm,
-        boardId: currentBoardId,
-        assignedTo: selectedAssignee,
-        completed: false,
-      };
-
-      setBoards((prevBoards) => {
-        const newBoards = prevBoards.map((board) =>
-          board.id === currentBoardId
-            ? { ...board, cards: [...board.cards, newCard] }
-            : board
+    if (editingCard && project?.id) {
+      // 수정 - KANBAN_CARD UPDATE
+      try {
+        const payload = {
+          title: cardForm.title.trim(),
+          description: (cardForm.description ?? '').trim(),  // 빈 문자열이면 백엔드에서 null로 저장
+          startDate: cardForm.startDate || null,
+          dueDate: cardForm.dueDate || null,
+          completed: editingCard.completed ?? false,
+        };
+        if (selectedAssignee) {
+          if (selectedAssignee.projectMemberNo != null) {
+            payload.projectMemberNo = selectedAssignee.projectMemberNo;
+          } else {
+            payload.memberNo = selectedAssignee.id;
+          }
+        }
+        const result = await projectService.updateKanbanCard(project.id, editingCard.id, payload);
+        const updatedCard = {
+          id: result.id,
+          title: result.title || cardForm.title,
+          description: result.description || cardForm.description || '',
+          startDate: result.startDate || cardForm.startDate || '',
+          dueDate: result.dueDate || cardForm.dueDate || '',
+          boardId: result.boardId ?? editingCard.boardId,
+          createdAt: result.createdAt ?? editingCard.createdAt,
+          assignedTo: result.assignedTo
+            ? {
+                id: result.assignedTo.id,
+                name: result.assignedTo.name,
+                role: result.assignedTo.role,
+                email: result.assignedTo.email,
+                avatar: getMemberProfileUrl(result.assignedTo.avatar),
+              }
+            : selectedAssignee ?? editingCard.assignedTo,
+          completed: !!result.completed,
+        };
+        setBoards((prevBoards) =>
+          prevBoards.map((board) => ({
+            ...board,
+            cards: board.cards.map((card) =>
+              card.id === editingCard.id ? updatedCard : card
+            ),
+          }))
         );
-        saveBoardsToLocalStorage(newBoards);
-        return newBoards;
-      });
-      toast.success('카드가 추가되었습니다.');
+        toast.success('카드가 수정되었습니다.');
+      } catch (err) {
+        toast.error(err?.message || '카드 수정에 실패했습니다.');
+        return;
+      }
+      setIsCardModalOpen(false);
+      setEditingCard(null);
+      setCurrentBoardId(null);
+      setCardForm({ title: '', description: '', startDate: '', dueDate: '' });
+      setSelectedAssignee(null);
+      setNewComment('');
+      setCardComments([]);
+      return;
+    }
+
+    if (currentBoardId !== null && project?.id) {
+      // 추가 - KANBAN_CARD INSERT
+      if (!selectedAssignee) {
+        toast.error('담당자를 선택해주세요.');
+        return;
+      }
+      try {
+        const payload = {
+          title: cardForm.title.trim(),
+          description: cardForm.description?.trim() || null,
+          boardId: currentBoardId,
+          startDate: cardForm.startDate || null,
+          dueDate: cardForm.dueDate || null,
+        };
+        if (selectedAssignee.projectMemberNo != null) {
+          payload.projectMemberNo = selectedAssignee.projectMemberNo;
+        } else {
+          payload.memberNo = selectedAssignee.id;
+        }
+        const result = await projectService.createKanbanCard(project.id, payload);
+        const newCard = {
+          id: result.id,
+          title: result.title || cardForm.title,
+          description: result.description || cardForm.description || '',
+          startDate: result.startDate || cardForm.startDate || '',
+          dueDate: result.dueDate || cardForm.dueDate || '',
+          boardId: result.boardId ?? currentBoardId,
+          createdAt: result.createdAt || null,
+          assignedTo: result.assignedTo
+            ? {
+                id: result.assignedTo.id,
+                name: result.assignedTo.name,
+                role: result.assignedTo.role,
+                email: result.assignedTo.email,
+                avatar: getMemberProfileUrl(result.assignedTo.avatar),
+              }
+            : selectedAssignee,
+          completed: !!result.completed,
+        };
+        setBoards((prevBoards) =>
+          prevBoards.map((board) =>
+            board.id === currentBoardId
+              ? { ...board, cards: [...board.cards, newCard] }
+              : board
+          )
+        );
+        toast.success('카드가 추가되었습니다.');
+      } catch (err) {
+        toast.error(err?.message || '카드 추가에 실패했습니다.');
+        return;
+      }
     }
 
     setIsCardModalOpen(false);
@@ -649,106 +917,115 @@ export function ProjectDetailPage({
     setCardComments([]);
   };
 
-  // 카드 삭제
-  const handleDeleteCard = (cardId) => {
-    setBoards((prevBoards) => {
-      const newBoards = prevBoards.map((board) => ({
-        ...board,
-        cards: board.cards.filter((card) => card.id !== cardId),
-      }));
-      saveBoardsToLocalStorage(newBoards);
-      return newBoards;
-    });
-    toast.success('카드가 삭제되었습니다.');
+  // 카드 삭제 (KANBAN_CARD_STATUS를 D로 변경 → 목록에서 숨김)
+  const handleDeleteCard = async (cardId) => {
+    if (!project?.id) return;
+
+    try {
+      await projectService.updateKanbanCard(project.id, cardId, { status: 'D' });
+      setBoards((prevBoards) =>
+        prevBoards.map((board) => ({
+          ...board,
+          cards: board.cards.filter((card) => card.id !== cardId),
+        }))
+      );
+      toast.success('카드가 삭제되었습니다.');
+    } catch (err) {
+      toast.error(err?.message || '카드 삭제에 실패했습니다.');
+    }
   };
 
-  // 보드 추가
-  const handleAddBoard = () => {
-    if (!newBoardTitle) {
+  // 보드 추가 (KANBAN_BOARD INSERT)
+  const handleAddBoard = async () => {
+    if (!newBoardTitle?.trim()) {
       toast.error('보드 이름을 입력해주세요.');
       return;
     }
+    if (!project?.id) return;
 
-    const newBoard = {
-      id: Date.now(),
-      title: newBoardTitle,
-      cards: [],
-    };
-
-    const newBoards = [...boards, newBoard];
-    setBoards(newBoards);
-    saveBoardsToLocalStorage(newBoards);
-    toast.success('보드가 추가되었습니다.');
-    setIsBoardModalOpen(false);
-    setNewBoardTitle('');
+    try {
+      const result = await projectService.createKanbanBoard(project.id, newBoardTitle.trim());
+      const newBoard = {
+        id: result.id,
+        title: result.title || newBoardTitle.trim(),
+        cards: (result.cards || []).map((c) => ({
+          id: c.id,
+          title: c.title || '',
+          description: c.description || '',
+          startDate: c.startDate || '',
+          dueDate: c.dueDate || '',
+          boardId: c.boardId ?? result.id,
+          completed: !!c.completed,
+          assignedTo: c.assignedTo
+            ? {
+                id: c.assignedTo.id,
+                name: c.assignedTo.name,
+                role: c.assignedTo.role,
+                email: c.assignedTo.email,
+                avatar: getMemberProfileUrl(c.assignedTo.avatar),
+              }
+            : null,
+        })),
+      };
+      setBoards((prev) => [...prev, newBoard]);
+      toast.success('보드가 추가되었습니다.');
+      setIsBoardModalOpen(false);
+      setNewBoardTitle('');
+    } catch (err) {
+      toast.error(err?.message || '보드 추가에 실패했습니다.');
+    }
   };
 
-  // 보드 삭제
-  const handleDeleteBoard = (boardId) => {
-    const newBoards = boards.filter(b => b.id !== boardId);
-    setBoards(newBoards);
-    saveBoardsToLocalStorage(newBoards);
-    toast.success('보드가 삭제되었습니다.');
+  // 보드 삭제 (KANBAN_BOARD_STATUS를 N으로 변경 → 목록에서 숨김)
+  const handleDeleteBoard = async (boardId) => {
+    if (!project?.id) return;
+
+    try {
+      await projectService.updateKanbanBoardStatus(project.id, boardId, 'N');
+      setBoards((prev) => prev.filter((b) => b.id !== boardId));
+      toast.success('보드가 삭제되었습니다.');
+    } catch (err) {
+      toast.error(err?.message || '보드 삭제에 실패했습니다.');
+    }
   };
 
-  // 코멘트 추가 핸들러
-  const handleAddComment = () => {
+  // 코멘트 추가 핸들러 (COMMENT INSERT)
+  const handleAddComment = async () => {
     if (!newComment.trim() || !editingCard) {
       toast.error('코멘트를 입력해주세요.');
       return;
     }
+    if (!project?.id) return;
 
-    const comment = {
-      id: Date.now(),
-      author: '김작가',
-      content: newComment,
-      createdAt: new Date().toLocaleString('ko-KR'),
-      role: 'artist'
-    };
-
-    // 카드의 코멘트 목록에 추가
-    const updatedCard = {
-      ...editingCard,
-      comments: [...(editingCard.comments || []), comment]
-    };
-
-    setEditingCard(updatedCard);
-    setCardComments([...(editingCard.comments || []), comment]);
-
-    // 보드 상태도 업데이트
-    setBoards((prevBoards) => {
-      const newBoards = prevBoards.map((board) => ({
-        ...board,
-        cards: board.cards.map((card) =>
-          card.id === editingCard.id
-            ? updatedCard
-            : card
-        ),
-      }));
-      saveBoardsToLocalStorage(newBoards);
-      return newBoards;
-    });
-
-    // localStorage에 피드백 저장
-    const feedback = {
-      id: `artist-${Date.now()}`,
-      projectId: project.id,
-      project: project.title,
-      cardTitle: editingCard.title,
-      content: newComment,
-      from: '김작가',
-      date: '방금 전',
-      isRead: false,
-      role: 'artist'
-    };
-
-    const existingFeedbacks = localStorage.getItem('artistFeedbacks');
-    const feedbacks = existingFeedbacks ? JSON.parse(existingFeedbacks) : [];
-    feedbacks.unshift(feedback);
-    localStorage.setItem('artistFeedbacks', JSON.stringify(feedbacks));
-
-    setNewComment('');
-    toast.success('코멘트가 추가되었습니다.');
+    try {
+      const result = await projectService.createComment(project.id, editingCard.id, newComment.trim());
+      const authorName = useAuthStore.getState().user?.memberName || '작성자';
+      const comment = {
+        id: result.id,
+        author: authorName,
+        content: result.content || newComment.trim(),
+        createdAt: result.commentCreatedAt || new Date().toLocaleString('ko-KR'),
+        role: useAuthStore.getState().user?.memberRole || '',
+      };
+      const updatedCard = {
+        ...editingCard,
+        comments: [...(editingCard.comments || []), comment],
+      };
+      setEditingCard(updatedCard);
+      setCardComments(updatedCard.comments);
+      setBoards((prevBoards) =>
+        prevBoards.map((board) => ({
+          ...board,
+          cards: board.cards.map((card) =>
+            card.id === editingCard.id ? updatedCard : card
+          ),
+        }))
+      );
+      setNewComment('');
+      toast.success('코멘트가 추가되었습니다.');
+    } catch (err) {
+      toast.error(err?.message || '코멘트 추가에 실패했습니다.');
+    }
   };
 
   // 코멘트 수정 시작
@@ -758,71 +1035,59 @@ export function ProjectDetailPage({
   };
 
   // 코멘트 수정 저장
-  const handleSaveEditComment = () => {
-    if (!editingComment || !editingCard) return;
-
-    const updatedComments = (editingCard.comments || []).map((c) =>
-      c.id === editingComment.id
-        ? { ...c, content: editingCommentContent }
-        : c
-    );
-
-    const updatedCard = {
-      ...editingCard,
-      comments: updatedComments
-    };
-
-    setEditingCard(updatedCard);
-    setCardComments(updatedComments);
-
-    // 보드 상태도 업데이트
-    setBoards((prevBoards) => {
-      const newBoards = prevBoards.map((board) => ({
-        ...board,
-        cards: board.cards.map((card) =>
-          card.id === editingCard.id
-            ? updatedCard
-            : card
-        ),
-      }));
-      saveBoardsToLocalStorage(newBoards);
-      return newBoards;
-    });
-
-    setEditingComment(null);
-    setEditingCommentContent('');
-    toast.success('코멘트가 수정되었습니다.');
+  const handleSaveEditComment = async () => {
+    if (!editingComment || !editingCard || !project?.id) return;
+    const content = (editingCommentContent ?? '').trim();
+    if (!content) {
+      toast.error('코멘트 내용을 입력해주세요.');
+      return;
+    }
+    try {
+      await projectService.updateComment(project.id, editingCard.id, editingComment.id, { content });
+      const updatedComments = (editingCard.comments || cardComments).map((c) =>
+        c.id === editingComment.id ? { ...c, content } : c
+      );
+      const updatedCard = { ...editingCard, comments: updatedComments };
+      setEditingCard(updatedCard);
+      setCardComments(updatedComments);
+      setBoards((prevBoards) =>
+        prevBoards.map((board) => ({
+          ...board,
+          cards: board.cards.map((card) =>
+            card.id === editingCard.id ? updatedCard : card
+          ),
+        }))
+      );
+      setEditingComment(null);
+      setEditingCommentContent('');
+      toast.success('코멘트가 수정되었습니다.');
+    } catch (err) {
+      toast.error(err?.response?.data?.message || '코멘트 수정에 실패했습니다.');
+    }
   };
 
-  // 코멘트 삭제
-  const handleDeleteComment = (commentId) => {
-    if (!editingCard) return;
-
-    const updatedComments = (editingCard.comments || []).filter((c) => c.id !== commentId);
-
-    const updatedCard = {
-      ...editingCard,
-      comments: updatedComments
-    };
-
-    setEditingCard(updatedCard);
-    setCardComments(updatedComments);
-
-    // 보드 상태도 업데이트
-    setBoards((prevBoards) => {
-      const newBoards = prevBoards.map((board) => ({
-        ...board,
-        cards: board.cards.map((card) =>
-          card.id === editingCard.id
-            ? updatedCard
-            : card
-        ),
-      }));
-      saveBoardsToLocalStorage(newBoards);
-      return newBoards;
-    });
-
-    toast.success('코멘트가 삭제되었습니다.');
+  // 코멘트 삭제 (COMMENT_STATUS를 B로 변경 → 숨김)
+  const handleDeleteComment = async (commentId) => {
+    if (!editingCard || !project?.id) return;
+    try {
+      await projectService.updateComment(project.id, editingCard.id, commentId, { status: 'block' });
+      const updatedComments = (editingCard.comments || cardComments).filter((c) => c.id !== commentId);
+      const updatedCard = { ...editingCard, comments: updatedComments };
+      setEditingCard(updatedCard);
+      setCardComments(updatedComments);
+      setBoards((prevBoards) =>
+        prevBoards.map((board) => ({
+          ...board,
+          cards: board.cards.map((card) =>
+            card.id === editingCard.id ? updatedCard : card
+          ),
+        }))
+      );
+      setPendingDeleteComment(null);
+      toast.success('코멘트가 삭제되었습니다.');
+    } catch (err) {
+      toast.error(err?.response?.data?.message || '코멘트 삭제에 실패했습니다.');
+    }
   };
 
   return (
@@ -858,20 +1123,32 @@ export function ProjectDetailPage({
                         size="sm"
                         onClick={handleToggleEditMode}
                         className="bg-primary hover:bg-primary/90"
+                        disabled={isSaving}
                       >
                         <Save className="w-4 h-4 mr-2" />
-                        저장
+                        {isSaving ? '저장 중...' : '저장'}
                       </Button>
                     </>
                   ) : (
-                    <Button
-                      size="sm"
-                      onClick={handleToggleEditMode}
-                      variant="outline"
-                    >
-                      <Edit className="w-4 h-4 mr-2" />
-                      편집
-                    </Button>
+                    <>
+                      <Button
+                        size="sm"
+                        onClick={handleToggleEditMode}
+                        variant="outline"
+                      >
+                        <Edit className="w-4 h-4 mr-2" />
+                        편집
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => setIsDeleteProjectModalOpen(true)}
+                        disabled={isSaving}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        삭제
+                      </Button>
+                    </>
                   )}
                 </div>
               )}
@@ -883,15 +1160,22 @@ export function ProjectDetailPage({
                 <div className="flex-shrink-0">
                   <div
                     className={`relative group ${isEditMode ? 'cursor-pointer' : ''}`}
-                    onClick={isEditMode ? handleChangeThumbnail : undefined}
+                    onClick={handleChangeThumbnail}
                   >
+                    <input
+                      ref={thumbnailInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleThumbnailFileChange}
+                    />
                     <ImageWithFallback
-                      src={editedProject.thumbnail || 'https://images.unsplash.com/photo-1591788806059-cb6e2f6a2498?w=400'}
+                      src={getProjectThumbnailUrl(editedProject.thumbnail) || PROJECT_THUMBNAIL_PLACEHOLDER}
                       alt={editedProject.title}
                       className="w-32 h-44 object-cover rounded-lg border-2 border-border shadow-md"
                     />
                     {isEditMode && (
-                      <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                         <span className="text-white text-xs font-medium">클릭하여 변경</span>
                       </div>
                     )}
@@ -970,30 +1254,35 @@ export function ProjectDetailPage({
                     <Button
                       variant="outline"
                       onClick={() => setIsTeamModalOpen(true)}
+                      disabled={teamMembersLoading}
                     >
                       <Users className="w-4 h-4 mr-2" />
-                      팀원 보기 ({teamMembers.length}명)
+                      팀원 보기 ({teamMembersLoading ? '...' : `${teamMembers.length}명`})
                     </Button>
 
-                    {/* 프로젝트 색상 선택 */}
+                    {/* 프로젝트 색상 선택 (편집 모드에서만 변경 가능) */}
                     <div>
                       <label className="text-xs text-muted-foreground mb-2 block">프로젝트 일정 색상</label>
-                      <div className="flex items-center gap-2 flex-wrap">
+                      <div className={`flex items-center gap-2 flex-wrap ${!isEditMode ? 'opacity-80' : ''}`}>
                         {colorPalette.map((item) => (
                           <button
                             key={item.color}
+                            type="button"
+                            disabled={!isEditMode}
                             onClick={() => {
                               setProjectColor(item.color);
                               toast.success(`프로젝트 색상이 ${item.name}로 변경되었습니다.`);
                             }}
-                            className="group relative"
-                            title={item.name}
+                            className={`group relative ${!isEditMode ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                            title={isEditMode ? item.name : '편집 버튼을 눌러 색상 변경'}
                           >
                             <div
-                              className={`w-7 h-7 rounded-full transition-all hover:scale-110 ${
+                              className={`w-7 h-7 rounded-full transition-all ${
+                                isEditMode ? 'hover:scale-110' : ''
+                              } ${
                                 projectColor === item.color
                                   ? 'ring-2 ring-offset-2 ring-foreground'
-                                  : 'hover:ring-2 hover:ring-offset-1 hover:ring-border'
+                                  : isEditMode ? 'hover:ring-2 hover:ring-offset-1 hover:ring-border' : ''
                               }`}
                               style={{ backgroundColor: item.color }}
                             />
@@ -1028,7 +1317,13 @@ export function ProjectDetailPage({
                   </Button>
                 </div>
 
-                {boards.length === 0 ? (
+                {boardsLoading ? (
+                  <div className="flex-1 flex items-center justify-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                    <div className="text-center">
+                      <p className="text-gray-500 text-sm">업무 보드 불러오는 중...</p>
+                    </div>
+                  </div>
+                ) : boards.length === 0 ? (
                   <div className="flex-1 flex items-center justify-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
                     <div className="text-center">
                       <p className="text-gray-500 text-sm">보드를 추가해서 업무 일정을 기록하세요</p>
@@ -1041,7 +1336,7 @@ export function ProjectDetailPage({
                         key={board.id}
                         board={board}
                         onCardDrop={handleCardDrop}
-                        onEdit={(card) => {
+                        onEdit={async (card) => {
                           setEditingCard(card);
                           setSelectedAssignee(card.assignedTo || null);
                           setCardForm({
@@ -1050,15 +1345,32 @@ export function ProjectDetailPage({
                             startDate: card.startDate,
                             dueDate: card.dueDate,
                           });
+                          setCardComments([]);
                           setIsCardModalOpen(true);
+                          if (project?.id && card.id) {
+                            try {
+                              const result = await projectService.getComments(project.id, card.id);
+                              const list = Array.isArray(result) ? result : result?.content ?? result?.data ?? [];
+                              setCardComments(list.map((c) => ({
+                                id: c.id,
+                                content: c.content || '',
+                                author: '작성자',
+                                createdAt: c.commentCreatedAt || '-',
+                              })));
+                            } catch {
+                              setCardComments([]);
+                            }
+                          }
                         }}
-                        onDelete={handleDeleteCard}
+                        onRequestDeleteCard={(card) => setPendingDeleteCard({ id: card.id, title: card.title || '이 카드' })}
                         onToggleComplete={handleToggleComplete}
                         onAddCard={(boardId) => {
                           setCurrentBoardId(boardId);
+                          setEditingCard(null);
+                          setCardComments([]);
                           setIsCardModalOpen(true);
                         }}
-                        onDeleteBoard={handleDeleteBoard}
+                        onRequestDeleteBoard={(board) => setPendingDeleteBoard({ id: board.id, title: board.title || '이 보드' })}
                         projectColor={projectColor}
                       />
                     ))}
@@ -1093,7 +1405,10 @@ export function ProjectDetailPage({
                       {schedule.events.length > 0 ? (
                         <div className="space-y-1">
                           {schedule.events.map((event, eventIdx) => (
-                            <p key={eventIdx} className="text-xs text-foreground">• {event}</p>
+                            <p key={eventIdx} className="text-xs text-foreground">
+                              • {event.title}
+                              {event.assigneeName && <span className="text-muted-foreground"> ({event.assigneeName})</span>}
+                            </p>
                           ))}
                         </div>
                       ) : (
@@ -1133,7 +1448,7 @@ export function ProjectDetailPage({
                 >
                   {/* 프로필 사진 */}
                   <ImageWithFallback
-                    src={member.avatar || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150'}
+                    src={member.avatar || MEMBER_AVATAR_PLACEHOLDER}
                     alt={member.name}
                     className="w-12 h-12 rounded-full object-cover flex-shrink-0"
                   />
@@ -1155,9 +1470,10 @@ export function ProjectDetailPage({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleDeleteTeamMember(member.id);
+                      setPendingDeleteTeamMember(member);
                     }}
                     className="ml-2 text-muted-foreground hover:text-destructive p-1"
+                    title="팀원 삭제"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -1218,6 +1534,36 @@ export function ProjectDetailPage({
         </div>
       </Modal>
 
+      {/* 팀원 삭제 확인 모달 */}
+      <Modal
+        isOpen={!!pendingDeleteTeamMember}
+        onClose={() => setPendingDeleteTeamMember(null)}
+        title="팀원 삭제 확인"
+        maxWidth="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            <strong>{pendingDeleteTeamMember?.name}</strong> 팀원을 삭제하시겠습니까?
+          </p>
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => setPendingDeleteTeamMember(null)}>
+              취소
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (pendingDeleteTeamMember?.id) {
+                  handleDeleteTeamMember(pendingDeleteTeamMember.id);
+                  setPendingDeleteTeamMember(null);
+                }
+              }}
+            >
+              삭제
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
       {/* 팀원 추가 모달 */}
       <Modal
         isOpen={isAddTeamMemberModalOpen}
@@ -1231,7 +1577,11 @@ export function ProjectDetailPage({
         <div>
           <p className="text-sm text-muted-foreground mb-4">추가할 팀원을 선택하세요.</p>
 
-          {notAddedMembers.length === 0 ? (
+          {addableMembersLoading ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <p className="text-sm">불러오는 중...</p>
+            </div>
+          ) : notAddedMembers.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <p className="text-sm">추가 가능한 팀원이 없습니다.</p>
             </div>
@@ -1251,7 +1601,7 @@ export function ProjectDetailPage({
                     />
                     
                     <ImageWithFallback
-                      src={member.avatar || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150'}
+                      src={member.avatar || MEMBER_AVATAR_PLACEHOLDER}
                       alt={member.name}
                       className="w-10 h-10 rounded-full object-cover flex-shrink-0"
                     />
@@ -1395,21 +1745,33 @@ export function ProjectDetailPage({
                   />
                 </div>
               </div>
-              
+              {editingCard?.createdAt && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  생성일: {(() => {
+                    try {
+                      const d = new Date(editingCard.createdAt);
+                      return isNaN(d.getTime()) ? editingCard.createdAt : d.toLocaleString('ko-KR');
+                    } catch {
+                      return editingCard.createdAt;
+                    }
+                  })()}
+                </p>
+              )}
               {/* 담당자 선택 */}
               <div className="mt-4">
                 <label className="text-sm font-medium text-muted-foreground mb-2 block">담당자</label>
                 <select
-                  value={selectedAssignee?.id || ''}
+                  value={selectedAssignee != null ? String(selectedAssignee.id) : ''}
                   onChange={(e) => {
-                    const selected = teamMembers.find(m => m.id === Number(e.target.value));
+                    const val = e.target.value;
+                    const selected = val ? teamMembers.find(m => String(m.id) === val) : null;
                     setSelectedAssignee(selected || null);
                   }}
                   className="w-full px-4 py-2.5 border border-border rounded-md focus:ring-2 focus:ring-primary focus:border-primary outline-none text-sm bg-background text-foreground"
                 >
                   <option value="">선택하세요</option>
                   {teamMembers.map((member) => (
-                    <option key={member.id} value={member.id}>
+                    <option key={member.id} value={String(member.id)}>
                       {member.name} - {member.role}
                     </option>
                   ))}
@@ -1519,12 +1881,12 @@ export function ProjectDetailPage({
                     <div className="flex items-start gap-3 mb-2">
                       <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
                         <span className="text-xs font-semibold text-primary">
-                          {comment.author.charAt(0)}
+                          {(comment.author || '작성자').charAt(0)}
                         </span>
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-sm font-semibold text-foreground">{comment.author}</span>
+                          <span className="text-sm font-semibold text-foreground">{comment.author || '작성자'}</span>
                           <span className="text-xs text-muted-foreground">{comment.createdAt}</span>
                         </div>
                         <p className="text-sm text-foreground whitespace-pre-wrap">{comment.content}</p>
@@ -1539,7 +1901,7 @@ export function ProjectDetailPage({
                           <Edit className="w-3 h-3" />
                         </button>
                         <button
-                          onClick={() => handleDeleteComment(comment.id)}
+                          onClick={() => setPendingDeleteComment(comment)}
                           className="text-muted-foreground hover:text-destructive p-1"
                           title="삭제"
                         >
@@ -1561,7 +1923,115 @@ export function ProjectDetailPage({
         </div>
       </Modal>
 
-      {/* 보드 추가 모달 */}
+      {/* 보드 삭제 확인 모달 */}
+      <Modal
+        isOpen={!!pendingDeleteBoard}
+        onClose={() => setPendingDeleteBoard(null)}
+        title="보드 삭제 확인"
+        maxWidth="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            <strong>{pendingDeleteBoard?.title}</strong> 보드를 삭제하시겠습니까?
+          </p>
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => setPendingDeleteBoard(null)}>
+              취소
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                if (!pendingDeleteBoard?.id) return;
+                await handleDeleteBoard(pendingDeleteBoard.id);
+                setPendingDeleteBoard(null);
+              }}
+            >
+              삭제
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* 카드 삭제 확인 모달 */}
+      <Modal
+        isOpen={!!pendingDeleteCard}
+        onClose={() => setPendingDeleteCard(null)}
+        title="카드 삭제 확인"
+        maxWidth="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            <strong>{pendingDeleteCard?.title}</strong> 카드를 삭제하시겠습니까?
+          </p>
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => setPendingDeleteCard(null)}>
+              취소
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                if (!pendingDeleteCard?.id) return;
+                await handleDeleteCard(pendingDeleteCard.id);
+                setPendingDeleteCard(null);
+              }}
+            >
+              삭제
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* 코멘트 삭제 확인 모달 */}
+      <Modal
+        isOpen={!!pendingDeleteComment}
+        onClose={() => setPendingDeleteComment(null)}
+        title="코멘트 삭제 확인"
+        maxWidth="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            이 코멘트를 삭제하시겠습니까?
+          </p>
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => setPendingDeleteComment(null)}>
+              취소
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (pendingDeleteComment?.id) {
+                  handleDeleteComment(pendingDeleteComment.id);
+                }
+              }}
+            >
+              삭제
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* 프로젝트 삭제 확인 모달 */}
+      <Modal
+        isOpen={isDeleteProjectModalOpen}
+        onClose={() => setIsDeleteProjectModalOpen(false)}
+        title="프로젝트 삭제 확인"
+        maxWidth="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            <strong>{editedProject?.title}</strong> 프로젝트를 정말 삭제하시겠습니까? 삭제된 프로젝트는 복구할 수 없습니다.
+          </p>
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => setIsDeleteProjectModalOpen(false)}>
+              취소
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteProject} disabled={isSaving}>
+              {isSaving ? '삭제 중...' : '삭제'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
       <Modal
         isOpen={isBoardModalOpen}
         onClose={() => {

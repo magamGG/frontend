@@ -435,6 +435,7 @@ export function ArtistDashboardPage() {
           const typeMap = {
             '연차': ATTENDANCE_TYPE.LEAVE,
             '반차': ATTENDANCE_TYPE.LEAVE,
+            '반반차': ATTENDANCE_TYPE.LEAVE,
             '병가': ATTENDANCE_TYPE.LEAVE,
             '워케이션': ATTENDANCE_TYPE.WORKATION,
             '재택근무': ATTENDANCE_TYPE.REMOTE,
@@ -728,7 +729,7 @@ export function ArtistDashboardPage() {
               {/* 근태 상태 표시 - API(leaveService.getCurrentStatus, attendanceService.getTodayStatus) 연동 */}
               {(() => {
                 const displayType = currentAttendanceType || ATTENDANCE_TYPE.OFFICE;
-                const displayConfig = ATTENDANCE_STATUS_CONFIG[displayType];
+                const displayConfig = ATTENDANCE_STATUS_CONFIG[displayType] || ATTENDANCE_STATUS_CONFIG[ATTENDANCE_TYPE.OFFICE];
                 const DisplayIcon = displayConfig.icon;
                 return (
                   <AttendanceStatusCard $bgColor={displayConfig.bgColor} $borderColor={displayConfig.borderColor}>

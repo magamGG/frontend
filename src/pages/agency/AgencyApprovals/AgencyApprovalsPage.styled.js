@@ -136,7 +136,7 @@ export const SectionBadge = styled.div`
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 0.75rem;
-  ${props => props.variant === 'outline' ? `
+  ${props => props.$variant === 'outline' ? `
     border: 1px solid var(--border);
     background-color: transparent;
   ` : `

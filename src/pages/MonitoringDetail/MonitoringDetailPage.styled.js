@@ -169,13 +169,13 @@ export const FilterButton = styled.button`
   transition: all 0.2s;
   cursor: pointer;
   border: none;
-  background-color: ${props => props.variant === 'default' ? '#3F4A5A' : '#e8eaed'};
-  color: ${props => props.variant === 'default' ? 'white' : '#1f2328'};
+  background-color: ${props => props.$variant === 'default' ? '#3F4A5A' : '#e8eaed'};
+  color: ${props => props.$variant === 'default' ? 'white' : '#1f2328'};
   font-weight: 500;
   white-space: nowrap;
 
   &:hover {
-    background-color: ${props => props.variant === 'default' ? '#3F4A5A' : '#d4d8dc'};
+    background-color: ${props => props.$variant === 'default' ? '#3F4A5A' : '#d4d8dc'};
   }
 `;
 

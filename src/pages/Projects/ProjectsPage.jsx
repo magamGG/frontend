@@ -44,53 +44,9 @@ const getStatusVariant = (status) => {
   return variantMap[status] || 'outline';
 };
 
-// TODO: Zustand store mapping - 작품 목록
-const initialProjects = [
-  {
-    id: 1,
-    title: '로맨스 판타지',
-    status: PROJECT_STATUS.SERIALIZING,
-    platform: '네이버 웹툰',
-    episodeCount: 42,
-    nextDeadline: '2026년 1월 15일',
-    progress: 75,
-    views: '125만',
-  },
-  {
-    id: 2,
-    title: '학원물',
-    status: PROJECT_STATUS.SERIALIZING,
-    platform: '카카오 웹툰',
-    episodeCount: 15,
-    nextDeadline: '2026년 1월 18일',
-    progress: 60,
-    views: '85만',
-  },
-  {
-    id: 3,
-    title: '액션 판타지',
-    status: PROJECT_STATUS.ON_BREAK,
-    platform: '네이버 웹툰',
-    episodeCount: 28,
-    nextDeadline: null,
-    progress: 45,
-    views: '200만',
-  },
-  {
-    id: 4,
-    title: 'SF 스릴러',
-    status: PROJECT_STATUS.PREPARING,
-    platform: '카카오 웹툰',
-    episodeCount: 0,
-    nextDeadline: '2026년 2월 1일',
-    progress: 15,
-    views: '-',
-  },
-];
-
 export function ProjectsPage() {
   const [filterStatus, setFilterStatus] = useState('전체');
-  const [projects] = useState(initialProjects);
+  const [projects] = useState([]);
 
   // 필터링된 작품 목록
   const filteredProjects =

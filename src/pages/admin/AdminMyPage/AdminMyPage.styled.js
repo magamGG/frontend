@@ -189,7 +189,7 @@ export const ActionButton = styled.button`
   cursor: pointer;
 
   ${props => {
-    if (props.variant === 'primary') {
+    if (props.$variant === 'primary') {
       return `
         border-color: #F97316;
         color: #F97316;
@@ -200,7 +200,7 @@ export const ActionButton = styled.button`
         }
       `;
     }
-    if (props.variant === 'danger') {
+    if (props.$variant === 'danger') {
       return `
         border-color: #DC2626;
         color: #DC2626;
