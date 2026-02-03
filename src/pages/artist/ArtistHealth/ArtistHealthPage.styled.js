@@ -232,21 +232,33 @@ export const NextCheckupDateValue = styled.span`
 // 미완료 상태 박스
 export const IncompleteStatusBox = styled.div`
   padding: 16px;
-  background-color: ${props => (props.$isWarning ? '#fff7ed' : '#f9fafb')};
-  border: ${props => (props.$isWarning ? '2px solid #fdba74' : '1px solid #e5e7eb')};
+  background-color: ${props => {
+    if (props.$isPurple) return '#faf5ff';
+    return props.$isWarning ? '#fff7ed' : '#f9fafb';
+  }};
+  border: ${props => {
+    if (props.$isPurple) return '2px solid #c084fc';
+    return props.$isWarning ? '2px solid #fdba74' : '1px solid #e5e7eb';
+  }};
   border-radius: 8px;
   text-align: center;
 `;
 
 export const IncompleteStatusIcon = styled.div`
   margin: 0 auto 12px;
-  color: ${props => (props.$isWarning ? '#f97316' : '#9ca3af')};
+  color: ${props => {
+    if (props.$isPurple) return '#9333ea';
+    return props.$isWarning ? '#f97316' : '#9ca3af';
+  }};
 `;
 
 export const IncompleteStatusText = styled.p`
   font-size: 14px;
-  font-weight: ${props => (props.$isWarning ? '600' : '400')};
-  color: ${props => (props.$isWarning ? '#f97316' : '#6e8fb3')};
+  font-weight: ${props => (props.$isWarning || props.$isPurple ? '600' : '400')};
+  color: ${props => {
+    if (props.$isPurple) return '#9333ea';
+    return props.$isWarning ? '#f97316' : '#6e8fb3';
+  }};
   margin: 0 0 8px 0;
 `;
 

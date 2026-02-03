@@ -21,12 +21,12 @@ export const AdminPersonalHealthBody = styled.div`
   gap: 16px;
 `;
 
-// 다음 검진 예정일 카드 (AdminHealthPage와 동일)
+// 다음 검진 예정일 카드
 export const NextCheckupCard = styled.div`
   padding: 20px;
   background-color: white;
   border-radius: 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 `;
 
@@ -89,22 +89,18 @@ export const NextCheckupItemMeta = styled.div`
   color: #6e8fb3;
 `;
 
-// 심층 검진 검사 그리드
+// 심층 검진 검사 현황 그리드
 export const DeepCheckupGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 16px;
-
-  @media (max-width: 1024px) {
-    grid-template-columns: 1fr;
-  }
 `;
 
 export const DeepCheckupCard = styled.div`
   padding: 20px;
   background-color: white;
   border-radius: 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 `;
 
@@ -236,21 +232,33 @@ export const NextCheckupDateValue = styled.span`
 // 미완료 상태 박스
 export const IncompleteStatusBox = styled.div`
   padding: 16px;
-  background-color: ${props => (props.$isWarning ? '#fff7ed' : '#f9fafb')};
-  border: ${props => (props.$isWarning ? '2px solid #fdba74' : '1px solid #e5e7eb')};
+  background-color: ${props => {
+    if (props.$isPurple) return '#faf5ff';
+    return props.$isWarning ? '#fff7ed' : '#f9fafb';
+  }};
+  border: ${props => {
+    if (props.$isPurple) return '2px solid #c084fc';
+    return props.$isWarning ? '2px solid #fdba74' : '1px solid #e5e7eb';
+  }};
   border-radius: 8px;
   text-align: center;
 `;
 
 export const IncompleteStatusIcon = styled.div`
   margin: 0 auto 12px;
-  color: ${props => (props.$isWarning ? '#f97316' : '#9ca3af')};
+  color: ${props => {
+    if (props.$isPurple) return '#9333ea';
+    return props.$isWarning ? '#f97316' : '#9ca3af';
+  }};
 `;
 
 export const IncompleteStatusText = styled.p`
   font-size: 14px;
-  font-weight: ${props => (props.$isWarning ? '600' : '400')};
-  color: ${props => (props.$isWarning ? '#f97316' : '#6e8fb3')};
+  font-weight: ${props => (props.$isWarning || props.$isPurple ? '600' : '400')};
+  color: ${props => {
+    if (props.$isPurple) return '#9333ea';
+    return props.$isWarning ? '#f97316' : '#6e8fb3';
+  }};
   margin: 0 0 8px 0;
 `;
 
