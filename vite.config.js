@@ -19,6 +19,25 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-ui': [
+            '@radix-ui/react-dialog',
+            '@radix-ui/react-dropdown-menu',
+            '@radix-ui/react-select',
+            '@radix-ui/react-tabs',
+          ],
+          'vendor-dnd': ['react-dnd', 'react-dnd-html5-backend'],
+          'vendor-charts': ['recharts'],
+          'vendor-router': ['react-router-dom'],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 500,
+  },
   server: {
     proxy: {
       '/api': {

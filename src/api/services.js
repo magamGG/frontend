@@ -175,13 +175,58 @@ export const leaveService = {
   getWeeklyAttendanceByManager: () => {
     return api.get(API_ENDPOINTS.LEAVE.MANAGER_WEEKLY);
   },
+
+  // 근태 신청 첨부 파일 다운로드
+  downloadFile: async (fileName) => {
+    const response = await api.get(API_ENDPOINTS.LEAVE.DOWNLOAD_FILE(fileName), {
+      responseType: 'blob', // Blob으로 응답 받기
+    });
+    return response;
+  },
 };
 
 // 프로젝트 서비스
 export const projectService = {
+  // 썸네일 업로드 (파일 저장 후 파일명 반환)
+  uploadThumbnail: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post(API_ENDPOINTS.PROJECTS.UPLOAD_THUMBNAIL, formData);
+  },
+
   // 프로젝트 생성
   createProject: (projectData) => {
     return api.post(API_ENDPOINTS.PROJECTS.CREATE, projectData);
+  },
+
+  // 프로젝트 단건 조회
+  getProject: (projectNo) => {
+    return api.get(API_ENDPOINTS.PROJECTS.DETAIL(projectNo));
+  },
+
+  // 프로젝트 수정
+  updateProject: (projectNo, projectData) => {
+    return api.put(API_ENDPOINTS.PROJECTS.UPDATE(projectNo), projectData);
+  },
+
+  // 프로젝트 삭제
+  deleteProject: (projectNo) => {
+    return api.delete(API_ENDPOINTS.PROJECTS.DELETE(projectNo));
+  },
+
+  // 프로젝트 멤버 목록 조회
+  getProjectMembers: (projectNo) => {
+    return api.get(API_ENDPOINTS.PROJECTS.MEMBERS(projectNo));
+  },
+
+  // 프로젝트에 팀원 추가 (DB PROJECT_MEMBER에 어시스트로 등록)
+  addProjectMembers: (projectNo, memberNos) => {
+    return api.post(API_ENDPOINTS.PROJECTS.MEMBERS(projectNo), { memberNos });
+  },
+
+  // 프로젝트에 추가 가능한 팀원 목록 (담당자/작가 제외, 프로젝트 미소속)
+  getAddableMembers: (projectNo) => {
+    return api.get(API_ENDPOINTS.PROJECTS.ADDABLE_MEMBERS(projectNo));
   },
   
   // 프로젝트 목록 조회
@@ -197,6 +242,41 @@ export const projectService = {
   // 담당자 대시보드 담당 프로젝트 현황 (마감 기한 대비 진행률 → 정상/주의)
   getManagedProjects: () => {
     return api.get(API_ENDPOINTS.PROJECTS.MANAGED);
+  },
+
+  // 칸반 보드 추가 (KANBAN_BOARD INSERT)
+  createKanbanBoard: (projectNo, title) => {
+    return api.post(API_ENDPOINTS.PROJECTS.KANBAN_BOARDS(projectNo), { title });
+  },
+
+  // 칸반 보드 상태 수정 (KANBAN_BOARD_STATUS N으로 숨김)
+  updateKanbanBoardStatus: (projectNo, boardId, status) => {
+    return api.put(API_ENDPOINTS.PROJECTS.KANBAN_BOARD_UPDATE(projectNo, boardId), { status });
+  },
+
+  // 칸반 카드 추가 (KANBAN_CARD INSERT)
+  createKanbanCard: (projectNo, payload) => {
+    return api.post(API_ENDPOINTS.PROJECTS.KANBAN_CARD(projectNo), payload);
+  },
+
+  // 칸반 카드 수정 (KANBAN_CARD UPDATE)
+  updateKanbanCard: (projectNo, cardId, payload) => {
+    return api.put(API_ENDPOINTS.PROJECTS.KANBAN_CARD_UPDATE(projectNo, cardId), payload);
+  },
+
+  // 칸반 카드 코멘트 목록 조회 (COMMENT - KANBAN_CARD_NO 기준)
+  getComments: (projectNo, cardId) => {
+    return api.get(API_ENDPOINTS.PROJECTS.KANBAN_CARD_COMMENTS(projectNo, cardId));
+  },
+
+  // 칸반 카드 코멘트 추가 (COMMENT INSERT)
+  createComment: (projectNo, cardId, content) => {
+    return api.post(API_ENDPOINTS.PROJECTS.KANBAN_CARD_COMMENTS(projectNo, cardId), { content });
+  },
+
+  // 칸반 카드 코멘트 수정 (COMMENT UPDATE) - { content } 또는 { status: 'block' } (블록)
+  updateComment: (projectNo, cardId, commentId, payload) => {
+    return api.put(API_ENDPOINTS.PROJECTS.KANBAN_CARD_COMMENT_UPDATE(projectNo, cardId, commentId), payload);
   },
 };
 

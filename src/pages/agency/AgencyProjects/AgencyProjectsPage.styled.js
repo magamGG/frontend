@@ -236,6 +236,12 @@ export const AgencyProjectMeta = styled.div`
   flex-wrap: wrap;
 `;
 
+export const AgencyProjectMetaGroup = styled.span`
+  display: flex;
+  align-items: center;
+  gap: 15px;
+`;
+
 export const AgencyProjectMetaItem = styled.span`
   display: flex;
   align-items: center;

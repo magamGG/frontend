@@ -15,6 +15,10 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     try {
+      // FormData 전송 시 Content-Type 제거 → multipart/form-data + boundary 자동 설정
+      if (config.data instanceof FormData) {
+        delete config.headers['Content-Type'];
+      }
       // Zustand store에서 직접 state 가져오기
       const state = useAuthStore.getState();
       const token = state.token;
@@ -44,6 +48,11 @@ api.interceptors.request.use(
 // Response 인터셉터 - 응답 통일 및 에러 처리
 api.interceptors.response.use(
   (response) => {
+    // Blob 응답인 경우 원본 response 반환 (다운로드 등)
+    if (response.config.responseType === 'blob') {
+      return response;
+    }
+    
     // 성공 응답 처리
     // API 문서에 따라 success 필드가 있는 경우 data 추출
     if (response.data && response.data.success !== undefined) {

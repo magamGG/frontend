@@ -9,6 +9,7 @@ import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { agencyService, leaveService } from '@/api';
 import useAuthStore from '@/store/authStore';
+import { RequestDetailModal } from '@/components/modals/RequestDetailModal/RequestDetailModal';
 import {
   AgencyApprovalsRoot,
   AgencyApprovalsBody,
@@ -49,6 +50,7 @@ export function AgencyApprovalsPage() {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [showCancelConfirmModal, setShowCancelConfirmModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [approvedDays, setApprovedDays] = useState('');
@@ -103,6 +105,9 @@ export function AgencyApprovalsPage() {
           days: req.attendanceRequestUsingDays,
           reason: req.attendanceRequestReason || '',
           workcationLocation: req.workcationLocation,
+          medicalFileUrl: req.medicalFileUrl,
+          attachedFile: req.medicalFileUrl ? req.medicalFileUrl.split('/').pop() : null,
+          projectName: req.projectName,
           status: req.attendanceRequestStatus === 'PENDING' ? '대기' 
                 : req.attendanceRequestStatus === 'APPROVED' ? '승인' 
                 : req.attendanceRequestStatus === 'REJECTED' ? '반려' : '대기',
@@ -129,10 +134,27 @@ export function AgencyApprovalsPage() {
     return () => window.removeEventListener('focus', handleFocus);
   }, [user?.agencyNo]);
 
-  // 카테고리별 필터링
-  const filteredRequests = selectedCategory === 'all' 
-    ? requests 
-    : requests.filter(r => r.category === selectedCategory);
+  // 카테고리별 필터링 (근태 하위 타입은 type으로 필터)
+  const filteredRequests = selectedCategory === 'all'
+    ? requests
+    : selectedCategory === 'join'
+      ? requests.filter(r => r.category === 'join')
+      : selectedCategory === 'attendance'
+        ? requests.filter(r => r.category === 'attendance')
+        : requests.filter(r => {
+            if (r.category !== 'attendance') return false;
+            const typeMap = {
+              annual: '연차',
+              half: ['반차', '반반차'],
+              sick: '병가',
+              workation: '워케이션',
+              remote: '재택근무',
+              vacation: '휴가',
+            };
+            const typeFilter = typeMap[selectedCategory];
+            if (!typeFilter) return false;
+            return Array.isArray(typeFilter) ? typeFilter.includes(r.type) : r.type === typeFilter;
+          });
   const pendingRequests = filteredRequests.filter(r => r.status === '대기');
   const processedRequests = filteredRequests.filter(r => r.status !== '대기')
     .sort((a, b) => {
@@ -143,8 +165,8 @@ export function AgencyApprovalsPage() {
 
   const handleOpenApproveModal = (request) => {
     setSelectedRequest(request);
-    // 병가인 경우에만 모달 표시, 아니면 바로 승인
-    if (request.category === 'sick') {
+    // 병가인 경우에만 모달 표시(인정 일 수 입력), 아니면 바로 승인
+    if (request.type === '병가') {
       setShowApproveModal(true);
       setApprovedDays('');
     } else {
@@ -155,31 +177,28 @@ export function AgencyApprovalsPage() {
   const handleApproveDirect = async (request) => {
     try {
       if (request.category === 'join') {
-        // 가입 요청 승인 API 호출
-        const response = await agencyService.approveJoinRequest(request.originalId);
-        console.log('가입 승인 API 응답:', response);
+        await agencyService.approveJoinRequest(request.originalId);
       } else if (request.category === 'attendance') {
         await leaveService.approveAttendanceRequest(request.originalId);
       }
-      
-      // 로컬 상태 업데이트
-      setRequests(requests.map(r => 
-        r.id === request.id 
+
+      setRequests(requests.map(r =>
+        r.id === request.id
           ? { ...r, status: '승인', processedDate: new Date().toISOString().split('T')[0] }
           : r
       ));
       toast.success(`${request.requester}의 ${request.type} 신청이 승인되었습니다.`);
     } catch (error) {
       console.error('승인 API 호출 실패:', error);
-      toast.error('승인 처리에 실패했습니다.');
+      toast.error(error.response?.data?.message || '승인 처리에 실패했습니다.');
     }
   };
 
   const handleApprove = async () => {
     if (!selectedRequest) return;
-    
-    // 병가인 경우 인정 일 수 확인
-    if (selectedRequest.category === 'sick' && !approvedDays.trim()) {
+
+    const isSick = selectedRequest.category === 'sick' || selectedRequest.type === '병가';
+    if (isSick && !approvedDays.trim()) {
       toast.error('인정 일 수를 입력해주세요.');
       return;
     }
@@ -190,16 +209,15 @@ export function AgencyApprovalsPage() {
       } else if (selectedRequest.category === 'attendance' || selectedRequest.category === 'sick') {
         await leaveService.approveAttendanceRequest(selectedRequest.originalId);
       }
-      
-      setRequests(requests.map(r => 
-        r.id === selectedRequest.id 
+      setRequests(requests.map(r =>
+        r.id === selectedRequest.id
           ? { ...r, status: '승인', processedDate: new Date().toISOString().split('T')[0] }
           : r
       ));
       toast.success(`${selectedRequest.requester}의 ${selectedRequest.type} 신청이 승인되었습니다.`);
     } catch (error) {
       console.error('승인 API 호출 실패:', error);
-      toast.error('승인 처리에 실패했습니다.');
+      toast.error(error.response?.data?.message || '승인 처리에 실패했습니다.');
     }
 
     setShowApproveModal(false);
@@ -235,6 +253,11 @@ export function AgencyApprovalsPage() {
     setShowRejectModal(true);
   };
 
+  const handleOpenDetailModal = (request) => {
+    setSelectedRequest(request);
+    setShowDetailModal(true);
+  };
+
   const handleReject = async () => {
     if (!rejectionReason.trim()) {
       toast.error('반려 사유를 입력해주세요.');
@@ -250,13 +273,12 @@ export function AgencyApprovalsPage() {
         } else if (selectedRequest.category === 'attendance') {
           await leaveService.rejectAttendanceRequest(selectedRequest.originalId, rejectionReason);
         }
-        
-        // 로컬 상태 업데이트
-        setRequests(requests.map(r => 
-          r.id === selectedRequest.id 
-            ? { 
-                ...r, 
-                status: '반려', 
+
+        setRequests(requests.map(r =>
+          r.id === selectedRequest.id
+            ? {
+                ...r,
+                status: '반려',
                 rejectionReason: rejectionReason,
                 processedDate: new Date().toISOString().split('T')[0]
               }
@@ -419,7 +441,7 @@ export function AgencyApprovalsPage() {
                 </EmptyStateCard>
               ) : (
                 pendingRequests.map((request) => (
-                  <RequestCard key={request.id}>
+                  <RequestCard key={request.id} onClick={() => handleOpenDetailModal(request)} style={{ cursor: 'pointer' }}>
                     <RequestCardHeader>
                       <div className="flex-1">
                         <RequestCardTitle>
@@ -497,7 +519,7 @@ export function AgencyApprovalsPage() {
                       </div>
                     </RequestCardHeader>
 
-                    <RequestCardActions>
+                    <RequestCardActions onClick={(e) => e.stopPropagation()}>
                       <Button
                         size="sm"
                         className="flex-1 bg-[#4CAF50] hover:bg-[#45a049] text-white"
@@ -539,7 +561,8 @@ export function AgencyApprovalsPage() {
                 processedRequests.map((request) => (
                   <div 
                     key={request.id} 
-                    className={`p-4 rounded-lg border bg-white ${
+                    onClick={() => handleOpenDetailModal(request)}
+                    className={`p-4 rounded-lg border bg-white cursor-pointer ${
                       request.status === '승인' 
                         ? 'border-[#A5D6A7]' 
                         : request.status === '반려'
@@ -596,7 +619,8 @@ export function AgencyApprovalsPage() {
                       </div>
                       {request.status === '승인' && (
                         <button
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setSelectedRequest(request);
                             setShowCancelConfirmModal(true);
                           }}
@@ -742,6 +766,13 @@ export function AgencyApprovalsPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* 상세보기 모달 */}
+      <RequestDetailModal
+        open={showDetailModal}
+        onOpenChange={setShowDetailModal}
+        request={selectedRequest}
+      />
     </AgencyApprovalsRoot>
   );
 }
