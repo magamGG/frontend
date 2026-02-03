@@ -164,7 +164,7 @@ export function AgencyProjectsPage() {
       title: p.projectName,
       platform: p.platform || '미정',
       status: 'normal',
-      serialStatus: p.projectStatus || '연재중',
+      serialStatus: p.projectStatus || '연재',
       currentEpisode: 0,
       deadline: deadlineDn,
       genre: p.projectGenre || '',
@@ -175,8 +175,8 @@ export function AgencyProjectsPage() {
       thumbnail: p.thumbnailFile || null,
       artistName: p.artistName || '',
       artistId: p.artistMemberNo,
-      managerName: '',
-      managerId: null,
+      managerName: p.managerName ?? '',
+      managerId: p.managerMemberNo ?? null,
       projectColor: p.projectColor || '#6E8FB3',
     };
   };
@@ -200,24 +200,24 @@ export function AgencyProjectsPage() {
     fetchManagers();
   }, [agencyNo]);
 
-  // 프로젝트 목록 API 조회
+  // 프로젝트 목록 API 조회 — 에이전시에 있는 모든 프로젝트 (agencyNo 기준)
   useEffect(() => {
-    if (!memberNo) return;
+    if (!agencyNo) return;
     const fetchProjects = async () => {
       setProjectsLoading(true);
       try {
-        const list = await projectService.getProjects(0, 100);
+        const list = await projectService.getProjectsByAgency(agencyNo);
         const arr = Array.isArray(list) ? list : list?.content ?? list?.data ?? [];
         setProjects(arr.map((p) => mapApiProjectToFrontend(p)));
       } catch (err) {
-        toast.error('프로젝트 목록을 불러오는데 실패했습니다.');
+        toast.error(err?.response?.data?.message || '프로젝트 목록을 불러오는데 실패했습니다.');
         setProjects([]);
       } finally {
         setProjectsLoading(false);
       }
     };
     fetchProjects();
-  }, [memberNo]);
+  }, [agencyNo]);
 
   // 상태 필터 선택 핸들러 (단일 선택)
   const handleFilterChange = (filter) => {
@@ -317,7 +317,7 @@ export function AgencyProjectsPage() {
       title: newProjectForm.title,
       platform: newProjectForm.platform,
       status: 'normal',
-      serialStatus: '연재중',
+      serialStatus: '연재',
       currentEpisode: 1,
       deadline: 'D-7',
       genre: newProjectForm.genre,
@@ -392,7 +392,7 @@ export function AgencyProjectsPage() {
   // 상태별 배지 색상
   const getStatusBadgeColor = (status) => {
     switch (status) {
-      case '연재중':
+      case '연재':
         return 'bg-green-500 hover:bg-green-600';
       case '휴재':
         return 'bg-orange-500 hover:bg-orange-600';
@@ -402,6 +402,23 @@ export function AgencyProjectsPage() {
         return 'bg-blue-500 hover:bg-blue-600';
     }
   };
+
+  // 에이전시의 모든 프로젝트 조회는 MEMBER_ROLE이 '에이전시 관리자'일 때만 이용 가능
+  if (user?.memberRole !== '에이전시 관리자') {
+    return (
+      <AgencyProjectsRoot>
+        <AgencyProjectsBody>
+          <Card className="p-12 flex flex-col items-center justify-center gap-4 min-h-[400px]">
+            <AlertCircle className="w-16 h-16 text-muted-foreground opacity-60" />
+            <p className="text-lg font-medium text-foreground">접근 권한이 없습니다</p>
+            <p className="text-sm text-muted-foreground text-center max-w-md">
+              이 페이지는 에이전시 관리자만 이용할 수 있습니다.
+            </p>
+          </Card>
+        </AgencyProjectsBody>
+      </AgencyProjectsRoot>
+    );
+  }
 
   // 작품 상세 페이지 표시
   if (showDetailPage && selectedProject) {
@@ -514,7 +531,7 @@ export function AgencyProjectsPage() {
               <AgencyProjectsFilterLeft>
                 <AgencyProjectsFilterLabel>상태:</AgencyProjectsFilterLabel>
                 <AgencyProjectsFilterButtons>
-                  {['전체', '연재중', '휴재', '완결'].map((filter) => (
+                  {['전체', '연재', '휴재', '완결'].map((filter) => (
                     <Button
                       key={filter}
                       variant={statusFilter === filter ? 'default' : 'outline'}

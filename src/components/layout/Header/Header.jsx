@@ -152,16 +152,16 @@ export function Header({
       setIsLoadingNotifications(true);
       const response = await notificationService.getNotifications();
       
-      // API 응답을 프론트엔드 형식으로 변환
+      // DB notificationStatus: Y = 안 읽음(false), N = 읽음(true)
       const formattedNotifications = response.map((n) => ({
-        id: n.notificationNo,
-        title: n.notificationName || '알림',
-        message: n.notificationText || '',
-        time: formatTimeAgo(n.notificationCreatedAt),
-        isRead: n.isRead,
-        type: getNotificationType(n.notificationType),
-        linkedPage: getLinkedPage(n.notificationType),
-      }));
+          id: n.notificationNo,
+          title: n.notificationName || '알림',
+          message: n.notificationText || '',
+          time: formatTimeAgo(n.notificationCreatedAt),
+          isRead: n.notificationStatus === 'N',
+          type: getNotificationType(n.notificationType),
+          linkedPage: getLinkedPage(n.notificationType),
+        }));
       
       setNotifications(formattedNotifications);
     } catch (error) {
