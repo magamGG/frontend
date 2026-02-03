@@ -88,8 +88,10 @@ export function AgencyApprovalsPage() {
           processedDate: req.newRequestStatus !== '대기' ? req.newRequestDate ? new Date(req.newRequestDate).toISOString().split('T')[0] : '' : null,
         }));
         
-        // 근태 신청 변환
-        const formattedAttendanceRequests = attendanceResponse.map((req) => ({
+        // 근태 신청 변환 (취소된 건 제외 - 작가가 삭제한 신청은 목록에서 제거)
+        const formattedAttendanceRequests = attendanceResponse
+          .filter((req) => req.attendanceRequestStatus !== 'CANCELLED')
+          .map((req) => ({
           id: `attendance-${req.attendanceRequestNo}`,
           originalId: req.attendanceRequestNo,
           type: req.attendanceRequestType,
@@ -120,6 +122,11 @@ export function AgencyApprovalsPage() {
     };
     
     fetchAllRequests();
+
+    // 창 포커스 시 재조회 (작가가 삭제한 요청 등 반영)
+    const handleFocus = () => fetchAllRequests();
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, [user?.agencyNo]);
 
   // 카테고리별 필터링
@@ -152,9 +159,7 @@ export function AgencyApprovalsPage() {
         const response = await agencyService.approveJoinRequest(request.originalId);
         console.log('가입 승인 API 응답:', response);
       } else if (request.category === 'attendance') {
-        // TODO: 근태 승인 API 구현 필요
-        // 현재는 프론트엔드 상태만 업데이트
-        console.log('근태 승인 처리:', request.originalId);
+        await leaveService.approveAttendanceRequest(request.originalId);
       }
       
       // 로컬 상태 업데이트
@@ -180,11 +185,12 @@ export function AgencyApprovalsPage() {
     }
 
     try {
-      // 백엔드 API 호출
-      const response = await agencyService.approveJoinRequest(selectedRequest.id);
-      console.log('승인 API 응답:', response);
+      if (selectedRequest.category === 'join') {
+        await agencyService.approveJoinRequest(selectedRequest.originalId);
+      } else if (selectedRequest.category === 'attendance' || selectedRequest.category === 'sick') {
+        await leaveService.approveAttendanceRequest(selectedRequest.originalId);
+      }
       
-      // API 성공 시 로컬 상태 업데이트
       setRequests(requests.map(r => 
         r.id === selectedRequest.id 
           ? { ...r, status: '승인', processedDate: new Date().toISOString().split('T')[0] }
@@ -242,9 +248,7 @@ export function AgencyApprovalsPage() {
           const response = await agencyService.rejectJoinRequest(selectedRequest.originalId, rejectionReason);
           console.log('가입 거절 API 응답:', response);
         } else if (selectedRequest.category === 'attendance') {
-          // TODO: 근태 반려 API 구현 필요
-          // 현재는 프론트엔드 상태만 업데이트
-          console.log('근태 반려 처리:', selectedRequest.originalId);
+          await leaveService.rejectAttendanceRequest(selectedRequest.originalId, rejectionReason);
         }
         
         // 로컬 상태 업데이트

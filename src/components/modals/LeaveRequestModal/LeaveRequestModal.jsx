@@ -229,15 +229,15 @@ export function LeaveRequestModal({ open, onOpenChange }) {
       '휴가': 'break',
     };
 
-    // API 요청 데이터 구성 (DB 필드명 기준 camelCase)
+    // API 요청 데이터 구성 (DB 필드명 기준 camelCase, 가이드 준수)
     const requestData = {
       attendanceRequestType: selectedType,
       attendanceRequestStartDate: startDate,
       attendanceRequestEndDate: endDate,
       attendanceRequestUsingDays: selectedType === '반차' ? 1 : days,
       attendanceRequestReason: reason,
-      workcationLocation: selectedType === '워케이션' ? location : null,
-      medicalFileUrl: attachedFile?.name || null,
+      workcationLocation: selectedType === '워케이션' ? (location || '') : '',
+      medicalFileUrl: attachedFile?.name || '',
     };
 
     try {
@@ -270,6 +270,9 @@ export function LeaveRequestModal({ open, onOpenChange }) {
       }
 
       toast.success('근태 신청이 완료되었습니다.');
+      
+      // 작가 대시보드 신청 현황 새로고침용 이벤트 (가이드: 기존 로직 유지, 연동만 추가)
+      window.dispatchEvent(new CustomEvent('leaveRequestSuccess'));
       
       // 폼 초기화
       resetForm();

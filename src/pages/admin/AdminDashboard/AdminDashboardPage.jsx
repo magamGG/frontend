@@ -22,8 +22,9 @@ import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, 
 import { ProjectListModal } from '@/components/modals/ProjectListModal';
 import { AttendanceListModal } from '@/components/modals/AttendanceListModal';
 import { toast } from 'sonner';
-import { leaveService, attendanceService, memberService } from '@/api/services';
+import { leaveService, attendanceService, memberService, calendarService, projectService } from '@/api/services';
 import useAuthStore from '@/store/authStore';
+import { LeaveRequestEditModal } from '@/components/modals/LeaveRequestEditModal';
 import svgPaths from '@/imports/svg-oq0e8tu4xb';
 import {
   AdminDashboardRoot,
@@ -125,6 +126,32 @@ import {
   EmptyStateText,
 } from './AdminDashboardPage.styled';
 
+// 근태 신청 타입 매핑 (백엔드 → 프론트 표시, GUIDE 변수명 준수)
+const ATTENDANCE_TYPE_MAP = {
+  연차: { type: '휴가', typeName: '연차' },
+  반차: { type: '휴가', typeName: '반차' },
+  반반차: { type: '휴가', typeName: '반반차' },
+  병가: { type: '휴가', typeName: '병가' },
+  휴재: { type: '휴가', typeName: '휴재' },
+  휴가: { type: '휴가', typeName: '휴가' },
+  재택: { type: '재택근무', typeName: '재택근무' },
+  재택근무: { type: '재택근무', typeName: '재택근무' },
+  워케이션: { type: '워케이션', typeName: '워케이션' },
+};
+
+const REQUEST_STATUS = {
+  PENDING: '대기',
+  APPROVED: '승인',
+  REJECTED: '반려',
+};
+
+const REQUEST_STATUS_MAP = {
+  PENDING: '대기',
+  APPROVED: '승인',
+  REJECTED: '반려',
+  CANCELLED: '반려',
+};
+
 export function AdminDashboardPage({ onNavigateToSection }) {
   const [isProjectListOpen, setIsProjectListOpen] = useState(false);
   const [isAttendanceListOpen, setIsAttendanceListOpen] = useState(false);
@@ -178,7 +205,7 @@ export function AdminDashboardPage({ onNavigateToSection }) {
     return () => clearInterval(interval);
   }, []);
 
-  // 오늘 출근 상태 조회 (페이지 로드 시 및 리다이렉션 시)
+  // 오늘 출근 상태 조회 (페이지 로드 시 및 리다이렉션 시), 탭 포커스 시 신청 현황 새로고침
   useEffect(() => {
     const fetchTodayAttendanceStatus = async () => {
       try {
@@ -197,8 +224,14 @@ export function AdminDashboardPage({ onNavigateToSection }) {
         setHealthCheckCompleted(false);
       }
     };
+
+    const handleFocus = () => {
+      fetchTodayAttendanceStatus();
+      setAttendanceRequestsRefreshTrigger((prev) => prev + 1);
+      setWeeklyAttendanceRefreshTrigger((prev) => prev + 1);
+    };
+
     fetchTodayAttendanceStatus();
-    const handleFocus = () => fetchTodayAttendanceStatus();
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
   }, []);
@@ -232,80 +265,218 @@ export function AdminDashboardPage({ onNavigateToSection }) {
     fetchWorkingArtists();
   }, [user?.memberNo, user?.agencyNo]);
 
-  // TODO: Zustand store mapping - 담당 프로젝트 목록
-  const managedProjects = [
-    { id: 1, name: '로맨스 판타지', artist: '김작가', status: '정상', progress: 85, deadline: '1월 25일' },
-    { id: 2, name: '액션 웹툰', artist: '이작가', status: '주의', progress: 65, deadline: '1월 20일' },
-    { id: 3, name: '일상 코미디', artist: '박작가', status: '정상', progress: 90, deadline: '1월 30일' },
-    { id: 4, name: 'SF 드라마', artist: '최작가', status: '정상', progress: 75, deadline: '1월 28일' },
-  ];
+  // 담당 프로젝트 현황 (DB 연동 - 마감 기한 대비 진행률 → 정상/주의)
+  const [managedProjects, setManagedProjects] = useState([]);
+  const [managedProjectsLoading, setManagedProjectsLoading] = useState(false);
 
-  // TODO: Zustand store mapping - 신청 현황 데이터
-  const REQUEST_STATUS = {
-    PENDING: '대기',
-    APPROVED: '승인',
-    REJECTED: '반려',
-  };
+  useEffect(() => {
+    const fetchManagedProjects = async () => {
+      const memberNo = useAuthStore.getState().user?.memberNo;
+      if (!memberNo) return;
 
-  const attendanceRequests = [
-    {
-      id: '1',
-      typeName: '휴가',
-      startDate: '1월 20일',
-      endDate: '1월 22일',
-      status: REQUEST_STATUS.PENDING,
-    },
-    {
-      id: '2',
-      typeName: '재택근무',
-      startDate: '1월 16일',
-      endDate: '1월 16일',
-      status: REQUEST_STATUS.APPROVED,
-    },
-    {
-      id: '3',
-      typeName: '휴가',
-      startDate: '1월 20일',
-      endDate: '1월 22일',
-      status: REQUEST_STATUS.PENDING,
-    },
-    {
-      id: '4',
-      typeName: '재택근무',
-      startDate: '1월 16일',
-      endDate: '1월 16일',
-      status: REQUEST_STATUS.APPROVED,
-    },
-    {
-      id: '5',
-      typeName: '휴가',
-      startDate: '1월 20일',
-      endDate: '1월 22일',
-      status: REQUEST_STATUS.PENDING,
-    },
-  ];
+      setManagedProjectsLoading(true);
+      try {
+        const list = await projectService.getManagedProjects();
+        const arr = Array.isArray(list) ? list : [];
+        const mapped = arr.map((p) => ({
+          id: p.projectNo,
+          name: p.projectName || '-',
+          artist: p.artist || '-',
+          status: p.status || '정상',
+          progress: p.progress ?? 0,
+          deadline: p.deadline || '-',
+        }));
+        setManagedProjects(mapped);
+      } catch (err) {
+        console.error('담당 프로젝트 현황 조회 실패:', err);
+        setManagedProjects([]);
+      } finally {
+        setManagedProjectsLoading(false);
+      }
+    };
+    fetchManagedProjects();
+  }, [user?.memberNo]);
 
+  // 신청 현황 (근태 신청 목록) - leaveService.getMyRequests API 연동, 작가 신청 현황과 동일
+  const [attendanceRequests, setAttendanceRequests] = useState([]);
+  const [isLoadingAttendanceRequests, setIsLoadingAttendanceRequests] = useState(false);
+  const [attendanceRequestsRefreshTrigger, setAttendanceRequestsRefreshTrigger] = useState(0);
+  const [editingAttendanceRequest, setEditingAttendanceRequest] = useState(null);
+  const [showEditAttendanceModal, setShowEditAttendanceModal] = useState(false);
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
 
-  // TODO: Zustand store mapping - 마감 임박 현황 데이터
-  const deadlineData = [
-    { name: '오늘', count: 2 },
-    { name: '내일', count: 3 },
-    { name: '2일 후', count: 1 },
-    { name: '3일 후', count: 4 },
-    { name: '4일 후', count: 2 },
-  ];
+  useEffect(() => {
+    const fetchAttendanceRequests = async () => {
+      const memberNo = useAuthStore.getState().user?.memberNo;
+      if (!memberNo) return;
 
-  // TODO: Zustand store mapping - 금주 근태 예정
-  const weeklyAttendance = [
-    { id: 1, name: '김작가', type: '워케이션', date: '1월 16일 ~ 1월 18일', status: '승인' },
-    { id: 2, name: '이작가', type: '휴가', date: '1월 17일 ~ 1월 19일', status: '승인' },
-    { id: 3, name: '박작가', type: '재택근무', date: '1월 15일', status: '승인' },
-    { id: 4, name: '정작가', type: '워케이션', date: '1월 20일 ~ 1월 22일', status: '대기' },
-  ];
+      setIsLoadingAttendanceRequests(true);
+      try {
+        const response = await leaveService.getMyRequests();
+        const list = Array.isArray(response) ? response : [];
+        const filtered = list.filter((item) => item.attendanceRequestStatus !== 'CANCELLED');
+        const formatReqDate = (dt) => {
+          if (!dt) return '';
+          const d = typeof dt === 'string' ? new Date(dt) : dt;
+          return `${d.getMonth() + 1}월 ${d.getDate()}일`;
+        };
+        const mapped = filtered.map((item) => {
+          const typeConfig = ATTENDANCE_TYPE_MAP[item.attendanceRequestType] || {
+            type: '휴가',
+            typeName: item.attendanceRequestType || '휴가',
+          };
+          const status = REQUEST_STATUS_MAP[item.attendanceRequestStatus] || REQUEST_STATUS.PENDING;
+          return {
+            id: String(item.attendanceRequestNo),
+            type: typeConfig.type,
+            typeName: typeConfig.typeName,
+            startDate: formatReqDate(item.attendanceRequestStartDate),
+            endDate: formatReqDate(item.attendanceRequestEndDate),
+            status,
+            rawStatus: item.attendanceRequestStatus,
+            raw: item,
+          };
+        });
+        setAttendanceRequests(mapped);
+      } catch (error) {
+        console.error('신청 현황 조회 실패:', error);
+        setAttendanceRequests([]);
+      } finally {
+        setIsLoadingAttendanceRequests(false);
+      }
+    };
+
+    fetchAttendanceRequests();
+  }, [attendanceRequestsRefreshTrigger]);
+
+  useEffect(() => {
+    const handleLeaveRequestSuccess = () => {
+      setAttendanceRequestsRefreshTrigger((prev) => prev + 1);
+    };
+    window.addEventListener('leaveRequestSuccess', handleLeaveRequestSuccess);
+    return () => window.removeEventListener('leaveRequestSuccess', handleLeaveRequestSuccess);
+  }, []);
+
+  const handleEditAttendanceRequest = (request) => {
+    if (!request?.raw || request.rawStatus !== 'PENDING') return;
+    setEditingAttendanceRequest(request.raw);
+    setShowEditAttendanceModal(true);
+  };
+
+  const handleCancelAttendanceRequest = async (request) => {
+    if (!request?.id) return;
+    try {
+      await leaveService.cancelAttendanceRequest(Number(request.id));
+      toast.success('근태 신청이 취소되었습니다.');
+      setAttendanceRequestsRefreshTrigger((prev) => prev + 1);
+    } catch (error) {
+      console.error('근태 신청 취소 실패:', error);
+      toast.error(error?.message || '취소에 실패했습니다.');
+    }
+  };
+
+  // 마감 임박 현황 (캘린더 DB 연동)
+  const [deadlineData, setDeadlineData] = useState([
+    { name: '오늘', count: 0 },
+    { name: '내일', count: 0 },
+    { name: '2일 후', count: 0 },
+    { name: '3일 후', count: 0 },
+    { name: '4일 후', count: 0 },
+  ]);
+  const [deadlineLoading, setDeadlineLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchDeadlineCounts = async () => {
+      setDeadlineLoading(true);
+      try {
+        const list = await calendarService.getDeadlineCounts();
+        const arr = Array.isArray(list) ? list : [];
+        if (arr.length >= 5) {
+          setDeadlineData(arr);
+        } else {
+          const defaultLabels = ['오늘', '내일', '2일 후', '3일 후', '4일 후'];
+          const mapped = defaultLabels.map((label) => {
+            const item = arr.find((d) => d.name === label);
+            return item ? { name: label, count: item.count ?? 0 } : { name: label, count: 0 };
+          });
+          setDeadlineData(mapped);
+        }
+      } catch (err) {
+        console.error('마감 임박 현황 조회 실패:', err);
+        setDeadlineData([
+          { name: '오늘', count: 0 },
+          { name: '내일', count: 0 },
+          { name: '2일 후', count: 0 },
+          { name: '3일 후', count: 0 },
+          { name: '4일 후', count: 0 },
+        ]);
+      } finally {
+        setDeadlineLoading(false);
+      }
+    };
+    fetchDeadlineCounts();
+  }, []);
+
+  // 금주 근태 예정 (DB 연동 - 담당 작가별 근태 신청)
+  const [weeklyAttendance, setWeeklyAttendance] = useState([]);
+  const [weeklyAttendanceLoading, setWeeklyAttendanceLoading] = useState(false);
+  const [weeklyAttendanceRefreshTrigger, setWeeklyAttendanceRefreshTrigger] = useState(0);
+
+  useEffect(() => {
+    const fetchWeeklyAttendance = async () => {
+      const memberNo = useAuthStore.getState().user?.memberNo;
+      if (!memberNo) return;
+
+      setWeeklyAttendanceLoading(true);
+      try {
+        const list = await leaveService.getWeeklyAttendanceByManager();
+        const arr = Array.isArray(list) ? list : [];
+        const typeMap = {
+          연차: '휴가',
+          반차: '휴가',
+          반반차: '휴가',
+          병가: '휴가',
+          휴재: '휴가',
+          휴가: '휴가',
+          재택: '재택근무',
+          재택근무: '재택근무',
+          워케이션: '워케이션',
+        };
+        const statusMap = { PENDING: '대기', APPROVED: '승인', REJECTED: '반려' };
+        const formatDate = (dt) => {
+          if (!dt) return '';
+          const d = typeof dt === 'string' ? new Date(dt) : dt;
+          return `${d.getMonth() + 1}월 ${d.getDate()}일`;
+        };
+        const mapped = arr.map((item) => {
+          const startStr = formatDate(item.attendanceRequestStartDate);
+          const endStr = formatDate(item.attendanceRequestEndDate);
+          const dateStr = startStr === endStr ? startStr : `${startStr} ~ ${endStr}`;
+          return {
+            id: item.attendanceRequestNo,
+            name: item.memberName || '-',
+            type: typeMap[item.attendanceRequestType] || item.attendanceRequestType || '-',
+            date: dateStr,
+            status: statusMap[item.attendanceRequestStatus] || item.attendanceRequestStatus || '-',
+          };
+        });
+        setWeeklyAttendance(mapped);
+      } catch (err) {
+        console.error('금주 근태 예정 조회 실패:', err);
+        setWeeklyAttendance([]);
+      } finally {
+        setWeeklyAttendanceLoading(false);
+      }
+    };
+    fetchWeeklyAttendance();
+  }, [user?.memberNo, weeklyAttendanceRefreshTrigger]);
 
   const getStatusColor = (status) => {
     switch (status) {
+      case '정상':
+        return 'bg-green-500';
+      case '주의':
+        return 'bg-amber-500';
       case '워케이션':
         return 'bg-[#9C27B0]';
       case '휴가':
@@ -642,25 +813,25 @@ export function AdminDashboardPage({ onNavigateToSection }) {
             )}
           </ChartCard>
 
-          {/* 신청 현황 */}
+          {/* 신청 현황 - 작가 신청 현황과 동일 (DB 연동, 수정/삭제 버튼) */}
           <QuickInfoCard>
             <AttendanceRequestCardHeader onClick={() => setShowAttendanceModal(true)} style={{ cursor: 'pointer' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <FileText className="w-4 h-4" style={{ color: 'var(--foreground)' }} />
                 <QuickInfoTitle style={{ margin: 0 }}>신청 현황</QuickInfoTitle>
               </div>
-              {attendanceRequests.length >= 2 && (
+              {attendanceRequests.length >= 1 && (
                 <ChevronRight className="w-4 h-4" style={{ color: 'var(--muted-foreground)' }} />
               )}
             </AttendanceRequestCardHeader>
-            {attendanceRequests.length >= 2 && (
+            {attendanceRequests.length >= 1 && (
               <AttendanceRequestCardList>
                 {attendanceRequests.slice(0, 2).map((request) => {
-                  const statusColor = 
+                  const statusColor =
                     request.status === REQUEST_STATUS.PENDING ? '#F59E0B' :
                     request.status === REQUEST_STATUS.APPROVED ? '#10B981' :
                     '#EF4444';
-                  
+
                   return (
                     <AttendanceRequestCardItem key={request.id}>
                       <AttendanceRequestCardItemContent>
@@ -894,7 +1065,7 @@ export function AdminDashboardPage({ onNavigateToSection }) {
         </ModalActions>
       </Modal>
 
-      {/* 신청 현황 모달 */}
+      {/* 신청 현황 모달 - 작가와 동일 (대기: 수정/삭제, 반려: 삭제만, 승인: 버튼 없음) */}
       <Modal 
         isOpen={showAttendanceModal} 
         onClose={() => setShowAttendanceModal(false)} 
@@ -908,7 +1079,11 @@ export function AdminDashboardPage({ onNavigateToSection }) {
       >
         <AttendanceRequestModalContent>
           <AttendanceRequestList>
-            {attendanceRequests.length === 0 ? (
+            {isLoadingAttendanceRequests ? (
+              <EmptyState>
+                <EmptyStateText>로딩 중...</EmptyStateText>
+              </EmptyState>
+            ) : attendanceRequests.length === 0 ? (
               <EmptyState>
                 <EmptyStateIcon>
                   <FileText className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
@@ -917,11 +1092,11 @@ export function AdminDashboardPage({ onNavigateToSection }) {
               </EmptyState>
             ) : (
               attendanceRequests.map((request) => {
-                const statusColor = 
+                const statusColor =
                   request.status === REQUEST_STATUS.PENDING ? '#F59E0B' :
                   request.status === REQUEST_STATUS.APPROVED ? '#10B981' :
                   '#EF4444';
-                
+
                 return (
                   <AttendanceRequestCard key={request.id}>
                     <AttendanceRequestCardContent>
@@ -934,27 +1109,33 @@ export function AdminDashboardPage({ onNavigateToSection }) {
                       </AttendanceRequestInfo>
                       {request.status === REQUEST_STATUS.PENDING && (
                         <AttendanceRequestActions>
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             size="sm"
-                            onClick={() => {
-                              // TODO: 수정 기능 구현
-                              toast.info('수정 기능은 준비 중입니다.');
-                            }}
+                            onClick={() => handleEditAttendanceRequest(request)}
                             style={{ fontSize: '12px', padding: '6px 12px' }}
                           >
                             수정
                           </Button>
-                          <Button 
-                            variant="destructive" 
+                          <Button
+                            variant="destructive"
                             size="sm"
-                            onClick={() => {
-                              // TODO: 취소 기능 구현
-                              toast.info('취소 기능은 준비 중입니다.');
-                            }}
+                            onClick={() => handleCancelAttendanceRequest(request)}
                             style={{ fontSize: '12px', padding: '6px 12px' }}
                           >
-                            취소
+                            삭제
+                          </Button>
+                        </AttendanceRequestActions>
+                      )}
+                      {request.status === REQUEST_STATUS.REJECTED && (
+                        <AttendanceRequestActions>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleCancelAttendanceRequest(request)}
+                            style={{ fontSize: '12px', padding: '6px 12px' }}
+                          >
+                            삭제
                           </Button>
                         </AttendanceRequestActions>
                       )}
@@ -964,7 +1145,7 @@ export function AdminDashboardPage({ onNavigateToSection }) {
               })
             )}
           </AttendanceRequestList>
-          
+
           {/* 하단 통계 */}
           {attendanceRequests.length > 0 && (
             <AttendanceRequestSummary>
@@ -974,19 +1155,19 @@ export function AdminDashboardPage({ onNavigateToSection }) {
               </AttendanceRequestSummaryItem>
               <AttendanceRequestSummaryItem>
                 <AttendanceRequestSummaryNumber $color="#10B981">
-                  {attendanceRequests.filter(r => r.status === REQUEST_STATUS.APPROVED).length}
+                  {attendanceRequests.filter((r) => r.status === REQUEST_STATUS.APPROVED).length}
                 </AttendanceRequestSummaryNumber>
                 <AttendanceRequestSummaryLabel>승인</AttendanceRequestSummaryLabel>
               </AttendanceRequestSummaryItem>
               <AttendanceRequestSummaryItem>
                 <AttendanceRequestSummaryNumber $color="#F59E0B">
-                  {attendanceRequests.filter(r => r.status === REQUEST_STATUS.PENDING).length}
+                  {attendanceRequests.filter((r) => r.status === REQUEST_STATUS.PENDING).length}
                 </AttendanceRequestSummaryNumber>
                 <AttendanceRequestSummaryLabel>대기</AttendanceRequestSummaryLabel>
               </AttendanceRequestSummaryItem>
               <AttendanceRequestSummaryItem>
                 <AttendanceRequestSummaryNumber $color="#EF4444">
-                  {attendanceRequests.filter(r => r.status === REQUEST_STATUS.REJECTED).length}
+                  {attendanceRequests.filter((r) => r.status === REQUEST_STATUS.REJECTED).length}
                 </AttendanceRequestSummaryNumber>
                 <AttendanceRequestSummaryLabel>반려</AttendanceRequestSummaryLabel>
               </AttendanceRequestSummaryItem>
@@ -994,6 +1175,16 @@ export function AdminDashboardPage({ onNavigateToSection }) {
           )}
         </AttendanceRequestModalContent>
       </Modal>
+
+      <LeaveRequestEditModal
+        open={showEditAttendanceModal}
+        onOpenChange={setShowEditAttendanceModal}
+        request={editingAttendanceRequest}
+        onSuccess={() => {
+          setAttendanceRequestsRefreshTrigger((prev) => prev + 1);
+          setEditingAttendanceRequest(null);
+        }}
+      />
     </AdminDashboardRoot>
   );
 }

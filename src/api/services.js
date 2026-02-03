@@ -163,6 +163,18 @@ export const leaveService = {
   rejectAttendanceRequest: (attendanceRequestNo, rejectReason) => {
     return api.post(API_ENDPOINTS.LEAVE.REJECT(attendanceRequestNo), { rejectReason });
   },
+
+  cancelAttendanceRequest: (attendanceRequestNo) => {
+    return api.post(API_ENDPOINTS.LEAVE.CANCEL(attendanceRequestNo));
+  },
+
+  updateAttendanceRequest: (attendanceRequestNo, requestData) => {
+    return api.put(API_ENDPOINTS.LEAVE.UPDATE(attendanceRequestNo), requestData);
+  },
+
+  getWeeklyAttendanceByManager: () => {
+    return api.get(API_ENDPOINTS.LEAVE.MANAGER_WEEKLY);
+  },
 };
 
 // 프로젝트 서비스
@@ -181,6 +193,11 @@ export const projectService = {
   getKanbanBoard: (projectNo) => {
     return api.get(API_ENDPOINTS.PROJECTS.KANBAN(projectNo));
   },
+
+  // 담당자 대시보드 담당 프로젝트 현황 (마감 기한 대비 진행률 → 정상/주의)
+  getManagedProjects: () => {
+    return api.get(API_ENDPOINTS.PROJECTS.MANAGED);
+  },
 };
 
 // 캘린더 서비스
@@ -193,6 +210,21 @@ export const calendarService = {
   // 월별 일정 조회
   getEventsByMonth: (year, month) => {
     return api.get(API_ENDPOINTS.CALENDAR.EVENTS_BY_MONTH(year, month));
+  },
+  
+  // 다가오는 일정 조회 (작가 대시보드 "다음 연재 프로젝트"용)
+  getUpcomingEvents: (limit = 10) => {
+    return api.get(API_ENDPOINTS.CALENDAR.UPCOMING_EVENTS(limit));
+  },
+
+  // 담당자 대시보드 마감 임박 현황 (오늘~4일 후별 건수)
+  getDeadlineCounts: () => {
+    return api.get(API_ENDPOINTS.CALENDAR.DEADLINE_COUNTS);
+  },
+
+  // 에이전시 대시보드 마감 임박 현황 (오늘~4일 후별 건수)
+  getDeadlineCountsByAgency: (agencyNo) => {
+    return api.get(API_ENDPOINTS.CALENDAR.DEADLINE_COUNTS_BY_AGENCY(agencyNo));
   },
 };
 
@@ -252,6 +284,31 @@ export const agencyService = {
   // 에이전시 가입 요청 거절
   rejectJoinRequest: (newRequestNo, rejectionReason) => {
     return api.post(API_ENDPOINTS.AGENCY.REJECT_JOIN_REQUEST(newRequestNo), { rejectionReason });
+  },
+
+  // 에이전시 대시보드 메트릭 (평균 마감 준수율, 활동 작가, 진행 프로젝트)
+  getDashboardMetrics: (agencyNo) => {
+    return api.get(API_ENDPOINTS.AGENCY.DASHBOARD_METRICS(agencyNo));
+  },
+
+  // 평균 마감 준수율 추이 (월별 + 전월 대비)
+  getComplianceTrend: (agencyNo) => {
+    return api.get(API_ENDPOINTS.AGENCY.COMPLIANCE_TREND(agencyNo));
+  },
+
+  // 작품별 아티스트 분포도
+  getArtistDistribution: (agencyNo) => {
+    return api.get(API_ENDPOINTS.AGENCY.ARTIST_DISTRIBUTION(agencyNo));
+  },
+
+  // 금일 출석 현황
+  getAttendanceDistribution: (agencyNo) => {
+    return api.get(API_ENDPOINTS.AGENCY.ATTENDANCE_DISTRIBUTION(agencyNo));
+  },
+
+  // 건강 인원 분포
+  getHealthDistribution: (agencyNo) => {
+    return api.get(API_ENDPOINTS.AGENCY.HEALTH_DISTRIBUTION(agencyNo));
   },
 };
 
