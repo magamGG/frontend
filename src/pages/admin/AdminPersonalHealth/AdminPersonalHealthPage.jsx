@@ -112,12 +112,20 @@ export function AdminPersonalHealthPage() {
   const fetchPhysicalDeepQuestions = async () => {
     try {
       setIsLoadingPhysicalQuestions(true);
-      // 백엔드 API 호출 - "월간 신체" 타입으로 질문 조회
+      
+      // 로그인한 사용자의 AgencyNo 가져오기
+      const agencyNo = user?.agencyNo;
+      if (!agencyNo) {
+        toast.error('에이전시 정보를 찾을 수 없습니다.');
+        return;
+      }
+      
+      // 백엔드 API 호출 - AgencyNo와 "월간 신체" 타입으로 질문 조회
       // 백엔드 처리: HealthSurveyController.getQuestionsBySurveyType() 
       // → HealthSurveyServiceImpl.getQuestionsBySurveyType()
-      // → HealthSurveyQuestionRepository.findByHealthSurveyQuestionTypeOrderByHealthSurveyOrderAsc()
-      // HEALTH_SURVEY_QUESTION_TYPE 컬럼으로 타입 구분하여 조회
-      const response = await fetch('/api/health-surveys/type/월간 신체/questions', {
+      // → HealthSurveyQuestionRepository.findByHealthSurvey_Agency_AgencyNoAndHealthSurveyQuestionTypeOrderByHealthSurveyOrderAsc()
+      // AgencyNo와 HEALTH_SURVEY_QUESTION_TYPE 컬럼으로 필터링하여 조회
+      const response = await fetch(`/api/health-surveys/type/월간 신체/questions?agencyNo=${agencyNo}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -149,12 +157,20 @@ export function AdminPersonalHealthPage() {
   const fetchMentalDeepQuestions = async () => {
     try {
       setIsLoadingMentalQuestions(true);
-      // 백엔드 API 호출 - "월간 정신" 타입으로 질문 조회
+      
+      // 로그인한 사용자의 AgencyNo 가져오기
+      const agencyNo = user?.agencyNo;
+      if (!agencyNo) {
+        toast.error('에이전시 정보를 찾을 수 없습니다.');
+        return;
+      }
+      
+      // 백엔드 API 호출 - AgencyNo와 "월간 정신" 타입으로 질문 조회
       // 백엔드 처리: HealthSurveyController.getQuestionsBySurveyType() 
       // → HealthSurveyServiceImpl.getQuestionsBySurveyType()
-      // → HealthSurveyQuestionRepository.findByHealthSurveyQuestionTypeOrderByHealthSurveyOrderAsc()
-      // HEALTH_SURVEY_QUESTION_TYPE 컬럼으로 타입 구분하여 조회
-      const response = await fetch('/api/health-surveys/type/월간 정신/questions', {
+      // → HealthSurveyQuestionRepository.findByHealthSurvey_Agency_AgencyNoAndHealthSurveyQuestionTypeOrderByHealthSurveyOrderAsc()
+      // AgencyNo와 HEALTH_SURVEY_QUESTION_TYPE 컬럼으로 필터링하여 조회
+      const response = await fetch(`/api/health-surveys/type/월간 정신/questions?agencyNo=${agencyNo}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
