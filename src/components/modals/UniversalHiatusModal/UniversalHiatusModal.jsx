@@ -28,9 +28,7 @@ export function UniversalHiatusModal({ open, onOpenChange }) {
           <FormGroup>
             <Label>작품 선택</Label>
             <Select>
-              <option>로맨스 판타지</option>
-              <option>학원물</option>
-              <option>액션 판타지</option>
+              <option value="">작품을 선택하세요</option>
             </Select>
           </FormGroup>
 

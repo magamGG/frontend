@@ -6,6 +6,32 @@ export const API_BASE_URL = import.meta.env.PROD
   : '';  // 개발 환경에서는 프록시 사용 (상대 경로)
 export const API_TIMEOUT = 10000;
 
+/** DB THUMBNAIL_FILE을 이미지 URL로 변환 (업로드 경로: /uploads/) */
+export function getProjectThumbnailUrl(thumbnailFile) {
+  if (!thumbnailFile) return null;
+  if (thumbnailFile.startsWith('http://') || thumbnailFile.startsWith('https://')) return thumbnailFile;
+  const base = API_BASE_URL || 'http://localhost:8888';
+  const path = thumbnailFile.startsWith('/uploads') ? thumbnailFile : `/uploads/${thumbnailFile.replace(/^\//, '')}`;
+  return `${base}${path}`;
+}
+
+/** 회원 프로필 이미지 URL 변환 */
+export function getMemberProfileUrl(profileImage) {
+  if (!profileImage) return null;
+  if (profileImage.startsWith('http://') || profileImage.startsWith('https://')) return profileImage;
+  const base = API_BASE_URL || 'http://localhost:8888';
+  const path = profileImage.startsWith('/uploads') ? profileImage : `/uploads/${profileImage.replace(/^\//, '')}`;
+  return `${base}${path}`;
+}
+
+/** 회원 프로필 없을 때 placeholder */
+export const MEMBER_AVATAR_PLACEHOLDER =
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"%3E%3Ccircle fill="%23e5e7eb" cx="24" cy="24" r="24"/%3E%3Cpath fill="%239ca3af" d="M24 24c4.4 0 8-3.6 8-8s-3.6-8-8-8-8 3.6-8 8 3.6 8 8 8zm0 4c-5.3 0-16 2.7-16 8v4h32v-4c0-5.3-10.7-8-16-8z"/%3E%3C/svg%3E';
+
+/** 썸네일 없을 때 사용할 placeholder (회색 박스 SVG) */
+export const PROJECT_THUMBNAIL_PLACEHOLDER =
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="96" height="128" viewBox="0 0 96 128"%3E%3Crect fill="%23e5e7eb" width="96" height="128"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-size="12"%3E%EC%9D%B4%EB%AF%B8%EC%A7%80%20%EC%97%86%EC%9D%8C%3C/text%3E%3C/svg%3E';
+
 // API 엔드포인트 (가이드 문서 기준)
 export const API_ENDPOINTS = {
   // 인증 API
@@ -63,8 +89,20 @@ export const API_ENDPOINTS = {
   // 프로젝트 API
   PROJECTS: {
     CREATE: `/api/projects`, // POST: 프로젝트 생성
+    UPLOAD_THUMBNAIL: `/api/projects/upload-thumbnail`, // POST: 썸네일 업로드 (파일 저장 후 파일명 반환)
     LIST: (page = 0, size = 10) => `/api/projects?page=${page}&size=${size}`, // GET: 프로젝트 목록 조회
+    DETAIL: (projectNo) => `/api/projects/${projectNo}`, // GET: 프로젝트 단건 조회
+    UPDATE: (projectNo) => `/api/projects/${projectNo}`, // PUT: 프로젝트 수정
+    DELETE: (projectNo) => `/api/projects/${projectNo}`, // DELETE: 프로젝트 삭제
+    MEMBERS: (projectNo) => `/api/projects/${projectNo}/members`, // GET: 프로젝트 멤버 목록, POST: 팀원 추가
+    ADDABLE_MEMBERS: (projectNo) => `/api/projects/${projectNo}/addable-members`, // GET: 추가 가능 팀원 (담당자/작가 제외, 미소속)
     KANBAN: (projectNo) => `/api/projects/${projectNo}/kanban`, // GET: 칸반 보드 조회
+    KANBAN_BOARDS: (projectNo) => `/api/projects/${projectNo}/kanban-board`, // POST: 칸반 보드 추가
+    KANBAN_BOARD_UPDATE: (projectNo, boardId) => `/api/projects/${projectNo}/kanban-board/${boardId}`, // PUT: 칸반 보드 상태 수정
+    KANBAN_CARD: (projectNo) => `/api/projects/${projectNo}/kanban-card`, // POST: 칸반 카드 추가
+    KANBAN_CARD_UPDATE: (projectNo, cardId) => `/api/projects/${projectNo}/kanban-card/${cardId}`, // PUT: 칸반 카드 수정
+    KANBAN_CARD_COMMENTS: (projectNo, cardId) => `/api/projects/${projectNo}/kanban-card/${cardId}/comments`, // GET: 목록, POST: 추가
+    KANBAN_CARD_COMMENT_UPDATE: (projectNo, cardId, commentId) => `/api/projects/${projectNo}/kanban-card/${cardId}/comments/${commentId}`, // PUT: 코멘트 수정
   },
 
   // 캘린더 API

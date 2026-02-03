@@ -7,6 +7,7 @@ import { BookOpen, Users, Calendar, AlertCircle, Plus, Search, ArrowUpDown } fro
 import { toast } from 'sonner';
 import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
 import { ProjectDetailPage } from '@/app/pages/artist/ProjectDetailPage';
+import { getProjectThumbnailUrl, PROJECT_THUMBNAIL_PLACEHOLDER } from '@/api/config';
 
 
 
@@ -27,13 +28,13 @@ export function AdminProjectsPage() {
 
   // 작품 추가 폼 상태
   const [newProjectForm, setNewProjectForm] = useState({
-    artistId,
-    title,
+    artistId: 0,
+    title: '',
     platform: '네이버 웹툰',
-    genre,
-    schedule,
-    thumbnail,
-    thumbnailFile,
+    genre: '',
+    schedule: '',
+    thumbnail: '',
+    thumbnailFile: null,
   });
 
   // 페이지 제목 변경을 위한 헤더 업데이트
@@ -48,108 +49,8 @@ export function AdminProjectsPage() {
     }
   }, [showDetailPage]);
 
-  // 작가 목록 (샘플 데이터)
-  const [artists] = useState([
-    { id, name: '김작가' },
-    { id, name: '이작가' },
-    { id, name: '박작가' },
-    { id, name: '최작가' },
-    { id, name: '정작가' },
-  ]);
-
-  const [projects, setProjects] = useState([
-    {
-      id,
-      title: '로맨스 판타지',
-      platform: '네이버 웹툰',
-      status,
-      serialStatus: '연재중',
-      currentEpisode,
-      deadline: 'D-2',
-      genre: '로맨스/판타지',
-      description: '매주 일요일 업데이트. 현재 스토리보드 단계입니다.',
-      schedule: '매주 일요일 오전 10시',
-      thumbnail: 'https://images.unsplash.com/photo-1591788806059-cb6e2f6a2498?w=400',
-      artistName: '김작가',
-      artistId,
-    },
-    {
-      id,
-      title: '학원물',
-      platform: '카카오페이지',
-      status,
-      serialStatus: '연재중',
-      currentEpisode,
-      deadline: 'D-5',
-      genre: '학원/일상',
-      description: '매주 수요일 업데이트. 러프 스케치 단계입니다.',
-      schedule: '매주 수요일 오후 2시',
-      thumbnail: 'https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?w=400',
-      artistName: '이작가',
-      artistId,
-    },
-    {
-      id,
-      title: '미스터리 스릴러',
-      platform: '레진코믹스',
-      status,
-      serialStatus: '휴재',
-      currentEpisode,
-      deadline: '휴재중',
-      genre: '미스터리/스릴러',
-      description: '2025년 3월 재연재 예정',
-      schedule: '휴재중 (3월 재개 예정)',
-      thumbnail: 'https://images.unsplash.com/photo-1618556662146-0c86c2466516?w=400',
-      artistName: '박작가',
-      artistId,
-    },
-    {
-      id,
-      title: '액션 판타지',
-      platform: '네이버 시리즈',
-      status,
-      serialStatus: '완결',
-      currentEpisode,
-      deadline: '완결',
-      genre: '액션/판타지',
-      description: '총 120화 완결. 조회수 2.5M을 기록했습니다.',
-      schedule: '완결 (2024년 12월)',
-      thumbnail: 'https://images.unsplash.com/photo-1618519764620-7403abdbdfe9?w=400',
-      artistName: '최작가',
-      artistId,
-    },
-    {
-      id,
-      title: '일상 코미디',
-      platform: '카카오웹툰',
-      status,
-      serialStatus: '연재중',
-      currentEpisode,
-      deadline: 'D-7',
-      genre: '일상/코미디',
-      description: '매주 금요일 업데이트',
-      schedule: '매주 금요일 오후 6시',
-      thumbnail: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=400',
-      artistName: '김작가',
-      artistId,
-    },
-  ]);
-
-  // localStorage에서 작품 데이터 로드
-  useEffect(() => {
-    const stored = localStorage.getItem('adminProjectsData');
-    if (stored) {
-      const data = JSON.parse(stored);
-      if (data.length > 0) {
-        setProjects(data);
-      }
-    }
-  }, []);
-
-  // 작품 데이터가 변경될 때마다 localStorage에 저장
-  useEffect(() => {
-    localStorage.setItem('adminProjectsData', JSON.stringify(projects));
-  }, [projects]);
+  const [artists] = useState([]);
+  const [projects, setProjects] = useState([]);
 
   // 상태 필터 토글
   const toggleFilter = (filter) => {
@@ -247,7 +148,7 @@ export function AdminProjectsPage() {
       deadline: 'D-7',
       genre: newProjectForm.genre,
       schedule: newProjectForm.schedule || '미정',
-      thumbnail: newProjectForm.thumbnail || 'https://images.unsplash.com/photo-1591788806059-cb6e2f6a2498?w=400',
+      thumbnail: newProjectForm.thumbnail || null,
       artistName: selectedArtist.name,
       artistId: newProjectForm.artistId,
     };
@@ -480,7 +381,7 @@ export function AdminProjectsPage() {
                     {/* 왼쪽: 썸네일 */}
                     <div className="flex-shrink-0">
                       <ImageWithFallback
-                        src={project.thumbnail || 'https://images.unsplash.com/photo-1591788806059-cb6e2f6a2498?w=400'}
+                        src={getProjectThumbnailUrl(project.thumbnail) || PROJECT_THUMBNAIL_PLACEHOLDER}
                         alt={project.title}
                         className="w-24 h-32 object-cover rounded-md border-2 border-border"
                       />
