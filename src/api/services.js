@@ -152,6 +152,21 @@ export const leaveService = {
     return api.get(API_ENDPOINTS.LEAVE.AGENCY_PENDING(agencyNo));
   },
 
+  // 에이전시 소속 회원 연차 잔액 목록 조회 (연차 관리 페이지 직원 리스트용)
+  getAgencyLeaveBalances: (agencyNo) => {
+    return api.get(API_ENDPOINTS.LEAVE.AGENCY_BALANCES(agencyNo));
+  },
+
+  // 에이전시 소속 연차 변경 이력 조회 (변경 로그용)
+  getLeaveHistoryByAgency: (agencyNo) => {
+    return api.get(API_ENDPOINTS.LEAVE.AGENCY_HISTORY(agencyNo));
+  },
+
+  // 회원 연차 조정 (LeaveBalance 갱신 + LeaveHistory 생성)
+  adjustLeaveBalance: (body) => {
+    return api.post(API_ENDPOINTS.LEAVE.ADJUST_BALANCE, body);
+  },
+
   getCurrentStatus: () => {
     return api.get(API_ENDPOINTS.LEAVE.CURRENT_STATUS);
   },

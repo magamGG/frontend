@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
@@ -7,7 +7,6 @@ import {
   Briefcase,
   FileText,
   TrendingUp,
-  TrendingDown,
   ChevronRight,
   Clock,
   CheckCircle2,
@@ -17,8 +16,6 @@ import {
 } from 'lucide-react';
 import { Modal } from '@/components/common/Modal';
 import { toast } from 'sonner';
-import useAuthStore from '@/store/authStore';
-import { agencyService, leaveService, calendarService } from '@/api/services';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Label } from 'recharts';
 import {
   AgencyDashboardRoot,
@@ -66,218 +63,122 @@ const REQUEST_STATUS = {
 export function AgencyDashboardPage() {
   const [selectedSection, setSelectedSection] = useState(null);
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
-  const user = useAuthStore((state) => state.user);
+  
+  // TODO: Zustand store mapping - 마감 임박 현황 데이터
+  const deadlineData = [
+    { day: '오늘', count: 2 },
+    { day: '내일', count: 3 },
+    { day: '2일 후', count: 1 },
+    { day: '3일 후', count: 4 },
+    { day: '4일 후', count: 2 },
+  ];
+  
+  // TODO: Zustand store mapping - 신청 현황 데이터
+  const attendanceRequests = [
+    {
+      id: '1',
+      typeName: '휴가',
+      startDate: '1월 20일',
+      endDate: '1월 22일',
+      status: REQUEST_STATUS.PENDING,
+    },
+    {
+      id: '2',
+      typeName: '재택근무',
+      startDate: '1월 16일',
+      endDate: '1월 16일',
+      status: REQUEST_STATUS.APPROVED,
+    },
+    {
+      id: '3',
+      typeName: '휴가',
+      startDate: '1월 20일',
+      endDate: '1월 22일',
+      status: REQUEST_STATUS.PENDING,
+    },
+    {
+      id: '4',
+      typeName: '재택근무',
+      startDate: '1월 16일',
+      endDate: '1월 16일',
+      status: REQUEST_STATUS.APPROVED,
+    },
+    {
+      id: '5',
+      typeName: '휴가',
+      startDate: '1월 20일',
+      endDate: '1월 22일',
+      status: REQUEST_STATUS.PENDING,
+    },
+  ];
 
-  // 메트릭 데이터 (DB 연동 - 평균 마감 준수율, 활동 작가, 진행 프로젝트)
-  const [metrics, setMetrics] = useState([
-    { id: 1, label: '평균 마감 준수율', value: '0%', change: '-', icon: Target, color: '#10B981', bgColor: '#F0FDF4', iconBgColor: '#D1FAE5' },
-    { id: 2, label: '활동 작가', value: '0명', change: '-', icon: Users, color: '#3B82F6', bgColor: '#EFF6FF', iconBgColor: '#DBEAFE' },
-    { id: 3, label: '진행 프로젝트', value: '0개', change: '-', icon: Briefcase, color: '#9333EA', bgColor: '#F3E8FF', iconBgColor: '#E9D5FF' },
-  ]);
-  const [metricsLoading, setMetricsLoading] = useState(false);
+  // TODO: Zustand store mapping - 메트릭 데이터
+  const metrics = [
+    { 
+      id: 1, 
+      label: '평균 마감 준수율', 
+      value: '87.5%', 
+      change: '+5.2%',
+      icon: Target,
+      color: '#10B981',
+      bgColor: '#F0FDF4',
+      iconBgColor: '#D1FAE5'
+    },
+    { 
+      id: 2, 
+      label: '활동 작가', 
+      value: '24명', 
+      change: '+3명',
+      icon: Users,
+      color: '#3B82F6',
+      bgColor: '#EFF6FF',
+      iconBgColor: '#DBEAFE'
+    },
+    { 
+      id: 3, 
+      label: '진행 프로젝트', 
+      value: '18개', 
+      change: '+2개',
+      icon: Briefcase,
+      color: '#9333EA',
+      bgColor: '#F3E8FF',
+      iconBgColor: '#E9D5FF'
+    },
+  ];
 
-  useEffect(() => {
-    const fetchMetrics = async () => {
-      const agencyNo = user?.agencyNo;
-      if (!agencyNo) return;
+  // TODO: Zustand store mapping - 마감 준수율 추이 데이터
+  const complianceData = [
+    { month: '1월', rate: 78 },
+    { month: '2월', rate: 82 },
+    { month: '3월', rate: 85 },
+    { month: '4월', rate: 83 },
+    { month: '5월', rate: 86 },
+    { month: '6월', rate: 87.5 },
+  ];
 
-      setMetricsLoading(true);
-      try {
-        const data = await agencyService.getDashboardMetrics(agencyNo);
-        const rate = data?.averageDeadlineComplianceRate ?? 0;
-        const artists = data?.activeArtistCount ?? 0;
-        const projects = data?.activeProjectCount ?? 0;
-        setMetrics([
-          {
-            id: 1,
-            label: '평균 마감 준수율',
-            value: `${rate}%`,
-            change: data?.complianceRateChange ?? '-',
-            icon: Target,
-            color: '#10B981',
-            bgColor: '#F0FDF4',
-            iconBgColor: '#D1FAE5',
-          },
-          {
-            id: 2,
-            label: '활동 작가',
-            value: `${artists}명`,
-            change: data?.activeArtistChange ?? '-',
-            icon: Users,
-            color: '#3B82F6',
-            bgColor: '#EFF6FF',
-            iconBgColor: '#DBEAFE',
-          },
-          {
-            id: 3,
-            label: '진행 프로젝트',
-            value: `${projects}개`,
-            change: data?.activeProjectChange ?? '-',
-            icon: Briefcase,
-            color: '#9333EA',
-            bgColor: '#F3E8FF',
-            iconBgColor: '#E9D5FF',
-          },
-        ]);
-      } catch (err) {
-        console.error('에이전시 대시보드 메트릭 조회 실패:', err);
-        setMetrics([
-          { id: 1, label: '평균 마감 준수율', value: '0%', change: '-', icon: Target, color: '#10B981', bgColor: '#F0FDF4', iconBgColor: '#D1FAE5' },
-          { id: 2, label: '활동 작가', value: '0명', change: '-', icon: Users, color: '#3B82F6', bgColor: '#EFF6FF', iconBgColor: '#DBEAFE' },
-          { id: 3, label: '진행 프로젝트', value: '0개', change: '-', icon: Briefcase, color: '#9333EA', bgColor: '#F3E8FF', iconBgColor: '#E9D5FF' },
-        ]);
-      } finally {
-        setMetricsLoading(false);
-      }
-    };
-    fetchMetrics();
-  }, [user?.agencyNo]);
+  // TODO: Zustand store mapping - 작품별 아티스트 분포 데이터
+  const artistDistributionData = [
+    { name: '로맨스 판타지', artists: 5 },
+    { name: '액션 웹툰', artists: 4 },
+    { name: 'SF 드라마', artists: 3 },
+    { name: '일상 코미디', artists: 6 },
+    { name: '스릴러', artists: 2 },
+  ];
 
-  // 마감 임박 현황 (DB 연동)
-  const [deadlineData, setDeadlineData] = useState([]);
+  // TODO: Zustand store mapping - 출석 현황 데이터
+  const attendanceData = [
+    { name: '출근', value: 18, color: '#00ACC1' },
+    { name: '재택근무', value: 3, color: '#FF9800' },
+    { name: '휴재', value: 2, color: '#757575' },
+    { name: '워케이션', value: 1, color: '#9C27B0' },
+  ];
 
-  // 신청 현황 (DB 연동 - 에이전시 소속 근태 신청)
-  const [attendanceRequests, setAttendanceRequests] = useState([]);
-
-  const formatDateKr = (dateStr) => {
-    if (!dateStr) return '-';
-    const d = new Date(dateStr);
-    return `${d.getMonth() + 1}월 ${d.getDate()}일`;
-  };
-
-  const REQUEST_STATUS_MAP = {
-    PENDING: REQUEST_STATUS.PENDING,
-    APPROVED: REQUEST_STATUS.APPROVED,
-    REJECTED: REQUEST_STATUS.REJECTED,
-  };
-
-  const fetchDeadlineAndRequests = async () => {
-    const agencyNo = user?.agencyNo;
-    if (!agencyNo) return;
-
-    try {
-      const [deadlineRes, requestsRes] = await Promise.all([
-        calendarService.getDeadlineCountsByAgency(agencyNo),
-        leaveService.getAgencyRequests(agencyNo),
-      ]);
-
-      const counts = deadlineRes ?? [];
-      setDeadlineData(
-        counts.map((c) => ({ day: c.name ?? '-', count: c.count ?? 0 }))
-      );
-
-      const raw = Array.isArray(requestsRes) ? requestsRes : (requestsRes?.data ?? []);
-      const filtered = raw.filter((r) => r.attendanceRequestStatus !== 'CANCELLED');
-      setAttendanceRequests(
-        filtered.map((r) => ({
-          id: String(r.attendanceRequestNo ?? r.memberNo),
-          typeName: r.attendanceRequestType ?? '-',
-          startDate: formatDateKr(r.attendanceRequestStartDate),
-          endDate: formatDateKr(r.attendanceRequestEndDate),
-          status: REQUEST_STATUS_MAP[r.attendanceRequestStatus] ?? '-',
-          attendanceRequestNo: r.attendanceRequestNo,
-        }))
-      );
-    } catch (err) {
-      console.error('마감 임박/신청 현황 조회 실패:', err);
-      setDeadlineData([]);
-      setAttendanceRequests([]);
-    }
-  };
-
-  useEffect(() => {
-    fetchDeadlineAndRequests();
-  }, [user?.agencyNo]);
-
-  useEffect(() => {
-    const onRefresh = () => fetchDeadlineAndRequests();
-    window.addEventListener('leaveRequestSuccess', onRefresh);
-    window.addEventListener('focus', onRefresh);
-    return () => {
-      window.removeEventListener('leaveRequestSuccess', onRefresh);
-      window.removeEventListener('focus', onRefresh);
-    };
-  }, [user?.agencyNo]);
-
-  // 평균 마감 준수율 추이 (DB 연동)
-  const [complianceData, setComplianceData] = useState([]);
-  const [complianceMonthOverMonthChange, setComplianceMonthOverMonthChange] = useState(null);
-
-  // 작품별 아티스트 분포 (DB 연동)
-  const [artistDistributionData, setArtistDistributionData] = useState([]);
-  const [maxArtistProjectName, setMaxArtistProjectName] = useState(null);
-
-  useEffect(() => {
-    const fetchComplianceAndDistribution = async () => {
-      const agencyNo = user?.agencyNo;
-      if (!agencyNo) return;
-
-      try {
-        const [trendRes, distRes] = await Promise.all([
-          agencyService.getComplianceTrend(agencyNo),
-          agencyService.getArtistDistribution(agencyNo),
-        ]);
-
-        const trend = trendRes?.trend ?? [];
-        setComplianceData(trend.map((t) => ({ month: t.month, rate: t.rate ?? 0 })));
-        setComplianceMonthOverMonthChange(trendRes?.monthOverMonthChange ?? null);
-
-        const dist = distRes?.distribution ?? [];
-        setArtistDistributionData(dist.map((d) => ({ name: d.name ?? '-', artists: d.artists ?? 0 })));
-        setMaxArtistProjectName(distRes?.maxArtistProjectName ?? null);
-      } catch (err) {
-        console.error('준수율 추이/아티스트 분포 조회 실패:', err);
-        setComplianceData([]);
-        setComplianceMonthOverMonthChange(null);
-        setArtistDistributionData([]);
-        setMaxArtistProjectName(null);
-      }
-    };
-    fetchComplianceAndDistribution();
-  }, [user?.agencyNo]);
-
-  // 금일 출석 현황 (DB 연동, 휴가/미출석 포함)
-  const [attendanceData, setAttendanceData] = useState([
-    { name: '출근', value: 0, color: '#00ACC1' },
-    { name: '재택근무', value: 0, color: '#FF9800' },
-    { name: '휴가', value: 0, color: '#757575' },
-    { name: '워케이션', value: 0, color: '#9C27B0' },
-    { name: '미출석', value: 0, color: '#EF4444' },
-  ]);
-
-  // 건강 인원 분포 (DB 연동)
-  const [healthData, setHealthData] = useState([
-    { name: '위험', value: 0, color: '#EF4444' },
-    { name: '주의', value: 0, color: '#FF9800' },
-    { name: '정상', value: 0, color: '#10B981' },
-  ]);
-
-  useEffect(() => {
-    const fetchAttendanceAndHealth = async () => {
-      const agencyNo = user?.agencyNo;
-      if (!agencyNo) return;
-
-      try {
-        const [attRes, healthRes] = await Promise.all([
-          agencyService.getAttendanceDistribution(agencyNo),
-          agencyService.getHealthDistribution(agencyNo),
-        ]);
-
-        const attDist = attRes?.distribution ?? [];
-        setAttendanceData(
-          attDist.map((d) => ({ name: d.name ?? '-', value: d.value ?? 0, color: d.color ?? '#94a3b8' }))
-        );
-
-        const healthDist = healthRes?.distribution ?? [];
-        setHealthData(
-          healthDist.map((d) => ({ name: d.name ?? '-', value: d.value ?? 0, color: d.color ?? '#94a3b8' }))
-        );
-      } catch (err) {
-        console.error('출석/건강 분포 조회 실패:', err);
-      }
-    };
-    fetchAttendanceAndHealth();
-  }, [user?.agencyNo]);
+  // TODO: Zustand store mapping - 건강 인원 분포 데이터
+  const healthData = [
+    { name: '위험', value: 2, color: '#EF4444' }, // 빨간색
+    { name: '주의', value: 5, color: '#FF9800' }, // 주황색
+    { name: '정상', value: 15, color: '#10B981' }, // 초록색
+  ];
 
   // 건강 인원 분포 레이블 렌더링 함수
   const renderHealthLabel = (props) => {
@@ -324,9 +225,9 @@ export function AgencyDashboardPage() {
                     <Icon className="w-5 h-5" />
                   </MetricIcon>
                 </MetricCardContent>
-            </MetricCard>
-          );
-        })}
+              </MetricCard>
+            );
+          })}
         </MetricsGrid>
 
         {/* 그래프 섹션 */}
@@ -375,25 +276,14 @@ export function AgencyDashboardPage() {
               </ResponsiveContainer>
             </ChartContainer>
 
-            {complianceMonthOverMonthChange != null && (
-              <ChartAlert
-                $bgColor={complianceMonthOverMonthChange >= 0 ? '#F0FDF4' : '#FEF2F2'}
-                $borderColor={complianceMonthOverMonthChange >= 0 ? '#86EFAC' : '#FECACA'}
-              >
-                <ChartAlertIcon>
-                  {complianceMonthOverMonthChange >= 0 ? (
-                    <TrendingUp className="w-4 h-4" style={{ color: '#10B981' }} />
-                  ) : (
-                    <TrendingDown className="w-4 h-4" style={{ color: '#EF4444' }} />
-                  )}
-                </ChartAlertIcon>
-                <ChartAlertText $color={complianceMonthOverMonthChange >= 0 ? '#065F46' : '#991B1B'}>
-                  {complianceMonthOverMonthChange >= 0
-                    ? `전월 대비 ${Math.abs(complianceMonthOverMonthChange)}% 증가했습니다`
-                    : `전월 대비 ${Math.abs(complianceMonthOverMonthChange)}% 감소했습니다`}
-                </ChartAlertText>
-              </ChartAlert>
-            )}
+            <ChartAlert $bgColor="#F0FDF4" $borderColor="#86EFAC">
+              <ChartAlertIcon>
+                <TrendingUp className="w-4 h-4" style={{ color: '#10B981' }} />
+              </ChartAlertIcon>
+              <ChartAlertText $color="#065F46">
+                전월 대비 5.2% 증가했습니다
+              </ChartAlertText>
+            </ChartAlert>
           </ChartCard>
 
           {/* 작품별 아티스트 분포도 (막대 그래프) */}
@@ -406,56 +296,48 @@ export function AgencyDashboardPage() {
             </ChartCardHeader>
 
             <ChartContainer>
-              {artistDistributionData.length === 0 ? (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, color: 'var(--muted-foreground)', fontSize: 14 }}>
-                  배정된 작품이 없습니다. 작가를 프로젝트에 배정하면 여기에 표시됩니다.
-                </div>
-              ) : (
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={artistDistributionData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis 
-                      dataKey="name" 
-                      tick={{ fontSize: 11 }}
-                      stroke="#94a3b8"
-                      angle={-15}
-                      textAnchor="end"
-                      height={80}
-                    />
-                    <YAxis 
-                      tick={{ fontSize: 12 }}
-                      stroke="#94a3b8"
-                      tickFormatter={(value) => `${value}명`}
-                    />
-                    <Tooltip 
-                      formatter={(value) => [`${value}명`, '아티스트']}
-                      contentStyle={{ 
-                        backgroundColor: '#ffffff',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '8px',
-                        fontSize: '12px'
-                      }}
-                    />
-                    <Bar 
-                      dataKey="artists" 
-                      fill="#6E8FB3" 
-                      radius={[8, 8, 0, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={artistDistributionData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis 
+                    dataKey="name" 
+                    tick={{ fontSize: 11 }}
+                    stroke="#94a3b8"
+                    angle={-15}
+                    textAnchor="end"
+                    height={80}
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 12 }}
+                    stroke="#94a3b8"
+                    tickFormatter={(value) => `${value}명`}
+                  />
+                  <Tooltip 
+                    formatter={(value) => [`${value}명`, '아티스트']}
+                    contentStyle={{ 
+                      backgroundColor: '#ffffff',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '12px'
+                    }}
+                  />
+                  <Bar 
+                    dataKey="artists" 
+                    fill="#6E8FB3" 
+                    radius={[8, 8, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
             </ChartContainer>
 
-            {maxArtistProjectName && (
-              <ChartAlert $bgColor="#EFF6FF" $borderColor="#BFDBFE">
-                <ChartAlertIcon>
-                  <Users className="w-4 h-4" style={{ color: '#3B82F6' }} />
-                </ChartAlertIcon>
-                <ChartAlertText $color="#1E3A8A">
-                  {maxArtistProjectName}에 가장 많은 아티스트가 배정되어 있습니다
-                </ChartAlertText>
-              </ChartAlert>
-            )}
+            <ChartAlert $bgColor="#EFF6FF" $borderColor="#BFDBFE">
+              <ChartAlertIcon>
+                <Users className="w-4 h-4" style={{ color: '#3B82F6' }} />
+              </ChartAlertIcon>
+              <ChartAlertText $color="#1E3A8A">
+                일상 코미디에 가장 많은 아티스트가 배정되어 있습니다
+              </ChartAlertText>
+            </ChartAlert>
           </ChartCard>
         </ChartsGrid>
 
@@ -510,17 +392,6 @@ export function AgencyDashboardPage() {
                 {attendanceData.reduce((sum, item) => sum + item.value, 0)}명
               </PieChartFooterValue>
             </PieChartFooter>
-
-            {attendanceData.some((item) => item.name === '미출석' && item.value > 0) && (
-              <ChartAlert $bgColor="#FEF2F2" $borderColor="#FECACA">
-                <ChartAlertIcon>
-                  <AlertCircle className="w-4 h-4" style={{ color: '#DC2626' }} />
-                </ChartAlertIcon>
-                <ChartAlertText $color="#991B1B">
-                  미출석 {attendanceData.find((d) => d.name === '미출석')?.value ?? 0}명 — 출석 확인이 필요합니다
-                </ChartAlertText>
-              </ChartAlert>
-            )}
           </ChartCard>
 
           {/* 건강 인원 분포 */}
@@ -640,7 +511,7 @@ export function AgencyDashboardPage() {
                   </ChartCardIcon>
                   <ChartCardTitle>신청 현황</ChartCardTitle>
                 </div>
-                {attendanceRequests.length >= 1 && (
+                {attendanceRequests.length >= 2 && (
                   <ChevronRight 
                     className="w-4 h-4" 
                     style={{ color: 'var(--muted-foreground)', cursor: 'pointer' }}
