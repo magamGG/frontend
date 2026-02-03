@@ -109,6 +109,7 @@ export const API_ENDPOINTS = {
     MANAGED: `/api/projects/managed`, // GET: 담당자 대시보드 담당 프로젝트 현황
     FEEDBACK: (limit = 50) => `/api/projects/feedback?limit=${limit}`, // GET: 작가 대시보드 피드백(프로젝트 코멘트 목록)
     TODAY_TASKS: `/api/projects/my-today-tasks`, // GET: 아티스트 대시보드 오늘 할 일 (담당+마감일 오늘+미완료 칸반 카드)
+    NEXT_SERIAL: (limit = 10) => `/api/projects/next-serial?limit=${limit}`, // GET: 아티스트 대시보드 다음 연재 프로젝트 (PROJECT_MEMBER+PROJECT_STARTED_AT/CYCLE)
     KANBAN_BOARDS: (projectNo) => `/api/projects/${projectNo}/kanban-board`, // POST: 칸반 보드 추가
     KANBAN_BOARD_UPDATE: (projectNo, boardId) => `/api/projects/${projectNo}/kanban-board/${boardId}`, // PUT: 칸반 보드 상태 수정
     KANBAN_CARD: (projectNo) => `/api/projects/${projectNo}/kanban-card`, // POST: 칸반 카드 추가

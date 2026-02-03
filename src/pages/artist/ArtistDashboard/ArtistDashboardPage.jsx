@@ -542,7 +542,7 @@ export function ArtistDashboardPage() {
     return () => window.removeEventListener('leaveRequestSuccess', handleLeaveRequestSuccess);
   }, []);
 
-  // 다음 연재 프로젝트 (다가오는 일정) - calendarService.getUpcomingEvents API 연동
+  // 다음 연재 프로젝트 - PROJECT_MEMBER 소속 + PROJECT_STARTED_AT, PROJECT_CYCLE로 계산한 다음 연재일
   useEffect(() => {
     const fetchDeadlineProjects = async () => {
       const memberNo = useAuthStore.getState().user?.memberNo;
@@ -550,20 +550,14 @@ export function ArtistDashboardPage() {
 
       setIsLoadingDeadlineProjects(true);
       try {
-        const response = await calendarService.getUpcomingEvents(10);
+        const response = await projectService.getNextSerialProjects(10);
         const list = Array.isArray(response) ? response : [];
-        const today = new Date();
-        const mapped = list.map((item) => {
-          const endDate = item.calendarEventEndedAt ? new Date(item.calendarEventEndedAt) : null;
-          const isToday = endDate && endDate.getFullYear() === today.getFullYear() &&
-            endDate.getMonth() === today.getMonth() && endDate.getDate() === today.getDate();
-          return {
-            id: item.calendarEventNo,
-            name: item.calendarEventName || item.calendarEventContent || '일정',
-            deadline: formatDeadlineDisplay(item.calendarEventEndedAt),
-            urgent: !!isToday,
-          };
-        });
+        const mapped = list.map((item) => ({
+          id: item.projectNo,
+          name: item.projectName || '프로젝트',
+          deadline: formatDeadlineDisplay(item.nextDeadline),
+          urgent: !!item.today,
+        }));
         setDeadlineProjects(mapped);
       } catch (error) {
         console.error('다음 연재 프로젝트 조회 실패:', error);

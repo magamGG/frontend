@@ -283,6 +283,11 @@ export const projectService = {
     return api.get(API_ENDPOINTS.PROJECTS.TODAY_TASKS);
   },
 
+  // 아티스트 대시보드 다음 연재 프로젝트 - PROJECT_MEMBER 소속 + PROJECT_STARTED_AT, PROJECT_CYCLE로 계산한 다음 연재일
+  getNextSerialProjects: (limit = 10) => {
+    return api.get(API_ENDPOINTS.PROJECTS.NEXT_SERIAL(limit));
+  },
+
   // 칸반 보드 추가 (KANBAN_BOARD INSERT)
   createKanbanBoard: (projectNo, title) => {
     return api.post(API_ENDPOINTS.PROJECTS.KANBAN_BOARDS(projectNo), { title });
