@@ -43,6 +43,7 @@ export const API_ENDPOINTS = {
   MEMBERS: {
     BASE: `/api/members`, // POST: 회원가입
     CURRENT: `/api/members/me`, // GET: 현재 회원 정보 조회
+    MY_ASSIGNED_ARTISTS: `/api/members/me/assigned-artists`, // GET: 로그인 회원의 배정 작가 (MANAGER·ARTIST_ASSIGNMENT)
     BY_AGENCY: (agencyNo) => `/api/members/agency/${agencyNo}`,
     DETAILS: (memberNo) => `/api/members/${memberNo}/details`,
     MANAGERS: (agencyNo) => `/api/members/agency/${agencyNo}/managers`,
@@ -93,11 +94,13 @@ export const API_ENDPOINTS = {
   PROJECTS: {
     CREATE: `/api/projects`, // POST: 프로젝트 생성
     UPLOAD_THUMBNAIL: `/api/projects/upload-thumbnail`, // POST: 썸네일 업로드 (파일 저장 후 파일명 반환)
-    LIST: (page = 0, size = 10) => `/api/projects?page=${page}&size=${size}`, // GET: 프로젝트 목록 조회
+    LIST: (page = 0, size = 10) => `/api/projects?page=${page}&size=${size}`, // GET: 프로젝트 목록 조회 (회원 소속)
+    LIST_BY_AGENCY: (agencyNo) => `/api/projects/agency/${agencyNo}`, // GET: 에이전시 소속 전체 프로젝트 (에이전시 관리자만)
     DETAIL: (projectNo) => `/api/projects/${projectNo}`, // GET: 프로젝트 단건 조회
     UPDATE: (projectNo) => `/api/projects/${projectNo}`, // PUT: 프로젝트 수정
     DELETE: (projectNo) => `/api/projects/${projectNo}`, // DELETE: 프로젝트 삭제
     MEMBERS: (projectNo) => `/api/projects/${projectNo}/members`, // GET: 프로젝트 멤버 목록, POST: 팀원 추가
+    MEMBER_DELETE: (projectNo, projectMemberNo) => `/api/projects/${projectNo}/members/remove/${projectMemberNo}`, // DELETE: 프로젝트 팀원 삭제
     ADDABLE_MEMBERS: (projectNo) => `/api/projects/${projectNo}/addable-members`, // GET: 추가 가능 팀원 (담당자/작가 제외, 미소속)
     KANBAN: (projectNo) => `/api/projects/${projectNo}/kanban`, // GET: 칸반 보드 조회
     MANAGED: `/api/projects/managed`, // GET: 담당자 대시보드 담당 프로젝트 현황

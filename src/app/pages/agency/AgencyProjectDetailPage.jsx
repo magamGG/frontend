@@ -333,7 +333,7 @@ export function AgencyProjectDetailPage({
                           {member.status}
                         </Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground">{member.role}</p>
+                      <p className="text-sm text-muted-foreground">{member.memberRole || member.role}</p>
                     </div>
                   </div>
                 </Card>
@@ -356,7 +356,7 @@ export function AgencyProjectDetailPage({
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <Briefcase className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-foreground">{selectedMember.role}</span>
+                  <span className="text-foreground">{selectedMember.memberRole || selectedMember.role}</span>
                 </div>
               </div>
             </div>

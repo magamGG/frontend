@@ -122,6 +122,7 @@ export function AgencyProjectDetailPage({ project, onBack }) {
   const [teamMembers, setTeamMembers] = useState([]);
   const [teamMembersLoading, setTeamMembersLoading] = useState(false);
 
+  // PROJECT_NO(project.id)로 PROJECT_MEMBER 조회
   useEffect(() => {
     if (!project?.id) return;
     const fetchMembers = async () => {
@@ -150,7 +151,7 @@ export function AgencyProjectDetailPage({ project, onBack }) {
     fetchMembers();
   }, [project?.id]);
 
-  // 칸반 보드 데이터 - DB(KANBAN_BOARD, KANBAN_CARD)에서 로드 (읽기 전용)
+  // PROJECT_NO(project.id)로 KANBAN_BOARD, KANBAN_CARD 조회 (읽기 전용)
   const [boards, setBoards] = useState([]);
   const [boardsLoading, setBoardsLoading] = useState(false);
 
@@ -194,7 +195,7 @@ export function AgencyProjectDetailPage({ project, onBack }) {
     fetchBoards();
   }, [project?.id]);
 
-  // 이번 주 팀 일정 - 칸반 카드 기반 (시작일~마감일 사이 모든 날짜에 표시)
+  // 주간 캘린더: KANBAN_CARD(startDate, dueDate, title, assignedTo) 기반으로 이번 주 일정 표시
   const weeklySchedule = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -335,7 +336,7 @@ export function AgencyProjectDetailPage({ project, onBack }) {
             </ProjectManagementSection>
           </ContentGridLeft>
 
-          {/* 오른쪽 열: 주간 캘린더 */}
+          {/* 오른쪽 열: 주간 캘린더 (KANBAN_CARD 기반) */}
           <ContentGridRight>
             <WeeklyScheduleSection>
               <WeeklyScheduleTitle>주간 캘린더</WeeklyScheduleTitle>

@@ -146,7 +146,7 @@ export function AdminProjectsPage() {
       title: p.projectName,
       platform: p.platform || '미정',
       status: 'normal',
-      serialStatus: p.projectStatus || '연재중',
+      serialStatus: p.projectStatus || '연재',
       currentEpisode: 0,
       deadline: deadlineDn,
       genre: p.projectGenre || '',
@@ -239,7 +239,7 @@ export function AdminProjectsPage() {
   // 상태별 배지 색상 (작가 계정과 동일)
   const getStatusBadgeColor = (status) => {
     switch (status) {
-      case '연재중':
+      case '연재':
         return 'bg-green-500 hover:bg-green-600';
       case '휴재':
         return 'bg-orange-500 hover:bg-orange-600';
@@ -314,7 +314,7 @@ export function AdminProjectsPage() {
         title: response.projectName,
         platform: response.platform || '미정',
         status: 'normal',
-        serialStatus: response.projectStatus || '연재중',
+        serialStatus: response.projectStatus || '연재',
         currentEpisode: 1,
         deadline: deadlineDn,
         genre: response.projectGenre || '',
@@ -483,7 +483,7 @@ export function AdminProjectsPage() {
           <FilterRow>
             <FilterLabel>상태:</FilterLabel>
             <FilterButtonGroup>
-              {['전체', '연재중', '휴재', '완결'].map((filter) => (
+              {['전체', '연재', '휴재', '완결'].map((filter) => (
                 <Button
                   key={filter}
                   variant={statusFilter === filter ? 'default' : 'outline'}

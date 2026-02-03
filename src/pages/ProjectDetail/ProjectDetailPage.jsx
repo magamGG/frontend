@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
-import { projectService } from '@/api/services';
+import { projectService, memberService } from '@/api/services';
 import useAuthStore from '@/store/authStore';
 import { getProjectThumbnailUrl, getMemberProfileUrl, PROJECT_THUMBNAIL_PLACEHOLDER, MEMBER_AVATAR_PLACEHOLDER } from '@/api/config';
 import { useDrag, useDrop } from 'react-dnd';
@@ -33,7 +33,7 @@ import { DraggableCardContainer } from './ProjectDetailPage.styled';
  * @property {number} id
  * @property {string} title
  * @property {string} platform
- * @property {'연재중' | '휴재' | '완결'} serialStatus
+ * @property {'연재' | '휴재' | '완결'} serialStatus
  * @property {number} currentEpisode
  * @property {string} [thumbnail]
  * @property {string} [artistName]
@@ -281,6 +281,8 @@ export function ProjectDetailPage({
   onProjectDelete,
   isArtistView = false,
 }) {
+  const { user } = useAuthStore();
+
   // 편집 모드 상태
   const [isEditMode, setIsEditMode] = useState(false);
   const [editedProject, setEditedProject] = useState(project);
@@ -320,7 +322,7 @@ export function ProjectDetailPage({
   const [teamMembers, setTeamMembers] = useState([]);
   const [teamMembersLoading, setTeamMembersLoading] = useState(false);
 
-  // 프로젝트 멤버 API 조회 (GET /api/projects/{id}/members)
+  // PROJECT_NO(project.id)로 PROJECT_MEMBER 조회
   useEffect(() => {
     if (!project?.id) return;
     const fetchMembers = async () => {
@@ -333,7 +335,9 @@ export function ProjectDetailPage({
             id: m.memberNo,
             projectMemberNo: m.projectMemberNo,
             name: m.memberName || m.memberEmail || '-',
-            role: m.memberRole || m.projectMemberRole || '-',
+            role: m.projectMemberRole || m.memberRole || '-',
+            projectMemberRole: m.projectMemberRole || '',
+            memberRole: m.memberRole || '',
             email: m.memberEmail || '',
             phone: m.memberPhone || '',
             status: m.memberStatus === '휴면' ? '휴면' : '출근',
@@ -349,6 +353,34 @@ export function ProjectDetailPage({
     };
     fetchMembers();
   }, [project?.id]);
+
+  // 현재 사용자의 이 프로젝트 내 역할 (PROJECT_MEMBER_ROLE) — 담당자일 때만 팀원 추가/삭제 노출
+  const currentUserProjectRole = useMemo(() => {
+    if (!user?.memberNo || !teamMembers?.length) return null;
+    const me = teamMembers.find((m) => m.id === user.memberNo);
+    return me?.projectMemberRole || me?.role || null;
+  }, [user?.memberNo, teamMembers]);
+  const isManagerRole = currentUserProjectRole === '담당자';
+
+  // 로그인 회원의 배정 작가 (MANAGER·ARTIST_ASSIGNMENT) — 작가명 SELECT 옵션
+  const [assignedArtists, setAssignedArtists] = useState([]);
+  const [assignedArtistsLoading, setAssignedArtistsLoading] = useState(false);
+  useEffect(() => {
+    if (!user?.memberNo) return;
+    const fetchArtists = async () => {
+      setAssignedArtistsLoading(true);
+      try {
+        const result = await memberService.getMyAssignedArtists();
+        const list = Array.isArray(result) ? result : result?.content ?? result?.data ?? [];
+        setAssignedArtists(list.map((m) => ({ id: m.memberNo, name: m.memberName || m.memberEmail || '-' })));
+      } catch {
+        setAssignedArtists([]);
+      } finally {
+        setAssignedArtistsLoading(false);
+      }
+    };
+    fetchArtists();
+  }, [user?.memberNo]);
 
   // 추가 가능한 팀원 (DB: MEMBER_ROLE != 담당자/작가, 프로젝트 미소속)
   const [availableMembers, setAvailableMembers] = useState([]);
@@ -383,7 +415,7 @@ export function ProjectDetailPage({
     fetchAddable();
   }, [isAddTeamMemberModalOpen, project?.id]);
 
-  // 칸반 보드 데이터 - DB(KANBAN_BOARD, KANBAN_CARD)에서 로드
+  // PROJECT_NO(project.id)로 KANBAN_BOARD, KANBAN_CARD 조회
   const [boards, setBoards] = useState([]);
   const [boardsLoading, setBoardsLoading] = useState(false);
 
@@ -433,39 +465,40 @@ export function ProjectDetailPage({
     localStorage.setItem(`kanban_boards_${project?.id}`, JSON.stringify(updatedBoards));
   };
 
-  // 이번 주 팀 일정 - 칸반 카드 기반 (시작일~마감일 사이 모든 날짜에 표시)
-  const weeklySchedule = useMemo(() => {
+  // KANBAN_CARD 마감일(kanban_card_ended_at) 내림차순 목록 + D-n 표시
+  const dueDateSortedCards = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
-    const schedule = [];
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() + i);
-      const dateStr = `${d.getMonth() + 1}/${d.getDate()}`;
-      const dayName = i === 0 ? `오늘 (${dayNames[d.getDay()]})` : dayNames[d.getDay()];
-      const yyyyMmDd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      const events = [];
-      boards.forEach((board) => {
-        (board.cards || []).forEach((card) => {
-          const startStr = card.startDate ? String(card.startDate).slice(0, 10) : null;
-          const dueStr = card.dueDate ? String(card.dueDate).slice(0, 10) : null;
-          // 시작일~마감일 사이에 있으면 해당 날짜에 표시
-          const assigneeName = card.assignedTo?.name || '';
-          if (startStr && dueStr) {
-            if (yyyyMmDd >= startStr && yyyyMmDd <= dueStr) {
-              events.push({ title: card.title, assigneeName });
-            }
-          } else if (startStr && startStr === yyyyMmDd) {
-            events.push({ title: card.title, assigneeName });
-          } else if (dueStr && dueStr === yyyyMmDd) {
-            events.push({ title: card.title, assigneeName });
-          }
+    const items = [];
+    boards.forEach((board) => {
+      (board.cards || []).forEach((card) => {
+        const dueStr = card.dueDate ? String(card.dueDate).slice(0, 10) : null;
+        if (!dueStr) return;
+        const dueDate = new Date(dueStr);
+        dueDate.setHours(0, 0, 0, 0);
+        const diffMs = dueDate - today;
+        const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+        let dLabel;
+        if (diffDays === 0) dLabel = 'D-Day';
+        else if (diffDays > 0) dLabel = `D-${diffDays}`;
+        else dLabel = `D+${Math.abs(diffDays)}`;
+        const dateStr = `${dueDate.getMonth() + 1}/${dueDate.getDate()}`;
+        const dayName = dayNames[dueDate.getDay()];
+        items.push({
+          card,
+          dueStr,
+          dueDate,
+          dLabel,
+          dateStr,
+          dayName,
+          assigneeName: card.assignedTo?.name || '',
         });
       });
-      schedule.push({ date: dateStr, day: dayName, events });
-    }
-    return schedule;
+    });
+    // kanban_card_ended_at(마감일) 내림차순
+    items.sort((a, b) => (a.dueStr > b.dueStr ? 1 : a.dueStr < b.dueStr ? -1 : 0));
+    return items;
   }, [boards]);
 
   // 모달 상태
@@ -515,13 +548,14 @@ export function ProjectDetailPage({
           : null;
         const payload = {
           projectName: editedProject.title,
-          projectStatus: editedProject.serialStatus || '연재중',
+          projectStatus: editedProject.serialStatus || '연재',
           projectColor: projectColor || '기본색',
           platform: editedProject.platform,
           projectGenre: editedProject.genre || undefined,
           projectCycle: editedProject.scheduleDays ? Number(editedProject.scheduleDays) : undefined,
           projectStartedAt: startDateStr ? `${startDateStr}T00:00:00` : undefined,
           thumbnailFile: editedProject.thumbnail || undefined,
+          artistMemberNo: editedProject.artistId ?? undefined,
         };
         const data = await projectService.updateProject(project.id, payload);
         const savedStartDateStr = data?.projectStartedAt ? String(data.projectStartedAt).slice(0, 10) : null;
@@ -547,7 +581,7 @@ export function ProjectDetailPage({
           id: data?.projectNo ?? project.id,
           title: data?.projectName ?? editedProject.title,
           platform: data?.platform || '미정',
-          serialStatus: data?.projectStatus || '연재중',
+          serialStatus: data?.projectStatus || '연재',
           genre: data?.projectGenre || '',
           schedule: data?.projectCycle ? `${data.projectCycle}일` : '미정',
           scheduleDays,
@@ -625,13 +659,34 @@ export function ProjectDetailPage({
     }
   };
 
-  // 팀원 삭제 (수정 모드에서만 임시 상태에 적용)
-  const handleDeleteTeamMember = (memberId) => {
-    if (editingTeamMembers.length <= 1) {
-      toast.error('최소 1명의 팀원은 필요합니다.');
-      return;
+  // 팀원 삭제 (PROJECT_MEMBER에서 삭제 후 목록 갱신)
+  const handleDeleteTeamMember = async (projectMemberNo) => {
+    if (!project?.id || projectMemberNo == null) return;
+    try {
+      await projectService.deleteProjectMember(project.id, projectMemberNo);
+      toast.success('팀원이 삭제되었습니다.');
+      setPendingDeleteTeamMember(null);
+
+      // 팀원 목록 API 재조회
+      const result = await projectService.getProjectMembers(project.id);
+      const list = Array.isArray(result) ? result : result?.content ?? result?.data ?? [];
+      setTeamMembers(
+        list.map((m) => ({
+          id: m.memberNo,
+          projectMemberNo: m.projectMemberNo,
+          name: m.memberName || m.memberEmail || '-',
+          role: m.projectMemberRole || m.memberRole || '-',
+          projectMemberRole: m.projectMemberRole || '',
+          memberRole: m.memberRole || '',
+          email: m.memberEmail || '',
+          phone: m.memberPhone || '',
+          status: m.memberStatus === '휴면' ? '휴면' : '출근',
+          avatar: getMemberProfileUrl(m.memberProfileImage),
+        }))
+      );
+    } catch (err) {
+      toast.error(err?.response?.data?.message || err?.message || '팀원 삭제에 실패했습니다.');
     }
-    setEditingTeamMembers(editingTeamMembers.filter(m => m.id !== memberId));
   };
 
   // 팀원 추가 - DB PROJECT_MEMBER에 저장 후 팀원 목록 갱신
@@ -649,13 +704,16 @@ export function ProjectDetailPage({
       setIsAddTeamMemberModalOpen(false);
       setSelectedMemberIds([]);
 
-      // 팀원 목록 API 재조회
+      // 팀원 목록 API 재조회 (projectMemberNo 포함해 삭제 시 사용)
       const result = await projectService.getProjectMembers(project.id);
       const list = Array.isArray(result) ? result : result?.content ?? result?.data ?? [];
       const refreshed = list.map((m) => ({
         id: m.memberNo,
+        projectMemberNo: m.projectMemberNo,
         name: m.memberName || m.memberEmail || '-',
-        role: m.projectMemberRole || '-',
+        role: m.projectMemberRole || m.memberRole || '-',
+        projectMemberRole: m.projectMemberRole || '',
+        memberRole: m.memberRole || '',
         email: m.memberEmail || '',
         phone: m.memberPhone || '',
         status: m.memberStatus === '휴면' ? '휴면' : '출근',
@@ -801,10 +859,14 @@ export function ProjectDetailPage({
         const payload = {
           title: cardForm.title.trim(),
           description: (cardForm.description ?? '').trim(),  // 빈 문자열이면 백엔드에서 null로 저장
-          startDate: cardForm.startDate || null,
-          dueDate: cardForm.dueDate || null,
           completed: editingCard.completed ?? false,
         };
+        if (cardForm.startDate) {
+          payload.startDate = cardForm.startDate.trim();
+        }
+        if (cardForm.dueDate) {
+          payload.dueDate = cardForm.dueDate.trim();
+        }
         if (selectedAssignee) {
           if (selectedAssignee.projectMemberNo != null) {
             payload.projectMemberNo = selectedAssignee.projectMemberNo;
@@ -866,9 +928,13 @@ export function ProjectDetailPage({
           title: cardForm.title.trim(),
           description: cardForm.description?.trim() || null,
           boardId: currentBoardId,
-          startDate: cardForm.startDate || null,
-          dueDate: cardForm.dueDate || null,
         };
+        if (cardForm.startDate) {
+          payload.startDate = cardForm.startDate.trim();
+        }
+        if (cardForm.dueDate) {
+          payload.dueDate = cardForm.dueDate.trim();
+        }
         if (selectedAssignee.projectMemberNo != null) {
           payload.projectMemberNo = selectedAssignee.projectMemberNo;
         } else {
@@ -999,20 +1065,21 @@ export function ProjectDetailPage({
 
     try {
       const result = await projectService.createComment(project.id, editingCard.id, newComment.trim());
-      const authorName = useAuthStore.getState().user?.memberName || '작성자';
       const comment = {
         id: result.id,
-        author: authorName,
+        author: result.authorName ?? useAuthStore.getState().user?.memberName ?? '작성자',
+        authorMemberNo: result.authorMemberNo ?? useAuthStore.getState().user?.memberNo ?? null,
         content: result.content || newComment.trim(),
         createdAt: result.commentCreatedAt || new Date().toLocaleString('ko-KR'),
         role: useAuthStore.getState().user?.memberRole || '',
       };
+      const updatedComments = [...cardComments, comment];
       const updatedCard = {
         ...editingCard,
-        comments: [...(editingCard.comments || []), comment],
+        comments: updatedComments,
       };
       setEditingCard(updatedCard);
-      setCardComments(updatedCard.comments);
+      setCardComments(updatedComments);
       setBoards((prevBoards) =>
         prevBoards.map((board) => ({
           ...board,
@@ -1044,7 +1111,7 @@ export function ProjectDetailPage({
     }
     try {
       await projectService.updateComment(project.id, editingCard.id, editingComment.id, { content });
-      const updatedComments = (editingCard.comments || cardComments).map((c) =>
+      const updatedComments = cardComments.map((c) =>
         c.id === editingComment.id ? { ...c, content } : c
       );
       const updatedCard = { ...editingCard, comments: updatedComments };
@@ -1071,7 +1138,7 @@ export function ProjectDetailPage({
     if (!editingCard || !project?.id) return;
     try {
       await projectService.updateComment(project.id, editingCard.id, commentId, { status: 'block' });
-      const updatedComments = (editingCard.comments || cardComments).filter((c) => c.id !== commentId);
+      const updatedComments = cardComments.filter((c) => c.id !== commentId);
       const updatedCard = { ...editingCard, comments: updatedComments };
       setEditingCard(updatedCard);
       setCardComments(updatedComments);
@@ -1196,22 +1263,47 @@ export function ProjectDetailPage({
                     <h1 className="text-3xl font-bold text-foreground mb-3">{editedProject.title}</h1>
                   )}
 
-                  {/* 작가명 */}
-                  {editedProject.artistName && (
-                    <div className="mb-3">
-                      {isEditMode ? (
-                        <input
-                          type="text"
-                          value={editedProject.artistName}
-                          onChange={(e) => setEditedProject({ ...editedProject, artistName: e.target.value })}
-                          placeholder="작가명"
-                          className="text-lg text-muted-foreground px-2 py-1 border border-border rounded-md bg-background"
-                        />
-                      ) : (
+                  {/* 작가명 — 담당자 배정 작가(MANAGER·ARTIST_ASSIGNMENT) SELECT */}
+                  <div className="mb-3">
+                    {isEditMode ? (
+                      <select
+                        value={editedProject.artistId ?? ''}
+                        onChange={(e) => {
+                          const id = e.target.value ? Number(e.target.value) : null;
+                          const artist = (id && assignedArtists.find((a) => a.id === id)) || { id, name: '' };
+                          const name = artist.name || (editedProject.artistId === id ? editedProject.artistName : '');
+                          setEditedProject({
+                            ...editedProject,
+                            artistId: id,
+                            artistName: name || editedProject.artistName,
+                          });
+                        }}
+                        className="text-sm text-muted-foreground px-2 py-1 border border-border rounded-md bg-background"
+                      >
+                        <option value="">작가 선택</option>
+                        {assignedArtistsLoading ? (
+                          <option disabled>불러오는 중...</option>
+                        ) : (
+                          [
+                            ...(editedProject.artistId && !assignedArtists.some((a) => a.id === editedProject.artistId)
+                              ? [{ id: editedProject.artistId, name: editedProject.artistName || '현재 작가' }]
+                              : []),
+                            ...assignedArtists,
+                          ]
+                            .filter((a, i, arr) => arr.findIndex((x) => x.id === a.id) === i)
+                            .map((a) => (
+                              <option key={a.id} value={a.id}>
+                                {a.name}
+                              </option>
+                            ))
+                        )}
+                      </select>
+                    ) : (
+                      editedProject.artistName && (
                         <p className="text-lg text-muted-foreground">작가: {editedProject.artistName}</p>
-                      )}
-                    </div>
-                  )}
+                      )
+                    )}
+                  </div>
                   
                   <div className="flex items-center gap-4 mb-4">
                     {/* 플랫폼 */}
@@ -1240,7 +1332,7 @@ export function ProjectDetailPage({
                         onChange={(e) => setEditedProject({ ...editedProject, serialStatus: e.target.value })}
                         className="text-sm px-3 py-1 border border-border rounded-md bg-background text-foreground"
                       >
-                        <option>연재중</option>
+                        <option>연재</option>
                         <option>휴재</option>
                         <option>완결</option>
                       </select>
@@ -1338,7 +1430,11 @@ export function ProjectDetailPage({
                         onCardDrop={handleCardDrop}
                         onEdit={async (card) => {
                           setEditingCard(card);
-                          setSelectedAssignee(card.assignedTo || null);
+                          const assignee = card.assignedTo;
+                          const matched = assignee?.id != null && teamMembers.length > 0
+                            ? teamMembers.find((m) => String(m.projectMemberNo ?? m.id) === String(assignee.id))
+                            : null;
+                          setSelectedAssignee(matched || assignee || null);
                           setCardForm({
                             title: card.title,
                             description: card.description,
@@ -1351,14 +1447,18 @@ export function ProjectDetailPage({
                             try {
                               const result = await projectService.getComments(project.id, card.id);
                               const list = Array.isArray(result) ? result : result?.content ?? result?.data ?? [];
-                              setCardComments(list.map((c) => ({
+                              const comments = list.map((c) => ({
                                 id: c.id,
                                 content: c.content || '',
-                                author: '작성자',
+                                author: c.authorName ?? '작성자',
+                                authorMemberNo: c.authorMemberNo ?? null,
                                 createdAt: c.commentCreatedAt || '-',
-                              })));
+                              }));
+                              setCardComments(comments);
+                              setEditingCard((prev) => (prev ? { ...prev, comments } : null));
                             } catch {
                               setCardComments([]);
+                              setEditingCard((prev) => (prev ? { ...prev, comments: [] } : null));
                             }
                           }
                         }}
@@ -1379,43 +1479,32 @@ export function ProjectDetailPage({
               </Card>
             </div>
 
-            {/* 오른쪽: 이번 주 팀 일정 */}
+            {/* 오른쪽: 마감일(kanban_card_ended_at) 내림차순 + D-n */}
             <div className="w-80 flex-shrink-0">
               <Card className="p-6 h-[calc(100vh-320px)] flex flex-col">
-                <h2 className="text-xl font-bold text-foreground mb-4">이번 주 팀 일정</h2>
+                <h2 className="text-xl font-bold text-foreground mb-4">남은 마감일</h2>
                 
                 <div className="space-y-3 overflow-y-auto flex-1">
-                  {weeklySchedule.map((schedule, idx) => (
-                    <div
-                      key={idx}
-                      className={`p-3 rounded-lg border-l-4 ${
-                        schedule.day.includes('오늘')
-                          ? 'bg-primary/10 border-primary'
-                          : 'bg-muted/20'
-                      }`}
-                      style={{
-                        borderLeftColor: schedule.events.length > 0 ? projectColor : undefined
-                      }}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-semibold text-sm text-foreground">{schedule.day}</span>
-                        <span className="text-xs text-muted-foreground">{schedule.date}</span>
-                      </div>
-                      
-                      {schedule.events.length > 0 ? (
-                        <div className="space-y-1">
-                          {schedule.events.map((event, eventIdx) => (
-                            <p key={eventIdx} className="text-xs text-foreground">
-                              • {event.title}
-                              {event.assigneeName && <span className="text-muted-foreground"> ({event.assigneeName})</span>}
-                            </p>
-                          ))}
+                  {dueDateSortedCards.length > 0 ? (
+                    dueDateSortedCards.map((item, idx) => (
+                      <div
+                        key={item.card.id ?? idx}
+                        className="p-3 rounded-lg border-l-4 bg-muted/20"
+                        style={{ borderLeftColor: projectColor }}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-semibold text-sm text-foreground">마감일 {item.dateStr}</span>
+                          <span className="text-xs font-medium text-primary">{item.dLabel}</span>
                         </div>
-                      ) : (
-                        <p className="text-xs text-muted-foreground italic">일정 없음</p>
-                      )}
-                    </div>
-                  ))}
+                        <p className="text-xs text-foreground">
+                          • {item.card.title}
+                          {item.assigneeName && <span className="text-muted-foreground"> ({item.assigneeName})</span>}
+                        </p>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic">마감일이 있는 카드가 없습니다.</p>
+                  )}
                 </div>
               </Card>
             </div>
@@ -1437,7 +1526,7 @@ export function ProjectDetailPage({
         <div>
           {/* 팀원 목록 */}
           <div className="space-y-0 divide-y divide-border">
-            {(isTeamEditMode ? editingTeamMembers : teamMembers).map((member) => (
+            {teamMembers.map((member) => (
               <div
                 key={member.id}
                 className="py-3 px-2 flex items-center justify-between hover:bg-muted/30 transition-colors"
@@ -1456,7 +1545,7 @@ export function ProjectDetailPage({
                   {/* 이름과 역할 */}
                   <div className="flex-1 min-w-0">
                     <h4 className="font-semibold text-foreground text-sm">{member.name}</h4>
-                    <p className="text-xs text-muted-foreground">{member.role}</p>
+                    <p className="text-xs text-muted-foreground">{member.memberRole || member.role}</p>
                   </div>
 
                   {/* 현재 상태 */}
@@ -1465,8 +1554,8 @@ export function ProjectDetailPage({
                   </Badge>
                 </div>
 
-                {/* 팀원 수정 모드일 때만 삭제 버튼 표시 */}
-                {isTeamEditMode && (
+                {/* 팀원 삭제 버튼 — 담당자만 노출, 작가/담당자 역할에는 미노출 */}
+                {isManagerRole && member.role !== '작가' && member.role !== '담당자' && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1482,54 +1571,18 @@ export function ProjectDetailPage({
             ))}
           </div>
 
-          {/* 수정 모드가 아닐 때: 하단에 수정 버튼 (가운데 정렬, 얇은 구분선 위) - 담당자 뷰에서만 표시 */}
-          {!isTeamEditMode && !isArtistView && (
-            <>
-              <div className="border-t border-border mt-4 mb-3" />
-              <div className="flex justify-center">
-                <Button
-                  size="sm"
-                  onClick={handleStartTeamEdit}
-                  variant="outline"
-                >
-                  <Edit className="w-4 h-4 mr-2" />
-                  수정
-                </Button>
-              </div>
-            </>
-          )}
-
-          {/* 수정 모드일 때: 하단에 저장/취소 버튼 */}
-          {isTeamEditMode && (
-            <>
-              {/* 팀원 추가 버튼 */}
-              <div className="mt-4">
-                <Button
-                  variant="outline"
-                  className="w-full border-dashed"
-                  onClick={() => setIsAddTeamMemberModalOpen(true)}
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  팀원 추가
-                </Button>
-              </div>
-              
-              <div className="flex gap-2 mt-6 pt-4 border-t border-border">
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={handleCancelTeamEdit}
-                >
-                  취소
-                </Button>
-                <Button
-                  className="flex-1 bg-primary hover:bg-primary/90"
-                  onClick={handleSaveTeamEdit}
-                >
-                  저장
-                </Button>
-              </div>
-            </>
+          {/* 팀원 추가 버튼 — PROJECT_MEMBER_ROLE이 담당자일 때만 */}
+          {isManagerRole && (
+            <div className="mt-4">
+              <Button
+                variant="outline"
+                className="w-full border-dashed"
+                onClick={() => setIsAddTeamMemberModalOpen(true)}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                팀원 추가
+              </Button>
+            </div>
           )}
         </div>
       </Modal>
@@ -1552,9 +1605,8 @@ export function ProjectDetailPage({
             <Button
               variant="destructive"
               onClick={() => {
-                if (pendingDeleteTeamMember?.id) {
-                  handleDeleteTeamMember(pendingDeleteTeamMember.id);
-                  setPendingDeleteTeamMember(null);
+                if (pendingDeleteTeamMember?.projectMemberNo != null) {
+                  handleDeleteTeamMember(pendingDeleteTeamMember.projectMemberNo);
                 }
               }}
             >
@@ -1608,7 +1660,7 @@ export function ProjectDetailPage({
                     
                     <div className="flex-1 min-w-0">
                       <h4 className="font-semibold text-foreground text-sm">{member.name}</h4>
-                      <p className="text-xs text-muted-foreground">{member.role}</p>
+                      <p className="text-xs text-muted-foreground">{member.memberRole || member.role}</p>
                     </div>
                   </label>
                 ))}
@@ -1666,7 +1718,7 @@ export function ProjectDetailPage({
                 <Briefcase className="w-5 h-5 text-muted-foreground" />
                 <div>
                   <p className="text-xs text-muted-foreground">직무</p>
-                  <p className="text-sm font-medium text-foreground">{selectedMember.role}</p>
+                  <p className="text-sm font-medium text-foreground">{selectedMember.memberRole || selectedMember.role}</p>
                 </div>
               </div>
 
@@ -1757,22 +1809,22 @@ export function ProjectDetailPage({
                   })()}
                 </p>
               )}
-              {/* 담당자 선택 */}
+              {/* 담당자 선택: 프로젝트 멤버 번호(projectMemberNo) 기준 조회, 멤버 이름·직책 표시 */}
               <div className="mt-4">
                 <label className="text-sm font-medium text-muted-foreground mb-2 block">담당자</label>
                 <select
-                  value={selectedAssignee != null ? String(selectedAssignee.id) : ''}
+                  value={selectedAssignee != null ? String(selectedAssignee.projectMemberNo ?? selectedAssignee.id) : ''}
                   onChange={(e) => {
                     const val = e.target.value;
-                    const selected = val ? teamMembers.find(m => String(m.id) === val) : null;
+                    const selected = val ? teamMembers.find((m) => String(m.projectMemberNo ?? m.id) === val) : null;
                     setSelectedAssignee(selected || null);
                   }}
                   className="w-full px-4 py-2.5 border border-border rounded-md focus:ring-2 focus:ring-primary focus:border-primary outline-none text-sm bg-background text-foreground"
                 >
                   <option value="">선택하세요</option>
                   {teamMembers.map((member) => (
-                    <option key={member.id} value={String(member.id)}>
-                      {member.name} - {member.role}
+                    <option key={member.projectMemberNo ?? member.id} value={String(member.projectMemberNo ?? member.id)}>
+                      {member.name} - {member.memberRole || member.role}
                     </option>
                   ))}
                 </select>
@@ -1843,9 +1895,9 @@ export function ProjectDetailPage({
               </div>
             </div>
 
-            {/* 코멘트 목록 */}
+            {/* 코멘트 목록 - KANBAN_CARD_NO(editingCard.id) 기준으로 조회한 COMMENT 전부 표시 */}
             <div className="space-y-4 max-h-[450px] overflow-y-auto">
-              {(editingCard?.comments || cardComments).map((comment) => (
+              {cardComments.map((comment) => (
                 <div key={comment.id} className="bg-muted/30 rounded-lg p-4">
                   {editingComment && editingComment.id === comment.id ? (
                     /* 수정 모드 */
@@ -1886,7 +1938,7 @@ export function ProjectDetailPage({
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-sm font-semibold text-foreground">{comment.author || '작성자'}</span>
+                          <span className="text-sm font-semibold text-foreground">{comment.author ?? '작성자'}</span>
                           <span className="text-xs text-muted-foreground">{comment.createdAt}</span>
                         </div>
                         <p className="text-sm text-foreground whitespace-pre-wrap">{comment.content}</p>
@@ -1912,7 +1964,7 @@ export function ProjectDetailPage({
                   )}
                 </div>
               ))}
-              {(!editingCard?.comments || editingCard.comments.length === 0) && cardComments.length === 0 && (
+              {cardComments.length === 0 && (
                 <div className="text-center py-12 text-muted-foreground">
                   <MessageSquare className="w-10 h-10 mx-auto mb-3 opacity-50" />
                   <p className="text-sm">아직 코멘트가 없습니다</p>

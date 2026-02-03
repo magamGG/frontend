@@ -72,7 +72,7 @@ export function AgencyProjectsPage() {
         : [...statusFilters.filter(f => f !== '전체'), filter];
       
       // 3개를 모두 선택하면 전체만 활성화
-      if (newFilters.length === 3 && newFilters.includes('연재중') && newFilters.includes('휴재') && newFilters.includes('완결')) {
+      if (newFilters.length === 3 && newFilters.includes('연재') && newFilters.includes('휴재') && newFilters.includes('완결')) {
         setStatusFilters(['전체']);
       } else {
         setStatusFilters(newFilters.length === 0 ? ['전체'] : newFilters);
@@ -159,7 +159,7 @@ export function AgencyProjectsPage() {
       title: newProjectForm.title,
       platform: newProjectForm.platform,
       status,
-      serialStatus: '연재중',
+      serialStatus: '연재',
       currentEpisode,
       deadline: 'D-7',
       genre: newProjectForm.genre,
@@ -230,7 +230,7 @@ export function AgencyProjectsPage() {
   // 상태별 배지 색상
   const getStatusBadgeColor = (status) => {
     switch (status) {
-      case '연재중':
+      case '연재':
         return 'bg-green-500 hover:bg-green-600';
       case '휴재':
         return 'bg-orange-500 hover:bg-orange-600';
@@ -364,7 +364,7 @@ export function AgencyProjectsPage() {
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-medium text-foreground">상태:</span>
                     <div className="flex gap-2">
-                      {['전체', '연재중', '휴재', '완결'].map((filter) => (
+                      {['전체', '연재', '휴재', '완결'].map((filter) => (
                         <Button
                           key={filter}
                           variant={statusFilters.includes(filter) ? 'default' : 'outline'}

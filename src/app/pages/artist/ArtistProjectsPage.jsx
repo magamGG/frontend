@@ -41,9 +41,9 @@ export function ArtistProjectsPage() {
         ? statusFilters.filter(f => f !== filter)
         : [...statusFilters.filter(f => f !== '전체'), filter];
       
-      // 연재중, 휴재, 완결이 모두 선택되면 전체로 변경
+      // 연재, 휴재, 완결이 모두 선택되면 전체로 변경
       if (newFilters.length === 3 && 
-          newFilters.includes('연재중') && 
+          newFilters.includes('연재') && 
           newFilters.includes('휴재') && 
           newFilters.includes('완결')) {
         setStatusFilters(['전체']);
@@ -72,7 +72,7 @@ export function ArtistProjectsPage() {
   // 통계 계산
   const stats = {
     total: projects.length,
-    ongoing: projects.filter(p => p.serialStatus === '연재중').length,
+    ongoing: projects.filter(p => p.serialStatus === '연재').length,
     paused: projects.filter(p => p.serialStatus === '휴재').length,
     completed: projects.filter(p => p.serialStatus === '완결').length,
   };
@@ -80,7 +80,7 @@ export function ArtistProjectsPage() {
   // 상태별 배지 색상
   const getStatusBadgeColor = (status) => {
     switch (status) {
-      case '연재중':
+      case '연재':
         return 'bg-green-500 hover:bg-green-600';
       case '휴재':
         return 'bg-orange-500 hover:bg-orange-600';
@@ -122,7 +122,7 @@ export function ArtistProjectsPage() {
               <Card className="p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <AlertCircle className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-xs font-medium text-muted-foreground">연재중</span>
+                  <span className="text-xs font-medium text-muted-foreground">연재</span>
                 </div>
                 <p className="text-2xl font-bold text-foreground">{stats.ongoing}개</p>
               </Card>
@@ -142,7 +142,7 @@ export function ArtistProjectsPage() {
               <div className="flex items-center gap-3">
                 <span className="text-sm font-medium text-foreground">상태:</span>
                 <div className="flex gap-2">
-                  {['전체', '연재중', '휴재', '완결'].map((filter) => (
+                  {['전체', '연재', '휴재', '완결'].map((filter) => (
                     <Button
                       key={filter}
                       variant={statusFilters.includes(filter) ? 'default' : 'outline'}
