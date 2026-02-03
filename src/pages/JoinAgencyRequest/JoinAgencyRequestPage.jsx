@@ -7,7 +7,7 @@ import { Label } from '@/app/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/app/components/ui/dialog';
 import { Building2, User, Mail, Phone, Key, Send, ArrowLeft, CheckCircle2, Edit } from 'lucide-react';
 import { toast } from 'sonner';
-import { agencyService } from '@/api';
+import { agencyService, memberService } from '@/api';
 import useAuthStore from '@/store/authStore';
 import {
   JoinAgencyRequestRoot,
@@ -41,32 +41,63 @@ import {
 export function JoinAgencyRequestPage({ onBack, onSuccess }) {
   const [step, setStep] = useState('form');
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMemberInfo, setIsLoadingMemberInfo] = useState(true);
   const user = useAuthStore((state) => state.user);
   
   // Zustand store에서 사용자 정보 가져오기
   const [userData, setUserData] = useState({
     name: user?.memberName || '',
-    email: '', // 이메일은 DB에서 가져와야 함
-    phone: '', // 전화번호도 DB에서 가져와야 함
+    email: '', // DB에서 가져올 예정
+    phone: '', // DB에서 가져올 예정
   });
   
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editFormData, setEditFormData] = useState({ ...userData });
   const [agencyCodeInput, setAgencyCodeInput] = useState('');
   
-  // 사용자 정보 초기화 (실제로는 API로 가져와야 함)
+  // 사용자 정보 초기화 - DB에서 가져오기
   useEffect(() => {
-    if (user?.memberName) {
-      setUserData(prev => ({ ...prev, name: user.memberName }));
-      setEditFormData(prev => ({ ...prev, name: user.memberName }));
-    }
-  }, [user]);
+    const fetchMemberInfo = async () => {
+      if (!user?.memberNo) {
+        setIsLoadingMemberInfo(false);
+        return;
+      }
+
+      try {
+        setIsLoadingMemberInfo(true);
+        // DB에서 회원 정보 가져오기
+        // axios interceptor가 이미 response.data를 반환하므로 response 자체가 데이터
+        const memberInfo = await memberService.getMyPageInfo(user.memberNo);
+        
+        setUserData({
+          name: memberInfo.memberName || user?.memberName || '',
+          email: memberInfo.memberEmail || '',
+          phone: memberInfo.memberPhone || '',
+        });
+        setEditFormData({
+          name: memberInfo.memberName || user?.memberName || '',
+          email: memberInfo.memberEmail || '',
+          phone: memberInfo.memberPhone || '',
+        });
+      } catch (error) {
+        console.error('회원 정보 조회 실패:', error);
+        toast.error('회원 정보를 불러오는데 실패했습니다.');
+        // 실패 시 기본값 사용
+        setUserData(prev => ({ ...prev, name: user?.memberName || '' }));
+        setEditFormData(prev => ({ ...prev, name: user?.memberName || '' }));
+      } finally {
+        setIsLoadingMemberInfo(false);
+      }
+    };
+
+    fetchMemberInfo();
+  }, [user?.memberNo]);
 
   const handleEditInputChange = (field, value) => {
     setEditFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
     if (!editFormData.name || !editFormData.email || !editFormData.phone) {
       toast.error('필수 항목을 모두 입력해주세요.');
       return;
@@ -84,9 +115,21 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
       return;
     }
 
-    setUserData({ ...editFormData });
-    setIsEditingProfile(false);
-    toast.success('개인 정보가 수정되었습니다.');
+    // DB에 프로필 정보 업데이트
+    try {
+      await memberService.updateProfile(user.memberNo, {
+        memberName: editFormData.name,
+        memberPhone: editFormData.phone,
+        memberAddress: '', // 주소는 필요시 추가
+      });
+      
+      setUserData({ ...editFormData });
+      setIsEditingProfile(false);
+      toast.success('개인 정보가 수정되었습니다.');
+    } catch (error) {
+      console.error('프로필 업데이트 실패:', error);
+      toast.error('개인 정보 수정에 실패했습니다.');
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -123,6 +166,18 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
     // "완료" 클릭 시 로그인 화면으로만 이동. 대시보드 이동은 에이전시가 new_request 승인 후 사용자가 다시 로그인할 때.
     onSuccess();
   };
+
+  // 로딩 중일 때 표시
+  if (isLoadingMemberInfo) {
+    return (
+      <JoinAgencyRequestRoot>
+        <BackgroundPattern />
+        <JoinAgencyRequestContainer style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+          <div>회원 정보를 불러오는 중...</div>
+        </JoinAgencyRequestContainer>
+      </JoinAgencyRequestRoot>
+    );
+  }
 
   // 요청 완료 화면: "완료" 클릭 시 대시보드로 가지 않고 로그인 화면으로 이동. 에이전시 승인 후 재로그인 시 대시보드로 이동.
   if (step === 'success') {
