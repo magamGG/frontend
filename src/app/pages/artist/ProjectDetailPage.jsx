@@ -600,24 +600,6 @@ export function ProjectDetailPage({
     setEditingCard(updatedCard);
     setCardComments([...(editingCard.comments || []), comment]);
 
-    // localStorage에 피드백 저장
-    const feedback = {
-      id: `artist-${Date.now()}`,
-      projectId: project.id,
-      project: project.title,
-      cardTitle: editingCard.title,
-      content,
-      from: '김작가',
-      date: '방금 전',
-      isRead,
-      role: 'artist'
-    };
-
-    const existingFeedbacks = localStorage.getItem('artistFeedbacks');
-    const feedbacks = existingFeedbacks ? JSON.parse(existingFeedbacks) : [];
-    feedbacks.unshift(feedback);
-    localStorage.setItem('artistFeedbacks', JSON.stringify(feedbacks));
-
     setNewComment('');
     toast.success('코멘트가 추가되었습니다.');
   };
