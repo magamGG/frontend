@@ -259,6 +259,11 @@ export const projectService = {
     return api.get(API_ENDPOINTS.PROJECTS.MANAGED);
   },
 
+  // 작가 대시보드 피드백 - 소속 프로젝트 칸반 카드에 달린 최신 코멘트 목록 (DB 연동)
+  getMyProjectFeedback: (limit = 50) => {
+    return api.get(API_ENDPOINTS.PROJECTS.FEEDBACK(limit));
+  },
+
   // 칸반 보드 추가 (KANBAN_BOARD INSERT)
   createKanbanBoard: (projectNo, title) => {
     return api.post(API_ENDPOINTS.PROJECTS.KANBAN_BOARDS(projectNo), { title });

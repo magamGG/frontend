@@ -104,6 +104,7 @@ export const API_ENDPOINTS = {
     ADDABLE_MEMBERS: (projectNo) => `/api/projects/${projectNo}/addable-members`, // GET: 추가 가능 팀원 (담당자/작가 제외, 미소속)
     KANBAN: (projectNo) => `/api/projects/${projectNo}/kanban`, // GET: 칸반 보드 조회
     MANAGED: `/api/projects/managed`, // GET: 담당자 대시보드 담당 프로젝트 현황
+    FEEDBACK: (limit = 50) => `/api/projects/feedback?limit=${limit}`, // GET: 작가 대시보드 피드백(프로젝트 코멘트 목록)
     KANBAN_BOARDS: (projectNo) => `/api/projects/${projectNo}/kanban-board`, // POST: 칸반 보드 추가
     KANBAN_BOARD_UPDATE: (projectNo, boardId) => `/api/projects/${projectNo}/kanban-board/${boardId}`, // PUT: 칸반 보드 상태 수정
     KANBAN_CARD: (projectNo) => `/api/projects/${projectNo}/kanban-card`, // POST: 칸반 카드 추가

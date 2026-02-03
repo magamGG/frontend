@@ -20,7 +20,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { leaveService, attendanceService, calendarService } from '@/api/services';
+import { leaveService, attendanceService, calendarService, projectService } from '@/api/services';
 import useAuthStore from '@/store/authStore';
 import { LeaveRequestEditModal } from '@/components/modals/LeaveRequestEditModal';
 import {
@@ -573,39 +573,51 @@ export function ArtistDashboardPage() {
     fetchDeadlineProjects();
   }, []);
 
-  // localStorage에서 피드백 불러오기
+  // DB 연동: 소속 프로젝트 칸반 카드 코멘트를 피드백으로 조회 (기존 localStorage 피드백 제거)
   useEffect(() => {
-    const loadFeedbacks = () => {
-      const stored = localStorage.getItem('artistFeedbacks');
-      if (stored) {
-        const allFeedbacks = JSON.parse(stored);
-        setFeedbacks(allFeedbacks);
-      } else {
-        setFeedbacks([
-          {
-            id: '1',
-            project: '내 웹툰',
-            content: '에피소드 41 수정 요청: 3페이지 배경 디테일 보완',
-            from: '이편집자',
-            date: '오늘',
-            isRead: false,
-          },
-          {
-            id: '2',
-            project: '신작',
-            content: '캐릭터 디자인 방향성 좋습니다. 그대로 진행해주세요!',
-            from: '김담당자',
-            date: '어제',
-            isRead: true,
-          },
-        ]);
+    localStorage.removeItem('artistFeedbacks');
+    const fetchFeedbacks = async () => {
+      const memberNo = useAuthStore.getState().user?.memberNo;
+      if (!memberNo) {
+        setFeedbacks([]);
+        return;
+      }
+      try {
+        const res = await projectService.getMyProjectFeedback(50);
+        const list = Array.isArray(res) ? res : res?.data ?? [];
+        const mapped = list.map((item) => ({
+          id: item.commentId ?? item.id,
+          project: item.projectName ?? '',
+          projectColor: item.projectColor ?? undefined,
+          cardTitle: item.cardTitle ?? undefined,
+          content: item.content ?? '',
+          from: item.writerName ?? '',
+          date: formatFeedbackDate(item.commentCreatedAt),
+          isRead: false,
+        }));
+        setFeedbacks(mapped);
+      } catch (err) {
+        console.error('피드백 조회 실패:', err);
+        setFeedbacks([]);
       }
     };
-
-    loadFeedbacks();
-    const interval = setInterval(loadFeedbacks, 1000);
+    fetchFeedbacks();
+    const interval = setInterval(fetchFeedbacks, 10000);
     return () => clearInterval(interval);
   }, []);
+
+  function formatFeedbackDate(isoOrDateTime) {
+    if (!isoOrDateTime) return '';
+    const d = new Date(isoOrDateTime.replace(' ', 'T'));
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const dDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    if (dDate.getTime() === today.getTime()) return '오늘';
+    if (dDate.getTime() === yesterday.getTime()) return '어제';
+    return `${d.getMonth() + 1}월 ${d.getDate()}일`;
+  }
 
   // 작업 시작 핸들러
   const handleStartWork = () => {
