@@ -8,7 +8,7 @@ const projects = [
   {
     id,
     title: '로맨스 판타지',
-    status: '연재중',
+    status: '연재',
     platform: '네이버 웹툰',
     episodeCount,
     nextDeadline: '2026년 1월 15일',
@@ -18,7 +18,7 @@ const projects = [
   {
     id,
     title: '학원물',
-    status: '연재중',
+    status: '연재',
     platform: '카카오 웹툰',
     episodeCount,
     nextDeadline: '2026년 1월 18일',
@@ -61,7 +61,7 @@ export function ProjectsPage() {
               </Button>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm">전체</Button>
-                <Button variant="outline" size="sm">연재중</Button>
+                <Button variant="outline" size="sm">연재</Button>
                 <Button variant="outline" size="sm">휴재</Button>
                 <Button variant="outline" size="sm">완결</Button>
               </div>
@@ -87,7 +87,7 @@ export function ProjectsPage() {
                     <span className="text-xs text-muted-foreground">상태</span>
                     <Badge 
                       variant={
-                        project.status === '연재중' ? 'default' : 
+                        project.status === '연재' ? 'default' : 
                         project.status === '휴재' ? 'secondary' : 
                         'outline'
                       }

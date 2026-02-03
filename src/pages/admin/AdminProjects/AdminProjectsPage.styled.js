@@ -396,7 +396,7 @@ export const AdminProjectModalActions = styled.div`
 export const StatusBadge = styled(Badge)`
   background-color: ${props => {
     switch (props.status) {
-      case '연재중':
+      case '연재':
         return '#22C55E'; // green-500
       case '휴재':
         return '#FF9800'; // orange-500
@@ -452,7 +452,7 @@ export const FilterButton = styled(Button)`
       switch (props.$status) {
         case '전체':
           return '#D0D0D0'; /* Light gray */
-        case '연재중':
+        case '연재':
           return '#3ECF59'; /* Bright green */
         case '휴재':
           return '#FF7F27'; /* Vibrant orange */
@@ -466,7 +466,7 @@ export const FilterButton = styled(Button)`
       switch (props.$status) {
         case '전체':
           return '#333333'; /* Dark gray text */
-        case '연재중':
+        case '연재':
         case '휴재':
         case '완결':
           return '#FFFFFF'; /* White text */
@@ -478,7 +478,7 @@ export const FilterButton = styled(Button)`
       switch (props.$status) {
         case '전체':
           return '#D0D0D0';
-        case '연재중':
+        case '연재':
           return '#3ECF59';
         case '휴재':
           return '#FF7F27';
@@ -494,7 +494,7 @@ export const FilterButton = styled(Button)`
         switch (props.$status) {
           case '전체':
             return '#C0C0C0'; /* Slightly darker gray */
-          case '연재중':
+          case '연재':
             return '#35B84D'; /* Slightly darker green */
           case '휴재':
             return '#E6701F'; /* Slightly darker orange */
@@ -508,7 +508,7 @@ export const FilterButton = styled(Button)`
         switch (props.$status) {
           case '전체':
             return '#C0C0C0';
-          case '연재중':
+          case '연재':
             return '#35B84D';
           case '휴재':
             return '#E6701F';

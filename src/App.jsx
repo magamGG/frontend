@@ -245,11 +245,10 @@ export default function App() {
           title: '대시보드',
           content: <AgencyDashboardPage />,
         },
-        {
-          id: 'projects',
-          title: '전체 프로젝트',
-          content: <AgencyProjectsPage />,
-        },
+        // 전체 프로젝트(에이전시 모든 프로젝트 조회) — MEMBER_ROLE이 에이전시 관리자일 때만 메뉴 노출
+        ...(user?.memberRole === '에이전시 관리자'
+          ? [{ id: 'projects', title: '전체 프로젝트', content: <AgencyProjectsPage /> }]
+          : []),
         {
           id: 'team',
           title: '전체 직원',

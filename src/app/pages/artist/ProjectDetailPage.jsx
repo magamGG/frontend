@@ -798,10 +798,10 @@ export function ProjectDetailPage({
                     {isEditMode ? (
                       <select
                         value={editedProject.serialStatus}
-                        onChange={(e) => setEditedProject({ ...editedProject, serialStatus: e.target.value연재중' | '휴재' | '완결' })}
+                        onChange={(e) => setEditedProject({ ...editedProject, serialStatus: e.target.value })}
                         className="text-sm px-3 py-1 border border-border rounded-md bg-background text-foreground"
                       >
-                        <option>연재중</option>
+                        <option>연재</option>
                         <option>휴재</option>
                         <option>완결</option>
                       </select>
@@ -958,7 +958,7 @@ export function ProjectDetailPage({
         <div>
           {/* 팀원 목록 */}
           <div className="space-y-0 divide-y divide-border">
-            {(isTeamEditMode ? editingTeamMembers).map((member) => (
+            {teamMembers.map((member) => (
               <div
                 key={member.id}
                 className="py-3 px-2 flex items-center justify-between hover:bg-muted/30 transition-colors"
@@ -977,7 +977,7 @@ export function ProjectDetailPage({
                   {/* 이름과 역할 */}
                   <div className="flex-1 min-w-0">
                     <h4 className="font-semibold text-foreground text-sm">{member.name}</h4>
-                    <p className="text-xs text-muted-foreground">{member.role}</p>
+                    <p className="text-xs text-muted-foreground">{member.memberRole || member.role}</p>
                   </div>
 
                   {/* 현재 상태 */}
@@ -986,14 +986,15 @@ export function ProjectDetailPage({
                   </Badge>
                 </div>
 
-                {/* 팀원 수정 모드일 때만 삭제 버튼 표시 */}
-                {isTeamEditMode && (
+                {/* 팀원 삭제 버튼 — 작가/담당자에는 미노출 */}
+                {member.role !== '작가' && member.role !== '담당자' && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDeleteTeamMember(member.id);
                     }}
                     className="ml-2 text-muted-foreground hover:text-destructive p-1"
+                    title="팀원 삭제"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -1002,55 +1003,17 @@ export function ProjectDetailPage({
             ))}
           </div>
 
-          {/* 수정 모드가 아닐 때: 하단에 수정 버튼 (가운데 정렬, 얇은 구분선 위) - 담당자 뷰에서만 표시 */}
-          {!isTeamEditMode && !isArtistView && (
-            <>
-              <div className="border-t border-border mt-4 mb-3" />
-              <div className="flex justify-center">
-                <Button
-                  size="sm"
-                  onClick={handleStartTeamEdit}
-                  variant="outline"
-                >
-                  <Edit className="w-4 h-4 mr-2" />
-                  수정
-                </Button>
-              </div>
-            </>
-          )}
-
-          {/* 수정 모드일 때: 하단에 저장/취소 버튼 */}
-          {isTeamEditMode && (
-            <>
-              {/* 팀원 추가 버튼 */}
-              <div className="mt-4">
-                <Button
-                  variant="outline"
-                  className="w-full border-dashed"
-                  onClick={() => setIsAddTeamMemberModalOpen(true)}
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  팀원 추가
-                </Button>
-              </div>
-              
-              <div className="flex gap-2 mt-6 pt-4 border-t border-border">
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={handleCancelTeamEdit}
-                >
-                  취소
-                </Button>
-                <Button
-                  className="flex-1 bg-primary hover:bg-primary/90"
-                  onClick={handleSaveTeamEdit}
-                >
-                  저장
-                </Button>
-              </div>
-            </>
-          )}
+          {/* 팀원 추가 버튼 */}
+          <div className="mt-4">
+            <Button
+              variant="outline"
+              className="w-full border-dashed"
+              onClick={() => setIsAddTeamMemberModalOpen(true)}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              팀원 추가
+            </Button>
+          </div>
         </div>
       </Modal>
 
@@ -1094,7 +1057,7 @@ export function ProjectDetailPage({
                     
                     <div className="flex-1 min-w-0">
                       <h4 className="font-semibold text-foreground text-sm">{member.name}</h4>
-                      <p className="text-xs text-muted-foreground">{member.role}</p>
+                      <p className="text-xs text-muted-foreground">{member.memberRole || member.role}</p>
                     </div>
                   </label>
                 ))}
@@ -1152,7 +1115,7 @@ export function ProjectDetailPage({
                 <Briefcase className="w-5 h-5 text-muted-foreground" />
                 <div>
                   <p className="text-xs text-muted-foreground">직무</p>
-                  <p className="text-sm font-medium text-foreground">{selectedMember.role}</p>
+                  <p className="text-sm font-medium text-foreground">{selectedMember.memberRole || selectedMember.role}</p>
                 </div>
               </div>
 
@@ -1246,7 +1209,7 @@ export function ProjectDetailPage({
                   <option value="">선택하세요</option>
                   {teamMembers.map((member) => (
                     <option key={member.id} value={member.id}>
-                      {member.name} - {member.role}
+                      {member.name} - {member.memberRole || member.role}
                     </option>
                   ))}
                 </select>

@@ -27,7 +27,7 @@ import {
 
 // 작품 상태 정의
 const PROJECT_STATUS = {
-  SERIALIZING: '연재중',
+  SERIALIZING: '연재',
   ON_BREAK: '휴재',
   PREPARING: '준비중',
   COMPLETED: '완결',

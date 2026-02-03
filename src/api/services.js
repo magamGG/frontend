@@ -41,6 +41,11 @@ export const memberService = {
     return api.get(API_ENDPOINTS.MEMBERS.ARTISTS_BY_MANAGER(managerNo));
   },
 
+  /** 로그인 회원의 배정 작가 목록 (MANAGER·ARTIST_ASSIGNMENT, 담당자만 해당) */
+  getMyAssignedArtists: () => {
+    return api.get(API_ENDPOINTS.MEMBERS.MY_ASSIGNED_ARTISTS);
+  },
+
   getWorkingArtistsByManager: (managerNo) => {
     return api.get(API_ENDPOINTS.MEMBERS.WORKING_ARTISTS(managerNo));
   },
@@ -239,14 +244,23 @@ export const projectService = {
     return api.post(API_ENDPOINTS.PROJECTS.MEMBERS(projectNo), { memberNos });
   },
 
+  // 프로젝트에서 팀원 삭제 (PROJECT_MEMBER에서 삭제)
+  deleteProjectMember: (projectNo, projectMemberNo) => {
+    return api.delete(API_ENDPOINTS.PROJECTS.MEMBER_DELETE(projectNo, projectMemberNo));
+  },
+
   // 프로젝트에 추가 가능한 팀원 목록 (담당자/작가 제외, 프로젝트 미소속)
   getAddableMembers: (projectNo) => {
     return api.get(API_ENDPOINTS.PROJECTS.ADDABLE_MEMBERS(projectNo));
   },
   
-  // 프로젝트 목록 조회
+  // 프로젝트 목록 조회 (로그인 회원 소속 프로젝트)
   getProjects: (page = 0, size = 10) => {
     return api.get(API_ENDPOINTS.PROJECTS.LIST(page, size));
+  },
+  // 에이전시 소속 전체 프로젝트 조회 (에이전시 관리자만)
+  getProjectsByAgency: (agencyNo) => {
+    return api.get(API_ENDPOINTS.PROJECTS.LIST_BY_AGENCY(agencyNo));
   },
   
   // 칸반 보드 조회

@@ -42,7 +42,7 @@ import {
 
 // 작품 상태 정의
 const PROJECT_SERIAL_STATUS = {
-  SERIALIZING: '연재중',
+  SERIALIZING: '연재',
   ON_BREAK: '휴재',
   COMPLETED: '완결',
 };
@@ -100,7 +100,7 @@ export function ArtistProjectsPage() {
       title: p.projectName,
       platform: p.platform || '미정',
       status: 'normal',
-      serialStatus: p.projectStatus || '연재중',
+      serialStatus: p.projectStatus || '연재',
       currentEpisode: 0,
       deadline: deadlineDn,
       genre: p.projectGenre || '',
@@ -225,7 +225,7 @@ export function ArtistProjectsPage() {
               <StatCardIcon>
                 <AlertCircle className="w-4 h-4" />
               </StatCardIcon>
-              <StatCardLabel>연재중</StatCardLabel>
+              <StatCardLabel>연재</StatCardLabel>
             </StatCardHeader>
             <StatCardValue>{stats.ongoing}개</StatCardValue>
           </StatCard>
