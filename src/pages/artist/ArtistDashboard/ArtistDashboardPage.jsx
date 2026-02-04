@@ -394,7 +394,9 @@ export function ArtistDashboardPage() {
           };
         });
 
-        setTasks(mapped);
+        // 기간 지난 업무(daysLeft < 0) 제외
+        const filtered = mapped.filter((t) => t.daysLeft === 999 || t.daysLeft >= 0);
+        setTasks(filtered);
       } catch (error) {
         console.error('오늘 할 일 조회 실패:', error);
         setTasks([]);
@@ -552,7 +554,16 @@ export function ArtistDashboardPage() {
       try {
         const response = await projectService.getNextSerialProjects(10);
         const list = Array.isArray(response) ? response : [];
-        const mapped = list.map((item) => ({
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        // 기간 지난 항목 제외: nextDeadline이 오늘 이전이면 표시하지 않음
+        const notPast = list.filter((item) => {
+          const d = item.nextDeadline ? new Date(String(item.nextDeadline).slice(0, 10)) : null;
+          if (!d || isNaN(d.getTime())) return true;
+          d.setHours(0, 0, 0, 0);
+          return d.getTime() >= today.getTime();
+        });
+        const mapped = notPast.map((item) => ({
           id: item.projectNo,
           name: item.projectName || '프로젝트',
           deadline: formatDeadlineDisplay(item.nextDeadline),

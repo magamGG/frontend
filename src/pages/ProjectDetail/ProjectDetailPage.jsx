@@ -465,7 +465,7 @@ export function ProjectDetailPage({
     localStorage.setItem(`kanban_boards_${project?.id}`, JSON.stringify(updatedBoards));
   };
 
-  // KANBAN_CARD 마감일(kanban_card_ended_at) 내림차순 목록 + D-n 표시
+  // KANBAN_CARD 마감일(kanban_card_ended_at) 내림차순 목록 + D-n 표시 (기간 지난 마감일 제외)
   const dueDateSortedCards = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -479,10 +479,11 @@ export function ProjectDetailPage({
         dueDate.setHours(0, 0, 0, 0);
         const diffMs = dueDate - today;
         const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+        // 기간 지난 마감일(diffDays < 0)은 목록에서 제외
+        if (diffDays < 0) return;
         let dLabel;
         if (diffDays === 0) dLabel = 'D-Day';
-        else if (diffDays > 0) dLabel = `D-${diffDays}`;
-        else dLabel = `D+${Math.abs(diffDays)}`;
+        else dLabel = `D-${diffDays}`;
         const dateStr = `${dueDate.getMonth() + 1}/${dueDate.getDate()}`;
         const dayName = dayNames[dueDate.getDay()];
         items.push({
