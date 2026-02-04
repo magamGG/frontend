@@ -78,12 +78,16 @@ const LEAVE_TYPE_COLORS = {
 };
 
 // 근태 통계: member_no 기준 attendance 확인 후, 출근일이면 attendance_request 승인 건으로 타입 표시(워케이션 등), 승인 없으면 출근
+// 출근하지 않았지만 승인된 연차/휴가 신청이 있는 날도 해당 타입으로 집계됨
 function AttendanceStatsChart({ stats }) {
   const totalCount = stats?.totalCount ?? 0;
   const typeCounts = stats?.typeCounts ?? [];
   const now = new Date();
   const daysSoFar = now.getDate();
-  const 미출근일수 = Math.max(0, daysSoFar - totalCount);
+  // typeCounts의 모든 count 합 = 출근 + 승인된 근태 신청(연차/휴가 등)이 있는 날 수
+  const accountedDays = typeCounts.reduce((sum, tc) => sum + (Number(tc.count) || 0), 0);
+  // 미출근 = 이번 달 1일~오늘 일수 - (출근 + 승인된 근태 신청이 있는 날 수)
+  const 미출근일수 = Math.max(0, daysSoFar - accountedDays);
   const 출근Color = '#22c55e';
   const 미출근Color = '#e2e8f0';
 
