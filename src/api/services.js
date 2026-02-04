@@ -283,6 +283,11 @@ export const projectService = {
     return api.get(API_ENDPOINTS.PROJECTS.TODAY_TASKS);
   },
 
+  // 회원별 칸반 카드 통계 (진행중/완료 작업 개수) - 워케이션 등 원격 관리용
+  getKanbanStatsForMember: (memberNo) => {
+    return api.get(API_ENDPOINTS.PROJECTS.KANBAN_STATS(memberNo));
+  },
+
   // 아티스트 대시보드 다음 연재 프로젝트 - PROJECT_MEMBER 소속 + PROJECT_STARTED_AT, PROJECT_CYCLE로 계산한 다음 연재일
   getNextSerialProjects: (limit = 10) => {
     return api.get(API_ENDPOINTS.PROJECTS.NEXT_SERIAL(limit));

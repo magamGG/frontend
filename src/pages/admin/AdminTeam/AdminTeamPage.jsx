@@ -8,11 +8,13 @@ import {
   Search,
   ChevronRight,
   ChevronDown,
-  Heart
+  Heart,
+  CalendarClock
 } from 'lucide-react';
 import { Card } from '@/app/components/ui/card';
+import { Badge } from '@/app/components/ui/badge';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-import { memberService } from '@/api';
+import { memberService, leaveService, attendanceService } from '@/api';
 import { API_BASE_URL } from '@/api/config';
 import useAuthStore from '@/store/authStore';
 import { toast } from 'sonner';
@@ -86,6 +88,23 @@ export function AdminTeamPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [employeeDetails, setEmployeeDetails] = useState({}); // 직원별 상세 정보 캐시
   const [loadingDetails, setLoadingDetails] = useState(new Set()); // 상세 로딩 중인 id
+  const [agencyLeaveRequests, setAgencyLeaveRequests] = useState([]); // 에이전시 소속 근태 신청 목록
+
+  const REQUEST_STATUS_MAP = {
+    PENDING: { label: '대기', color: '#F59E0B' },
+    APPROVED: { label: '승인', color: '#10B981' },
+    REJECTED: { label: '반려', color: '#EF4444' },
+    CANCELLED: { label: '취소', color: '#6B7280' },
+  };
+  const formatReqDate = (str) => {
+    if (!str) return '-';
+    try {
+      const d = new Date(str);
+      return d.toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit', year: 'numeric' });
+    } catch {
+      return str;
+    }
+  };
 
   // 현재 로그인한 담당자의 managerNo 조회 및 배정된 작가 목록 가져오기
   useEffect(() => {
@@ -161,15 +180,52 @@ export function AdminTeamPage() {
     fetchEmployees();
   }, [user?.memberNo, user?.agencyNo]);
 
-  // 직원 상세 정보 가져오기 (건강 체크 포함)
+  // 에이전시 소속 근태 신청 목록 조회 (직원별 필터링용)
+  useEffect(() => {
+    const fetchAgencyLeaveRequests = async () => {
+      if (!user?.agencyNo) return;
+      try {
+        const list = await leaveService.getAgencyRequests(user.agencyNo);
+        setAgencyLeaveRequests(Array.isArray(list) ? list : []);
+      } catch (err) {
+        console.error('에이전시 근태 신청 목록 조회 실패:', err);
+        setAgencyLeaveRequests([]);
+      }
+    };
+    fetchAgencyLeaveRequests();
+  }, [user?.agencyNo]);
+
+  // 직원 목록 로드 시 참여 중인 프로젝트 수 등 상세 정보 미리 조회
+  useEffect(() => {
+    if (!employees.length || !user?.agencyNo) return;
+    employees.forEach((emp) => {
+      if (!employeeDetails[emp.id] && !loadingDetails.has(emp.id)) {
+        fetchEmployeeDetails(emp.id);
+      }
+    });
+  }, [employees, user?.agencyNo]);
+
+  // 직원 상세 정보 가져오기 (건강 체크, 근태 통계 포함)
   const fetchEmployeeDetails = async (employeeId) => {
-    if (employeeDetails[employeeId]) {
-      return; // 이미 캐시된 경우
+    if (employeeDetails[employeeId] || loadingDetails.has(employeeId)) {
+      return; // 이미 캐시됐거나 로딩 중인 경우
     }
     setLoadingDetails(prev => new Set(prev).add(employeeId));
     try {
-      const response = await memberService.getMemberDetails(employeeId);
-      const data = Array.isArray(response) ? response[0] : response;
+      const [memberResponse, statsResponse] = await Promise.all([
+        memberService.getMemberDetails(employeeId),
+        (async () => {
+          try {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth() + 1;
+            return await attendanceService.getStatistics(employeeId, year, month);
+          } catch {
+            return null;
+          }
+        })(),
+      ]);
+      const data = Array.isArray(memberResponse) ? memberResponse[0] : memberResponse;
 
       // 건강 체크 데이터 변환
       let healthCheck = null;
@@ -181,10 +237,23 @@ export function AdminTeamPage() {
           sleepHours: hc.sleepHours || 0,
           physicalDiscomfort: hc.discomfortLevel || 0,
           memo: hc.memo || '',
-          // TODO: 백엔드에서 제공되면 사용, 아니면 빈 배열
           healthScoreData: [],
           healthStatusDistribution: [],
           totalCheckDays: 0,
+        };
+      }
+
+      // 근태 통계 데이터 변환 (파이 차트용)
+      const ATTENDANCE_TYPE_COLORS = { '출근': '#00ACC1', '휴가': '#757575', '재택근무': '#FF9800', '워케이션': '#9C27B0' };
+      let attendanceStats = null;
+      if (statsResponse?.typeCounts?.length) {
+        attendanceStats = {
+          data: statsResponse.typeCounts.map((item) => ({
+            name: item.type,
+            value: Number(item.count),
+            color: ATTENDANCE_TYPE_COLORS[item.type] || '#6E8FB3',
+          })),
+          totalDays: statsResponse.totalCount || 0,
         };
       }
 
@@ -197,6 +266,7 @@ export function AdminTeamPage() {
           ...data,
           healthCheck,
           projectCount,
+          attendanceStats,
         },
       }));
 
@@ -250,6 +320,11 @@ export function AdminTeamPage() {
     if (isExpanding && !employeeDetails[employee.id]) {
       await fetchEmployeeDetails(employee.id);
     }
+  };
+
+  // 해당 직원의 근태 신청 목록 (에이전시 목록에서 필터링)
+  const getEmployeeLeaveRequests = (employeeId) => {
+    return agencyLeaveRequests.filter((r) => Number(r.memberNo) === Number(employeeId));
   };
 
   const handleOpenDetail = (employee) => {
@@ -630,51 +705,126 @@ export function AdminTeamPage() {
                     </EmployeeRight>
                   </EmployeeCard>
 
-                  {/* 펼침: 데일리 설문(건강 체크) 결과 - agency 직원관리와 동일 */}
+                  {/* 펼침: 데일리 설문, 근태 신청 리스트, 근태 통계 그래프 - 에이전시 직원관리와 동일 */}
                   {isExpanded && (
                     <Card className="mt-0 p-6 bg-white border-t-0 rounded-t-none" style={{ borderTopLeftRadius: 0, borderTopRightRadius: 0, marginTop: '-1px', border: '1px solid #e2e8f0' }}>
                       {loadingDetails.has(employee.id) ? (
                         <div className="text-center py-6 text-sm text-muted-foreground">상세 정보를 불러오는 중...</div>
                       ) : (
                         <>
-                          <div className="flex items-center gap-2 mb-3">
-                            <Heart className="w-4 h-4 text-primary" />
-                            <h3 className="text-base font-semibold text-foreground">건강 체크 결과</h3>
-                          </div>
-                          {hc ? (
-                            <div className="space-y-0">
-                              <div className="flex items-center justify-between py-2 border-b border-border">
-                                <span className="text-sm text-muted-foreground">오늘 컨디션</span>
-                                <span className="text-sm font-medium text-foreground">{hc.condition ?? '-'}</span>
+                          {/* 공통: 데일리 설문, 근태 신청 리스트, 근태 통계 그래프 */}
+                          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 pb-6 border-b border-border">
+                            {/* 1. 데일리 설문 내용 */}
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-2 mb-3">
+                                <Heart className="w-4 h-4 text-primary" />
+                                <h3 className="text-base font-semibold text-foreground">데일리 설문 (건강 체크)</h3>
                               </div>
-                              <div className="flex items-center justify-between py-2 border-b border-border">
-                                <span className="text-sm text-muted-foreground">수면 시간</span>
-                                <span className="text-sm font-medium text-foreground">{hc.sleepHours ?? 0}시간</span>
-                              </div>
-                              <div className="flex items-center justify-between py-2 border-b border-border">
-                                <span className="text-sm text-muted-foreground">신체 불편함</span>
-                                <span className="text-sm font-medium text-foreground">{hc.physicalDiscomfort ?? hc.discomfortLevel ?? 0}</span>
-                              </div>
-                              {hc.memo && (
-                                <div className="pt-3 mt-3 border-t border-border">
-                                  <p className="text-xs text-muted-foreground mb-2">메모</p>
-                                  <div className="p-3 bg-muted/30 rounded-lg">
-                                    <p className="text-sm text-foreground">{hc.memo}</p>
+                              {hc ? (
+                                <div className="space-y-0 p-4 bg-white border border-border rounded-lg flex-1 flex flex-col min-h-[220px]">
+                                  <div className="flex justify-between py-2 border-b border-border">
+                                    <span className="text-sm text-muted-foreground">오늘 컨디션</span>
+                                    <span className="text-sm font-medium">{hc.condition ?? '-'}</span>
                                   </div>
+                                  <div className="flex justify-between py-2 border-b border-border">
+                                    <span className="text-sm text-muted-foreground">수면 시간</span>
+                                    <span className="text-sm font-medium">{hc.sleepHours ?? 0}시간</span>
+                                  </div>
+                                  <div className="flex justify-between py-2 border-b border-border">
+                                    <span className="text-sm text-muted-foreground">신체 불편함</span>
+                                    <span className="text-sm font-medium">{hc.physicalDiscomfort ?? hc.discomfortLevel ?? 0}</span>
+                                  </div>
+                                  {hc.memo && (
+                                    <div className="pt-3 mt-3 border-t border-border">
+                                      <p className="text-xs text-muted-foreground mb-2">메모</p>
+                                      <div className="p-3 bg-muted/30 rounded-lg">
+                                        <p className="text-sm">{hc.memo}</p>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
+                              ) : (
+                                <div className="p-4 border border-border rounded-lg flex-1 flex items-center justify-center min-h-[220px] text-sm text-muted-foreground">검진을 하지 않았습니다</div>
                               )}
                             </div>
-                          ) : (
-                            <div className="text-center py-8 text-sm text-muted-foreground">검진을 하지 않았습니다</div>
-                          )}
-                          <div className="mt-4 pt-3 border-t border-border">
-                            <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); handleOpenDetail(employee); }}
-                              className="text-sm text-primary hover:underline"
-                            >
-                              상세 보기 →
-                            </button>
+
+                            {/* 2. 근태 신청 리스트 */}
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-2 mb-3">
+                                <CalendarClock className="w-4 h-4 text-primary" />
+                                <h3 className="text-base font-semibold text-foreground">근태 신청 리스트</h3>
+                              </div>
+                              <div className="p-4 border border-border rounded-lg flex-1 flex flex-col min-h-[220px]">
+                                {getEmployeeLeaveRequests(employee.id).length > 0 ? (
+                                  <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+                                    {getEmployeeLeaveRequests(employee.id)
+                                      .filter((r) => r.attendanceRequestStatus !== 'CANCELLED')
+                                      .map((req) => {
+                                        const statusMap = REQUEST_STATUS_MAP[req.attendanceRequestStatus] || { label: req.attendanceRequestStatus, color: '#6B7280' };
+                                        return (
+                                          <div key={req.attendanceRequestNo} className="p-2 bg-muted/30 rounded-lg border border-border">
+                                            <div className="flex justify-between items-center">
+                                              <span className="text-sm font-medium">{req.attendanceRequestType || '-'}</span>
+                                              <Badge style={{ backgroundColor: statusMap.color, color: '#fff', fontSize: '10px' }}>{statusMap.label}</Badge>
+                                            </div>
+                                            <p className="text-xs text-muted-foreground mt-1">{formatReqDate(req.attendanceRequestStartDate)} ~ {formatReqDate(req.attendanceRequestEndDate)}</p>
+                                          </div>
+                                        );
+                                      })}
+                                  </div>
+                                ) : (
+                                  <div className="text-center py-6 text-sm text-muted-foreground flex-1 flex items-center justify-center">근태 신청 내역이 없습니다</div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* 3. 근태 통계 그래프 */}
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-2 mb-3">
+                                <Briefcase className="w-4 h-4 text-primary" />
+                                <h3 className="text-base font-semibold text-foreground">근태 통계</h3>
+                              </div>
+                              <div className="p-4 border border-border rounded-lg flex-1 flex flex-col min-h-[220px]">
+                                {details?.attendanceStats?.data?.length > 0 ? (
+                                  <div className="flex items-center gap-4 flex-1 min-h-[180px]">
+<div className="w-[140px] h-[140px] flex-shrink-0">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                          <Pie
+                                            data={details.attendanceStats.data}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={30}
+                                            outerRadius={50}
+                                            paddingAngle={2}
+                                            dataKey="value"
+                                          >
+                                            {details.attendanceStats.data.map((entry, index) => (
+                                              <Cell key={`cell-${index}`} fill={entry.color} />
+                                            ))}
+                                          </Pie>
+                                          <Tooltip formatter={(value) => [`${value}일`, '']} />
+                                        </PieChart>
+                                      </ResponsiveContainer>
+                                    </div>
+                                    <div className="flex-1">
+                                      <p className="text-2xl font-bold text-foreground">{details.attendanceStats.totalDays}<span className="text-sm font-normal text-muted-foreground ml-1">일</span></p>
+                                      <p className="text-xs text-muted-foreground">이번 달 출근</p>
+                                      <div className="mt-2 space-y-1">
+                                        {details.attendanceStats.data.map((item, i) => (
+                                          <div key={i} className="flex items-center gap-2 text-xs">
+                                            <span style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: item.color }} />
+                                            <span>{item.name} {item.value}일</span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="text-center py-6 text-sm text-muted-foreground flex-1 flex items-center justify-center">근태 통계 데이터가 없습니다</div>
+                                )}
+                              </div>
+                            </div>
                           </div>
                         </>
                       )}

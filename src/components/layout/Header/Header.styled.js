@@ -344,6 +344,7 @@ export const ProfileAvatar = styled.div`
   justify-content: center; 
   align-items: center;
   flex-shrink: 0;
+  overflow: hidden;
 `;
 
 export const ProfileInfo = styled.div`
