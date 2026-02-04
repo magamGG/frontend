@@ -46,6 +46,33 @@ export const HeaderTitle = styled.h1`
   margin: 0;
 `;
 
+// 정신/신체 토글
+export const DetailTabWrap = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 8px;
+  padding: 2px;
+  background-color: #e8eaed;
+`;
+
+export const DetailTabButton = styled.button`
+  padding: 6px 14px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background-color: ${props => props.$active ? 'white' : 'transparent'};
+  color: ${props => props.$active ? '#1f2328' : '#6E8FB3'};
+  box-shadow: ${props => props.$active ? '0 1px 2px rgba(0,0,0,0.06)' : 'none'};
+  transition: all 0.2s ease;
+
+  &:hover {
+    color: #1f2328;
+  }
+`;
+
 // 통계 그리드 (데스크탑: 4열)
 export const StatisticsGrid = styled.div`
   display: grid;

@@ -434,6 +434,41 @@ export const agencyService = {
   getHealthDistribution: (agencyNo) => {
     return api.get(API_ENDPOINTS.AGENCY.HEALTH_DISTRIBUTION(agencyNo));
   },
+
+  // 검진 모니터링 상세 목록 (정신/신체 타입별)
+  getHealthMonitoringDetail: (agencyNo, type) => {
+    return api.get(API_ENDPOINTS.AGENCY.HEALTH_MONITORING_DETAIL(agencyNo, type || 'mental'));
+  },
+
+  // 에이전시 건강 검진 일정 (HEALTH_SURVEY 생성일·주기 기반 다음 검진 예정일)
+  getAgencyHealthSchedule: (agencyNo) => {
+    return api.get(API_ENDPOINTS.AGENCY.HEALTH_SCHEDULE(agencyNo));
+  },
+
+  // 에이전시 건강 검진 설정 수정 (period, cycle)
+  updateAgencyHealthSchedule: (agencyNo, body) => {
+    return api.put(API_ENDPOINTS.AGENCY.HEALTH_SCHEDULE(agencyNo), body);
+  },
+
+  // 에이전시 미검진 인원 목록 (정신/신체 중 하나라도 미검진이면 포함)
+  getAgencyUnscreenedList: (agencyNo) => {
+    return api.get(API_ENDPOINTS.AGENCY.UNSCREENED_LIST(agencyNo));
+  },
+
+  // 에이전시 마감 임박 현황 (담당자 관리 프로젝트 업무, 오늘~4일 후 5개 집계)
+  getDeadlineCounts: (agencyNo) => {
+    return api.get(API_ENDPOINTS.AGENCY.DEADLINE_COUNTS(agencyNo));
+  },
+
+  // 에이전시 상세 조회 (agencyLeave 등)
+  getAgency: (agencyNo) => {
+    return api.get(API_ENDPOINTS.AGENCY.GET(agencyNo));
+  },
+
+  // 에이전시 기본 연차(agency_leave) 수정
+  updateAgencyLeave: (agencyNo, body) => {
+    return api.put(API_ENDPOINTS.AGENCY.LEAVE(agencyNo), body);
+  },
 };
 
 export default {

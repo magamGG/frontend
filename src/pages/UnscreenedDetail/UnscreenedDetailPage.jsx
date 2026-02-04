@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { ArrowLeft, Search, Calendar, Clock, Bell } from 'lucide-react';
 import { toast } from 'sonner';
+import useAuthStore from '@/store/authStore';
+import { agencyService } from '@/api/services';
 import {
   UnscreenedDetailRoot,
   UnscreenedDetailBody,
@@ -36,56 +38,89 @@ import {
   EmptyState,
 } from './UnscreenedDetailPage.styled';
 
-// TODO: Zustand store mapping - 미검진 인원 데이터
-const initialUnscreenedData = [
-  { id: 1, name: '송도동', date: '2026.01.12', missedType: '정신건강', lastCheckDate: '2025.12.15', team: '웹툰팀', position: '작가', daysOverdue: 7 },
-  { id: 2, name: '박아시', date: '2026.01.11', missedType: '신체건강', lastCheckDate: '2025.12.20', team: '웹툰팀', position: '작가', daysOverdue: 5 },
-  { id: 3, name: '이직가', date: '2026.01.10', missedType: '둘 다', lastCheckDate: '2025.12.10', team: '웹툰팀', position: '어시스턴트', daysOverdue: 9 },
-  { id: 4, name: '최소연', date: '2026.01.13', missedType: '정신건강', lastCheckDate: '2025.12.18', team: '기획팀', position: '매니저', daysOverdue: 6 },
-  { id: 5, name: '김작가', date: '2026.01.14', missedType: '신체건강', lastCheckDate: '2025.12.25', team: '웹툰팀', position: '작가', daysOverdue: 4 },
-  { id: 6, name: '정원화', date: '2026.01.09', missedType: '둘 다', lastCheckDate: '2025.12.05', team: '웹툰팀', position: '작가', daysOverdue: 14 },
-  { id: 7, name: '한민수', date: '2026.01.15', missedType: '정신건강', lastCheckDate: '2025.12.28', team: '기획팀', position: '담당자', daysOverdue: 3 },
-  { id: 8, name: '윤서진', date: '2026.01.08', missedType: '신체건강', lastCheckDate: '2025.12.12', team: '웹툰팀', position: '작가', daysOverdue: 11 },
-  { id: 9, name: '강태희', date: '2026.01.16', missedType: '둘 다', lastCheckDate: '2025.12.30', team: '웹툰팀', position: '어시스턴트', daysOverdue: 2 },
-  { id: 10, name: '조민아', date: '2026.01.07', missedType: '정신건강', lastCheckDate: '2025.12.08', team: '기획팀', position: '매니저', daysOverdue: 12 },
-];
+const FILTER_TYPES = ['전체', '정신', '신체', '둘 다'];
 
-const FILTER_TYPES = ['전체', '정신건강', '신체건강'];
+function getStatusLabel(status) {
+  if (status === 'BOTH') return '전체';
+  if (status === 'MENTAL_ONLY') return '정신';
+  if (status === 'PHYSICAL_ONLY') return '신체';
+  return status || '-';
+}
 
 export function UnscreenedDetailPage({ onBack }) {
+  const { user } = useAuthStore();
+  const agencyNo = user?.agencyNo;
+
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('전체');
-  const [unscreenedData] = useState(initialUnscreenedData);
+  const [unscreenedData, setUnscreenedData] = useState([]);
+  const [nextCheckupDate, setNextCheckupDate] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // 유형별 배지 색상
-  const getTypeBadgeStyle = (type) => {
-    switch (type) {
-      case '둘 다':
+  useEffect(() => {
+    if (!agencyNo) {
+      setUnscreenedData([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    agencyService
+      .getAgencyUnscreenedList(agencyNo)
+      .then((res) => {
+        setUnscreenedData(res?.items ?? []);
+        setNextCheckupDate(res?.nextCheckupDate ?? null);
+      })
+      .catch(() => setUnscreenedData([]))
+      .finally(() => setLoading(false));
+  }, [agencyNo]);
+
+  // 유형별 배지 색상 (status: BOTH | MENTAL_ONLY | PHYSICAL_ONLY)
+  const getTypeBadgeStyle = (status) => {
+    switch (status) {
+      case 'BOTH':
         return { backgroundColor: '#FEE2E2', color: '#DC2626' };
-      case '정신건강':
-        return { backgroundColor: '#F3E5F5', color: '#9B8FAA' };
-      case '신체건강':
-        return { backgroundColor: '#DBEAFE', color: '#3B82F6' };
+      case 'MENTAL_ONLY':
+        return { backgroundColor: '#F3E5F5', color: '#9333EA' };
+      case 'PHYSICAL_ONLY':
+        return { backgroundColor: '#DBEAFE', color: '#2563EB' };
       default:
         return { backgroundColor: '#F3F4F6', color: '#6B7280' };
     }
   };
 
-  // 필터링된 데이터 (지연 일수 내림차순 정렬)
+  // 마지막 검사일 (정신/신체 중 더 최근)
+  const getLastCheckDate = (person) => {
+    const m = person.lastMentalCheckDate;
+    const p = person.lastPhysicalCheckDate;
+    if (!m && !p) return '-';
+    if (!m) return p;
+    if (!p) return m;
+    return m >= p ? m : p;
+  };
+
+  // 지연 일수 (다음 검진일 기준, 오늘 초과 시)
+  const getDaysOverdue = (person) => {
+    if (!nextCheckupDate) return null;
+    const next = new Date(nextCheckupDate.replace(/\./g, '-'));
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    next.setHours(0, 0, 0, 0);
+    const diff = Math.floor((today - next) / (1000 * 60 * 60 * 24));
+    return diff > 0 ? diff : 0;
+  };
+
+  // 필터링된 데이터
   const filteredData = unscreenedData
     .filter((person) => {
-      const matchesSearch = person.name.toLowerCase().includes(searchQuery.toLowerCase());
-      let matchesType = false;
-      if (filterType === '전체') {
-        matchesType = true;
-      } else if (filterType === '정신건강') {
-        matchesType = person.missedType === '정신건강' || person.missedType === '둘 다';
-      } else if (filterType === '신체건강') {
-        matchesType = person.missedType === '신체건강' || person.missedType === '둘 다';
-      }
+      const name = person.memberName ?? '';
+      const matchesSearch = name.toLowerCase().includes(searchQuery.toLowerCase());
+      let matchesType = true;
+      if (filterType === '정신') matchesType = person.status === 'MENTAL_ONLY';
+      else if (filterType === '신체') matchesType = person.status === 'PHYSICAL_ONLY';
+      else if (filterType === '둘 다') matchesType = person.status === 'BOTH';
       return matchesSearch && matchesType;
     })
-    .sort((a, b) => b.daysOverdue - a.daysOverdue);
+    .sort((a, b) => (getDaysOverdue(b) ?? 0) - (getDaysOverdue(a) ?? 0));
 
   // 알람 발송 핸들러
   const handleSendAlarm = (personName) => {
@@ -94,19 +129,19 @@ export function UnscreenedDetailPage({ onBack }) {
 
   // 7일 이상 지연 인원 일괄 알람 발송
   const handleSendBulkAlarm = () => {
-    const overduePersons = unscreenedData.filter(p => p.daysOverdue >= 7);
-    if (overduePersons.length === 0) {
+    const overdueCount = unscreenedData.filter((p) => (getDaysOverdue(p) ?? 0) >= 7).length;
+    if (overdueCount === 0) {
       toast.info('7일 이상 지연된 인원이 없습니다.');
       return;
     }
-    toast.success(`${overduePersons.length}명에게 검진 알림을 일괄 발송했습니다.`);
+    toast.success(`${overdueCount}명에게 검진 알림을 일괄 발송했습니다.`);
   };
 
-  // 통계 계산
+  // 통계 (정신 미검진 = MENTAL_ONLY + BOTH, 신체 미검진 = PHYSICAL_ONLY + BOTH)
   const stats = {
     total: unscreenedData.length,
-    mental: unscreenedData.filter(p => p.missedType === '정신건강' || p.missedType === '둘 다').length,
-    physical: unscreenedData.filter(p => p.missedType === '신체건강' || p.missedType === '둘 다').length,
+    mental: unscreenedData.filter((p) => p.status === 'MENTAL_ONLY' || p.status === 'BOTH').length,
+    physical: unscreenedData.filter((p) => p.status === 'PHYSICAL_ONLY' || p.status === 'BOTH').length,
   };
 
   return (
@@ -133,15 +168,15 @@ export function UnscreenedDetailPage({ onBack }) {
         {/* 통계 카드 */}
         <StatisticsGrid>
           <StatisticsCard>
-            <StatisticsLabel>전체</StatisticsLabel>
+            <StatisticsLabel>전체 미검진</StatisticsLabel>
             <StatisticsValue $color="red">{stats.total}명</StatisticsValue>
           </StatisticsCard>
           <StatisticsCard>
-            <StatisticsLabel>정신건강</StatisticsLabel>
+            <StatisticsLabel>정신 미검진</StatisticsLabel>
             <StatisticsValue $color="purple">{stats.mental}명</StatisticsValue>
           </StatisticsCard>
           <StatisticsCard>
-            <StatisticsLabel>신체건강</StatisticsLabel>
+            <StatisticsLabel>신체 미검진</StatisticsLabel>
             <StatisticsValue $color="blue">{stats.physical}명</StatisticsValue>
           </StatisticsCard>
         </StatisticsGrid>
@@ -166,7 +201,7 @@ export function UnscreenedDetailPage({ onBack }) {
               {FILTER_TYPES.map((type) => (
                 <FilterButton
                   key={type}
-                  variant={filterType === type ? 'default' : 'outline'}
+                  $variant={filterType === type ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setFilterType(type)}
                 >
@@ -179,65 +214,78 @@ export function UnscreenedDetailPage({ onBack }) {
 
         {/* 목록 테이블 */}
         <DataTableCard>
-          <TableWrapper>
-            <Table>
-              <TableHead>
-                <TableHeaderRow>
-                  <TableHeaderCell>이름</TableHeaderCell>
-                  <TableHeaderCell $align="center">미검진 유형</TableHeaderCell>
-                  <TableHeaderCell $align="center">미검진 날짜</TableHeaderCell>
-                  <TableHeaderCell $align="center">지연 일수</TableHeaderCell>
-                  <TableHeaderCell $align="right">마지막 검사일</TableHeaderCell>
-                  <TableHeaderCell $align="right"></TableHeaderCell>
-                </TableHeaderRow>
-              </TableHead>
-              <TableBody>
-                {filteredData.map((person) => (
-                  <TableRow key={person.id}>
-                    <TableCell $fontWeight="medium">{person.name}</TableCell>
-                    <TableCell $align="center">
-                      <TypeBadge style={getTypeBadgeStyle(person.missedType)}>
-                        {person.missedType === '둘 다' ? '전체' : person.missedType}
-                      </TypeBadge>
-                    </TableCell>
-                    <TableCell $align="center">
-                      <div className="flex items-center justify-center gap-1 text-sm" style={{ color: '#1f2328' }}>
-                        <Calendar className="w-3.5 h-3.5" style={{ color: '#5a6067' }} />
-                        {person.date}
-                      </div>
-                    </TableCell>
-                    <TableCell $align="center">
-                      <DelayBadge>{person.daysOverdue}일 지연</DelayBadge>
-                    </TableCell>
-                    <TableCell $align="right">
-                      <div className="flex items-center justify-end gap-1 text-sm" style={{ color: '#1f2328' }}>
-                        <Clock className="w-3.5 h-3.5" style={{ color: '#5a6067' }} />
-                        {person.lastCheckDate}
-                      </div>
-                    </TableCell>
-                    <TableCell $align="right">
-                      <AlarmButton
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSendAlarm(person.name);
-                        }}
-                      >
-                        <Bell className="w-3.5 h-3.5" />
-                        <span className="text-xs">알람 전송</span>
-                      </AlarmButton>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableWrapper>
-
-          {filteredData.length === 0 && (
+          {loading ? (
             <EmptyState>
-              <p className="text-sm" style={{ color: 'var(--accent)' }}>검색 결과가 없습니다.</p>
+              <p className="text-sm" style={{ color: 'var(--accent)' }}>불러오는 중...</p>
             </EmptyState>
+          ) : (
+            <>
+              <TableWrapper>
+                <Table>
+                  <TableHead>
+                    <TableHeaderRow>
+                      <TableHeaderCell>이름</TableHeaderCell>
+                      <TableHeaderCell>직책</TableHeaderCell>
+                      <TableHeaderCell $align="center">미검진 유형</TableHeaderCell>
+                      <TableHeaderCell $align="center">다음 검진 예정일</TableHeaderCell>
+                      <TableHeaderCell $align="center">지연 일수</TableHeaderCell>
+                      <TableHeaderCell $align="right">마지막 검사일</TableHeaderCell>
+                      <TableHeaderCell $align="right"></TableHeaderCell>
+                    </TableHeaderRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredData.map((person) => {
+                      const daysOverdue = getDaysOverdue(person);
+                      return (
+                        <TableRow key={person.memberNo}>
+                          <TableCell $fontWeight="medium">{person.memberName ?? '-'}</TableCell>
+                          <TableCell>{person.position ?? '-'}</TableCell>
+                          <TableCell $align="center">
+                            <TypeBadge style={getTypeBadgeStyle(person.status)}>
+                              {getStatusLabel(person.status)}
+                            </TypeBadge>
+                          </TableCell>
+                          <TableCell $align="center">
+                            <div className="flex items-center justify-center gap-1 text-sm" style={{ color: '#1f2328' }}>
+                              <Calendar className="w-3.5 h-3.5" style={{ color: '#5a6067' }} />
+                              {nextCheckupDate ?? '-'}
+                            </div>
+                          </TableCell>
+                          <TableCell $align="center">
+                            <DelayBadge>{daysOverdue != null && daysOverdue > 0 ? `${daysOverdue}일 지연` : '-'}</DelayBadge>
+                          </TableCell>
+                          <TableCell $align="right">
+                            <div className="flex items-center justify-end gap-1 text-sm" style={{ color: '#1f2328' }}>
+                              <Clock className="w-3.5 h-3.5" style={{ color: '#5a6067' }} />
+                              {getLastCheckDate(person)}
+                            </div>
+                          </TableCell>
+                          <TableCell $align="right">
+                            <AlarmButton
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSendAlarm(person.memberName);
+                              }}
+                            >
+                              <Bell className="w-3.5 h-3.5" />
+                              <span className="text-xs">알람 전송</span>
+                            </AlarmButton>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TableWrapper>
+
+              {filteredData.length === 0 && (
+                <EmptyState>
+                  <p className="text-sm" style={{ color: 'var(--accent)' }}>검색 결과가 없습니다.</p>
+                </EmptyState>
+              )}
+            </>
           )}
         </DataTableCard>
       </UnscreenedDetailBody>

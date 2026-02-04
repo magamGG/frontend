@@ -18,7 +18,7 @@ import {
 import { Modal } from '@/components/common/Modal';
 import { toast } from 'sonner';
 import useAuthStore from '@/store/authStore';
-import { agencyService, leaveService, calendarService } from '@/api/services';
+import { agencyService, leaveService } from '@/api/services';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Label } from 'recharts';
 import {
   AgencyDashboardRoot,
@@ -159,7 +159,7 @@ export function AgencyDashboardPage() {
 
     try {
       const [deadlineRes, requestsRes] = await Promise.all([
-        calendarService.getDeadlineCountsByAgency(agencyNo),
+        agencyService.getDeadlineCounts(agencyNo),
         leaveService.getAgencyRequests(agencyNo),
       ]);
 
@@ -646,7 +646,7 @@ export function AgencyDashboardPage() {
                     domain={[0, 'dataMax + 1']}
                   />
                   <Tooltip 
-                    formatter={(value) => [`${value}개`, '작품']}
+                    formatter={(value) => [`${value}개`, '업무']}
                     contentStyle={{ 
                       backgroundColor: '#ffffff',
                       border: '1px solid #e2e8f0',
@@ -668,7 +668,7 @@ export function AgencyDashboardPage() {
                   <AlertCircle className="w-4 h-4" style={{ color: '#DC2626' }} />
                 </ChartAlertIcon>
                 <ChartAlertText $color="#991B1B">
-                  오늘 마감 예정 작품이 {deadlineData[0].count}개 있습니다
+                  오늘 마감 예정 업무가 {deadlineData[0].count}개 있습니다
                 </ChartAlertText>
               </ChartAlert>
             )}

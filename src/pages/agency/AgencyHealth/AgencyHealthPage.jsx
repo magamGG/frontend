@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
@@ -7,6 +7,8 @@ import { Label } from '@/app/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/app/components/ui/dialog';
 import { Calendar, User, ChevronRight, Clock, CheckCircle2, FileText, Plus, Edit2, Trash2, X, Settings } from 'lucide-react';
 import { toast } from 'sonner';
+import useAuthStore from '@/store/authStore';
+import { agencyService } from '@/api/services';
 import { MentalHealthDetailPage } from '@/pages/MentalHealthDetail';
 import { PhysicalHealthDetailPage } from '@/pages/PhysicalHealthDetail';
 import { RiskAnalysisPage } from '@/pages/RiskAnalysis';
@@ -46,6 +48,8 @@ import {
   MonitoringGrid,
   MonitoringCard,
   MonitoringHeader,
+  MonitoringTabWrap,
+  MonitoringTabButton,
   MonitoringChartContainer,
   MonitoringFooter,
   UnscreenedCard,
@@ -56,88 +60,21 @@ import {
   UnscreenedName,
 } from './AgencyHealthPage.styled';
 
-// TODO: Zustand store mapping - 건강 검진 데이터
-const initialNextCheckupDate = {
-  mentalCheckup: '2026.01.25',
-  physicalCheckup: '2026.02.01',
-  daysUntilMental: 5,
-  daysUntilPhysical: 12,
+// HEALTH_SURVEY 기반 예정일 기본값 (API 로드 전)
+const defaultNextCheckupDate = {
+  mentalCheckup: '-',
+  physicalCheckup: '-',
+  daysUntilMental: 0,
+  daysUntilPhysical: 0,
 };
 
-const initialDeepCheckupData = {
-  mental: {
-    totalEmployees: 12,
-    completed: 8,
-    pending: 4,
-    completionRate: 67,
-    lastUpdated: '2026.01.18 14:30',
-    completedList: [
-      { id: 1, name: '송도동', date: '2026.01.15', score: 12, status: '주의' },
-      { id: 2, name: '박아시', date: '2026.01.16', score: 5, status: '정상' },
-      { id: 3, name: '이직가', date: '2026.01.17', score: 3, status: '정상' },
-      { id: 4, name: '최소연', date: '2026.01.18', score: 8, status: '주의' },
-      { id: 5, name: '김작가', date: '2026.01.15', score: 2, status: '정상' },
-      { id: 6, name: '정원화', date: '2026.01.16', score: 15, status: '위험' },
-      { id: 7, name: '한민수', date: '2026.01.17', score: 6, status: '정상' },
-      { id: 8, name: '윤서진', date: '2026.01.18', score: 9, status: '주의' },
-    ].sort((a, b) => b.score - a.score),
-    pendingList: [
-      { id: 9, name: '강태희', daysRemaining: 3 },
-      { id: 10, name: '조민아', daysRemaining: 5 },
-      { id: 11, name: '서준혁', daysRemaining: 6 },
-      { id: 12, name: '임유진', daysRemaining: 7 },
-    ],
-  },
-  physical: {
-    totalEmployees: 12,
-    completed: 10,
-    pending: 2,
-    completionRate: 83,
-    lastUpdated: '2026.01.18 15:45',
-    completedList: [
-      { id: 1, name: '송도동', date: '2026.01.14', score: 18, status: '위험' },
-      { id: 2, name: '박아시', date: '2026.01.15', score: 8, status: '정상' },
-      { id: 3, name: '이직가', date: '2026.01.15', score: 12, status: '주의' },
-      { id: 4, name: '최소연', date: '2026.01.16', score: 5, status: '정상' },
-      { id: 5, name: '김작가', date: '2026.01.16', score: 3, status: '정상' },
-      { id: 6, name: '정원화', date: '2026.01.17', score: 7, status: '정상' },
-      { id: 7, name: '한민수', date: '2026.01.17', score: 11, status: '주의' },
-      { id: 8, name: '윤서진', date: '2026.01.18', score: 4, status: '정상' },
-      { id: 9, name: '강태희', date: '2026.01.18', score: 6, status: '정상' },
-      { id: 10, name: '조민아', date: '2026.01.18', score: 9, status: '주의' },
-    ].sort((a, b) => b.score - a.score),
-    pendingList: [
-      { id: 11, name: '서준혁', daysRemaining: 4 },
-      { id: 12, name: '임유진', daysRemaining: 6 },
-    ],
-  },
-};
-
-const mentalPieData = [
-  { name: '정상', value: 3, color: '#10B981' },
-  { name: '주의', value: 3, color: '#F59E0B' },
-  { name: '위험', value: 2, color: '#EF4444' },
+const defaultMonitoringPieData = [
+  { name: '위험', value: 0, color: '#EF4444' },
+  { name: '경고', value: 0, color: '#CA8A04' },
+  { name: '주의', value: 0, color: '#FF9800' },
+  { name: '정상', value: 0, color: '#10B981' },
+  { name: '미검진', value: 0, color: '#94A3B8' },
 ];
-
-const physicalPieData = [
-  { name: '정상', value: 6, color: '#10B981' },
-  { name: '주의', value: 3, color: '#F59E0B' },
-  { name: '위험', value: 1, color: '#EF4444' },
-];
-
-const monitoringStatusData = [
-  { name: '정상', value: 5, color: '#10B981' },
-  { name: '주의', value: 4, color: '#F59E0B' },
-  { name: '위험', value: 3, color: '#EF4444' },
-  { name: '미검진', value: 4, color: '#6B7280' },
-];
-
-const initialUnscreenedData = [
-  { id: 1, name: '김담당', team: '', daysOverdue: 7 },
-  { id: 2, name: '서유진', team: '', daysOverdue: 5 },
-  { id: 3, name: '조수연', team: '', daysOverdue: 3 },
-  { id: 4, name: '김희동', team: '', daysOverdue: 1 },
-].sort((a, b) => b.daysOverdue - a.daysOverdue);
 
 // 설문 데이터
 const initialSurveys = [
@@ -211,16 +148,75 @@ const initialSurveys = [
 ];
 
 export function AgencyHealthPage() {
+  const { user } = useAuthStore();
+  const agencyNo = user?.agencyNo;
+
   const [currentView, setCurrentView] = useState('main');
-  const [nextCheckupDate] = useState(initialNextCheckupDate);
-  const [deepCheckupData] = useState(initialDeepCheckupData);
-  const [unscreenedData] = useState(initialUnscreenedData);
+  const [nextCheckupDate, setNextCheckupDate] = useState(defaultNextCheckupDate);
+  const [unscreenedData, setUnscreenedData] = useState([]);
   const [surveys, setSurveys] = useState(initialSurveys);
+
+  // 검진 모니터링: 정신/신체 토글 및 API 데이터 (분포 = getHealthDistribution, 예정일 = getAgencyHealthSchedule)
+  const [monitoringTab, setMonitoringTab] = useState('mental');
+  const [monitoringMentalData, setMonitoringMentalData] = useState(defaultMonitoringPieData);
+  const [monitoringPhysicalData, setMonitoringPhysicalData] = useState(defaultMonitoringPieData);
+
+  // HEALTH_SURVEY 생성일·주기 기반 다음 검진 예정일 (정신/신체 동일 주기)
+  useEffect(() => {
+    if (!agencyNo) return;
+    agencyService.getAgencyHealthSchedule(agencyNo).then((res) => {
+      const dateStr = res?.nextCheckupDate ?? '-';
+      const days = res?.daysUntil ?? 0;
+      setNextCheckupDate({
+        mentalCheckup: dateStr,
+        physicalCheckup: dateStr,
+        daysUntilMental: days,
+        daysUntilPhysical: days,
+      });
+    }).catch(() => {});
+  }, [agencyNo]);
+
+  useEffect(() => {
+    if (!agencyNo) return;
+    agencyService.getHealthDistribution(agencyNo).then((res) => {
+      const mapItem = (d) => ({ name: d.name ?? '-', value: d.value ?? 0, color: d.color ?? '#94a3b8' });
+      setMonitoringMentalData((res?.mentalDistribution ?? []).map(mapItem).length ? (res.mentalDistribution || []).map(mapItem) : defaultMonitoringPieData);
+      setMonitoringPhysicalData((res?.physicalDistribution ?? []).map(mapItem).length ? (res.physicalDistribution || []).map(mapItem) : defaultMonitoringPieData);
+    }).catch(() => {});
+  }, [agencyNo]);
+
+  // 미검진 인원 (정신/신체 중 하나라도 미검진이면 포함)
+  useEffect(() => {
+    if (!agencyNo) return;
+    agencyService.getAgencyUnscreenedList(agencyNo).then((res) => {
+      setUnscreenedData(res?.items ?? []);
+    }).catch(() => setUnscreenedData([]));
+  }, [agencyNo]);
+
+  // 분포 데이터로 심층 검사 현황 계산 (정신/신체)
+  const mentalTotal = monitoringMentalData.reduce((acc, d) => acc + (Number(d.value) || 0), 0);
+  const mentalCompleted = monitoringMentalData.filter((d) => d.name !== '미검진').reduce((acc, d) => acc + (Number(d.value) || 0), 0);
+  const mentalPending = monitoringMentalData.find((d) => d.name === '미검진')?.value ?? 0;
+  const mentalCompletionRate = mentalTotal ? Math.round((mentalCompleted / mentalTotal) * 100) : 0;
+
+  const physicalTotal = monitoringPhysicalData.reduce((acc, d) => acc + (Number(d.value) || 0), 0);
+  const physicalCompleted = monitoringPhysicalData.filter((d) => d.name !== '미검진').reduce((acc, d) => acc + (Number(d.value) || 0), 0);
+  const physicalPending = monitoringPhysicalData.find((d) => d.name === '미검진')?.value ?? 0;
+  const physicalCompletionRate = physicalTotal ? Math.round((physicalCompleted / physicalTotal) * 100) : 0;
 
   // 건강 검진 설정 모달 (HEALTH_SURVEY_PERIOD, HEALTH_SURVEY_CYCLE)
   const [isSurveySettingsModalOpen, setIsSurveySettingsModalOpen] = useState(false);
-  const [surveyPeriod, setSurveyPeriod] = useState(15);   // HEALTH_SURVEY_PERIOD (설문 기간, 일)
-  const [surveyCycle, setSurveyCycle] = useState(30);    // HEALTH_SURVEY_CYCLE (설문 주기, 일)
+  const [surveyPeriod, setSurveyPeriod] = useState(15);
+  const [surveyCycle, setSurveyCycle] = useState(30);
+
+  // 설정 모달 열릴 때 현재 기간·주기 로드
+  useEffect(() => {
+    if (!isSurveySettingsModalOpen || !agencyNo) return;
+    agencyService.getAgencyHealthSchedule(agencyNo).then((res) => {
+      if (res?.period != null) setSurveyPeriod(res.period);
+      if (res?.cycle != null) setSurveyCycle(res.cycle);
+    }).catch(() => {});
+  }, [isSurveySettingsModalOpen, agencyNo]);
 
   // 모달 상태
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -343,7 +339,7 @@ export function AgencyHealthPage() {
     toast.success('설문이 수정되었습니다');
   };
 
-  // 건강 검진 설정 저장 (HEALTH_SURVEY_PERIOD, HEALTH_SURVEY_CYCLE)
+  // 건강 검진 설정 저장 (HEALTH_SURVEY period, cycle 업데이트)
   const handleSurveySettingsSave = () => {
     const period = Number(surveyPeriod);
     const cycle = Number(surveyCycle);
@@ -355,9 +351,28 @@ export function AgencyHealthPage() {
       toast.error('설문 주기는 1~365일 사이로 입력해주세요.');
       return;
     }
-    // TODO: API 연동 시 healthSurvey period/cycle 업데이트 호출
-    setIsSurveySettingsModalOpen(false);
-    toast.success('건강 검진 설정이 저장되었습니다.');
+    if (!agencyNo) {
+      toast.error('에이전시 정보를 불러올 수 없습니다.');
+      return;
+    }
+    agencyService
+      .updateAgencyHealthSchedule(agencyNo, { period, cycle })
+      .then(() => {
+        setIsSurveySettingsModalOpen(false);
+        toast.success('건강 검진 설정이 저장되었습니다.');
+        return agencyService.getAgencyHealthSchedule(agencyNo);
+      })
+      .then((res) => {
+        if (res?.nextCheckupDate != null && res?.daysUntil != null) {
+          setNextCheckupDate({
+            mentalCheckup: res.nextCheckupDate,
+            physicalCheckup: res.nextCheckupDate,
+            daysUntilMental: res.daysUntil,
+            daysUntilPhysical: res.daysUntil,
+          });
+        }
+      })
+      .catch(() => toast.error('설정 저장에 실패했습니다.'));
   };
 
   // 상세 페이지 표시 조건부 렌더링
@@ -378,7 +393,12 @@ export function AgencyHealthPage() {
   }
   
   if (currentView === 'monitoring-detail') {
-    return <MonitoringDetailPage onBack={() => setCurrentView('main')} />;
+    return (
+      <MonitoringDetailPage
+        onBack={() => setCurrentView('main')}
+        initialTab={monitoringTab}
+      />
+    );
   }
   
   if (currentView === 'unscreened-detail') {
@@ -438,28 +458,28 @@ export function AgencyHealthPage() {
                 <h3 className="text-sm font-bold" style={{ color: '#1f2328' }}>정신 건강 심층 검사</h3>
               </div>
 
-              {/* 검사 현황 */}
+              {/* 검사 현황 (getHealthDistribution 기반) */}
               <DeepCheckupStatus>
                 <div className="flex items-center justify-between text-xs mb-1.5">
                   <span style={{ color: '#6E8FB3' }}>검사 현황</span>
-                  <span className="font-bold" style={{ color: '#1f2328' }}>{deepCheckupData.mental.completionRate}%</span>
+                  <span className="font-bold" style={{ color: '#1f2328' }}>{mentalCompletionRate}%</span>
                 </div>
                 <DeepCheckupProgressBar>
-                  <DeepCheckupProgress $color="purple" $width={deepCheckupData.mental.completionRate} />
+                  <DeepCheckupProgress $color="purple" $width={mentalCompletionRate} />
                 </DeepCheckupProgressBar>
                 <DeepCheckupProgressText>
-                  총 {deepCheckupData.mental.totalEmployees}명, 미완료 {deepCheckupData.mental.pending}명 {deepCheckupData.mental.lastUpdated}
+                  총 {mentalTotal}명, 미완료 {mentalPending}명 실시간
                 </DeepCheckupProgressText>
               </DeepCheckupStatus>
 
-              {/* 점수 분포 */}
+              {/* 점수 분포 (getHealthDistribution 정신 분포) */}
               <ScoreDistribution>
                 <ScoreDistributionTitle>점수 분포</ScoreDistributionTitle>
                 <div className="flex items-center gap-3">
                   <PieChartContainer>
                     <PieChart width={100} height={100}>
                       <Pie
-                        data={mentalPieData}
+                        data={monitoringMentalData}
                         cx="50%"
                         cy="50%"
                         innerRadius={28}
@@ -467,7 +487,7 @@ export function AgencyHealthPage() {
                         paddingAngle={3}
                         dataKey="value"
                       >
-                        {mentalPieData.map((entry, index) => (
+                        {monitoringMentalData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
@@ -475,7 +495,7 @@ export function AgencyHealthPage() {
                     </PieChart>
                   </PieChartContainer>
                   <LegendContainer>
-                    {mentalPieData.map((item, index) => (
+                    {monitoringMentalData.map((item, index) => (
                       <LegendItem key={index}>
                         <LegendColor $color={item.color} />
                         <LegendLabel>{item.name}</LegendLabel>
@@ -513,28 +533,28 @@ export function AgencyHealthPage() {
                 <h3 className="text-sm font-bold" style={{ color: '#1f2328' }}>신체 건강 심층 검사</h3>
               </div>
 
-              {/* 검사 현황 */}
+              {/* 검사 현황 (getHealthDistribution 기반) */}
               <DeepCheckupStatus>
                 <div className="flex items-center justify-between text-xs mb-1.5">
                   <span style={{ color: '#6E8FB3' }}>검사 현황</span>
-                  <span className="font-bold" style={{ color: '#1f2328' }}>{deepCheckupData.physical.completionRate}%</span>
+                  <span className="font-bold" style={{ color: '#1f2328' }}>{physicalCompletionRate}%</span>
                 </div>
                 <DeepCheckupProgressBar>
-                  <DeepCheckupProgress $color="blue" $width={deepCheckupData.physical.completionRate} />
+                  <DeepCheckupProgress $color="blue" $width={physicalCompletionRate} />
                 </DeepCheckupProgressBar>
                 <DeepCheckupProgressText>
-                  총 {deepCheckupData.physical.totalEmployees}명, 미완료 {deepCheckupData.physical.pending}명 {deepCheckupData.physical.lastUpdated}
+                  총 {physicalTotal}명, 미완료 {physicalPending}명 실시간
                 </DeepCheckupProgressText>
               </DeepCheckupStatus>
 
-              {/* 점수 분포 */}
+              {/* 점수 분포 (getHealthDistribution 신체 분포) */}
               <ScoreDistribution>
                 <ScoreDistributionTitle>점수 분포</ScoreDistributionTitle>
                 <div className="flex items-center gap-3">
                   <PieChartContainer>
                     <PieChart width={100} height={100}>
                       <Pie
-                        data={physicalPieData}
+                        data={monitoringPhysicalData}
                         cx="50%"
                         cy="50%"
                         innerRadius={28}
@@ -542,7 +562,7 @@ export function AgencyHealthPage() {
                         paddingAngle={3}
                         dataKey="value"
                       >
-                        {physicalPieData.map((entry, index) => (
+                        {monitoringPhysicalData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
@@ -550,7 +570,7 @@ export function AgencyHealthPage() {
                     </PieChart>
                   </PieChartContainer>
                   <LegendContainer>
-                    {physicalPieData.map((item, index) => (
+                    {monitoringPhysicalData.map((item, index) => (
                       <LegendItem key={index}>
                         <LegendColor $color={item.color} />
                         <LegendLabel>{item.name}</LegendLabel>
@@ -566,26 +586,45 @@ export function AgencyHealthPage() {
 
         {/* 하단: 검진 모니터링 및 미검진 인원 */}
         <MonitoringGrid>
-          {/* 검진 모니터링 */}
+          {/* 검진 모니터링 (정신/신체 토글) */}
           <MonitoringCard onClick={() => setCurrentView('monitoring-detail')}>
             <MonitoringHeader>
               <h2 className="text-sm font-bold" style={{ color: '#1f2328' }}>검진 모니터링</h2>
-              <ChevronRight className="w-4 h-4" style={{ color: '#6E8FB3' }} />
+              <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                <MonitoringTabWrap>
+                  <MonitoringTabButton
+                    type="button"
+                    $active={monitoringTab === 'mental'}
+                    onClick={() => setMonitoringTab('mental')}
+                  >
+                    정신 건강
+                  </MonitoringTabButton>
+                  <MonitoringTabButton
+                    type="button"
+                    $active={monitoringTab === 'physical'}
+                    onClick={() => setMonitoringTab('physical')}
+                  >
+                    신체 건강
+                  </MonitoringTabButton>
+                </MonitoringTabWrap>
+                <ChevronRight className="w-4 h-4" style={{ color: '#6E8FB3' }} />
+              </div>
             </MonitoringHeader>
 
             <div className="flex items-center justify-between gap-4">
               <MonitoringChartContainer>
                 <PieChart width={140} height={140}>
                   <Pie
-                    data={monitoringStatusData}
+                    data={monitoringTab === 'mental' ? monitoringMentalData : monitoringPhysicalData}
                     cx="50%"
                     cy="50%"
                     innerRadius={40}
                     outerRadius={60}
                     paddingAngle={3}
                     dataKey="value"
+                    animationDuration={200}
                   >
-                    {monitoringStatusData.map((entry, index) => (
+                    {(monitoringTab === 'mental' ? monitoringMentalData : monitoringPhysicalData).map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
@@ -594,7 +633,7 @@ export function AgencyHealthPage() {
               </MonitoringChartContainer>
 
               <LegendContainer>
-                {monitoringStatusData.map((item, index) => (
+                {(monitoringTab === 'mental' ? monitoringMentalData : monitoringPhysicalData).map((item, index) => (
                   <LegendItem key={index}>
                     <LegendColor $color={item.color} />
                     <LegendLabel>{item.name}</LegendLabel>
@@ -605,7 +644,9 @@ export function AgencyHealthPage() {
             </div>
 
             <MonitoringFooter>
-              <span className="text-xs" style={{ color: '#6E8FB3' }}>검진 인원</span>
+              <span className="text-xs" style={{ color: '#6E8FB3' }}>
+                {monitoringTab === 'mental' ? '정신 건강' : '신체 건강'} · 전체 인원(에이전시 관리자 제외)
+              </span>
             </MonitoringFooter>
           </MonitoringCard>
 
@@ -617,19 +658,28 @@ export function AgencyHealthPage() {
             </UnscreenedHeader>
 
             <UnscreenedList>
-              {unscreenedData.map((person) => (
-                <UnscreenedItem key={person.id}>
-                  <div className="flex items-center gap-2">
-                    <UnscreenedAvatar>
-                      <User className="w-4 h-4" style={{ color: '#6B7280' }} />
-                    </UnscreenedAvatar>
-                    <UnscreenedName>{person.name}</UnscreenedName>
-                  </div>
-                  <Badge className="text-white text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: '#DC2626' }}>
-                    {person.daysOverdue}일 지연
-                  </Badge>
+              {unscreenedData.length === 0 ? (
+                <UnscreenedItem>
+                  <UnscreenedName style={{ color: '#6E8FB3' }}>미검진 인원이 없습니다</UnscreenedName>
                 </UnscreenedItem>
-              ))}
+              ) : (
+                unscreenedData.map((person) => {
+                  const statusLabel = person.status === 'BOTH' ? '전체' : person.status === 'MENTAL_ONLY' ? '정신' : '신체';
+                  return (
+                    <UnscreenedItem key={person.memberNo}>
+                      <div className="flex items-center gap-2">
+                        <UnscreenedAvatar>
+                          <User className="w-4 h-4" style={{ color: '#6B7280' }} />
+                        </UnscreenedAvatar>
+                        <UnscreenedName>{person.memberName ?? '-'}</UnscreenedName>
+                      </div>
+                      <Badge className="text-white text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: '#DC2626' }}>
+                        {statusLabel}
+                      </Badge>
+                    </UnscreenedItem>
+                  );
+                })
+              )}
             </UnscreenedList>
           </UnscreenedCard>
         </MonitoringGrid>

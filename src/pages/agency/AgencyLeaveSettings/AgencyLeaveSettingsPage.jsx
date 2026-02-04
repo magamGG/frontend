@@ -7,7 +7,7 @@ import { Label } from '@/app/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
 import { Textarea } from '@/app/components/ui/textarea';
 import { toast } from 'sonner';
-import { leaveService } from '@/api';
+import { leaveService, agencyService } from '@/api';
 import useAuthStore from '@/store/authStore';
 import { 
   Calendar,
@@ -436,16 +436,25 @@ export function AgencyLeaveSettingsPage() {
 
   const seasonInfo = getSeasonInfo();
 
-  // 초기 데이터 로드 (에이전시 연차 잔액 API + localStorage 정책)
+  // 초기 데이터 로드 (에이전시 연차 잔액 API + agency_leave 기반 기본 연차)
   const agencyNo = currentUser?.agencyNo;
   useEffect(() => {
     const loadLeaveData = async () => {
       setIsLoading(true);
       try {
-        // 회사 기본 연차 정책: localStorage에서 로드 (에이전시 기본 연차 API 연동 시 교체 가능)
-        const storedPolicy = localStorage.getItem('agencyLeavePolicy');
-        if (storedPolicy) {
-          setCompanyPolicy(JSON.parse(storedPolicy));
+        // 회사 기본 연차: 에이전시 상세 API(agency_leave)에서 로드
+        if (agencyNo) {
+          try {
+            const agencyRes = await agencyService.getAgency(agencyNo);
+            const leave = agencyRes?.agencyLeave ?? 15;
+            setCompanyPolicy((prev) => ({ ...prev, defaultLeave: leave }));
+          } catch (_) {
+            const storedPolicy = localStorage.getItem('agencyLeavePolicy');
+            if (storedPolicy) setCompanyPolicy(JSON.parse(storedPolicy));
+          }
+        } else {
+          const storedPolicy = localStorage.getItem('agencyLeavePolicy');
+          if (storedPolicy) setCompanyPolicy(JSON.parse(storedPolicy));
         }
 
         // 에이전시 소속 회원 연차 잔액 목록 API (axios 인터셉터가 response.data를 반환하므로 반환값이 배열)
@@ -629,18 +638,36 @@ export function AgencyLeaveSettingsPage() {
     return { riskEnd, completeStart, completeStartVisible };
   }, [currentMonth]);
 
-  // 정책 저장
+  // 정책 저장 (agency_leave 업데이트 후 연차 잔액 목록 재조회하여 테이블 반영)
   const handleSavePolicy = async () => {
     if (companyPolicy.defaultLeave < 0) {
       toast.error('기본 연차 수는 0 이상이어야 합니다.');
       return;
     }
-    
+    if (!agencyNo) {
+      toast.error('에이전시 정보를 불러올 수 없습니다.');
+      return;
+    }
     try {
-      // TODO: 실제 API 호출로 변경
-      // await leaveService.updateLeaveSettings(companyPolicy);
+      await agencyService.updateAgencyLeave(agencyNo, { agencyLeave: companyPolicy.defaultLeave });
       localStorage.setItem('agencyLeavePolicy', JSON.stringify(companyPolicy));
       toast.success('회사 연차 정책이 저장되었습니다.');
+      // 연차 잔액 목록 재조회 (백엔드에서 LeaveBalance total/remain 반영됨) → 테이블 갱신
+      const list = await leaveService.getAgencyLeaveBalances(agencyNo);
+      const arr = Array.isArray(list) ? list : [];
+      const mapped = arr.map((item) => ({
+        id: item.memberNo,
+        memberNo: item.memberNo,
+        name: item.memberName ?? '-',
+        position: item.memberRole ?? '-',
+        totalLeave: item.leaveBalanceTotalDays ?? 0,
+        usedLeave: item.leaveBalanceUsedDays ?? 0,
+        remainingLeave: Math.round(Number(item.leaveBalanceRemainDays ?? 0)),
+        startDate: '',
+        adjustmentDetails: '',
+        currentYearAdjustmentTotal: item.currentYearAdjustmentTotal ?? 0,
+      }));
+      setEmployeeList(mapped);
     } catch (error) {
       console.error('Failed to save policy:', error);
       toast.error('정책 저장에 실패했습니다.');

@@ -1,16 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { ArrowLeft, Search, TrendingUp, AlertTriangle, Bell } from 'lucide-react';
 import { toast } from 'sonner';
+import useAuthStore from '@/store/authStore';
+import { agencyService } from '@/api/services';
 import {
   MonitoringDetailRoot,
   MonitoringDetailBody,
   HeaderSection,
   BackButton,
   HeaderTitle,
+  DetailTabWrap,
+  DetailTabButton,
   StatisticsGrid,
   StatisticsCard,
   StatisticsLabel,
@@ -34,38 +38,47 @@ import {
   EmptyState,
 } from './MonitoringDetailPage.styled';
 
-// TODO: Zustand store mapping - 검진 모니터링 데이터
-const initialMonitoringData = [
-  { id: 1, name: '송도동', mentalCount: 7, physicalCount: 2, status: '위험', lastCheckDate: '2026.01.18', team: '웹툰팀', position: '작가' },
-  { id: 2, name: '박아시', mentalCount: 6, physicalCount: 3, status: '주의', lastCheckDate: '2026.01.17', team: '웹툰팀', position: '작가' },
-  { id: 3, name: '이직가', mentalCount: 5, physicalCount: 0, status: '주의', lastCheckDate: '2026.01.16', team: '웹툰팀', position: '어시스턴트' },
-  { id: 4, name: '최소연', mentalCount: 2, physicalCount: 7, status: '정상', lastCheckDate: '2026.01.15', team: '기획팀', position: '매니저' },
-  { id: 5, name: '김작가', mentalCount: 9, physicalCount: 8, status: '정상', lastCheckDate: '2026.01.14', team: '웹툰팀', position: '작가' },
-  { id: 6, name: '정원화', mentalCount: 8, physicalCount: 5, status: '주의', lastCheckDate: '2026.01.14', team: '웹툰팀', position: '작가' },
-  { id: 7, name: '한민수', mentalCount: 3, physicalCount: 9, status: '정상', lastCheckDate: '2026.01.13', team: '기획팀', position: '담당자' },
-  { id: 8, name: '윤서진', mentalCount: 10, physicalCount: 4, status: '위험', lastCheckDate: '2026.01.12', team: '웹툰팀', position: '작가' },
-  { id: 9, name: '강태희', mentalCount: 4, physicalCount: 6, status: '정상', lastCheckDate: '2026.01.11', team: '웹툰팀', position: '어시스턴트' },
-  { id: 10, name: '조민아', mentalCount: 7, physicalCount: 7, status: '주의', lastCheckDate: '2026.01.11', team: '기획팀', position: '매니저' },
-  { id: 11, name: '서준혁', mentalCount: 11, physicalCount: 3, status: '위험', lastCheckDate: '2026.01.10', team: '웹툰팀', position: '작가' },
-  { id: 12, name: '임유진', mentalCount: 5, physicalCount: 8, status: '정상', lastCheckDate: '2026.01.09', team: '웹툰팀', position: '어시스턴트' },
-].sort((a, b) => new Date(b.lastCheckDate).getTime() - new Date(a.lastCheckDate).getTime());
+const STATUS_FILTERS = ['전체', '위험', '경고', '주의', '정상', '미검진'];
 
-const STATUS_FILTERS = ['전체', '위험', '주의', '정상'];
+export function MonitoringDetailPage({ onBack, initialTab = 'mental' }) {
+  const { user } = useAuthStore();
+  const agencyNo = user?.agencyNo;
 
-export function MonitoringDetailPage({ onBack }) {
+  const [detailTab, setDetailTab] = useState(initialTab);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('전체');
-  const [monitoringData] = useState(initialMonitoringData);
+  const [monitoringData, setMonitoringData] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!agencyNo) {
+      setMonitoringData([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    agencyService
+      .getHealthMonitoringDetail(agencyNo, detailTab)
+      .then((res) => {
+        setMonitoringData(res?.items ?? []);
+      })
+      .catch(() => setMonitoringData([]))
+      .finally(() => setLoading(false));
+  }, [agencyNo, detailTab]);
 
   // 상태별 배지 색상
   const getStatusBadgeClass = (status) => {
     switch (status) {
       case '위험':
         return 'bg-red-100 text-red-600';
+      case '경고':
+        return 'bg-amber-100 text-amber-700';
       case '주의':
         return 'bg-orange-100 text-orange-600';
       case '정상':
         return 'bg-green-100 text-green-600';
+      case '미검진':
+        return 'bg-slate-100 text-slate-600';
       default:
         return 'bg-gray-100 text-gray-600';
     }
@@ -76,6 +89,7 @@ export function MonitoringDetailPage({ onBack }) {
     switch (status) {
       case '위험':
         return <AlertTriangle className="w-3 h-3" />;
+      case '경고':
       case '주의':
         return <TrendingUp className="w-3 h-3" />;
       default:
@@ -83,30 +97,28 @@ export function MonitoringDetailPage({ onBack }) {
     }
   };
 
-  // 필터링된 데이터
+  // 필터링된 데이터 (API 항목: memberName, position, totalScore, status, lastCheckDate)
   const filteredData = monitoringData.filter((person) => {
-    const matchesSearch = person.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const name = person.memberName ?? '';
+    const matchesSearch = name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = filterStatus === '전체' || person.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
 
-  // 알람 발송 핸들러
-  const handleSendAlarm = (personName) => {
-    toast.success(`${personName}님에게 검진 알림을 발송했습니다.`);
-  };
-
-  // 통계 계산
+  // 통계 계산 (현재 탭 데이터 기준)
   const stats = {
     total: monitoringData.length,
-    risk: monitoringData.filter(p => p.status === '위험').length,
-    warning: monitoringData.filter(p => p.status === '주의').length,
-    normal: monitoringData.filter(p => p.status === '정상').length,
+    risk: monitoringData.filter((p) => p.status === '위험').length,
+    warning: monitoringData.filter((p) => p.status === '경고').length,
+    caution: monitoringData.filter((p) => p.status === '주의').length,
+    normal: monitoringData.filter((p) => p.status === '정상').length,
+    unscreened: monitoringData.filter((p) => p.status === '미검진').length,
   };
 
   return (
     <MonitoringDetailRoot>
       <MonitoringDetailBody>
-        {/* 헤더 */}
+        {/* 헤더 + 정신/신체 토글 */}
         <HeaderSection>
           <div className="flex items-center gap-3">
             <BackButton
@@ -117,6 +129,22 @@ export function MonitoringDetailPage({ onBack }) {
               <ArrowLeft className="w-4 h-4" />
             </BackButton>
             <HeaderTitle>검진 모니터링</HeaderTitle>
+            <DetailTabWrap>
+              <DetailTabButton
+                type="button"
+                $active={detailTab === 'mental'}
+                onClick={() => setDetailTab('mental')}
+              >
+                정신 건강
+              </DetailTabButton>
+              <DetailTabButton
+                type="button"
+                $active={detailTab === 'physical'}
+                onClick={() => setDetailTab('physical')}
+              >
+                신체 건강
+              </DetailTabButton>
+            </DetailTabWrap>
           </div>
         </HeaderSection>
 
@@ -140,9 +168,9 @@ export function MonitoringDetailPage({ onBack }) {
               <StatisticsIcon $color="orange">
                 <TrendingUp className="w-3 h-3" />
               </StatisticsIcon>
-              <StatisticsLabel $color="orange" style={{ marginBottom: 0 }}>주의</StatisticsLabel>
+              <StatisticsLabel $color="orange" style={{ marginBottom: 0 }}>경고·주의</StatisticsLabel>
             </div>
-            <StatisticsValue $color="orange">{stats.warning}명</StatisticsValue>
+            <StatisticsValue $color="orange">{stats.warning + stats.caution}명</StatisticsValue>
           </StatisticsCard>
           <StatisticsCard>
             <StatisticsLabel $color="green">정상</StatisticsLabel>
@@ -169,7 +197,7 @@ export function MonitoringDetailPage({ onBack }) {
               {STATUS_FILTERS.map((status) => (
                 <FilterButton
                   key={status}
-                  variant={filterStatus === status ? 'default' : 'outline'}
+                  $variant={filterStatus === status ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setFilterStatus(status)}
                 >
@@ -182,38 +210,50 @@ export function MonitoringDetailPage({ onBack }) {
 
         {/* 목록 테이블 */}
         <DataTableCard>
-          <TableWrapper>
-            <Table>
-              <TableHead>
-                <TableHeaderRow>
-                  <TableHeaderCell>이름</TableHeaderCell>
-                  <TableHeaderCell>직책</TableHeaderCell>
-                  <TableHeaderCell $align="center">상태</TableHeaderCell>
-                  <TableHeaderCell $align="right">최근 검사일</TableHeaderCell>
-                </TableHeaderRow>
-              </TableHead>
-              <TableBody>
-                {filteredData.map((person) => (
-                  <TableRow key={person.id}>
-                    <TableCell $fontWeight="medium">{person.name}</TableCell>
-                    <TableCell>{person.position}</TableCell>
-                    <TableCell $align="center">
-                      <StatusBadge className={getStatusBadgeClass(person.status)}>
-                        {getStatusIcon(person.status)}
-                        {person.status}
-                      </StatusBadge>
-                    </TableCell>
-                    <TableCell $align="right">{person.lastCheckDate}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableWrapper>
-
-          {filteredData.length === 0 && (
+          {loading ? (
             <EmptyState>
-              <p className="text-sm text-[#6E8FB3]">검색 결과가 없습니다.</p>
+              <p className="text-sm text-[#6E8FB3]">불러오는 중...</p>
             </EmptyState>
+          ) : (
+            <>
+              <TableWrapper>
+                <Table>
+                  <TableHead>
+                    <TableHeaderRow>
+                      <TableHeaderCell>이름</TableHeaderCell>
+                      <TableHeaderCell>직책</TableHeaderCell>
+                      <TableHeaderCell $align="center">점수</TableHeaderCell>
+                      <TableHeaderCell $align="center">상태</TableHeaderCell>
+                      <TableHeaderCell $align="right">최근 검사일</TableHeaderCell>
+                    </TableHeaderRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredData.map((person) => (
+                      <TableRow key={person.memberNo}>
+                        <TableCell $fontWeight="medium">{person.memberName ?? '-'}</TableCell>
+                        <TableCell>{person.position ?? '-'}</TableCell>
+                        <TableCell $align="center">
+                          {person.totalScore != null ? person.totalScore : '미검진'}
+                        </TableCell>
+                        <TableCell $align="center">
+                          <StatusBadge className={getStatusBadgeClass(person.status)}>
+                            {getStatusIcon(person.status)}
+                            {person.status}
+                          </StatusBadge>
+                        </TableCell>
+                        <TableCell $align="right">{person.lastCheckDate ?? '-'}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableWrapper>
+
+              {filteredData.length === 0 && (
+                <EmptyState>
+                  <p className="text-sm text-[#6E8FB3]">검색 결과가 없습니다.</p>
+                </EmptyState>
+              )}
+            </>
           )}
         </DataTableCard>
       </MonitoringDetailBody>

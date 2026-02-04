@@ -143,6 +143,8 @@ export const API_ENDPOINTS = {
 
   // 에이전시 API
   AGENCY: {
+    GET: (agencyNo) => `/api/agency/${agencyNo}`, // GET: 에이전시 상세 (agencyLeave 등)
+    LEAVE: (agencyNo) => `/api/agency/${agencyNo}/leave`, // PUT: 기본 연차(agency_leave) 수정
     JOIN_REQUEST: `/api/agency/join-request`, // POST: 에이전시 가입 요청
     JOIN_REQUESTS: (agencyNo) => `/api/agency/${agencyNo}/join-requests`, // GET: 에이전시 가입 요청 목록 조회
     APPROVE_JOIN_REQUEST: (newRequestNo) => `/api/agency/join-requests/${newRequestNo}/approve`, // POST: 가입 요청 승인
@@ -152,6 +154,10 @@ export const API_ENDPOINTS = {
     ARTIST_DISTRIBUTION: (agencyNo) => `/api/agency/${agencyNo}/artist-distribution`, // GET: 작품별 아티스트 분포
     ATTENDANCE_DISTRIBUTION: (agencyNo) => `/api/agency/${agencyNo}/attendance-distribution`, // GET: 금일 출석 현황
     HEALTH_DISTRIBUTION: (agencyNo) => `/api/agency/${agencyNo}/health-distribution`, // GET: 건강 인원 분포
+    HEALTH_MONITORING_DETAIL: (agencyNo, type) => `/api/agency/${agencyNo}/health-monitoring-detail?type=${type || 'mental'}`, // GET: 검진 모니터링 상세 목록 (정신/신체)
+    HEALTH_SCHEDULE: (agencyNo) => `/api/agency/${agencyNo}/health-schedule`, // GET: 건강 검진 일정, PUT: 설정 수정 (period, cycle)
+    UNSCREENED_LIST: (agencyNo) => `/api/agency/${agencyNo}/unscreened-list`, // GET: 미검진 인원 목록 (정신/신체 구분)
+    DEADLINE_COUNTS: (agencyNo) => `/api/agency/${agencyNo}/deadline-counts`, // GET: 마감 임박 현황 (담당자 관리 프로젝트 업무, 오늘~4일 후)
   },
 };
 
