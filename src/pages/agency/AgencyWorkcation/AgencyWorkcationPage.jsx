@@ -18,7 +18,7 @@ import {
   ArrowUpDown
 } from 'lucide-react';
 import { memberService, leaveService, projectService } from '@/api/services';
-import { getMemberProfileUrl } from '@/api/config';
+import { API_BASE_URL } from '@/api/config';
 import useAuthStore from '@/store/authStore';
 import { toast } from 'sonner';
 import {
@@ -77,10 +77,6 @@ import {
   TaskCardInfo,
   TaskCardProgress,
   ProjectsSection,
-  SortOptionsRow,
-  SortLabel,
-  LoadingMessage,
-  MemberAvatarPlaceholder,
 } from './AgencyWorkcationPage.styled';
 
 export function AgencyWorkcationPage() {
@@ -93,7 +89,7 @@ export function AgencyWorkcationPage() {
   const [members, setMembers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // DB에서 워케이션 중인 직원 조회 (재택근무 제외)
+  // attendance_request에서 승인된 워케이션/재택근무 조회
   useEffect(() => {
     const fetchWorkcationMembers = async () => {
       if (!agencyNo) {
@@ -104,7 +100,7 @@ export function AgencyWorkcationPage() {
 
       setIsLoading(true);
       try {
-        console.log('📡 워케이션 직원 조회 시작:', { agencyNo });
+        console.log('📡 워케이션/재택근무 직원 조회 시작:', { agencyNo });
         
         // 1. 에이전시 소속 근태 신청 목록 조회
         const response = await leaveService.getAgencyRequests(agencyNo);
@@ -116,11 +112,10 @@ export function AgencyWorkcationPage() {
         
         console.log('📋 근태 신청 목록:', requestsList);
         
-        // 2. 승인된 워케이션 신청만 필터링 (재택근무 제외, 현재 날짜가 기간 내에 있는 것만)
+        // 2. 승인된 워케이션/재택근무 신청 필터링 (현재 날짜가 기간 내에 있는 것만)
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         
-        const workationTypes = ['워케이션', 'WORKATION', 'workation']; // 워케이션만 포함, 재택근무/재택/REMOTE 제외
         const activeRequests = requestsList.filter(request => {
           // 승인된 신청만 (백엔드 필드명: attendanceRequestStatus)
           const status = request.attendanceRequestStatus || request.status;
@@ -128,9 +123,12 @@ export function AgencyWorkcationPage() {
             return false;
           }
           
-          // 워케이션 타입만 (재택근무는 워케이션 관리에 표시하지 않음)
+          // 재택근무 또는 워케이션 타입만 (백엔드 필드명: attendanceRequestType)
           const attendanceType = request.attendanceRequestType || request.attendanceType || request.type;
-          if (!workationTypes.includes(attendanceType)) {
+          if (attendanceType !== '재택근무' && 
+              attendanceType !== '워케이션' && 
+              attendanceType !== 'REMOTE' && 
+              attendanceType !== 'WORKATION') {
             return false;
           }
           
@@ -158,7 +156,7 @@ export function AgencyWorkcationPage() {
           return today >= startDate && today <= endDate;
         });
         
-        console.log('✅ 활성 워케이션 신청:', activeRequests);
+        console.log('✅ 활성 워케이션/재택근무 신청:', activeRequests);
         
         // 3. 각 회원의 상세 정보 조회
         const membersData = await Promise.all(
@@ -171,18 +169,33 @@ export function AgencyWorkcationPage() {
                 return null;
               }
               
-              // 회원 상세 정보 및 칸반 통계 조회
-              const [memberInfo, memberDetails, kanbanStats] = await Promise.all([
+              // 회원 상세 정보 + 해당 회원 작업 수(미완료/완료/삭제제외) 병렬 조회
+              const [memberInfo, taskCountRes, completedTaskCountRes, activeTaskCountRes] = await Promise.all([
                 memberService.getMyPageInfo(memberNo),
-                memberService.getMemberDetails(memberNo).catch(() => null),
-                projectService.getKanbanStatsForMember(memberNo).catch(() => ({ totalCount: 0, inProgressCount: 0, completedCount: 0 })),
+                projectService.getTaskCountByMember(memberNo).catch(() => ({ count: 0 })),
+                projectService.getCompletedTaskCountByMember(memberNo).catch(() => ({ count: 0 })),
+                projectService.getActiveTaskCountByMember(memberNo).catch(() => ({ count: 0 })),
               ]);
               
-              // 프로필 이미지 URL 구성 (config 유틸 사용)
-              const profileImageUrl = getMemberProfileUrl(memberInfo.memberProfileImage);
+              // 프로필 이미지 URL 구성
+              let profileImageUrl = null;
+              if (memberInfo.memberProfileImage) {
+                const imageBaseUrl = API_BASE_URL || 'http://localhost:8888';
+                if (memberInfo.memberProfileImage.startsWith('http://') || 
+                    memberInfo.memberProfileImage.startsWith('https://')) {
+                  profileImageUrl = memberInfo.memberProfileImage;
+                } else if (memberInfo.memberProfileImage.startsWith('/uploads/')) {
+                  profileImageUrl = `${imageBaseUrl}${memberInfo.memberProfileImage}`;
+                } else {
+                  profileImageUrl = `${imageBaseUrl}/uploads/${memberInfo.memberProfileImage}`;
+                }
+              }
               
-              // 워케이션만 표시하므로 타입은 항상 워케이션
-              const workcationType = '워케이션';
+              // 근태 타입 매핑
+              const attendanceType = request.attendanceRequestType || request.attendanceType || request.type;
+              const workcationType = attendanceType === '재택근무' || attendanceType === 'REMOTE' 
+                ? '재택근무' 
+                : '워케이션';
               
               // 날짜 포맷팅 (LocalDateTime -> YYYY-MM-DD)
               const formatDate = (dateStr) => {
@@ -195,12 +208,9 @@ export function AgencyWorkcationPage() {
               const startDate = formatDate(request.attendanceRequestStartDate || request.startDate);
               const endDate = formatDate(request.attendanceRequestEndDate || request.endDate);
               
-              // 칸반 통계: 진행률 = 완료/전체 * 100 (전체 0이면 0)
-              const totalCount = kanbanStats?.totalCount ?? 0;
-              const completedCount = kanbanStats?.completedCount ?? 0;
-              const inProgressCount = kanbanStats?.inProgressCount ?? 0;
-              const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
-
+              const taskCount = Number(taskCountRes?.count ?? taskCountRes?.data?.count ?? 0);
+              const completedTaskCount = Number(completedTaskCountRes?.count ?? completedTaskCountRes?.data?.count ?? 0);
+              const activeTaskCount = Number(activeTaskCountRes?.count ?? activeTaskCountRes?.data?.count ?? 0);
               return {
                 id: memberNo,
                 name: memberInfo.memberName || request.memberName || '',
@@ -208,18 +218,16 @@ export function AgencyWorkcationPage() {
                 phone: memberInfo.memberPhone || '',
                 role: memberInfo.memberRole || '',
                 avatar: profileImageUrl,
+                // 백엔드 필드명: workcationLocation
                 location: request.workcationLocation || request.location || '위치 정보 없음',
                 startDate: startDate,
                 endDate: endDate,
                 workcationType: workcationType,
-                projectNames: memberDetails?.currentProjects || [],
-                kanbanStats: {
-                  totalCount,
-                  inProgressCount,
-                  completedCount,
-                  progressPercent,
-                },
-                tasks: [],
+                projectNames: [], // 추후 프로젝트 API로 조회
+                tasks: [], // 진행률 등 추후 사용
+                taskCount, // 미완료 N (상단 "진행 중인 작업" 통계용)
+                completedTaskCount, // 완료된 칸반 카드 수 (KANBAN_CARD_STATUS='Y')
+                activeTaskCount, // STATUS != 'D' (카드 "작업 N개" 표시용)
                 dailyReport: null,
                 contact: {
                   email: memberInfo.memberEmail || '',
@@ -236,10 +244,10 @@ export function AgencyWorkcationPage() {
         // null 제거
         const validMembers = membersData.filter(m => m !== null);
         
-        console.log('✅ 워케이션 직원 목록:', validMembers);
+        console.log('✅ 워케이션/재택근무 직원 목록:', validMembers);
         setMembers(validMembers);
       } catch (error) {
-        console.error('워케이션 직원 조회 실패:', error);
+        console.error('워케이션/재택근무 직원 조회 실패:', error);
         toast.error('데이터를 불러오는데 실패했습니다.');
         setMembers([]);
       } finally {
@@ -311,25 +319,25 @@ export function AgencyWorkcationPage() {
       const comparison = a.name.localeCompare(b.name, 'ko');
       return sortOrder === 'asc' ? comparison : -comparison;
     } else if (sortType === 'imminent') {
-      // 작업 진행률 낮은 순 (미완료 많은 순)
-      const aProgress = a.kanbanStats?.progressPercent ?? 0;
-      const bProgress = b.kanbanStats?.progressPercent ?? 0;
-      return sortOrder === 'asc' ? aProgress - bProgress : bProgress - aProgress;
+      // 연재 임박 순서: 마감일이 가까운 순서
+      const aDeadline = a.tasks.length > 0 ? new Date(a.tasks[0].deadline) : new Date('9999-12-31');
+      const bDeadline = b.tasks.length > 0 ? new Date(b.tasks[0].deadline) : new Date('9999-12-31');
+      const comparison = aDeadline - bDeadline;
+      return sortOrder === 'asc' ? comparison : -comparison;
     }
     return 0;
   });
 
-  // Calculate statistics (KANBAN_CARD 기준)
+  // Calculate statistics (진행 중인 작업 = 워케이션 멤버별 칸반 카드 수 합, KANBAN_CARD_STATUS='N'만)
   const stats = {
     total: members.length,
-    totalTasks: members.reduce((acc, m) => acc + (m.kanbanStats?.totalCount || 0), 0),
-    inProgressTasks: members.reduce((acc, m) => acc + (m.kanbanStats?.inProgressCount || 0), 0),
-    completedTasks: members.reduce((acc, m) => acc + (m.kanbanStats?.completedCount || 0), 0),
-    avgProgress: members.length > 0
+    avgProgress: members.length > 0 
       ? Math.round(
-          members.reduce((acc, m) => acc + (m.kanbanStats?.progressPercent || 0), 0) / members.length
+          members.reduce((acc, m) => acc + (m.dailyReport?.progress || 0), 0) / members.length
         )
       : 0,
+    totalTasks: members.reduce((acc, m) => acc + (m.taskCount ?? 0), 0),
+    completedTasks: members.reduce((acc, m) => acc + (m.completedTaskCount ?? 0), 0),
   };
 
 
@@ -346,20 +354,20 @@ export function AgencyWorkcationPage() {
 
         {/* 정렬 옵션 */}
         <div className="mb-4 flex justify-end">
-          <SortOptionsRow>
-            <SortLabel>정렬:</SortLabel>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--foreground)', whiteSpace: 'nowrap' }}>정렬:</span>
             <FilterButtonGroup>
               <Button
                 variant={sortType === 'alphabetical' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => handleSort('alphabetical')}
-                className="flex items-center gap-1"
+                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
               >
                 가나다순
                 {sortType === 'alphabetical' && (
                   <>
                     <ArrowUpDown className="w-3 h-3" />
-                    <span className="text-xs">{sortOrder === 'asc' ? '↑' : '↓'}</span>
+                    <span style={{ fontSize: '12px' }}>{sortOrder === 'asc' ? '↑' : '↓'}</span>
                   </>
                 )}
               </Button>
@@ -367,18 +375,18 @@ export function AgencyWorkcationPage() {
                 variant={sortType === 'imminent' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => handleSort('imminent')}
-                className="flex items-center gap-1"
+                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
               >
                 연재 임박
                 {sortType === 'imminent' && (
                   <>
                     <ArrowUpDown className="w-3 h-3" />
-                    <span className="text-xs">{sortOrder === 'asc' ? '↑' : '↓'}</span>
+                    <span style={{ fontSize: '12px' }}>{sortOrder === 'asc' ? '↑' : '↓'}</span>
                   </>
                 )}
               </Button>
             </FilterButtonGroup>
-          </SortOptionsRow>
+          </div>
         </div>
 
         {/* Statistics Cards */}
@@ -393,10 +401,10 @@ export function AgencyWorkcationPage() {
 
           <StatisticsCard>
             <div className="flex items-center gap-2 mb-2">
-              <Briefcase className="w-4 h-4 text-amber-600" />
+              <Briefcase className="w-4 h-4 text-green-600" />
               <StatisticsLabel>진행 중인 작업</StatisticsLabel>
             </div>
-            <p className="text-2xl font-bold text-foreground">{stats.inProgressTasks}개</p>
+            <p className="text-2xl font-bold text-foreground">{stats.totalTasks}개</p>
           </StatisticsCard>
 
           <StatisticsCard>
@@ -410,17 +418,17 @@ export function AgencyWorkcationPage() {
 
         {/* Workcation Members Grid */}
         {isLoading ? (
-          <LoadingMessage>
-            <p>워케이션 직원 목록을 불러오는 중...</p>
-          </LoadingMessage>
+          <div style={{ textAlign: 'center', padding: '2rem' }}>
+            <p>워케이션/재택근무 직원 목록을 불러오는 중...</p>
+          </div>
         ) : (
           <MembersGrid>
             {sortedMembers.map((member) => {
             const daysRemaining = getDaysRemaining(member.endDate);
-            const ks = member.kanbanStats || {};
-            const totalCount = ks.totalCount ?? 0;
-            const completedCount = ks.completedCount ?? 0;
-            const progressPercent = ks.progressPercent ?? 0;
+            // 전체 작업 진행률: (완료 작업 수 / 삭제 제외 전체 작업 수) * 100. 작업이 없으면 0%
+            const total = member.activeTaskCount ?? 0;
+            const completed = member.completedTaskCount ?? 0;
+            const avgProgress = total > 0 ? Math.round((completed / total) * 100) : 0;
 
             return (
               <MemberCard 
@@ -452,9 +460,12 @@ export function AgencyWorkcationPage() {
                             }}
                           />
                         ) : null}
-                        <MemberAvatarPlaceholder $visible={!member.avatar}>
+                        <div 
+                          className="w-16 h-16 rounded-full border-4 border-white/20 bg-white/20 flex items-center justify-center"
+                          style={{ display: member.avatar ? 'none' : 'flex' }}
+                        >
                           <Briefcase className="w-8 h-8 text-white" />
-                        </MemberAvatarPlaceholder>
+                        </div>
                       </MemberCardAvatar>
                       <div>
                         <MemberCardName>{member.name}</MemberCardName>
@@ -500,17 +511,17 @@ export function AgencyWorkcationPage() {
                     </div>
                   )}
 
-                  {/* Progress - KANBAN_CARD 기준 */}
+                  {/* Progress - 완료/전체 작업 수로 진행률 계산 */}
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-muted-foreground">작업 진행률</span>
-                      <span className="text-2xl font-bold text-foreground">{progressPercent}%</span>
+                      <span className="text-sm text-muted-foreground">전체 작업 진행률</span>
+                      <span className="text-2xl font-bold text-foreground">{avgProgress}%</span>
                     </div>
                     <div className="relative h-4 w-full overflow-hidden rounded-full bg-gray-100">
                       <div
                         className="h-full rounded-full transition-all duration-500 ease-out shadow-sm"
                         style={{
-                          width: `${progressPercent}%`,
+                          width: `${avgProgress}%`,
                           background: 'linear-gradient(90deg, #A855F7 0%, #9333EA 50%, #7C3AED 100%)',
                           boxShadow: '0 2px 4px rgba(147, 51, 234, 0.3)',
                         }}
@@ -518,17 +529,11 @@ export function AgencyWorkcationPage() {
                     </div>
                   </div>
 
-                  {/* Tasks Summary - 진행중/완료 작업 개수 */}
+                  {/* Tasks Summary */}
                   <MemberCardTasks>
-                    <div className="flex items-center gap-4 text-sm flex-wrap">
+                    <div className="flex items-center gap-4 text-sm">
                       <span className="text-muted-foreground">
-                        진행중 <span className="font-semibold text-foreground">{totalCount > 0 ? totalCount - completedCount : 0}개</span>
-                      </span>
-                      <span className="text-muted-foreground">
-                        완료 <span className="font-semibold text-green-600">{completedCount}개</span>
-                      </span>
-                      <span className="text-muted-foreground">
-                        전체 <span className="font-semibold text-foreground">{totalCount}개</span>
+                        작업 <span className="font-semibold text-foreground">{member.activeTaskCount ?? member.taskCount ?? 0}개</span>
                       </span>
                     </div>
                     <Button 
@@ -585,9 +590,12 @@ export function AgencyWorkcationPage() {
                             }}
                           />
                         ) : null}
-                        <MemberAvatarPlaceholder $visible={!selectedMember.avatar} $size="lg">
+                        <div 
+                          className="w-20 h-20 rounded-full border-4 border-white/20 bg-white/20 flex items-center justify-center"
+                          style={{ display: selectedMember.avatar ? 'none' : 'flex' }}
+                        >
                           <Briefcase className="w-10 h-10 text-white" />
-                        </MemberAvatarPlaceholder>
+                        </div>
                       </DetailMemberAvatar>
                       <div>
                         <DetailMemberName>{selectedMember.name}</DetailMemberName>
@@ -643,46 +651,46 @@ export function AgencyWorkcationPage() {
                   </DetailMemberGrid>
                 </div>
 
-                {/* Kanban 작업 통계 */}
-                {selectedMember.kanbanStats && selectedMember.kanbanStats.totalCount > 0 && (
+                {/* Daily Report */}
+                {selectedMember.dailyReport && (
                   <DailyReportCard>
                     <DailyReportHeader>
                       <DailyReportTitle>
-                        <Briefcase className="w-5 h-5 text-primary" />
-                        <h4 className="font-semibold text-foreground">작업 현황 (KANBAN_CARD)</h4>
+                        <FileText className="w-5 h-5 text-primary" />
+                        <h4 className="font-semibold text-foreground">현재 작업 중인 업무</h4>
                       </DailyReportTitle>
+                      <Badge variant="outline" className="ml-auto text-xs bg-white">
+                        {selectedMember.dailyReport.lastUpdated}
+                      </Badge>
                     </DailyReportHeader>
 
                     <div className="space-y-4">
                       <div>
-                        <p className="text-sm text-muted-foreground mb-2">작업 진행률</p>
+                        <p className="text-sm text-muted-foreground mb-2">전체 진행률</p>
                         <DailyReportProgress>
-                          <Progress value={selectedMember.kanbanStats.progressPercent || 0} className="flex-1" />
+                          <Progress value={selectedMember.dailyReport.progress} className="flex-1" />
                           <span className="text-lg font-bold text-foreground">
-                            {selectedMember.kanbanStats.progressPercent || 0}%
+                            {selectedMember.dailyReport.progress}%
                           </span>
                         </DailyReportProgress>
                       </div>
 
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="p-3 rounded-lg bg-muted/50 text-center">
-                          <p className="text-2xl font-bold text-foreground">{selectedMember.kanbanStats.totalCount}</p>
-                          <p className="text-xs text-muted-foreground">전체 작업</p>
-                        </div>
-                        <div className="p-3 rounded-lg bg-amber-50 text-center">
-                          <p className="text-2xl font-bold text-amber-700">{selectedMember.kanbanStats.inProgressCount}</p>
-                          <p className="text-xs text-muted-foreground">진행중</p>
-                        </div>
-                        <div className="p-3 rounded-lg bg-green-50 text-center">
-                          <p className="text-2xl font-bold text-green-700">{selectedMember.kanbanStats.completedCount}</p>
-                          <p className="text-xs text-muted-foreground">완료</p>
-                        </div>
+                      <div>
+                        <p className="text-sm font-semibold text-foreground mb-2">완료한 작업</p>
+                        <DailyReportTasks>
+                          {selectedMember.dailyReport.tasksCompleted.map((task, idx) => (
+                            <li key={idx} className="flex items-center gap-2 text-sm text-foreground">
+                              <CheckCircle2 className="w-4 h-4 text-green-600" />
+                              {task}
+                            </li>
+                          ))}
+                        </DailyReportTasks>
                       </div>
                     </div>
                   </DailyReportCard>
                 )}
 
-                {/* Tasks List (상세 작업 목록 - 별도 API 연동 시) */}
+                {/* Tasks List */}
                 {selectedMember.tasks && selectedMember.tasks.length > 0 && (
                   <div>
                     <h4 className="font-semibold text-foreground mb-4 flex items-center gap-2">
