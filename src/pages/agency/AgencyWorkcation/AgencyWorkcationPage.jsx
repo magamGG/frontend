@@ -17,7 +17,7 @@ import {
   FileText,
   ArrowUpDown
 } from 'lucide-react';
-import { memberService, leaveService } from '@/api/services';
+import { memberService, leaveService, projectService } from '@/api/services';
 import { API_BASE_URL } from '@/api/config';
 import useAuthStore from '@/store/authStore';
 import { toast } from 'sonner';
@@ -89,7 +89,7 @@ export function AgencyWorkcationPage() {
   const [members, setMembers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // DB에서 워케이션/재택근무 중인 직원 조회
+  // attendance_request에서 승인된 워케이션/재택근무 조회
   useEffect(() => {
     const fetchWorkcationMembers = async () => {
       if (!agencyNo) {
@@ -112,7 +112,7 @@ export function AgencyWorkcationPage() {
         
         console.log('📋 근태 신청 목록:', requestsList);
         
-        // 2. 승인된 재택근무/워케이션 신청 필터링 (현재 날짜가 기간 내에 있는 것만)
+        // 2. 승인된 워케이션/재택근무 신청 필터링 (현재 날짜가 기간 내에 있는 것만)
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         
@@ -169,8 +169,13 @@ export function AgencyWorkcationPage() {
                 return null;
               }
               
-              // 회원 상세 정보 조회
-              const memberInfo = await memberService.getMyPageInfo(memberNo);
+              // 회원 상세 정보 + 해당 회원 작업 수(미완료/완료/삭제제외) 병렬 조회
+              const [memberInfo, taskCountRes, completedTaskCountRes, activeTaskCountRes] = await Promise.all([
+                memberService.getMyPageInfo(memberNo),
+                projectService.getTaskCountByMember(memberNo).catch(() => ({ count: 0 })),
+                projectService.getCompletedTaskCountByMember(memberNo).catch(() => ({ count: 0 })),
+                projectService.getActiveTaskCountByMember(memberNo).catch(() => ({ count: 0 })),
+              ]);
               
               // 프로필 이미지 URL 구성
               let profileImageUrl = null;
@@ -203,6 +208,9 @@ export function AgencyWorkcationPage() {
               const startDate = formatDate(request.attendanceRequestStartDate || request.startDate);
               const endDate = formatDate(request.attendanceRequestEndDate || request.endDate);
               
+              const taskCount = Number(taskCountRes?.count ?? taskCountRes?.data?.count ?? 0);
+              const completedTaskCount = Number(completedTaskCountRes?.count ?? completedTaskCountRes?.data?.count ?? 0);
+              const activeTaskCount = Number(activeTaskCountRes?.count ?? activeTaskCountRes?.data?.count ?? 0);
               return {
                 id: memberNo,
                 name: memberInfo.memberName || request.memberName || '',
@@ -215,10 +223,12 @@ export function AgencyWorkcationPage() {
                 startDate: startDate,
                 endDate: endDate,
                 workcationType: workcationType,
-                // TODO: 프로젝트, 작업, 일일 리포트는 별도 API로 조회 필요
                 projectNames: [], // 추후 프로젝트 API로 조회
-                tasks: [], // 추후 작업 API로 조회
-                dailyReport: null, // 추후 일일 리포트 API로 조회
+                tasks: [], // 진행률 등 추후 사용
+                taskCount, // 미완료 N (상단 "진행 중인 작업" 통계용)
+                completedTaskCount, // 완료된 칸반 카드 수 (KANBAN_CARD_STATUS='Y')
+                activeTaskCount, // STATUS != 'D' (카드 "작업 N개" 표시용)
+                dailyReport: null,
                 contact: {
                   email: memberInfo.memberEmail || '',
                   phone: memberInfo.memberPhone || '',
@@ -318,7 +328,7 @@ export function AgencyWorkcationPage() {
     return 0;
   });
 
-  // Calculate statistics
+  // Calculate statistics (진행 중인 작업 = 워케이션 멤버별 칸반 카드 수 합, KANBAN_CARD_STATUS='N'만)
   const stats = {
     total: members.length,
     avgProgress: members.length > 0 
@@ -326,11 +336,8 @@ export function AgencyWorkcationPage() {
           members.reduce((acc, m) => acc + (m.dailyReport?.progress || 0), 0) / members.length
         )
       : 0,
-    totalTasks: members.reduce((acc, m) => acc + (m.tasks?.length || 0), 0),
-    completedTasks: members.reduce(
-      (acc, m) => acc + (m.tasks?.filter(t => t.progress === 100).length || 0), 
-      0
-    ),
+    totalTasks: members.reduce((acc, m) => acc + (m.taskCount ?? 0), 0),
+    completedTasks: members.reduce((acc, m) => acc + (m.completedTaskCount ?? 0), 0),
   };
 
 
@@ -418,9 +425,10 @@ export function AgencyWorkcationPage() {
           <MembersGrid>
             {sortedMembers.map((member) => {
             const daysRemaining = getDaysRemaining(member.endDate);
-            const avgProgress = Math.round(
-              member.tasks.reduce((acc, t) => acc + t.progress, 0) / member.tasks.length
-            );
+            // 전체 작업 진행률: (완료 작업 수 / 삭제 제외 전체 작업 수) * 100. 작업이 없으면 0%
+            const total = member.activeTaskCount ?? 0;
+            const completed = member.completedTaskCount ?? 0;
+            const avgProgress = total > 0 ? Math.round((completed / total) * 100) : 0;
 
             return (
               <MemberCard 
@@ -432,7 +440,7 @@ export function AgencyWorkcationPage() {
                   <MemberCardHeaderContent>
                     <MemberCardBadges>
                       <Badge className="bg-white/20 text-white border-none">
-                        워케이션 진행 중
+                        {member.workcationType} 진행 중
                       </Badge>
                       <Badge className="bg-white/90 text-[#3F4A5A] border-none">
                         D-{daysRemaining}
@@ -503,16 +511,7 @@ export function AgencyWorkcationPage() {
                     </div>
                   )}
 
-                  {/* Progress */}
-                  {member.tasks && member.tasks.length > 0 && (
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-muted-foreground">전체 작업 진행률</span>
-                        <span className="text-2xl font-bold text-foreground">{avgProgress}%</span>
-                      </div>
-                      <Progress value={avgProgress} className="h-3" />
-                    </div>
-                  )}
+                  {/* Progress - 완료/전체 작업 수로 진행률 계산 */}
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm text-muted-foreground">전체 작업 진행률</span>
@@ -534,7 +533,7 @@ export function AgencyWorkcationPage() {
                   <MemberCardTasks>
                     <div className="flex items-center gap-4 text-sm">
                       <span className="text-muted-foreground">
-                        작업 <span className="font-semibold text-foreground">{member.tasks?.length || 0}개</span>
+                        작업 <span className="font-semibold text-foreground">{member.activeTaskCount ?? member.taskCount ?? 0}개</span>
                       </span>
                     </div>
                     <Button 
@@ -606,7 +605,7 @@ export function AgencyWorkcationPage() {
                       </div>
                     </DetailMemberInfo>
                     <Badge className="bg-white/20 text-white border-none text-sm">
-                      워케이션 진행 중
+                      {selectedMember?.workcationType} 진행 중
                     </Badge>
                   </DetailMemberHeader>
 

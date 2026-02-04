@@ -55,7 +55,6 @@ const getIconForSection = (sectionId, index) => {
   if (sectionId === 'manager-projects') return Briefcase;
   if (sectionId === 'manager-calendar') return Calendar;
   if (sectionId === 'manager-team') return Users;
-  if (sectionId === 'manager-attendance') return ClipboardCheck;
   
   // 작가 페이지 아이콘 매핑
   if (sectionId === 'individual-dashboard') return Home;

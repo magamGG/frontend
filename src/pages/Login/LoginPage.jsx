@@ -42,7 +42,10 @@ const USER_ROLE_TYPES = {
   ALL: 'all',
 };
 
-// 데모 계정 설정
+// 데모 계정 설정 (memberNo: 0이면 PROJECT_MEMBER 조회 시 항상 0건 → 담당 프로젝트 수 0개로 표시됨)
+// 실제 담당자/에이전시 계정의 MEMBER_NO를 넣으면 데모에서도 프로젝트 수가 표시됨
+const DEMO_MEMBER_NO = 1;
+
 const demoAccountList = [
   {
     id: USER_ROLE_TYPES.INDIVIDUAL,
@@ -143,7 +146,7 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
     
     login({
       token: 'demo-token',
-      memberNo: 0,
+      memberNo: DEMO_MEMBER_NO,
       memberName: '데모 사용자',
       memberRole: memberRole,
       agencyNo: agencyNo,

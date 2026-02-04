@@ -107,6 +107,11 @@ export const API_ENDPOINTS = {
     ADDABLE_MEMBERS: (projectNo) => `/api/projects/${projectNo}/addable-members`, // GET: 추가 가능 팀원 (담당자/작가 제외, 미소속)
     KANBAN: (projectNo) => `/api/projects/${projectNo}/kanban`, // GET: 칸반 보드 조회
     MANAGED: `/api/projects/managed`, // GET: 담당자 대시보드 담당 프로젝트 현황
+    DEADLINE_COUNTS: `/api/projects/deadline-counts`, // GET: 담당자 대시보드 마감 임박 현황 (주기 기준)
+    MY_COUNT: `/api/projects/my-count`, // GET: 로그인 회원 소속 프로젝트 수 (PROJECT_MEMBER 기준)
+    TASK_COUNT_BY_MEMBER: (memberNo) => `/api/projects/members/${memberNo}/task-count`, // GET: 회원에게 배정된 칸반 카드(작업) 수 (미완료 N)
+    COMPLETED_TASK_COUNT_BY_MEMBER: (memberNo) => `/api/projects/members/${memberNo}/completed-task-count`, // GET: 회원 완료 작업 수 (KANBAN_CARD_STATUS='Y')
+    ACTIVE_TASK_COUNT_BY_MEMBER: (memberNo) => `/api/projects/members/${memberNo}/active-task-count`, // GET: 회원 작업 수 (STATUS != 'D', 카드 "작업 N개" 표시용)
     FEEDBACK: (limit = 50) => `/api/projects/feedback?limit=${limit}`, // GET: 작가 대시보드 피드백(프로젝트 코멘트 목록)
     TODAY_TASKS: `/api/projects/my-today-tasks`, // GET: 아티스트 대시보드 오늘 할 일 (담당+마감일 오늘+미완료 칸반 카드)
     NEXT_SERIAL: (limit = 10) => `/api/projects/next-serial?limit=${limit}`, // GET: 아티스트 대시보드 다음 연재 프로젝트 (PROJECT_MEMBER+PROJECT_STARTED_AT/CYCLE)

@@ -273,6 +273,31 @@ export const projectService = {
     return api.get(API_ENDPOINTS.PROJECTS.MANAGED);
   },
 
+  // 담당자 대시보드 마감 임박 현황 (주기 기준: 오늘~4일 후별 다음 연재일 건수)
+  getDeadlineCounts: () => {
+    return api.get(API_ENDPOINTS.PROJECTS.DEADLINE_COUNTS);
+  },
+
+  // 로그인 회원이 소속된 프로젝트 수 (PROJECT_MEMBER 기준)
+  getMyProjectCount: () => {
+    return api.get(API_ENDPOINTS.PROJECTS.MY_COUNT);
+  },
+
+  // 회원에게 배정된 칸반 카드(작업) 수 (워케이션 카드 등 "작업 N개" 표시용, 미완료 N만)
+  getTaskCountByMember: (memberNo) => {
+    return api.get(API_ENDPOINTS.PROJECTS.TASK_COUNT_BY_MEMBER(memberNo));
+  },
+
+  // 회원 완료 작업 수 (KANBAN_CARD_STATUS='Y', 워케이션 상단 "완료된 작업" 통계용)
+  getCompletedTaskCountByMember: (memberNo) => {
+    return api.get(API_ENDPOINTS.PROJECTS.COMPLETED_TASK_COUNT_BY_MEMBER(memberNo));
+  },
+
+  // 회원 작업 수 - STATUS가 'D'가 아닌 것만 (카드 "작업 N개" 표시용)
+  getActiveTaskCountByMember: (memberNo) => {
+    return api.get(API_ENDPOINTS.PROJECTS.ACTIVE_TASK_COUNT_BY_MEMBER(memberNo));
+  },
+
   // 작가 대시보드 피드백 - 소속 프로젝트 칸반 카드에 달린 최신 코멘트 목록 (DB 연동)
   getMyProjectFeedback: (limit = 50) => {
     return api.get(API_ENDPOINTS.PROJECTS.FEEDBACK(limit));
