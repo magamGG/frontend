@@ -333,6 +333,7 @@ export function AdminMyPage({ onClose, onLogout }) {
           fileName = await memberService.uploadProfileImage(memberNo, file);
           setProfileImage(`${imageBaseUrl}/uploads/${fileName}`);
           toast.success('프로필 사진이 변경되었습니다.');
+          window.dispatchEvent(new CustomEvent('profile-image-updated'));
         }
       } catch (error) {
         console.error('이미지 업로드 실패:', error);

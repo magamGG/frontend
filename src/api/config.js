@@ -115,6 +115,7 @@ export const API_ENDPOINTS = {
     ACTIVE_TASK_COUNT_BY_MEMBER: (memberNo) => `/api/projects/members/${memberNo}/active-task-count`, // GET: 회원 작업 수 (STATUS != 'D', 카드 "작업 N개" 표시용)
     FEEDBACK: (limit = 50) => `/api/projects/feedback?limit=${limit}`, // GET: 작가 대시보드 피드백(프로젝트 코멘트 목록)
     TODAY_TASKS: `/api/projects/my-today-tasks`, // GET: 아티스트 대시보드 오늘 할 일 (담당+마감일 오늘+미완료 칸반 카드)
+    KANBAN_STATS: (memberNo) => `/api/projects/member/${memberNo}/kanban-stats`, // GET: 회원별 칸반 카드 통계 (진행중/완료 개수)
     NEXT_SERIAL: (limit = 10) => `/api/projects/next-serial?limit=${limit}`, // GET: 아티스트 대시보드 다음 연재 프로젝트 (PROJECT_MEMBER+PROJECT_STARTED_AT/CYCLE)
     KANBAN_BOARDS: (projectNo) => `/api/projects/${projectNo}/kanban-board`, // POST: 칸반 보드 추가
     KANBAN_BOARD_UPDATE: (projectNo, boardId) => `/api/projects/${projectNo}/kanban-board/${boardId}`, // PUT: 칸반 보드 상태 수정

@@ -136,6 +136,11 @@ export function CalendarComponent({
   projects = [],
   selectedProject = '',
   onProjectChange,
+  /** 작가 캘린더: 프로젝트별 필터 (펼치면 프로젝트 목록, 선택 시 해당 업무만 표시) */
+  useProjectFilter = false,
+  projectListForFilter = [],
+  selectedProjectFilter = '',
+  onProjectFilterChange,
   onEventAdd,
   onEventDelete,
   onNoteSave,
@@ -217,8 +222,15 @@ export function CalendarComponent({
     return null;
   };
 
-  // 필터링된 일정
+  // 필터링된 일정 (프로젝트 필터 우선, 없으면 개인/작품 필터)
   const filteredEvents = events.filter((event) => {
+    if (useProjectFilter) {
+      if (!selectedProjectFilter) return true;
+      const proj = projectListForFilter.find((p) => String(p.projectNo) === String(selectedProjectFilter));
+      if (!proj) return true;
+      return event.projectNo != null && Number(event.projectNo) === Number(selectedProjectFilter)
+        || (event.project != null && event.project === proj.projectName);
+    }
     if (filterCategory === 'all') return true;
     return event.category === filterCategory;
   });
@@ -397,14 +409,29 @@ export function CalendarComponent({
                     </LegendItem>
                   </AttendanceLegend>
 
-                  <CategorySelect
-                    value={filterCategory}
-                    onChange={(e) => onFilterCategoryChange && onFilterCategoryChange(e.target.value)}
-                  >
-                    <option value="all">전체</option>
-                    <option value="personal">개인 일정</option>
-                    <option value="work">작품 일정</option>
-                  </CategorySelect>
+                  {useProjectFilter ? (
+                    <CategorySelect
+                      value={selectedProjectFilter}
+                      onChange={(e) => onProjectFilterChange && onProjectFilterChange(e.target.value)}
+                      title="프로젝트별로 일정 필터"
+                    >
+                      <option value="">전체</option>
+                      {projectListForFilter.map((p) => (
+                        <option key={p.projectNo} value={p.projectNo}>
+                          {p.projectName || `프로젝트 ${p.projectNo}`}
+                        </option>
+                      ))}
+                    </CategorySelect>
+                  ) : (
+                    <CategorySelect
+                      value={filterCategory}
+                      onChange={(e) => onFilterCategoryChange && onFilterCategoryChange(e.target.value)}
+                    >
+                      <option value="all">전체</option>
+                      <option value="personal">개인 일정</option>
+                      <option value="work">작품 일정</option>
+                    </CategorySelect>
+                  )}
                 </CalendarHeaderRight>
               </CalendarHeader>
 

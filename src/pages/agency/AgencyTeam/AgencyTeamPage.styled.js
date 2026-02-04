@@ -108,13 +108,51 @@ export const EmployeeCardContent = styled.div`
 export const EmployeeAvatar = styled.div`
   width: 56px;
   height: 56px;
-  background-color: var(--primary);
-  opacity: 0.2;
+  background-color: color-mix(in srgb, var(--primary) 15%, transparent);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  overflow: hidden;
+`;
+
+export const EmployeeAvatarImg = styled.img`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+`;
+
+export const EmployeeAvatarFallback = styled.div`
+  display: ${(props) => (props.$visible ? 'flex' : 'none')};
+  align-items: center;
+  justify-content: center;
+`;
+
+export const CardActionsColumn = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+`;
+
+export const ProjectsInfoRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0;
+  height: fit-content;
+`;
+
+export const ExpandedCard = styled.div`
+  margin-top: -1px;
+  padding: 1.5rem;
+  background-color: #ffffff;
+  border: 1px solid var(--border);
+  border-top: none;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  border-radius: 0 0 8px 8px;
 `;
 
 export const EmployeeInfo = styled.div`

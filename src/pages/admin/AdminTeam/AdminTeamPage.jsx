@@ -8,10 +8,12 @@ import {
   Search,
   ChevronRight,
   ChevronDown,
+  Heart,
+  CalendarClock
 } from 'lucide-react';
 import { Card } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { memberService, projectService, leaveService, attendanceService } from '@/api';
 import { API_BASE_URL } from '@/api/config';
 import useAuthStore from '@/store/authStore';
@@ -158,16 +160,32 @@ export function AdminTeamPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [employeeDetails, setEmployeeDetails] = useState({}); // 직원별 상세 정보 캐시
   const [loadingDetails, setLoadingDetails] = useState(new Set()); // 상세 로딩 중인 id
-  /** 현재 로그인 계정이 PROJECT_MEMBER에 등록된 프로젝트 수 */
+  const [agencyLeaveRequests, setAgencyLeaveRequests] = useState([]); // 에이전시 소속 근태 신청 목록
   const [myProjectCount, setMyProjectCount] = useState(null);
 
-  // 현재 로그인 계정 소속 프로젝트 수 (PROJECT_MEMBER 기준)
+  const REQUEST_STATUS_MAP = {
+    PENDING: { label: '대기', color: '#F59E0B' },
+    APPROVED: { label: '승인', color: '#10B981' },
+    REJECTED: { label: '반려', color: '#EF4444' },
+    CANCELLED: { label: '취소', color: '#6B7280' },
+  };
+  const formatReqDate = (str) => {
+    if (!str) return '-';
+    try {
+      const d = new Date(str);
+      return d.toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit', year: 'numeric' });
+    } catch {
+      return str;
+    }
+  };
+
+  // 현재 로그인 계정(담당자)의 담당 프로젝트 수 (PROJECT_MEMBER 기준)
   useEffect(() => {
     if (!user?.memberNo) return;
     const fetchCount = async () => {
       try {
-        const res = await projectService.getMyProjectCount();
-        setMyProjectCount(Number(res?.count ?? res?.data?.count ?? 0));
+        const list = await projectService.getManagedProjects();
+        setMyProjectCount(Array.isArray(list) ? list.length : 0);
       } catch {
         setMyProjectCount(0);
       }
@@ -259,43 +277,84 @@ export function AdminTeamPage() {
     fetchEmployees();
   }, [user?.memberNo, user?.agencyNo]);
 
-  // 근태 신청 상태/타입 매핑 (표시용)
-  const LEAVE_STATUS_MAP = { PENDING: '대기', APPROVED: '승인', REJECTED: '반려', CANCELLED: '취소' };
-  const LEAVE_TYPE_MAP = { '연차': '연차', '병가': '병가', '워케이션': '워케이션', '재택근무': '재택근무', '휴가': '휴가', '반차': '반차', '반반차': '반반차' };
+  // 에이전시 소속 근태 신청 목록 조회 (직원별 필터링용)
+  useEffect(() => {
+    const fetchAgencyLeaveRequests = async () => {
+      if (!user?.agencyNo) return;
+      try {
+        const list = await leaveService.getAgencyRequests(user.agencyNo);
+        setAgencyLeaveRequests(Array.isArray(list) ? list : []);
+      } catch (err) {
+        console.error('에이전시 근태 신청 목록 조회 실패:', err);
+        setAgencyLeaveRequests([]);
+      }
+    };
+    fetchAgencyLeaveRequests();
+  }, [user?.agencyNo]);
 
-  // 직원 상세 정보 가져오기 (프로젝트 수 + 해당 작가 근태 신청 리스트 + 근태 통계)
+  // 직원 목록 로드 시 참여 중인 프로젝트 수 등 상세 정보 미리 조회
+  useEffect(() => {
+    if (!employees.length || !user?.agencyNo) return;
+    employees.forEach((emp) => {
+      if (!employeeDetails[emp.id] && !loadingDetails.has(emp.id)) {
+        fetchEmployeeDetails(emp.id);
+      }
+    });
+  }, [employees, user?.agencyNo]);
+
+  // 직원 상세 정보 가져오기 (건강 체크, 근태 통계 포함)
   const fetchEmployeeDetails = async (employeeId) => {
-    if (employeeDetails[employeeId]) {
-      return; // 이미 캐시된 경우
+    if (employeeDetails[employeeId] || loadingDetails.has(employeeId)) {
+      return; // 이미 캐시됐거나 로딩 중인 경우
     }
     setLoadingDetails(prev => new Set(prev).add(employeeId));
     try {
-      const [memberRes, agencyRequestsRes, statsRes] = await Promise.all([
+      const [memberResponse, statsResponse] = await Promise.all([
         memberService.getMemberDetails(employeeId),
-        user?.agencyNo ? leaveService.getAgencyRequests(user.agencyNo) : Promise.resolve([]),
-        attendanceService.getStatistics(employeeId, new Date().getFullYear(), new Date().getMonth() + 1),
+        (async () => {
+          try {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth() + 1;
+            return await attendanceService.getStatistics(employeeId, year, month);
+          } catch {
+            return null;
+          }
+        })(),
       ]);
-      const response = memberRes;
-      const data = Array.isArray(response) ? response[0] : response;
+      const data = Array.isArray(memberResponse) ? memberResponse[0] : memberResponse;
 
-      // 해당 작가의 근태 신청만 필터 (좌측 리스트용)
-      const rawAgencyList = Array.isArray(agencyRequestsRes) ? agencyRequestsRes : agencyRequestsRes?.data ?? [];
-      const leaveRequests = rawAgencyList
-        .filter((r) => Number(r.memberNo) === Number(employeeId) && r.attendanceRequestStatus !== 'CANCELLED')
-        .map((r) => ({
-          id: r.attendanceRequestNo,
-          type: LEAVE_TYPE_MAP[r.attendanceRequestType] || r.attendanceRequestType || '-',
-          startDate: r.attendanceRequestStartDate,
-          endDate: r.attendanceRequestEndDate,
-          status: LEAVE_STATUS_MAP[r.attendanceRequestStatus] || r.attendanceRequestStatus,
-        }));
+      // 건강 체크 데이터 변환
+      let healthCheck = null;
+      if (data?.healthCheck) {
+        const hc = data.healthCheck;
+        healthCheck = {
+          date: hc.date ? new Date(hc.date).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' }) : '',
+          condition: hc.condition || '보통',
+          sleepHours: hc.sleepHours || 0,
+          physicalDiscomfort: hc.discomfortLevel || 0,
+          memo: hc.memo || '',
+          healthScoreData: [],
+          healthStatusDistribution: [],
+          totalCheckDays: 0,
+        };
+      }
 
-      const statsData = statsRes?.data ?? statsRes;
-      const attendanceStats = {
-        totalCount: statsData?.totalCount ?? 0,
-        typeCounts: statsData?.typeCounts ?? [],
-      };
+      // 근태 통계 데이터 변환 (파이 차트용)
+      const ATTENDANCE_TYPE_COLORS = { '출근': '#00ACC1', '휴가': '#757575', '재택근무': '#FF9800', '워케이션': '#9C27B0' };
+      let attendanceStats = null;
+      if (statsResponse?.typeCounts?.length) {
+        attendanceStats = {
+          data: statsResponse.typeCounts.map((item) => ({
+            name: item.type,
+            value: Number(item.count),
+            color: ATTENDANCE_TYPE_COLORS[item.type] || '#6E8FB3',
+          })),
+          totalDays: statsResponse.totalCount || 0,
+        };
+      }
 
+      // 프로젝트 수 계산
       const projectCount = data?.currentProjects?.length || 0;
 
       setEmployeeDetails(prev => ({
@@ -303,7 +362,6 @@ export function AdminTeamPage() {
         [employeeId]: {
           ...data,
           projectCount,
-          leaveRequests,
           attendanceStats,
         },
       }));
@@ -357,6 +415,11 @@ export function AdminTeamPage() {
     if (isExpanding && !employeeDetails[employee.id]) {
       await fetchEmployeeDetails(employee.id);
     }
+  };
+
+  // 해당 직원의 근태 신청 목록 (에이전시 목록에서 필터링)
+  const getEmployeeLeaveRequests = (employeeId) => {
+    return agencyLeaveRequests.filter((r) => Number(r.memberNo) === Number(employeeId));
   };
 
   const handleOpenDetail = (employee) => {
@@ -554,6 +617,7 @@ export function AdminTeamPage() {
             {filteredEmployees.map((employee) => {
               const isExpanded = expandedEmployeeId === employee.id;
               const details = employeeDetails[employee.id];
+              const hc = details?.healthCheck;
               return (
                 <div key={employee.id}>
                   <EmployeeCard onClick={() => handleEmployeeClick(employee)}>
@@ -607,49 +671,128 @@ export function AdminTeamPage() {
                     </EmployeeRight>
                   </EmployeeCard>
 
-                  {/* 펼침: 근태 신청 리스트 + 해당 작가 근태 통계 */}
+                  {/* 펼침: 데일리 설문, 근태 신청 리스트, 근태 통계 그래프 - 에이전시 직원관리와 동일 */}
                   {isExpanded && (
                     <Card className="mt-0 p-6 bg-white border-t-0 rounded-t-none" style={{ borderTopLeftRadius: 0, borderTopRightRadius: 0, marginTop: '-1px', border: '1px solid #e2e8f0' }}>
                       {loadingDetails.has(employee.id) ? (
                         <div className="text-center py-6 text-sm text-muted-foreground">상세 정보를 불러오는 중...</div>
                       ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                          {/* 좌: 근태 신청 리스트 (2개 이상 시 스크롤, 스크롤바 숨김) */}
-                          <LeaveListSection>
-                            <h3 className="text-base font-semibold text-foreground mb-3">근태 신청 리스트</h3>
-                            {details?.leaveRequests?.length ? (
-                              <LeaveListScroll>
-                                <ul className="space-y-3 pr-1">
-                                  {details.leaveRequests.map((req) => {
-                                    const startStr = req.startDate ? new Date(req.startDate).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' }) : '-';
-                                    const endStr = req.endDate ? new Date(req.endDate).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' }) : '-';
-                                    const statusVariant = req.status === '승인' ? 'default' : req.status === '반려' ? 'destructive' : 'secondary';
-                                    return (
-                                      <li key={req.id} className="rounded-lg border border-border bg-muted/30 px-3 py-3">
-                                        <div className="flex items-center justify-between gap-2 mb-1.5">
-                                          <span className="text-sm font-semibold text-foreground">{req.type}</span>
-                                          <Badge variant={statusVariant} className="text-xs shrink-0">
-                                            {req.status}
-                                          </Badge>
-                                        </div>
-                                        <p className="text-xs text-muted-foreground">
-                                          {startStr} ~ {endStr}
-                                        </p>
-                                      </li>
-                                    );
-                                  })}
-                                </ul>
-                              </LeaveListScroll>
-                            ) : (
-                              <p className="text-sm text-muted-foreground py-2">근태 신청 내역이 없습니다</p>
-                            )}
-                          </LeaveListSection>
-                          {/* 우: 근태 통계 (파이 차트) */}
-                          <AttendanceStatsSection>
-                            <h3 className="text-base font-semibold text-foreground mb-3">근태 통계</h3>
-                            <AttendanceStatsChart stats={details?.attendanceStats} />
-                          </AttendanceStatsSection>
-                        </div>
+                        <>
+                          {/* 공통: 데일리 설문, 근태 신청 리스트, 근태 통계 그래프 */}
+                          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 pb-6 border-b border-border">
+                            {/* 1. 데일리 설문 내용 */}
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-2 mb-3">
+                                <Heart className="w-4 h-4 text-primary" />
+                                <h3 className="text-base font-semibold text-foreground">데일리 설문 (건강 체크)</h3>
+                              </div>
+                              {hc ? (
+                                <div className="space-y-0 p-4 bg-white border border-border rounded-lg flex-1 flex flex-col min-h-[220px]">
+                                  <div className="flex justify-between py-2 border-b border-border">
+                                    <span className="text-sm text-muted-foreground">오늘 컨디션</span>
+                                    <span className="text-sm font-medium">{hc.condition ?? '-'}</span>
+                                  </div>
+                                  <div className="flex justify-between py-2 border-b border-border">
+                                    <span className="text-sm text-muted-foreground">수면 시간</span>
+                                    <span className="text-sm font-medium">{hc.sleepHours ?? 0}시간</span>
+                                  </div>
+                                  <div className="flex justify-between py-2 border-b border-border">
+                                    <span className="text-sm text-muted-foreground">신체 불편함</span>
+                                    <span className="text-sm font-medium">{hc.physicalDiscomfort ?? hc.discomfortLevel ?? 0}</span>
+                                  </div>
+                                  {hc.memo && (
+                                    <div className="pt-3 mt-3 border-t border-border">
+                                      <p className="text-xs text-muted-foreground mb-2">메모</p>
+                                      <div className="p-3 bg-muted/30 rounded-lg">
+                                        <p className="text-sm">{hc.memo}</p>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="p-4 border border-border rounded-lg flex-1 flex items-center justify-center min-h-[220px] text-sm text-muted-foreground">검진을 하지 않았습니다</div>
+                              )}
+                            </div>
+
+                            {/* 2. 근태 신청 리스트 */}
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-2 mb-3">
+                                <CalendarClock className="w-4 h-4 text-primary" />
+                                <h3 className="text-base font-semibold text-foreground">근태 신청 리스트</h3>
+                              </div>
+                              <div className="p-4 border border-border rounded-lg flex-1 flex flex-col min-h-[220px]">
+                                {getEmployeeLeaveRequests(employee.id).length > 0 ? (
+                                  <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+                                    {getEmployeeLeaveRequests(employee.id)
+                                      .filter((r) => r.attendanceRequestStatus !== 'CANCELLED')
+                                      .map((req) => {
+                                        const statusMap = REQUEST_STATUS_MAP[req.attendanceRequestStatus] || { label: req.attendanceRequestStatus, color: '#6B7280' };
+                                        return (
+                                          <div key={req.attendanceRequestNo} className="p-2 bg-muted/30 rounded-lg border border-border">
+                                            <div className="flex justify-between items-center">
+                                              <span className="text-sm font-medium">{req.attendanceRequestType || '-'}</span>
+                                              <Badge style={{ backgroundColor: statusMap.color, color: '#fff', fontSize: '10px' }}>{statusMap.label}</Badge>
+                                            </div>
+                                            <p className="text-xs text-muted-foreground mt-1">{formatReqDate(req.attendanceRequestStartDate)} ~ {formatReqDate(req.attendanceRequestEndDate)}</p>
+                                          </div>
+                                        );
+                                      })}
+                                  </div>
+                                ) : (
+                                  <div className="text-center py-6 text-sm text-muted-foreground flex-1 flex items-center justify-center">근태 신청 내역이 없습니다</div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* 3. 근태 통계 그래프 */}
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-2 mb-3">
+                                <Briefcase className="w-4 h-4 text-primary" />
+                                <h3 className="text-base font-semibold text-foreground">근태 통계</h3>
+                              </div>
+                              <div className="p-4 border border-border rounded-lg flex-1 flex flex-col min-h-[220px]">
+                                {details?.attendanceStats?.data?.length > 0 ? (
+                                  <div className="flex items-center gap-4 flex-1 min-h-[180px]">
+<div className="w-[140px] h-[140px] flex-shrink-0">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                          <Pie
+                                            data={details.attendanceStats.data}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={30}
+                                            outerRadius={50}
+                                            paddingAngle={2}
+                                            dataKey="value"
+                                          >
+                                            {details.attendanceStats.data.map((entry, index) => (
+                                              <Cell key={`cell-${index}`} fill={entry.color} />
+                                            ))}
+                                          </Pie>
+                                          <Tooltip formatter={(value) => [`${value}일`, '']} />
+                                        </PieChart>
+                                      </ResponsiveContainer>
+                                    </div>
+                                    <div className="flex-1">
+                                      <p className="text-2xl font-bold text-foreground">{details.attendanceStats.totalDays}<span className="text-sm font-normal text-muted-foreground ml-1">일</span></p>
+                                      <p className="text-xs text-muted-foreground">이번 달 출근</p>
+                                      <div className="mt-2 space-y-1">
+                                        {details.attendanceStats.data.map((item, i) => (
+                                          <div key={i} className="flex items-center gap-2 text-xs">
+                                            <span style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: item.color }} />
+                                            <span>{item.name} {item.value}일</span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="text-center py-6 text-sm text-muted-foreground flex-1 flex items-center justify-center">근태 통계 데이터가 없습니다</div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </>
                       )}
                     </Card>
                   )}
