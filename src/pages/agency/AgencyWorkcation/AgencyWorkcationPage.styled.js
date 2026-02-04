@@ -51,6 +51,35 @@ export const FilterButtonGroup = styled.div`
   gap: 8px;
 `;
 
+export const SortOptionsRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+`;
+
+export const SortLabel = styled.span`
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--foreground);
+  white-space: nowrap;
+`;
+
+export const LoadingMessage = styled.div`
+  text-align: center;
+  padding: 2rem;
+`;
+
+export const MemberAvatarPlaceholder = styled.div`
+  display: ${(props) => (props.$visible ? 'flex' : 'none')};
+  align-items: center;
+  justify-content: center;
+  width: ${(props) => (props.$size === 'lg' ? '5rem' : '4rem')};
+  height: ${(props) => (props.$size === 'lg' ? '5rem' : '4rem')};
+  border-radius: 50%;
+  border: 4px solid rgba(255, 255, 255, 0.2);
+  background-color: rgba(255, 255, 255, 0.2);
+`;
+
 // 통계 그리드 (데스크탑: 3열)
 export const StatisticsGrid = styled.div`
   display: grid;

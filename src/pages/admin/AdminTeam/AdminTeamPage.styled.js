@@ -538,3 +538,28 @@ export const EmptyStateMessage = styled.p`
   margin: 0;
   text-align: center;
 `;
+
+/** 근태 신청 리스트 / 근태 통계 영역 구분용 */
+export const LeaveListSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+`;
+
+/** 근태 신청 리스트 스크롤 영역 (2개 이상일 때 스크롤, 스크롤바 숨김) */
+export const LeaveListScroll = styled.div`
+  overflow-y: auto;
+  max-height: 220px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+`;
+
+/** 근태 통계 영역 */
+export const AttendanceStatsSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+`;

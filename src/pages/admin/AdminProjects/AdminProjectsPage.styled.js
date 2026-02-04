@@ -264,6 +264,7 @@ export const AdminProjectMetaDivider = styled.span`
 
 export const AdminProjectStatus = styled.div`
   flex-shrink: 0;
+  width: 78px;
   text-align: right;
   display: flex;
   flex-direction: column;
@@ -273,6 +274,7 @@ export const AdminProjectStatus = styled.div`
 export const AdminProjectStatusText = styled.p`
   font-size: 14px;
   color: var(--muted-foreground);
+  text-align: left;
   margin: 0;
 `;
 

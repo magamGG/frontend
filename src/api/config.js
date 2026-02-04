@@ -79,6 +79,7 @@ export const API_ENDPOINTS = {
     LIST: (memberNo, year) => `/api/leave/list?memberNo=${memberNo}&year=${year}`, // GET: 연차 목록 조회
     BALANCE: (memberNo) => `/api/leave/balance/${memberNo}`, // GET: 연차 잔액 조회
     MY_REQUESTS: `/api/leave/my-requests`, // GET: 내 근태 신청 목록 조회
+    MANAGER_REQUESTS: `/api/leave/manager/requests`, // GET: 담당자 대시보드 신청 현황 (담당 작가 근태 신청)
     AGENCY_REQUESTS: (agencyNo) => `/api/leave/agency/${agencyNo}`, // GET: 에이전시 소속 근태 신청 목록
     AGENCY_PENDING: (agencyNo) => `/api/leave/agency/${agencyNo}/pending`, // GET: 에이전시 소속 대기 중 근태 신청
     MANAGER_WEEKLY: `/api/leave/manager/weekly`, // GET: 담당자 대시보드 금주 근태 예정
@@ -107,8 +108,14 @@ export const API_ENDPOINTS = {
     ADDABLE_MEMBERS: (projectNo) => `/api/projects/${projectNo}/addable-members`, // GET: 추가 가능 팀원 (담당자/작가 제외, 미소속)
     KANBAN: (projectNo) => `/api/projects/${projectNo}/kanban`, // GET: 칸반 보드 조회
     MANAGED: `/api/projects/managed`, // GET: 담당자 대시보드 담당 프로젝트 현황
+    DEADLINE_COUNTS: `/api/projects/deadline-counts`, // GET: 담당자 대시보드 마감 임박 현황 (주기 기준)
+    MY_COUNT: `/api/projects/my-count`, // GET: 로그인 회원 소속 프로젝트 수 (PROJECT_MEMBER 기준)
+    TASK_COUNT_BY_MEMBER: (memberNo) => `/api/projects/members/${memberNo}/task-count`, // GET: 회원에게 배정된 칸반 카드(작업) 수 (미완료 N)
+    COMPLETED_TASK_COUNT_BY_MEMBER: (memberNo) => `/api/projects/members/${memberNo}/completed-task-count`, // GET: 회원 완료 작업 수 (KANBAN_CARD_STATUS='Y')
+    ACTIVE_TASK_COUNT_BY_MEMBER: (memberNo) => `/api/projects/members/${memberNo}/active-task-count`, // GET: 회원 작업 수 (STATUS != 'D', 카드 "작업 N개" 표시용)
     FEEDBACK: (limit = 50) => `/api/projects/feedback?limit=${limit}`, // GET: 작가 대시보드 피드백(프로젝트 코멘트 목록)
     TODAY_TASKS: `/api/projects/my-today-tasks`, // GET: 아티스트 대시보드 오늘 할 일 (담당+마감일 오늘+미완료 칸반 카드)
+    KANBAN_STATS: (memberNo) => `/api/projects/member/${memberNo}/kanban-stats`, // GET: 회원별 칸반 카드 통계 (진행중/완료 개수)
     NEXT_SERIAL: (limit = 10) => `/api/projects/next-serial?limit=${limit}`, // GET: 아티스트 대시보드 다음 연재 프로젝트 (PROJECT_MEMBER+PROJECT_STARTED_AT/CYCLE)
     KANBAN_BOARDS: (projectNo) => `/api/projects/${projectNo}/kanban-board`, // POST: 칸반 보드 추가
     KANBAN_BOARD_UPDATE: (projectNo, boardId) => `/api/projects/${projectNo}/kanban-board/${boardId}`, // PUT: 칸반 보드 상태 수정
@@ -120,9 +127,6 @@ export const API_ENDPOINTS = {
 
   // 캘린더 API
   CALENDAR: {
-    CREATE_EVENT: `/api/calendar/events`, // POST: 일정 생성
-    EVENTS_BY_MONTH: (year, month) => `/api/calendar/events?year=${year}&month=${month}`, // GET: 월별 일정 조회
-    UPCOMING_EVENTS: (limit = 10) => `/api/calendar/events/upcoming?limit=${limit}`, // GET: 다가오는 일정 (작가 대시보드용)
     DEADLINE_COUNTS: `/api/calendar/deadline-counts`, // GET: 담당자 대시보드 마감 임박 현황
     DEADLINE_COUNTS_BY_AGENCY: (agencyNo) => `/api/calendar/deadline-counts/agency/${agencyNo}`, // GET: 에이전시 대시보드 마감 임박 현황
   },

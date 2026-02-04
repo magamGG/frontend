@@ -8,11 +8,13 @@ import {
   Search,
   ChevronRight,
   ChevronDown,
-  Heart
+  Heart,
+  CalendarClock
 } from 'lucide-react';
 import { Card } from '@/app/components/ui/card';
+import { Badge } from '@/app/components/ui/badge';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-import { memberService } from '@/api';
+import { memberService, projectService, leaveService, attendanceService } from '@/api';
 import { API_BASE_URL } from '@/api/config';
 import useAuthStore from '@/store/authStore';
 import { toast } from 'sonner';
@@ -56,26 +58,98 @@ import {
   EmployeeDetailName,
   EmployeeDetailBadges,
   EmployeeDetailContact,
-  HealthCheckCard,
-  HealthCheckTitle,
-  HealthCheckContent,
-  HealthMetrics,
-  HealthMetric,
-  HealthMetricLabel,
-  HealthMetricValue,
-  HealthMetricDivider,
-  MemoSection,
-  MemoLabel,
-  MemoInput,
-  ChartContainer,
-  LineChartWrapper,
+  EmptyStateContainer,
+  EmptyStateMessage,
   PieChartWrapper,
   PieChartCenterText,
   PieChartDays,
-  PieChartLabel,
-  EmptyStateContainer,
-  EmptyStateMessage,
+  LeaveListSection,
+  LeaveListScroll,
+  AttendanceStatsSection,
 } from './AdminTeamPage.styled';
+
+// 근태 타입별 색상 (leave_request 기준, 있는 것만 표시)
+const LEAVE_TYPE_COLORS = {
+  연차: '#3B82F6',
+  병가: '#EF4444',
+  워케이션: '#10B981',
+  재택근무: '#8B5CF6',
+  휴가: '#F59E0B',
+  반차: '#EAB308',
+  반반차: '#6B7280',
+};
+
+// 근태 통계: member_no 기준 attendance 확인 후, 출근일이면 attendance_request 승인 건으로 타입 표시(워케이션 등), 승인 없으면 출근
+// 출근하지 않았지만 승인된 연차/휴가 신청이 있는 날도 해당 타입으로 집계됨
+function AttendanceStatsChart({ stats }) {
+  const totalCount = stats?.totalCount ?? 0;
+  const typeCounts = stats?.typeCounts ?? [];
+  const now = new Date();
+  const daysSoFar = now.getDate();
+  // typeCounts의 모든 count 합 = 출근 + 승인된 근태 신청(연차/휴가 등)이 있는 날 수
+  const accountedDays = typeCounts.reduce((sum, tc) => sum + (Number(tc.count) || 0), 0);
+  // 미출근 = 이번 달 1일~오늘 일수 - (출근 + 승인된 근태 신청이 있는 날 수)
+  const 미출근일수 = Math.max(0, daysSoFar - accountedDays);
+  const 출근Color = '#22c55e';
+  const 미출근Color = '#e2e8f0';
+
+  // 통계 표시는 그대로 두되, "미출근"은 차트·텍스트 리스트에서 제외
+  const rows = [
+    ...typeCounts.map((tc) => ({
+      label: tc.type || '출근',
+      value: Number(tc.count) || 0,
+      color: tc.type === '출근' ? 출근Color : (LEAVE_TYPE_COLORS[tc.type] || '#6B7280'),
+    })),
+    // { label: '미출근', value: 미출근일수, color: 미출근Color },
+  ].filter((r) => r.value > 0);
+
+  const pieData = rows.map((r) => ({ name: r.label, value: r.value, color: r.color }));
+  const centerDays = pieData.reduce((sum, d) => sum + d.value, 0);
+  const isEmpty = pieData.length === 0;
+
+  return (
+    <div className="flex flex-row items-center gap-4">
+      <PieChartWrapper style={{ width: 160, height: 160 }}>
+        {isEmpty ? (
+          <div className="flex items-center justify-center w-full h-full text-lg font-semibold text-muted-foreground">
+            0일
+          </div>
+        ) : (
+          <>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={45}
+                  outerRadius={70}
+                  paddingAngle={2}
+                  dataKey="value"
+                >
+                  {pieData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+            <PieChartCenterText>
+              <PieChartDays>{centerDays}일</PieChartDays>
+            </PieChartCenterText>
+          </>
+        )}
+      </PieChartWrapper>
+      <div className="flex flex-col gap-2">
+        {rows.map(({ label, value, color }) => (
+          <div key={label} className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: color }} />
+            <span className="text-sm text-foreground">{label} {value}일</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function AdminTeamPage() {
   const user = useAuthStore((state) => state.user);
@@ -86,6 +160,38 @@ export function AdminTeamPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [employeeDetails, setEmployeeDetails] = useState({}); // 직원별 상세 정보 캐시
   const [loadingDetails, setLoadingDetails] = useState(new Set()); // 상세 로딩 중인 id
+  const [agencyLeaveRequests, setAgencyLeaveRequests] = useState([]); // 에이전시 소속 근태 신청 목록
+  const [myProjectCount, setMyProjectCount] = useState(null);
+
+  const REQUEST_STATUS_MAP = {
+    PENDING: { label: '대기', color: '#F59E0B' },
+    APPROVED: { label: '승인', color: '#10B981' },
+    REJECTED: { label: '반려', color: '#EF4444' },
+    CANCELLED: { label: '취소', color: '#6B7280' },
+  };
+  const formatReqDate = (str) => {
+    if (!str) return '-';
+    try {
+      const d = new Date(str);
+      return d.toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit', year: 'numeric' });
+    } catch {
+      return str;
+    }
+  };
+
+  // 현재 로그인 계정(담당자)의 담당 프로젝트 수 (PROJECT_MEMBER 기준)
+  useEffect(() => {
+    if (!user?.memberNo) return;
+    const fetchCount = async () => {
+      try {
+        const list = await projectService.getManagedProjects();
+        setMyProjectCount(Array.isArray(list) ? list.length : 0);
+      } catch {
+        setMyProjectCount(0);
+      }
+    };
+    fetchCount();
+  }, [user?.memberNo]);
 
   // 현재 로그인한 담당자의 managerNo 조회 및 배정된 작가 목록 가져오기
   useEffect(() => {
@@ -120,7 +226,6 @@ export function AdminTeamPage() {
         // 3. 작가 데이터를 컴포넌트 형식으로 변환
         const imageBaseUrl = API_BASE_URL || 'http://localhost:8888';
         const mappedEmployees = artistsList.map((artist) => {
-          // 프로필 이미지 URL 구성
           let profileImageUrl = null;
           if (artist.memberProfileImage) {
             if (artist.memberProfileImage.startsWith('http://') || artist.memberProfileImage.startsWith('https://')) {
@@ -131,25 +236,36 @@ export function AdminTeamPage() {
               profileImageUrl = `${imageBaseUrl}/uploads/${artist.memberProfileImage}`;
             }
           }
-          
           return {
             id: artist.memberNo,
             name: artist.memberName,
             email: artist.memberEmail,
             phone: artist.memberPhone || '',
-            role: artist.memberRole, // 원본 역할 그대로 표시
-            originalRole: artist.memberRole, // 원본 역할 저장
-            status: artist.memberStatus === 'ACTIVE' ? '근무중' 
-              : artist.memberStatus === 'ON_LEAVE' ? '휴가' 
-              : artist.memberStatus === 'SICK_LEAVE' ? '병가' 
+            role: artist.memberRole,
+            originalRole: artist.memberRole,
+            status: artist.memberStatus === 'ACTIVE' ? '근무중'
+              : artist.memberStatus === 'ON_LEAVE' ? '휴가'
+              : artist.memberStatus === 'SICK_LEAVE' ? '병가'
               : '근무중',
-            projectCount: 0, // 프로젝트 수는 상세 정보에서 가져옴
-            healthCheck: null, // 건강 체크는 상세 정보에서 가져옴
-            profileImage: profileImageUrl, // 프로필 이미지 URL
+            projectCount: 0,
+            profileImage: profileImageUrl,
           };
         });
 
-        setEmployees(mappedEmployees);
+        // 4. 참여 중인 프로젝트 수를 먼저 조회한 뒤 한 번에 설정 (클릭 전에도 카드에 올바른 개수 표시)
+        const withCounts = await Promise.all(
+          mappedEmployees.map(async (emp) => {
+            try {
+              const res = await memberService.getMemberDetails(emp.id);
+              const data = res?.data != null ? res.data : (Array.isArray(res) ? res[0] : res);
+              const projectCount = (data?.currentProjects?.length ?? 0);
+              return { ...emp, projectCount };
+            } catch {
+              return { ...emp, projectCount: 0 };
+            }
+          })
+        );
+        setEmployees(withCounts);
       } catch (error) {
         console.error('작가 목록 조회 실패:', error);
         toast.error('작가 목록을 불러오는데 실패했습니다.');
@@ -161,15 +277,52 @@ export function AdminTeamPage() {
     fetchEmployees();
   }, [user?.memberNo, user?.agencyNo]);
 
-  // 직원 상세 정보 가져오기 (건강 체크 포함)
+  // 에이전시 소속 근태 신청 목록 조회 (직원별 필터링용)
+  useEffect(() => {
+    const fetchAgencyLeaveRequests = async () => {
+      if (!user?.agencyNo) return;
+      try {
+        const list = await leaveService.getAgencyRequests(user.agencyNo);
+        setAgencyLeaveRequests(Array.isArray(list) ? list : []);
+      } catch (err) {
+        console.error('에이전시 근태 신청 목록 조회 실패:', err);
+        setAgencyLeaveRequests([]);
+      }
+    };
+    fetchAgencyLeaveRequests();
+  }, [user?.agencyNo]);
+
+  // 직원 목록 로드 시 참여 중인 프로젝트 수 등 상세 정보 미리 조회
+  useEffect(() => {
+    if (!employees.length || !user?.agencyNo) return;
+    employees.forEach((emp) => {
+      if (!employeeDetails[emp.id] && !loadingDetails.has(emp.id)) {
+        fetchEmployeeDetails(emp.id);
+      }
+    });
+  }, [employees, user?.agencyNo]);
+
+  // 직원 상세 정보 가져오기 (건강 체크, 근태 통계 포함)
   const fetchEmployeeDetails = async (employeeId) => {
-    if (employeeDetails[employeeId]) {
-      return; // 이미 캐시된 경우
+    if (employeeDetails[employeeId] || loadingDetails.has(employeeId)) {
+      return; // 이미 캐시됐거나 로딩 중인 경우
     }
     setLoadingDetails(prev => new Set(prev).add(employeeId));
     try {
-      const response = await memberService.getMemberDetails(employeeId);
-      const data = Array.isArray(response) ? response[0] : response;
+      const [memberResponse, statsResponse] = await Promise.all([
+        memberService.getMemberDetails(employeeId),
+        (async () => {
+          try {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth() + 1;
+            return await attendanceService.getStatistics(employeeId, year, month);
+          } catch {
+            return null;
+          }
+        })(),
+      ]);
+      const data = Array.isArray(memberResponse) ? memberResponse[0] : memberResponse;
 
       // 건강 체크 데이터 변환
       let healthCheck = null;
@@ -181,10 +334,23 @@ export function AdminTeamPage() {
           sleepHours: hc.sleepHours || 0,
           physicalDiscomfort: hc.discomfortLevel || 0,
           memo: hc.memo || '',
-          // TODO: 백엔드에서 제공되면 사용, 아니면 빈 배열
           healthScoreData: [],
           healthStatusDistribution: [],
           totalCheckDays: 0,
+        };
+      }
+
+      // 근태 통계 데이터 변환 (파이 차트용)
+      const ATTENDANCE_TYPE_COLORS = { '출근': '#00ACC1', '휴가': '#757575', '재택근무': '#FF9800', '워케이션': '#9C27B0' };
+      let attendanceStats = null;
+      if (statsResponse?.typeCounts?.length) {
+        attendanceStats = {
+          data: statsResponse.typeCounts.map((item) => ({
+            name: item.type,
+            value: Number(item.count),
+            color: ATTENDANCE_TYPE_COLORS[item.type] || '#6E8FB3',
+          })),
+          totalDays: statsResponse.totalCount || 0,
         };
       }
 
@@ -195,8 +361,8 @@ export function AdminTeamPage() {
         ...prev,
         [employeeId]: {
           ...data,
-          healthCheck,
           projectCount,
+          attendanceStats,
         },
       }));
 
@@ -216,7 +382,7 @@ export function AdminTeamPage() {
       // employees 상태도 업데이트
       setEmployees(prev => prev.map(emp => 
         emp.id === employeeId 
-          ? { ...emp, projectCount, healthCheck, profileImage: profileImageUrl || emp.profileImage }
+          ? { ...emp, projectCount, profileImage: profileImageUrl || emp.profileImage }
           : emp
       ));
     } catch (error) {
@@ -232,7 +398,6 @@ export function AdminTeamPage() {
   };
 
   const totalArtists = employees.length;
-  const worksInProgress = employees.reduce((sum, emp) => sum + emp.projectCount, 0);
   const activeArtists = employees.filter(emp => emp.status === '근무중').length;
 
   const filteredEmployees = employees.filter(emp => {
@@ -250,6 +415,11 @@ export function AdminTeamPage() {
     if (isExpanding && !employeeDetails[employee.id]) {
       await fetchEmployeeDetails(employee.id);
     }
+  };
+
+  // 해당 직원의 근태 신청 목록 (에이전시 목록에서 필터링)
+  const getEmployeeLeaveRequests = (employeeId) => {
+    return agencyLeaveRequests.filter((r) => Number(r.memberNo) === Number(employeeId));
   };
 
   const handleOpenDetail = (employee) => {
@@ -289,8 +459,8 @@ export function AdminTeamPage() {
                 <Briefcase className="w-6 h-6" />
               </StatCardIcon>
               <StatCardContent>
-                <StatCardLabel>진행 중인 작품</StatCardLabel>
-                <StatCardValue>{worksInProgress}개</StatCardValue>
+                <StatCardLabel>진행 중인 프로젝트</StatCardLabel>
+                <StatCardValue>{myProjectCount ?? 0}개</StatCardValue>
               </StatCardContent>
             </StatCard>
             
@@ -371,135 +541,6 @@ export function AdminTeamPage() {
                 </EmployeeRight>
               </EmployeeDetailHeader>
             </EmployeeDetailCard>
-
-            {/* 건강 체크 결과 카드 */}
-            {selectedEmployee.healthCheck ? (
-              <HealthCheckCard>
-                <HealthCheckTitle>
-                  {selectedEmployee.healthCheck.date ? `${selectedEmployee.healthCheck.date} 건강 체크 결과` : '건강 체크 결과'}
-                </HealthCheckTitle>
-                <HealthCheckContent>
-                  {/* 왼쪽: 건강 메트릭 */}
-                  <div>
-                    <HealthMetrics>
-                      <HealthMetric>
-                        <HealthMetricLabel>오늘 컨디션</HealthMetricLabel>
-                        <HealthMetricValue>{selectedEmployee.healthCheck.condition}</HealthMetricValue>
-                      </HealthMetric>
-                      <HealthMetricDivider />
-                      <HealthMetric>
-                        <HealthMetricLabel>수면 시간</HealthMetricLabel>
-                        <HealthMetricValue>{selectedEmployee.healthCheck.sleepHours}(시간)</HealthMetricValue>
-                      </HealthMetric>
-                      <HealthMetricDivider />
-                      <HealthMetric>
-                        <HealthMetricLabel>신체 불편함</HealthMetricLabel>
-                        <HealthMetricValue>{selectedEmployee.healthCheck.physicalDiscomfort}</HealthMetricValue>
-                      </HealthMetric>
-                    </HealthMetrics>
-                    <MemoSection>
-                      <MemoLabel>메모 내용</MemoLabel>
-                      <MemoInput
-                        type="text"
-                        placeholder="오늘은 키위가 먹고싶네여...."
-                        value={selectedEmployee.healthCheck.memo}
-                        readOnly
-                      />
-                    </MemoSection>
-                  </div>
-
-                  {/* 중앙: 라인 차트 - 최근 7일간 건강 점수 추이 */}
-                  {selectedEmployee.healthCheck?.healthScoreData && selectedEmployee.healthCheck.healthScoreData.length > 0 ? (
-                    <ChartContainer>
-                      <LineChartWrapper>
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={selectedEmployee.healthCheck.healthScoreData}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                            <XAxis 
-                              dataKey="date" 
-                              stroke="#5a6067"
-                              tick={{ fontSize: 12 }}
-                              label={{ value: '날짜', position: 'insideBottom', offset: -5, style: { textAnchor: 'middle', fill: '#5a6067' } }}
-                            />
-                            <YAxis 
-                              stroke="#5a6067"
-                              tick={{ fontSize: 12 }}
-                              domain={[0, 100]}
-                              ticks={[0, 25, 50, 75, 100]}
-                              label={{ value: '건강 점수', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fill: '#5a6067' } }}
-                            />
-                            <Tooltip 
-                              formatter={(value) => [`${value}점`, '건강 점수']}
-                              labelFormatter={(label) => `${label}`}
-                            />
-                            <Line 
-                              type="monotone" 
-                              dataKey="score" 
-                              stroke="#3B82F6" 
-                              strokeWidth={2}
-                              dot={{ fill: '#3B82F6', r: 4 }}
-                              activeDot={{ r: 6 }}
-                              name="건강 점수"
-                            />
-                          </LineChart>
-                        </ResponsiveContainer>
-                      </LineChartWrapper>
-                    </ChartContainer>
-                  ) : (
-                    <ChartContainer>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#9CA3AF' }}>
-                        건강 점수 데이터가 없습니다
-                      </div>
-                    </ChartContainer>
-                  )}
-
-                  {/* 오른쪽: 원형 차트 - 최근 30일간 건강 상태 분포도 */}
-                  {selectedEmployee.healthCheck?.healthStatusDistribution && selectedEmployee.healthCheck.healthStatusDistribution.length > 0 ? (
-                    <PieChartWrapper>
-                      <ResponsiveContainer width={140} height={140}>
-                        <PieChart>
-                          <Pie
-                            data={selectedEmployee.healthCheck.healthStatusDistribution}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={45}
-                            outerRadius={70}
-                            paddingAngle={2}
-                            dataKey="value"
-                          >
-                            {selectedEmployee.healthCheck.healthStatusDistribution.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                          </Pie>
-                          <Tooltip 
-                            formatter={(value, name) => [`${value}일`, name]}
-                          />
-                        </PieChart>
-                      </ResponsiveContainer>
-                      <PieChartCenterText>
-                        <PieChartDays>{selectedEmployee.healthCheck.totalCheckDays || 0} 일</PieChartDays>
-                        <PieChartLabel>총 체크일</PieChartLabel>
-                      </PieChartCenterText>
-                    </PieChartWrapper>
-                  ) : (
-                    <PieChartWrapper>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#9CA3AF' }}>
-                        건강 상태 분포 데이터가 없습니다
-                      </div>
-                    </PieChartWrapper>
-                  )}
-                </HealthCheckContent>
-              </HealthCheckCard>
-            ) : (
-              <HealthCheckCard>
-                <HealthCheckTitle>건강 체크 결과</HealthCheckTitle>
-                <HealthCheckContent>
-                  <div style={{ textAlign: 'center', padding: '2rem', color: '#9CA3AF' }}>
-                    건강 체크 정보가 없습니다
-                  </div>
-                </HealthCheckContent>
-              </HealthCheckCard>
-            )}
           </EmployeeDetailView>
         </AdminTeamBody>
       </AdminTeamRoot>
@@ -533,8 +574,8 @@ export function AdminTeamPage() {
               <Briefcase className="w-6 h-6" />
             </StatCardIcon>
             <StatCardContent>
-              <StatCardLabel>진행 중인 작품</StatCardLabel>
-              <StatCardValue>{worksInProgress}개</StatCardValue>
+              <StatCardLabel>진행 중인 프로젝트</StatCardLabel>
+              <StatCardValue>{myProjectCount ?? 0}개</StatCardValue>
             </StatCardContent>
           </StatCard>
           
@@ -630,51 +671,126 @@ export function AdminTeamPage() {
                     </EmployeeRight>
                   </EmployeeCard>
 
-                  {/* 펼침: 데일리 설문(건강 체크) 결과 - agency 직원관리와 동일 */}
+                  {/* 펼침: 데일리 설문, 근태 신청 리스트, 근태 통계 그래프 - 에이전시 직원관리와 동일 */}
                   {isExpanded && (
                     <Card className="mt-0 p-6 bg-white border-t-0 rounded-t-none" style={{ borderTopLeftRadius: 0, borderTopRightRadius: 0, marginTop: '-1px', border: '1px solid #e2e8f0' }}>
                       {loadingDetails.has(employee.id) ? (
                         <div className="text-center py-6 text-sm text-muted-foreground">상세 정보를 불러오는 중...</div>
                       ) : (
                         <>
-                          <div className="flex items-center gap-2 mb-3">
-                            <Heart className="w-4 h-4 text-primary" />
-                            <h3 className="text-base font-semibold text-foreground">건강 체크 결과</h3>
-                          </div>
-                          {hc ? (
-                            <div className="space-y-0">
-                              <div className="flex items-center justify-between py-2 border-b border-border">
-                                <span className="text-sm text-muted-foreground">오늘 컨디션</span>
-                                <span className="text-sm font-medium text-foreground">{hc.condition ?? '-'}</span>
+                          {/* 공통: 데일리 설문, 근태 신청 리스트, 근태 통계 그래프 */}
+                          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 pb-6 border-b border-border">
+                            {/* 1. 데일리 설문 내용 */}
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-2 mb-3">
+                                <Heart className="w-4 h-4 text-primary" />
+                                <h3 className="text-base font-semibold text-foreground">데일리 설문 (건강 체크)</h3>
                               </div>
-                              <div className="flex items-center justify-between py-2 border-b border-border">
-                                <span className="text-sm text-muted-foreground">수면 시간</span>
-                                <span className="text-sm font-medium text-foreground">{hc.sleepHours ?? 0}시간</span>
-                              </div>
-                              <div className="flex items-center justify-between py-2 border-b border-border">
-                                <span className="text-sm text-muted-foreground">신체 불편함</span>
-                                <span className="text-sm font-medium text-foreground">{hc.physicalDiscomfort ?? hc.discomfortLevel ?? 0}</span>
-                              </div>
-                              {hc.memo && (
-                                <div className="pt-3 mt-3 border-t border-border">
-                                  <p className="text-xs text-muted-foreground mb-2">메모</p>
-                                  <div className="p-3 bg-muted/30 rounded-lg">
-                                    <p className="text-sm text-foreground">{hc.memo}</p>
+                              {hc ? (
+                                <div className="space-y-0 p-4 bg-white border border-border rounded-lg flex-1 flex flex-col min-h-[220px]">
+                                  <div className="flex justify-between py-2 border-b border-border">
+                                    <span className="text-sm text-muted-foreground">오늘 컨디션</span>
+                                    <span className="text-sm font-medium">{hc.condition ?? '-'}</span>
                                   </div>
+                                  <div className="flex justify-between py-2 border-b border-border">
+                                    <span className="text-sm text-muted-foreground">수면 시간</span>
+                                    <span className="text-sm font-medium">{hc.sleepHours ?? 0}시간</span>
+                                  </div>
+                                  <div className="flex justify-between py-2 border-b border-border">
+                                    <span className="text-sm text-muted-foreground">신체 불편함</span>
+                                    <span className="text-sm font-medium">{hc.physicalDiscomfort ?? hc.discomfortLevel ?? 0}</span>
+                                  </div>
+                                  {hc.memo && (
+                                    <div className="pt-3 mt-3 border-t border-border">
+                                      <p className="text-xs text-muted-foreground mb-2">메모</p>
+                                      <div className="p-3 bg-muted/30 rounded-lg">
+                                        <p className="text-sm">{hc.memo}</p>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
+                              ) : (
+                                <div className="p-4 border border-border rounded-lg flex-1 flex items-center justify-center min-h-[220px] text-sm text-muted-foreground">검진을 하지 않았습니다</div>
                               )}
                             </div>
-                          ) : (
-                            <div className="text-center py-8 text-sm text-muted-foreground">검진을 하지 않았습니다</div>
-                          )}
-                          <div className="mt-4 pt-3 border-t border-border">
-                            <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); handleOpenDetail(employee); }}
-                              className="text-sm text-primary hover:underline"
-                            >
-                              상세 보기 →
-                            </button>
+
+                            {/* 2. 근태 신청 리스트 */}
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-2 mb-3">
+                                <CalendarClock className="w-4 h-4 text-primary" />
+                                <h3 className="text-base font-semibold text-foreground">근태 신청 리스트</h3>
+                              </div>
+                              <div className="p-4 border border-border rounded-lg flex-1 flex flex-col min-h-[220px]">
+                                {getEmployeeLeaveRequests(employee.id).length > 0 ? (
+                                  <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+                                    {getEmployeeLeaveRequests(employee.id)
+                                      .filter((r) => r.attendanceRequestStatus !== 'CANCELLED')
+                                      .map((req) => {
+                                        const statusMap = REQUEST_STATUS_MAP[req.attendanceRequestStatus] || { label: req.attendanceRequestStatus, color: '#6B7280' };
+                                        return (
+                                          <div key={req.attendanceRequestNo} className="p-2 bg-muted/30 rounded-lg border border-border">
+                                            <div className="flex justify-between items-center">
+                                              <span className="text-sm font-medium">{req.attendanceRequestType || '-'}</span>
+                                              <Badge style={{ backgroundColor: statusMap.color, color: '#fff', fontSize: '10px' }}>{statusMap.label}</Badge>
+                                            </div>
+                                            <p className="text-xs text-muted-foreground mt-1">{formatReqDate(req.attendanceRequestStartDate)} ~ {formatReqDate(req.attendanceRequestEndDate)}</p>
+                                          </div>
+                                        );
+                                      })}
+                                  </div>
+                                ) : (
+                                  <div className="text-center py-6 text-sm text-muted-foreground flex-1 flex items-center justify-center">근태 신청 내역이 없습니다</div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* 3. 근태 통계 그래프 */}
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-2 mb-3">
+                                <Briefcase className="w-4 h-4 text-primary" />
+                                <h3 className="text-base font-semibold text-foreground">근태 통계</h3>
+                              </div>
+                              <div className="p-4 border border-border rounded-lg flex-1 flex flex-col min-h-[220px]">
+                                {details?.attendanceStats?.data?.length > 0 ? (
+                                  <div className="flex items-center gap-4 flex-1 min-h-[180px]">
+<div className="w-[140px] h-[140px] flex-shrink-0">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                          <Pie
+                                            data={details.attendanceStats.data}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={30}
+                                            outerRadius={50}
+                                            paddingAngle={2}
+                                            dataKey="value"
+                                          >
+                                            {details.attendanceStats.data.map((entry, index) => (
+                                              <Cell key={`cell-${index}`} fill={entry.color} />
+                                            ))}
+                                          </Pie>
+                                          <Tooltip formatter={(value) => [`${value}일`, '']} />
+                                        </PieChart>
+                                      </ResponsiveContainer>
+                                    </div>
+                                    <div className="flex-1">
+                                      <p className="text-2xl font-bold text-foreground">{details.attendanceStats.totalDays}<span className="text-sm font-normal text-muted-foreground ml-1">일</span></p>
+                                      <p className="text-xs text-muted-foreground">이번 달 출근</p>
+                                      <div className="mt-2 space-y-1">
+                                        {details.attendanceStats.data.map((item, i) => (
+                                          <div key={i} className="flex items-center gap-2 text-xs">
+                                            <span style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: item.color }} />
+                                            <span>{item.name} {item.value}일</span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="text-center py-6 text-sm text-muted-foreground flex-1 flex items-center justify-center">근태 통계 데이터가 없습니다</div>
+                                )}
+                              </div>
+                            </div>
                           </div>
                         </>
                       )}

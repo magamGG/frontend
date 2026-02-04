@@ -17,7 +17,6 @@ const ArtistCalendarPage = lazy(() => import('@/pages/artist/ArtistCalendar').th
 const ArtistWorkationPage = lazy(() => import('@/pages/artist/ArtistWorkation').then(m => ({ default: m.ArtistWorkationPage })));
 const ArtistTeamPage = lazy(() => import('@/pages/artist/ArtistTeam').then(m => ({ default: m.ArtistTeamPage })));
 const ArtistHealthPage = lazy(() => import('@/pages/artist/ArtistHealth').then(m => ({ default: m.ArtistHealthPage })));
-const AttendancePage = lazy(() => import('@/pages/Attendance').then(m => ({ default: m.AttendancePage })));
 
 // Lazy load admin pages
 const AdminDashboardPage = lazy(() => import('@/pages/admin/AdminDashboard').then(m => ({ default: m.AdminDashboardPage })));
@@ -231,11 +230,6 @@ export default function App() {
           title: '작가 건강관리',
           content: <AdminHealthPage />,
         },
-        {
-          id: 'attendance',
-          title: '근태 관리',
-          content: <AttendancePage />,
-        },
       ]
     : userRole === 'agency'
     ? [
@@ -316,11 +310,6 @@ export default function App() {
           id: 'manager-team',
           title: '직원 관리',
           content: <AdminTeamPage />,
-        },
-        {
-          id: 'manager-attendance',
-          title: '근태 관리',
-          content: <AttendancePage />,
         },
         {
           id: 'agency-dashboard',

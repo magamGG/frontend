@@ -255,6 +255,7 @@ export const AgencyProjectMetaDivider = styled.span`
 
 export const AgencyProjectStatus = styled.div`
   flex-shrink: 0;
+  width: 78px;
   text-align: right;
   display: flex;
   flex-direction: column;
@@ -277,6 +278,7 @@ export const AgencyProjectStatusText = styled.p`
 export const AgencyProjectEpisodeText = styled.p`
   font-size: 12px;
   color: var(--muted-foreground);
+  text-align: left;
   margin: 0;
 `;
 

@@ -86,7 +86,7 @@ export function AdminTeamPage() {
                   <Briefcase className="w-6 h-6 text-blue-600" />
                 </div>
                 <div>
-                  <span className="text-sm font-medium text-muted-foreground block">진행 중인 작품</span>
+                  <span className="text-sm font-medium text-muted-foreground block">진행 중인 프로젝트</span>
                   <p className="text-3xl font-bold text-foreground">
                     {mainArtists.reduce((sum, artist) => sum + artist.projects.length, 0)}개
                   </p>
@@ -146,7 +146,7 @@ export function AdminTeamPage() {
                   <div className="flex items-center gap-2 mb-3">
                     <Briefcase className="w-4 h-4 text-muted-foreground" />
                     <span className="text-sm font-medium text-muted-foreground">
-                      진행 중인 작품 ({artist.projects.length})
+                      진행 중인 프로젝트 ({artist.projects.length})
                     </span>
                   </div>
                   <div className="space-y-2">

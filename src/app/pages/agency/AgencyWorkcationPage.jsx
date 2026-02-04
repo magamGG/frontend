@@ -72,7 +72,7 @@ export function AgencyWorkcationPage() {
     ),
     totalTasks: mockWorkcationMembers.reduce((acc, m) => acc + m.tasks.length, 0),
     completedTasks: mockWorkcationMembers.reduce(
-      (acc, m) => acc + m.tasks.filter(t => t.progress === 100).length, 
+      (acc, m) => acc + (m.completedTaskCount ?? m.tasks?.filter(t => t.progress === 100).length ?? 0),
       0
     ),
   };
@@ -161,9 +161,10 @@ export function AgencyWorkcationPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredMembers.map((member) => {
             const daysRemaining = getDaysRemaining(member.endDate);
-            const avgProgress = Math.round(
-              member.tasks.reduce((acc, t) => acc + t.progress, 0) / member.tasks.length
-            );
+            // 전체 작업 진행률: (완료/전체)*100. API 연동 시 activeTaskCount·completedTaskCount 사용, 목업은 tasks 평균
+            const total = member.activeTaskCount ?? member.tasks?.length ?? 0;
+            const completed = member.completedTaskCount ?? member.tasks?.filter(t => t.progress === 100).length ?? 0;
+            const avgProgress = total > 0 ? Math.round((completed / total) * 100) : (member.tasks?.length ? Math.round(member.tasks.reduce((acc, t) => acc + t.progress, 0) / member.tasks.length) : 0);
 
             return (
               <Card 
@@ -242,7 +243,7 @@ export function AgencyWorkcationPage() {
                   <div className="flex items-center justify-between pt-2 border-t border-[#DADDE1]">
                     <div className="flex items-center gap-4 text-sm">
                       <span className="text-[#6E8FB3]">
-                        작업 <span className="font-semibold text-[#1F2328]">{member.tasks.length}개</span>
+                        작업 <span className="font-semibold text-[#1F2328]">{member.activeTaskCount ?? member.taskCount ?? member.tasks?.length ?? 0}개</span>
                       </span>
                     </div>
                     <Button 

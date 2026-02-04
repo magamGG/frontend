@@ -3,7 +3,7 @@ import { Bell, Plus, User, X, ChevronRight } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Badge } from "@/app/components/ui/badge";
 import { memberService } from '@/api/services';
-import { API_BASE_URL } from '@/api/config';
+import { getMemberProfileUrl } from '@/api/config';
 import useAuthStore from '@/store/authStore';
 import { notificationService } from "@/api/services";
 import { toast } from "sonner";
@@ -123,7 +123,7 @@ export function Header({
       time: "2시간 전",
       isRead: false,
       type: "success",
-      linkedPage: "attendance",
+      linkedPage: "approvals",
     },
     {
       id: 4,
@@ -234,32 +234,30 @@ export function Header({
   ).length;
 
   // 사용자 정보 로드
-  useEffect(() => {
+  const loadUserInfo = async () => {
     if (!memberNo) return;
-    
-    const loadUserInfo = async () => {
-      try {
-        const myPageData = await memberService.getMyPageInfo(memberNo);
-        setMemberName(myPageData.memberName || '');
-        setMemberRole(myPageData.memberRole || '');
-        
-        // 프로필 이미지 URL 설정
-        const imageBaseUrl = API_BASE_URL || 'http://localhost:8888';
-        if (myPageData.memberProfileImage) {
-          setProfileImage(`${imageBaseUrl}/uploads/${myPageData.memberProfileImage}`);
-        } else {
-          setProfileImage(null);
-        }
-      } catch (error) {
-        console.error('사용자 정보 로드 실패:', error);
-        // 에러 발생 시 기본값 사용
-        setMemberName(user?.memberName || '');
-        setMemberRole(user?.memberRole || '');
-      }
-    };
-    
+    try {
+      const myPageData = await memberService.getMyPageInfo(memberNo);
+      setMemberName(myPageData.memberName || '');
+      setMemberRole(myPageData.memberRole || '');
+      setProfileImage(getMemberProfileUrl(myPageData.memberProfileImage));
+    } catch (error) {
+      console.error('사용자 정보 로드 실패:', error);
+      setMemberName(user?.memberName || '');
+      setMemberRole(user?.memberRole || '');
+    }
+  };
+
+  useEffect(() => {
     loadUserInfo();
   }, [memberNo, user]);
+
+  // 마이페이지에서 프로필 사진 업로드 후 헤더 갱신
+  useEffect(() => {
+    const handleProfileUpdated = () => loadUserInfo();
+    window.addEventListener('profile-image-updated', handleProfileUpdated);
+    return () => window.removeEventListener('profile-image-updated', handleProfileUpdated);
+  }, [memberNo]);
 
   // Close notification panel when clicking outside
   useEffect(() => {
@@ -559,11 +557,19 @@ export function Header({
                     height: '100%', 
                     objectFit: 'cover',
                     borderRadius: '50%'
-                  }} 
+                  }}
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.nextSibling?.style?.setProperty('display', 'block');
+                  }}
                 />
-              ) : (
-                <User style={{ width: '16px', height: '16px', color: 'var(--primary-foreground)' }} />
-              )}
+              ) : null}
+              <User style={{ 
+                width: '16px', 
+                height: '16px', 
+                color: 'var(--primary-foreground)',
+                display: profileImage ? 'none' : 'block'
+              }} />
             </ProfileAvatar>
             <ProfileInfo>
               <ProfileName>

@@ -22,7 +22,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, 
 import { ProjectListModal } from '@/components/modals/ProjectListModal';
 import { AttendanceListModal } from '@/components/modals/AttendanceListModal';
 import { toast } from 'sonner';
-import { leaveService, attendanceService, memberService, calendarService, projectService } from '@/api/services';
+import { leaveService, attendanceService, memberService, projectService } from '@/api/services';
 import useAuthStore from '@/store/authStore';
 import { LeaveRequestEditModal } from '@/components/modals/LeaveRequestEditModal';
 import svgPaths from '@/imports/svg-oq0e8tu4xb';
@@ -269,6 +269,65 @@ export function AdminDashboardPage({ onNavigateToSection }) {
   const [managedProjects, setManagedProjects] = useState([]);
   const [managedProjectsLoading, setManagedProjectsLoading] = useState(false);
 
+  // YYYY-MM-DD → "N월 N일" (마감 보정용)
+  const formatDeadlineFromIso = (isoStr) => {
+    if (!isoStr) return null;
+    const d = new Date(isoStr);
+    if (Number.isNaN(d.getTime())) return null;
+    return `${d.getMonth() + 1}월 ${d.getDate()}일`;
+  };
+
+  // 주기 기준 다음 연재일 계산 (프로젝트 목록과 동일 로직 - deadline '-' 보정용)
+  const getNextScheduleDateFromProject = (p) => {
+    const startDateStr = p.projectStartedAt
+      ? (typeof p.projectStartedAt === 'string' ? p.projectStartedAt.slice(0, 10) : null)
+      : null;
+    if (!startDateStr || p.projectCycle == null || isNaN(Number(p.projectCycle))) return null;
+    const start = new Date(startDateStr);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    start.setHours(0, 0, 0, 0);
+    const daysDiff = Math.floor((today - start) / (1000 * 60 * 60 * 24));
+    if (daysDiff < 0) return start;
+    const n = daysDiff === 0 ? 0 : Math.ceil(daysDiff / Number(p.projectCycle));
+    const next = new Date(start);
+    next.setDate(start.getDate() + n * Number(p.projectCycle));
+    return next;
+  };
+
+  // 마감일 문자열("N월 N일")을 Date 객체로 변환 (정렬용)
+  const parseDeadlineToDate = (deadlineStr) => {
+    if (!deadlineStr || deadlineStr === '-') return null;
+    const match = deadlineStr.match(/(\d+)월\s*(\d+)일/);
+    if (!match) return null;
+    const month = parseInt(match[1], 10);
+    const day = parseInt(match[2], 10);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const year = today.getFullYear();
+    const date = new Date(year, month - 1, day);
+    date.setHours(0, 0, 0, 0);
+    // 올해 날짜가 이미 지났으면 내년으로 처리 (단, 오늘과 같은 날짜는 올해로 유지)
+    if (date < today && date.getTime() !== today.getTime()) {
+      date.setFullYear(year + 1);
+    }
+    return date;
+  };
+
+  // 마감일 표시용 D-N / D-DAY 라벨
+  const getDeadlineDnLabel = (deadlineStr) => {
+    const date = parseDeadlineToDate(deadlineStr);
+    if (!date) return '';
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diffDays = Math.round((date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (diffDays > 0) return `D-${diffDays}`;
+    if (diffDays === 0) return 'D-DAY';
+    return `D+${Math.abs(diffDays)}`;
+  };
+
   useEffect(() => {
     const fetchManagedProjects = async () => {
       const memberNo = useAuthStore.getState().user?.memberNo;
@@ -276,16 +335,60 @@ export function AdminDashboardPage({ onNavigateToSection }) {
 
       setManagedProjectsLoading(true);
       try {
-        const list = await projectService.getManagedProjects();
-        const arr = Array.isArray(list) ? list : [];
-        const mapped = arr.map((p) => ({
-          id: p.projectNo,
-          name: p.projectName || '-',
-          artist: p.artist || '-',
-          status: p.status || '정상',
-          progress: p.progress ?? 0,
-          deadline: p.deadline || '-',
-        }));
+        const [managedList, projectsList] = await Promise.all([
+          projectService.getManagedProjects(),
+          projectService.getProjects(0, 100),
+        ]);
+        const arr = Array.isArray(managedList) ? managedList : [];
+        const fullList = Array.isArray(projectsList) ? projectsList : projectsList?.content ?? projectsList?.data ?? [];
+        const mapped = arr.map((p) => {
+          let deadline = p.deadline || '-';
+          if (deadline === '-') {
+            const full = fullList.find((x) => x.projectNo === p.projectNo);
+            if (full) {
+              const nextDate = getNextScheduleDateFromProject(full);
+              if (nextDate) {
+                const iso = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}-${String(nextDate.getDate()).padStart(2, '0')}`;
+                deadline = formatDeadlineFromIso(iso) || '-';
+              }
+            }
+          }
+          return {
+            id: p.projectNo,
+            name: p.projectName || '-',
+            artist: p.artist || '-',
+            status: p.status || '정상',
+            progress: p.progress ?? 0,
+            deadline,
+          };
+        });
+        
+        // 마감일 기준으로 정렬 (오늘이 연재일인 항목이 제일 위, 그 다음 가까운 순서대로)
+        mapped.sort((a, b) => {
+          const dateA = parseDeadlineToDate(a.deadline);
+          const dateB = parseDeadlineToDate(b.deadline);
+          
+          // 둘 다 마감일이 없으면 프로젝트 번호순
+          if (!dateA && !dateB) {
+            return a.id - b.id;
+          }
+          // 마감일이 없는 항목은 뒤로
+          if (!dateA) return 1;
+          if (!dateB) return -1;
+          
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          
+          // 오늘이 연재일인 항목을 최우선으로
+          const aIsToday = dateA && dateA.getTime() === today.getTime();
+          const bIsToday = dateB && dateB.getTime() === today.getTime();
+          if (aIsToday && !bIsToday) return -1;  // a가 오늘이면 앞으로
+          if (!aIsToday && bIsToday) return 1;   // b가 오늘이면 앞으로
+          
+          // 둘 다 오늘이거나 둘 다 오늘이 아니면 날짜 오름차순 (가까운 순서)
+          return dateA - dateB;
+        });
+        
         setManagedProjects(mapped);
       } catch (err) {
         console.error('담당 프로젝트 현황 조회 실패:', err);
@@ -297,7 +400,7 @@ export function AdminDashboardPage({ onNavigateToSection }) {
     fetchManagedProjects();
   }, [user?.memberNo]);
 
-  // 신청 현황 (근태 신청 목록) - leaveService.getMyRequests API 연동, 작가 신청 현황과 동일
+  // 신청 현황 (근태 신청 목록) - leaveService.getManagerRequests API 연동, 담당 작가 근태 신청 현황
   const [attendanceRequests, setAttendanceRequests] = useState([]);
   const [isLoadingAttendanceRequests, setIsLoadingAttendanceRequests] = useState(false);
   const [attendanceRequestsRefreshTrigger, setAttendanceRequestsRefreshTrigger] = useState(0);
@@ -312,7 +415,7 @@ export function AdminDashboardPage({ onNavigateToSection }) {
 
       setIsLoadingAttendanceRequests(true);
       try {
-        const response = await leaveService.getMyRequests();
+        const response = await leaveService.getManagerRequests();
         const list = Array.isArray(response) ? response : [];
         const filtered = list.filter((item) => item.attendanceRequestStatus !== 'CANCELLED');
         const formatReqDate = (dt) => {
@@ -326,6 +429,8 @@ export function AdminDashboardPage({ onNavigateToSection }) {
             typeName: item.attendanceRequestType || '휴가',
           };
           const status = REQUEST_STATUS_MAP[item.attendanceRequestStatus] || REQUEST_STATUS.PENDING;
+          const requesterName = item.memberName || item.artistName || item.requesterName || '-';
+
           return {
             id: String(item.attendanceRequestNo),
             type: typeConfig.type,
@@ -334,6 +439,7 @@ export function AdminDashboardPage({ onNavigateToSection }) {
             endDate: formatReqDate(item.attendanceRequestEndDate),
             status,
             rawStatus: item.attendanceRequestStatus,
+            requesterName,
             raw: item,
           };
         });
@@ -389,7 +495,7 @@ export function AdminDashboardPage({ onNavigateToSection }) {
     const fetchDeadlineCounts = async () => {
       setDeadlineLoading(true);
       try {
-        const list = await calendarService.getDeadlineCounts();
+        const list = await projectService.getDeadlineCounts();
         const arr = Array.isArray(list) ? list : [];
         if (arr.length >= 5) {
           setDeadlineData(arr);
@@ -835,8 +941,12 @@ export function AdminDashboardPage({ onNavigateToSection }) {
                   return (
                     <AttendanceRequestCardItem key={request.id}>
                       <AttendanceRequestCardItemContent>
-                        <AttendanceRequestCardItemTitle>{request.typeName || request.type}</AttendanceRequestCardItemTitle>
-                        <AttendanceRequestCardItemDate>{request.startDate} ~ {request.endDate}</AttendanceRequestCardItemDate>
+                        <AttendanceRequestCardItemTitle>
+                          {request.requesterName || '-'}
+                        </AttendanceRequestCardItemTitle>
+                        <AttendanceRequestCardItemDate>
+                          {(request.typeName || request.type) || '-'} · {request.startDate} ~ {request.endDate}
+                        </AttendanceRequestCardItemDate>
                       </AttendanceRequestCardItemContent>
                       <AttendanceRequestCardItemBadge $statusColor={statusColor}>
                         {request.status}
@@ -856,7 +966,7 @@ export function AdminDashboardPage({ onNavigateToSection }) {
             <ProjectsHeader>
               <ProjectsHeaderLeft>
                 <Briefcase className="w-5 h-5" style={{ color: '#6E8FB3' }} />
-                <ChartTitle>담당 프로젝트 현황</ChartTitle>
+                <ChartTitle>다음 연재일</ChartTitle>
               </ProjectsHeaderLeft>
               <Button variant="outline" size="sm" onClick={() => setIsProjectListOpen(true)} className="text-xs h-7">
                 전체보기
@@ -864,7 +974,7 @@ export function AdminDashboardPage({ onNavigateToSection }) {
             </ProjectsHeader>
 
             <ProjectsList>
-              {managedProjects.map((project) => {
+              {managedProjects.slice(0, 4).map((project) => {
                 // 프로젝트 클릭 핸들러
                 const handleProjectClick = () => {
                   // 프로젝트 ID를 localStorage에 저장하여 AdminProjectsPage에서 사용
@@ -884,13 +994,15 @@ export function AdminDashboardPage({ onNavigateToSection }) {
                     <ProjectItemInfo>
                       <ProjectItemTitleRow>
                         <ProjectItemTitle>{project.name}</ProjectItemTitle>
-                        <Badge className={`${getStatusColor(project.status)} text-xs text-white`}>{project.status}</Badge>
+                        <Badge className={`${getStatusColor(project.status)} text-xs text-white`}>
+                          {getDeadlineDnLabel(project.deadline)}
+                        </Badge>
                       </ProjectItemTitleRow>
-                      <ProjectItemArtist>담당: {project.artist}</ProjectItemArtist>
                     </ProjectItemInfo>
                   </ProjectItemHeader>
                   <ProjectItemMeta>
-                    <span>마감: {project.deadline}</span>
+                    <ProjectItemArtist>담당: {project.artist}</ProjectItemArtist>
+                    <span>연재일 : {project.deadline}</span>
                   </ProjectItemMeta>
                 </ProjectItem>
                 );
@@ -1104,8 +1216,12 @@ export function AdminDashboardPage({ onNavigateToSection }) {
                         {request.status}
                       </AttendanceRequestStatusBadge>
                       <AttendanceRequestInfo>
-                        <AttendanceRequestTypeText>{request.typeName || request.type}</AttendanceRequestTypeText>
-                        <AttendanceRequestDateText>{request.startDate} ~ {request.endDate}</AttendanceRequestDateText>
+                        <AttendanceRequestTypeText>
+                          {request.requesterName || '-'} · {(request.typeName || request.type) || '-'}
+                        </AttendanceRequestTypeText>
+                        <AttendanceRequestDateText>
+                          {request.startDate} ~ {request.endDate}
+                        </AttendanceRequestDateText>
                       </AttendanceRequestInfo>
                       {request.status === REQUEST_STATUS.PENDING && (
                         <AttendanceRequestActions>
