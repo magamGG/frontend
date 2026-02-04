@@ -20,7 +20,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { leaveService, attendanceService, calendarService, projectService } from '@/api/services';
+import { leaveService, attendanceService, calendarService, projectService, memoService } from '@/api/services';
 import useAuthStore from '@/store/authStore';
 import { LeaveRequestEditModal } from '@/components/modals/LeaveRequestEditModal';
 import {
@@ -327,12 +327,28 @@ export function ArtistDashboardPage() {
     return `${displayType} 중`;
   };
 
-  // localStorage에서 메모 로드
+  // 개인 메모 목록 조회 (MEMO 테이블, 타입 '개인')
   useEffect(() => {
-    const storedMemos = localStorage.getItem('artistMemos');
-    if (storedMemos) {
-      setMemos(JSON.parse(storedMemos));
-    }
+    const fetchMemos = async () => {
+      try {
+        const list = await memoService.getList();
+        const arr = Array.isArray(list) ? list : [];
+        const mapped = arr.map((m, i) => ({
+          id: String(m.memoNo),
+          title: m.memoName || '새 메모',
+          content: m.memoText || '',
+          color: MEMO_COLORS[i % MEMO_COLORS.length].bg,
+          createdAt: m.memoCreatedAt || new Date().toISOString(),
+        }));
+        setMemos(mapped);
+      } catch (err) {
+        console.error('메모 목록 조회 실패:', err);
+        const storedMemos = localStorage.getItem('artistMemos');
+        if (storedMemos) setMemos(JSON.parse(storedMemos));
+        else setMemos([]);
+      }
+    };
+    fetchMemos();
   }, []);
 
   // localStorage에서 오늘 할 일 완료 상태 로드
@@ -706,33 +722,39 @@ export function ArtistDashboardPage() {
     }
   };
 
-  // 메모 저장 핸들러
-  const handleSaveMemo = () => {
-    if (currentMemoText.trim()) {
+  // 메모 저장 핸들러 (MEMO 테이블에 타입 '개인'으로 저장)
+  const handleSaveMemo = async () => {
+    if (!currentMemoText.trim()) {
+      toast.error('메모 내용을 입력해주세요.');
+      return;
+    }
+    const title = currentMemoTitle?.trim() || '새 메모';
+    const content = currentMemoText.trim();
+    try {
       if (editingMemoId) {
-        const updatedMemos = memos.map((memo) =>
-          memo.id === editingMemoId ? { ...memo, title: currentMemoTitle || '새 메모', content: currentMemoText } : memo
-        );
-        setMemos(updatedMemos);
-        localStorage.setItem('artistMemos', JSON.stringify(updatedMemos));
+        await memoService.update(Number(editingMemoId), { title, content });
         toast.success('메모가 수정되었습니다.');
       } else {
-        const newMemo = {
-          id: Date.now().toString(),
-          title: currentMemoTitle || '새 메모',
-          content: currentMemoText,
-          color: MEMO_COLORS[getRandomColor()].bg,
-          createdAt: new Date().toISOString(),
-        };
-        setMemos([...memos, newMemo]);
+        await memoService.create({ memoName: title, memoText: content });
         toast.success('메모가 저장되었습니다.');
       }
+      const list = await memoService.getList();
+      const arr = Array.isArray(list) ? list : [];
+      const mapped = arr.map((m, i) => ({
+        id: String(m.memoNo),
+        title: m.memoName || '새 메모',
+        content: m.memoText || '',
+        color: MEMO_COLORS[i % MEMO_COLORS.length].bg,
+        createdAt: m.memoCreatedAt || new Date().toISOString(),
+      }));
+      setMemos(mapped);
       setShowMemoModal(false);
       setCurrentMemoText('');
       setCurrentMemoTitle('');
       setEditingMemoId(null);
-    } else {
-      toast.error('메모 내용을 입력해주세요.');
+    } catch (err) {
+      console.error('메모 저장 실패:', err);
+      toast.error(err?.message || '메모 저장에 실패했습니다.');
     }
   };
 
@@ -781,15 +803,18 @@ export function ArtistDashboardPage() {
     }
   };
 
-  // 메모 삭제 실행 핸들러
-  const handleDeleteMemoConfirm = () => {
-    if (memoToDelete) {
-      const updatedMemos = memos.filter((memo) => memo.id !== memoToDelete);
-      setMemos(updatedMemos);
-      localStorage.setItem('artistMemos', JSON.stringify(updatedMemos));
+  // 메모 삭제 실행 핸들러 (MEMO 테이블에서 삭제)
+  const handleDeleteMemoConfirm = async () => {
+    if (!memoToDelete) return;
+    try {
+      await memoService.delete(Number(memoToDelete));
+      setMemos((prev) => prev.filter((m) => m.id !== memoToDelete));
       toast.success('메모가 삭제되었습니다.');
       setShowDeleteMemoConfirm(false);
       setMemoToDelete(null);
+    } catch (err) {
+      console.error('메모 삭제 실패:', err);
+      toast.error(err?.message || '메모 삭제에 실패했습니다.');
     }
   };
 
