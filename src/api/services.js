@@ -146,6 +146,11 @@ export const leaveService = {
   getMyRequests: () => {
     return api.get(API_ENDPOINTS.LEAVE.MY_REQUESTS);
   },
+
+  // 담당자 대시보드 신청 현황 - 담당 작가 근태 신청 목록 조회
+  getManagerRequests: () => {
+    return api.get(API_ENDPOINTS.LEAVE.MANAGER_REQUESTS);
+  },
   
   // 에이전시 소속 근태 신청 목록 조회
   getAgencyRequests: (agencyNo) => {

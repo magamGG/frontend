@@ -174,14 +174,15 @@ export function AdminProjectsPage() {
 
     setProjects([...projects, newProject]);
     setIsAddModalOpen(false);
+    // 폼 초기화
     setNewProjectForm({
-      artistId,
-      title,
+      artistId: 0,
+      title: '',
       platform: '네이버 웹툰',
-      genre,
-      schedule,
-      thumbnail,
-      thumbnailFile,
+      genre: '',
+      schedule: '',
+      thumbnail: '',
+      thumbnailFile: null,
     });
     toast.success('작품이 추가되었습니다.');
   };
@@ -202,14 +203,14 @@ export function AdminProjectsPage() {
         return;
       }
 
-      // 파일을 읽어서 미리보기 URL 생성
+      // 파일을 읽어서 미리보기 URL 생성 + thumbnailFile에 실제 파일 보관
       const reader = new FileReader();
       reader.onload = (event) => {
         const result = event.target?.result;
         setNewProjectForm({
           ...newProjectForm,
-          thumbnail,
-          thumbnailFile,
+          thumbnail: result,
+          thumbnailFile: file,
         });
       };
       reader.readAsDataURL(file);

@@ -91,17 +91,18 @@ function AttendanceStatsChart({ stats }) {
   const 출근Color = '#22c55e';
   const 미출근Color = '#e2e8f0';
 
+  // 통계 표시는 그대로 두되, "미출근"은 차트·텍스트 리스트에서 제외
   const rows = [
     ...typeCounts.map((tc) => ({
       label: tc.type || '출근',
       value: Number(tc.count) || 0,
       color: tc.type === '출근' ? 출근Color : (LEAVE_TYPE_COLORS[tc.type] || '#6B7280'),
     })),
-    { label: '미출근', value: 미출근일수, color: 미출근Color },
+    // { label: '미출근', value: 미출근일수, color: 미출근Color },
   ].filter((r) => r.value > 0);
 
   const pieData = rows.map((r) => ({ name: r.label, value: r.value, color: r.color }));
-  const centerDays = pieData.filter((d) => d.name !== '미출근').reduce((sum, d) => sum + d.value, 0);
+  const centerDays = pieData.reduce((sum, d) => sum + d.value, 0);
   const isEmpty = pieData.length === 0;
 
   return (
