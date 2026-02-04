@@ -296,7 +296,7 @@ export function AgencyProjectsPage() {
   };
 
   // 작품 추가 핸들러
-  const handleAddProject = () => {
+  const handleAddProject = async () => {
     if (!newProjectForm.managerId || !newProjectForm.artistName || !newProjectForm.title || !newProjectForm.genre) {
       toast.error('필수 항목을 모두 입력해주세요.');
       return;
@@ -312,6 +312,22 @@ export function AgencyProjectsPage() {
     const scheduleDays = newProjectForm.schedule ? Number(newProjectForm.schedule) : null;
     const nextScheduleDate = calculateNextScheduleDate(newProjectForm.startDate, scheduleDays);
 
+    // 썸네일 업로드 → PROJECT.THUMBNAIL_FILE에 파일명 저장
+    let thumbnailFileName = null;
+    if (newProjectForm.thumbnailFile) {
+      try {
+        const uploadRes = await projectService.uploadThumbnail(newProjectForm.thumbnailFile);
+        const uploadData = uploadRes;
+        thumbnailFileName =
+          typeof uploadData === 'string'
+            ? uploadData
+            : uploadData?.data ?? uploadData?.fileName ?? null;
+      } catch (err) {
+        toast.error('썸네일 업로드에 실패했습니다.');
+        return;
+      }
+    }
+
     const newProject = {
       id: Date.now(),
       title: newProjectForm.title,
@@ -325,7 +341,7 @@ export function AgencyProjectsPage() {
       scheduleDays: scheduleDays ?? null,
       startDate: newProjectForm.startDate || null,
       nextScheduleDate: nextScheduleDate ? formatDate(nextScheduleDate) : null,
-      thumbnail: newProjectForm.thumbnail || null,
+      thumbnail: thumbnailFileName || newProjectForm.thumbnail || null,
       artistName: newProjectForm.artistName,
       artistId: Date.now(),
       managerName: selectedManager.name,

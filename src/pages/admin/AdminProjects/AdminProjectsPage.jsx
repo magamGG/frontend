@@ -319,7 +319,11 @@ export function AdminProjectsPage() {
       let thumbnailFileName = null;
       if (newProjectForm.thumbnailFile) {
         const uploadRes = await projectService.uploadThumbnail(newProjectForm.thumbnailFile);
-        thumbnailFileName = uploadRes?.data ?? null;
+        const uploadData = uploadRes;
+        thumbnailFileName =
+          typeof uploadData === 'string'
+            ? uploadData
+            : uploadData?.data ?? uploadData?.fileName ?? null;
       }
 
       const response = await projectService.createProject({

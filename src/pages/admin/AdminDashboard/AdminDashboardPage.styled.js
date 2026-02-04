@@ -630,7 +630,7 @@ export const ProjectItemMeta = styled.div`
   align-items: center;
   justify-content: space-between;
   font-size: 12px;
-  color: #6e8fb3;
+  color: var(--muted-foreground);
 `;
 
 export const ProjectsInfoBox = styled.div`
