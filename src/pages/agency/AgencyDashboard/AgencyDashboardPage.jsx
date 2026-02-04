@@ -18,7 +18,7 @@ import {
 import { Modal } from '@/components/common/Modal';
 import { toast } from 'sonner';
 import useAuthStore from '@/store/authStore';
-import { agencyService, leaveService, calendarService } from '@/api/services';
+import { agencyService, leaveService } from '@/api/services';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Label } from 'recharts';
 import {
   AgencyDashboardRoot,
@@ -49,6 +49,8 @@ import {
   PieChartFooter,
   PieChartFooterLabel,
   PieChartFooterValue,
+  HealthTabWrap,
+  HealthTabButton,
   WarningBox,
   WarningContent,
   WarningTitle,
@@ -157,7 +159,7 @@ export function AgencyDashboardPage() {
 
     try {
       const [deadlineRes, requestsRes] = await Promise.all([
-        calendarService.getDeadlineCountsByAgency(agencyNo),
+        agencyService.getDeadlineCounts(agencyNo),
         leaveService.getAgencyRequests(agencyNo),
       ]);
 
@@ -245,12 +247,23 @@ export function AgencyDashboardPage() {
     { name: '미출석', value: 0, color: '#EF4444' },
   ]);
 
-  // 건강 인원 분포 (DB 연동)
-  const [healthData, setHealthData] = useState([
+  // 건강 인원 분포 - 정신/신체 분리 (DB 연동, 미검진 포함, 에이전시 관리자 제외)
+  const [healthMentalData, setHealthMentalData] = useState([
     { name: '위험', value: 0, color: '#EF4444' },
+    { name: '경고', value: 0, color: '#CA8A04' },
     { name: '주의', value: 0, color: '#FF9800' },
     { name: '정상', value: 0, color: '#10B981' },
+    { name: '미검진', value: 0, color: '#94A3B8' },
   ]);
+  const [healthPhysicalData, setHealthPhysicalData] = useState([
+    { name: '위험', value: 0, color: '#EF4444' },
+    { name: '경고', value: 0, color: '#CA8A04' },
+    { name: '주의', value: 0, color: '#FF9800' },
+    { name: '정상', value: 0, color: '#10B981' },
+    { name: '미검진', value: 0, color: '#94A3B8' },
+  ]);
+  // 건강 인원 분포 탭: 'mental' | 'physical'
+  const [healthTab, setHealthTab] = useState('mental');
 
   useEffect(() => {
     const fetchAttendanceAndHealth = async () => {
@@ -268,10 +281,23 @@ export function AgencyDashboardPage() {
           attDist.map((d) => ({ name: d.name ?? '-', value: d.value ?? 0, color: d.color ?? '#94a3b8' }))
         );
 
-        const healthDist = healthRes?.distribution ?? [];
-        setHealthData(
-          healthDist.map((d) => ({ name: d.name ?? '-', value: d.value ?? 0, color: d.color ?? '#94a3b8' }))
-        );
+        const mapItem = (d) => ({ name: d.name ?? '-', value: d.value ?? 0, color: d.color ?? '#94a3b8' });
+        const mentalDist = healthRes?.mentalDistribution ?? [];
+        const physicalDist = healthRes?.physicalDistribution ?? [];
+        setHealthMentalData(mentalDist.length > 0 ? mentalDist.map(mapItem) : [
+          { name: '위험', value: 0, color: '#EF4444' },
+          { name: '경고', value: 0, color: '#CA8A04' },
+          { name: '주의', value: 0, color: '#FF9800' },
+          { name: '정상', value: 0, color: '#10B981' },
+          { name: '미검진', value: 0, color: '#94A3B8' },
+        ]);
+        setHealthPhysicalData(physicalDist.length > 0 ? physicalDist.map(mapItem) : [
+          { name: '위험', value: 0, color: '#EF4444' },
+          { name: '경고', value: 0, color: '#CA8A04' },
+          { name: '주의', value: 0, color: '#FF9800' },
+          { name: '정상', value: 0, color: '#10B981' },
+          { name: '미검진', value: 0, color: '#94A3B8' },
+        ]);
       } catch (err) {
         console.error('출석/건강 분포 조회 실패:', err);
       }
@@ -279,17 +305,15 @@ export function AgencyDashboardPage() {
     fetchAttendanceAndHealth();
   }, [user?.agencyNo]);
 
-  // 건강 인원 분포 레이블 렌더링 함수
-  const renderHealthLabel = (props) => {
+  // 건강 인원 분포 레이블 렌더링 (데이터 배열 전달)
+  const renderHealthLabel = (chartData) => (props) => {
     const RADIAN = Math.PI / 180;
     const { cx, cy, midAngle, innerRadius, outerRadius, name, value } = props;
-    const entry = healthData.find(item => item.name === name && item.value === value);
+    const entry = chartData.find(item => item.name === name && item.value === value);
     const color = entry?.color || '#000';
-    
     const labelRadius = outerRadius + 30;
     const x = cx + Math.cos(-midAngle * RADIAN) * labelRadius;
     const y = cy + Math.sin(-midAngle * RADIAN) * labelRadius;
-    
     return (
       <text
         x={x}
@@ -523,13 +547,29 @@ export function AgencyDashboardPage() {
             )}
           </ChartCard>
 
-          {/* 건강 인원 분포 */}
+          {/* 건강 인원 분포 (정신/신체 토글) */}
           <ChartCard>
             <ChartCardHeader>
               <ChartCardIcon>
                 <Activity className="w-5 h-5" style={{ color: '#6E8FB3' }} />
               </ChartCardIcon>
               <ChartCardTitle>건강 인원 분포</ChartCardTitle>
+              <HealthTabWrap>
+                <HealthTabButton
+                  type="button"
+                  $active={healthTab === 'mental'}
+                  onClick={() => setHealthTab('mental')}
+                >
+                  정신 건강
+                </HealthTabButton>
+                <HealthTabButton
+                  type="button"
+                  $active={healthTab === 'physical'}
+                  onClick={() => setHealthTab('physical')}
+                >
+                  신체 건강
+                </HealthTabButton>
+              </HealthTabWrap>
             </ChartCardHeader>
 
             <PieChartSection>
@@ -537,7 +577,7 @@ export function AgencyDashboardPage() {
                 <ResponsiveContainer width="100%" height={200}>
                   <PieChart>
                     <Pie
-                      data={healthData}
+                      data={healthTab === 'mental' ? healthMentalData : healthPhysicalData}
                       cx="50%"
                       cy="50%"
                       innerRadius={0}
@@ -545,11 +585,13 @@ export function AgencyDashboardPage() {
                       fill="#8884d8"
                       paddingAngle={2}
                       dataKey="value"
-                      label={renderHealthLabel}
+                      label={renderHealthLabel(healthTab === 'mental' ? healthMentalData : healthPhysicalData)}
                       labelLine={false}
+                      isAnimationActive={true}
+                      animationDuration={200}
                     >
-                      {healthData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      {(healthTab === 'mental' ? healthMentalData : healthPhysicalData).map((entry, index) => (
+                        <Cell key={`health-cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
                     <Tooltip />
@@ -558,7 +600,7 @@ export function AgencyDashboardPage() {
               </PieChartContainer>
 
               <PieChartLegend>
-                {healthData.map((item, index) => (
+                {(healthTab === 'mental' ? healthMentalData : healthPhysicalData).map((item, index) => (
                   <PieChartLegendItem key={index}>
                     <PieChartLegendDot style={{ backgroundColor: item.color }} />
                     <PieChartLegendLabel>{item.name}</PieChartLegendLabel>
@@ -569,9 +611,11 @@ export function AgencyDashboardPage() {
             </PieChartSection>
 
             <PieChartFooter>
-              <PieChartFooterLabel>전체 인원</PieChartFooterLabel>
+              <PieChartFooterLabel>
+                {healthTab === 'mental' ? '정신 건강' : '신체 건강'} · 전체 인원 (에이전시 관리자 제외)
+              </PieChartFooterLabel>
               <PieChartFooterValue>
-                {healthData.reduce((sum, item) => sum + item.value, 0)}명
+                {(healthTab === 'mental' ? healthMentalData : healthPhysicalData).reduce((sum, item) => sum + item.value, 0)}명
               </PieChartFooterValue>
             </PieChartFooter>
           </ChartCard>
@@ -602,7 +646,7 @@ export function AgencyDashboardPage() {
                     domain={[0, 'dataMax + 1']}
                   />
                   <Tooltip 
-                    formatter={(value) => [`${value}개`, '작품']}
+                    formatter={(value) => [`${value}개`, '업무']}
                     contentStyle={{ 
                       backgroundColor: '#ffffff',
                       border: '1px solid #e2e8f0',
@@ -624,7 +668,7 @@ export function AgencyDashboardPage() {
                   <AlertCircle className="w-4 h-4" style={{ color: '#DC2626' }} />
                 </ChartAlertIcon>
                 <ChartAlertText $color="#991B1B">
-                  오늘 마감 예정 작품이 {deadlineData[0].count}개 있습니다
+                  오늘 마감 예정 업무가 {deadlineData[0].count}개 있습니다
                 </ChartAlertText>
               </ChartAlert>
             )}

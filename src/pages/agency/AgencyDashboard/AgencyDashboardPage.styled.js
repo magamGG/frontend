@@ -210,6 +210,34 @@ export const PieChartFooterValue = styled.span`
   color: #1f2328;
 `;
 
+// 건강 인원 분포 정신/신체 토글
+export const HealthTabWrap = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-left: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+`;
+
+export const HealthTabButton = styled.button`
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  border: none;
+  background-color: ${props => props.$active ? '#6E8FB3' : 'white'};
+  color: ${props => props.$active ? 'white' : '#5a6067'};
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+  &:first-of-type {
+    border-right: 1px solid #e2e8f0;
+  }
+  &:hover:not(:disabled) {
+    background-color: ${props => props.$active ? '#5a7a9e' : '#f1f5f9'};
+  }
+`;
+
 // 경고 박스
 export const WarningBox = styled.div`
   display: flex;

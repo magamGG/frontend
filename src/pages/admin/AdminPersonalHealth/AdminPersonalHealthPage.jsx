@@ -58,125 +58,147 @@ import {
   SurveyModalActions,
 } from './AdminPersonalHealthPage.styled';
 
-// 정신 건강 단계별 메시지
-const mentalHealthMessages = {
-  정상: {
-    color: '#16a34a', // green-600
-    text: '정상',
-    iconColor: 'text-green-600',
-    bgColor: '#dcfce7', // 연한 초록
-    borderColor: '#16a34a', // 초록 테두리
-    messages: [
-      '현재 정신 건강 상태가 양호합니다.',
-      '지금처럼 규칙적인 생활 패턴을 유지하세요.',
-      '정기적인 검진을 통해 건강을 관리하세요.'
-    ]
-  },
-  주의: {
-    color: '#ea580c', // orange-600
-    text: '주의',
-    iconColor: 'text-orange-600',
-    bgColor: '#ffedd5', // 연한 주황
-    borderColor: '#ea580c', // 주황 테두리
-    messages: [
-      '스트레스 관리와 충분한 휴식이 필요합니다.',
-      '정기적인 운동과 취미 활동을 권장합니다.',
-      '증상이 지속되면 전문가 상담을 받으시기 바랍니다.'
-    ]
-  },
-  경고: {
-    color: '#ca8a04', // yellow-600
-    text: '경고',
-    iconColor: 'text-yellow-600',
-    bgColor: '#fef9c3', // 연한 노랑
-    borderColor: '#ca8a04', // 노랑 테두리
-    messages: [
-      '정신 건강 상태에 주의가 필요합니다.',
-      '즉시 전문가 상담을 받으시기 바랍니다.',
-      '충분한 휴식과 스트레스 해소가 필요합니다.'
-    ]
-  },
-  위험: {
-    color: '#dc2626', // red-600
-    text: '위험',
-    iconColor: 'text-red-600',
-    bgColor: '#fee2e2', // 연한 빨강
-    borderColor: '#dc2626', // 빨강 테두리
-    messages: [
-      '즉시 전문가 상담이 필요합니다.',
-      '담당자에게 연락하여 전문 상담을 받으시기 바랍니다.',
-      '건강 관리를 위해 적극적인 조치가 필요합니다.'
-    ]
-  }
-};
+// PHQ-9·GAD-7 기반 월간 정신 건강 채점 기준 (Instruction Manual 기준)
+const PHQ_GAD_SCORE_BANDS = { 정상: '0~14', 주의: '15~29', 경고: '30~44', 위험: '45+' };
 
-// 신체 건강 단계별 메시지
-const physicalHealthMessages = {
+const mentalHealthMessages = {
   정상: {
     color: '#16a34a',
     text: '정상',
     iconColor: 'text-green-600',
-    bgColor: '#dcfce7', // 연한 초록
-    borderColor: '#16a34a', // 초록 테두리
+    bgColor: '#dcfce7',
+    borderColor: '#16a34a',
+    scoreBand: PHQ_GAD_SCORE_BANDS.정상,
+    severityLabel: '증상 없음~최소',
     messages: [
-      '현재 신체 건강 상태가 양호합니다.',
-      '지금처럼 올바른 자세와 규칙적인 운동을 유지하세요.',
-      '정기적인 검진을 통해 건강을 관리하세요.'
+      'PHQ-9·GAD-7 기준, 우울·불안 증상이 없거나 최소 수준입니다.',
+      '규칙적인 생활과 정기 검진을 유지하세요.'
     ]
   },
   주의: {
     color: '#ea580c',
     text: '주의',
     iconColor: 'text-orange-600',
-    bgColor: '#ffedd5', // 연한 주황
-    borderColor: '#ea580c', // 주황 테두리
+    bgColor: '#ffedd5',
+    borderColor: '#ea580c',
+    scoreBand: PHQ_GAD_SCORE_BANDS.주의,
+    severityLabel: '경미~중등도',
     messages: [
-      '손목/손가락 통증에 주의가 필요합니다.',
-      '정기적인 스트레칭과 바른 자세를 유지하세요.',
-      '증상이 심해지면 의료 전문가와 상담하세요.'
+      'PHQ-9·GAD-7 기준, 경미~중등도 수준입니다. 10점 이상은 추가 평가를 권합니다.',
+      '스트레스 관리, 휴식, 운동을 권장하며, 증상 지속 시 상담을 고려하세요.'
     ]
   },
   경고: {
     color: '#ca8a04',
     text: '경고',
     iconColor: 'text-yellow-600',
-    bgColor: '#fef9c3', // 연한 노랑
-    borderColor: '#ca8a04', // 노랑 테두리
+    bgColor: '#fef9c3',
+    borderColor: '#ca8a04',
+    scoreBand: PHQ_GAD_SCORE_BANDS.경고,
+    severityLabel: '중등도 이상',
     messages: [
-      '신체 건강 상태에 주의가 필요합니다.',
-      '즉시 의료 전문가 상담을 받으시기 바랍니다.',
-      '무리한 작업을 피하고 충분한 휴식을 취하세요.'
+      'PHQ-9·GAD-7 기준, 중등도 이상으로 치료 계획·상담·추적 관찰을 권합니다.',
+      '전문가 상담을 받으시기 바랍니다.'
     ]
   },
   위험: {
     color: '#dc2626',
     text: '위험',
     iconColor: 'text-red-600',
-    bgColor: '#fee2e2', // 연한 빨강
-    borderColor: '#dc2626', // 빨강 테두리
+    bgColor: '#fee2e2',
+    borderColor: '#dc2626',
+    scoreBand: PHQ_GAD_SCORE_BANDS.위험,
+    severityLabel: '높은 수준',
     messages: [
-      '즉시 의료 전문가 상담이 필요합니다.',
-      '담당자에게 연락하여 전문 상담을 받으시기 바랍니다.',
-      '작업 중단 및 치료가 필요할 수 있습니다.'
+      'PHQ-9·GAD-7 기준, 활성 치료가 권장되는 구간입니다.',
+      '담당자 연락 후 전문 상담·협진 관리를 받으시기 바랍니다.'
     ]
   }
 };
 
-// TODO: Zustand store mapping - 심층 검진 검사 데이터
+// QuickDASH 기반 월간 신체(상지) 건강 채점 기준
+const QUICKDASH_RAW_BANDS = { 정상: '11~20', 주의: '21~30', 경고: '31~40', 위험: '41~55' };
+
+function getQuickDashNormalizedScore(rawScore) {
+  if (rawScore == null || rawScore < 11) return 0;
+  if (rawScore > 55) return 100;
+  return Math.round(((Number(rawScore) - 11) / 44) * 100);
+}
+
+const physicalHealthMessages = {
+  정상: {
+    color: '#16a34a',
+    text: '정상',
+    iconColor: 'text-green-600',
+    bgColor: '#dcfce7',
+    borderColor: '#16a34a',
+    scoreBand: QUICKDASH_RAW_BANDS.정상,
+    severityLabel: '상지 기능 제한 없음~낮음',
+    messages: [
+      'QuickDASH 기준, 손·팔꿈치·어깨 관련 기능 제한이 없거나 낮습니다.',
+      '올바른 자세와 정기 스트레칭을 유지하세요.'
+    ]
+  },
+  주의: {
+    color: '#ea580c',
+    text: '주의',
+    iconColor: 'text-orange-600',
+    bgColor: '#ffedd5',
+    borderColor: '#ea580c',
+    scoreBand: QUICKDASH_RAW_BANDS.주의,
+    severityLabel: '경미한 상지 기능 제한',
+    messages: [
+      'QuickDASH 기준, 경미한 상지 기능 제한이 있을 수 있습니다.',
+      '스트레칭·자세 교정을 하고, 증상이 있으면 의료 상담을 권합니다.'
+    ]
+  },
+  경고: {
+    color: '#ca8a04',
+    text: '경고',
+    iconColor: 'text-yellow-600',
+    bgColor: '#fef9c3',
+    borderColor: '#ca8a04',
+    scoreBand: QUICKDASH_RAW_BANDS.경고,
+    severityLabel: '중등도 상지 기능 제한',
+    messages: [
+      'QuickDASH 기준, 중등도 수준의 상지 기능 제한으로 평가됩니다.',
+      '의료 전문가 상담과 작업 조정을 권합니다.'
+    ]
+  },
+  위험: {
+    color: '#dc2626',
+    text: '위험',
+    iconColor: 'text-red-600',
+    bgColor: '#fee2e2',
+    borderColor: '#dc2626',
+    scoreBand: QUICKDASH_RAW_BANDS.위험,
+    severityLabel: '높은 상지 기능 제한',
+    messages: [
+      'QuickDASH 기준, 상지 기능 제한이 높은 구간입니다.',
+      '담당자 연락 후 전문 진료·작업 조정이 필요할 수 있습니다.'
+    ]
+  }
+};
+
+// 심층 검진 검사 데이터 (다음 검진일·마감일은 API에서 소속 에이전시 HEALTH_SURVEY 주기 기준으로 계산된 값 사용)
 const initialDeepCheckupData = {
   mental: {
-    lastCheckDate: '2026.01.15',
-    score: 8,
+    lastCheckDate: '',
+    score: 0,
     status: '미완료',
     isCompleted: false,
-    nextCheckDate: '2026.01.25',
+    nextCheckDate: '',
+    deadlineDate: '',
+    daysRemaining: null,
   },
   physical: {
     lastCheckDate: '',
     score: 0,
     status: '미완료',
     isCompleted: false,
-    nextCheckDate: '2026.02.01',
+    nextCheckDate: '',
+    deadlineDate: '',
+    daysRemaining: null,
   },
 };
 
@@ -302,11 +324,12 @@ export function AdminPersonalHealthPage() {
             status: mentalStatus.riskLevel || '정상',
             isCompleted: true,
             nextCheckDate: nextCheckupDateFormatted,
+            deadlineDate: '',
             daysRemaining: daysRemaining,
           },
         }));
       } else {
-        // 미완료 상태일 때 마감일과 남은 일수 표시
+        // 미완료: 소속 에이전시 HEALTH_SURVEY의 period 기준 마감일(deadlineDate) 표시
         let deadlineDateFormatted = '';
         let daysRemaining = null;
         if (mentalStatus.deadlineDate) {
@@ -314,14 +337,15 @@ export function AdminPersonalHealthPage() {
           deadlineDateFormatted = `${deadline.getFullYear()}.${String(deadline.getMonth() + 1).padStart(2, '0')}.${String(deadline.getDate()).padStart(2, '0')}`;
           daysRemaining = mentalStatus.daysRemaining ?? null;
         }
-        
-        console.log('정신 건강 설문 미완료 - 마감일:', deadlineDateFormatted, '남은 일수:', daysRemaining);
-        
         setDeepCheckupData(prev => ({
           ...prev,
           mental: {
             ...prev.mental,
+            lastCheckDate: '',
+            score: 0,
+            status: '미완료',
             isCompleted: false,
+            nextCheckDate: '',
             deadlineDate: deadlineDateFormatted,
             daysRemaining: daysRemaining,
           },
@@ -362,11 +386,12 @@ export function AdminPersonalHealthPage() {
             status: physicalStatus.riskLevel || '정상',
             isCompleted: true,
             nextCheckDate: nextCheckupDateFormatted,
+            deadlineDate: '',
             daysRemaining: daysRemaining,
           },
         }));
       } else {
-        // 미완료 상태일 때 마감일과 남은 일수 표시
+        // 미완료: 소속 에이전시 HEALTH_SURVEY의 period 기준 마감일(deadlineDate) 표시
         let deadlineDateFormatted = '';
         let daysRemaining = null;
         if (physicalStatus.deadlineDate) {
@@ -374,14 +399,15 @@ export function AdminPersonalHealthPage() {
           deadlineDateFormatted = `${deadline.getFullYear()}.${String(deadline.getMonth() + 1).padStart(2, '0')}.${String(deadline.getDate()).padStart(2, '0')}`;
           daysRemaining = physicalStatus.daysRemaining ?? null;
         }
-        
-        console.log('신체 건강 설문 미완료 - 마감일:', deadlineDateFormatted, '남은 일수:', daysRemaining);
-        
         setDeepCheckupData(prev => ({
           ...prev,
           physical: {
             ...prev.physical,
+            lastCheckDate: '',
+            score: 0,
+            status: '미완료',
             isCompleted: false,
+            nextCheckDate: '',
             deadlineDate: deadlineDateFormatted,
             daysRemaining: daysRemaining,
           },
@@ -673,7 +699,7 @@ export function AdminPersonalHealthPage() {
                       <CompletedStatusValue>{deepCheckupData.mental.lastCheckDate}</CompletedStatusValue>
                     </CompletedStatusItem>
                     <CompletedStatusItem>
-                      <CompletedStatusLabel>검사 점수</CompletedStatusLabel>
+                      <CompletedStatusLabel>검사 점수 (PHQ-9·GAD 총점 0~67)</CompletedStatusLabel>
                       <CompletedStatusValue>{deepCheckupData.mental.score}점</CompletedStatusValue>
                     </CompletedStatusItem>
                     <CompletedStatusItem>
@@ -686,12 +712,15 @@ export function AdminPersonalHealthPage() {
                 </CompletedStatusBox>
 
                 <ResultDetailBox>
-                  <ResultDetailTitle>검사 결과</ResultDetailTitle>
+                  <ResultDetailTitle>검사 결과 (PHQ-9·GAD-7 기준)</ResultDetailTitle>
                   <ResultDetailText>
-                    귀하의 정신 건강 점수는 <strong style={{ color: '#1f2328' }}>{deepCheckupData.mental.score}점</strong>으로{' '}
+                    귀하의 <strong>월간 정신 건강 총점</strong>은 <strong style={{ color: '#1f2328' }}>{deepCheckupData.mental.score}점</strong>(총 0~67)이며,{' '}
                     <strong style={{ color: mentalHealthMessages[deepCheckupData.mental.status]?.color || '#1f2328' }}>
                       {deepCheckupData.mental.status || '미정'}
-                    </strong> 단계입니다.
+                    </strong> 구간(점수 {mentalHealthMessages[deepCheckupData.mental.status]?.scoreBand || '-'}, {mentalHealthMessages[deepCheckupData.mental.status]?.severityLabel || ''})입니다.
+                  </ResultDetailText>
+                  <ResultDetailText style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '4px' }}>
+                    채점 기준: 정상 0~14 · 주의 15~29 · 경고 30~44 · 위험 45+
                   </ResultDetailText>
                   {(() => {
                     const statusInfo = mentalHealthMessages[deepCheckupData.mental.status] || mentalHealthMessages['정상'];
@@ -777,8 +806,8 @@ export function AdminPersonalHealthPage() {
                       <CompletedStatusValue>{deepCheckupData.physical.lastCheckDate}</CompletedStatusValue>
                     </CompletedStatusItem>
                     <CompletedStatusItem>
-                      <CompletedStatusLabel>검사 점수</CompletedStatusLabel>
-                      <CompletedStatusValue>{deepCheckupData.physical.score}점</CompletedStatusValue>
+                      <CompletedStatusLabel>검사 점수 (QuickDASH 원점수 11~55)</CompletedStatusLabel>
+                      <CompletedStatusValue>{deepCheckupData.physical.score}점 (정규화 {getQuickDashNormalizedScore(deepCheckupData.physical.score)}점)</CompletedStatusValue>
                     </CompletedStatusItem>
                     <CompletedStatusItem>
                       <CompletedStatusLabel>상태</CompletedStatusLabel>
@@ -790,12 +819,16 @@ export function AdminPersonalHealthPage() {
                 </CompletedStatusBox>
 
                 <ResultDetailBox>
-                  <ResultDetailTitle>검사 결과</ResultDetailTitle>
+                  <ResultDetailTitle>검사 결과 (QuickDASH 기준)</ResultDetailTitle>
                   <ResultDetailText>
-                    귀하의 신체 건강 점수는 <strong style={{ color: '#1f2328' }}>{deepCheckupData.physical.score}점</strong>으로{' '}
+                    귀하의 <strong>QuickDASH 원점수</strong>는 <strong style={{ color: '#1f2328' }}>{deepCheckupData.physical.score}점</strong>(11~55),{' '}
+                    <strong>정규화 점수</strong>는 <strong style={{ color: '#1f2328' }}>{getQuickDashNormalizedScore(deepCheckupData.physical.score)}점</strong>(0~100, 상지 기능 제한 정도)이며,{' '}
                     <strong style={{ color: physicalHealthMessages[deepCheckupData.physical.status]?.color || '#1f2328' }}>
                       {deepCheckupData.physical.status || '미정'}
-                    </strong> 단계입니다.
+                    </strong> 구간(원점수 {physicalHealthMessages[deepCheckupData.physical.status]?.scoreBand || '-'}, {physicalHealthMessages[deepCheckupData.physical.status]?.severityLabel || ''})입니다.
+                  </ResultDetailText>
+                  <ResultDetailText style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '4px' }}>
+                    채점 기준: 정상 11~20 · 주의 21~30 · 경고 31~40 · 위험 41~55 (원점수)
                   </ResultDetailText>
                   {(() => {
                     const statusInfo = physicalHealthMessages[deepCheckupData.physical.status] || physicalHealthMessages['정상'];
@@ -840,7 +873,7 @@ export function AdminPersonalHealthPage() {
                 </IncompleteStatusIcon>
                 <IncompleteStatusText $isWarning>검사가 아직 완료되지 않았습니다</IncompleteStatusText>
                 <IncompleteStatusSubtext>
-                  {deepCheckupData.physical.deadlineDate || deepCheckupData.physical.nextCheckDate || '2026.02.01'}까지 검사를 완료해주세요
+                  {deepCheckupData.physical.deadlineDate || deepCheckupData.physical.nextCheckDate || '미정'}까지 검사를 완료해주세요
                   {deepCheckupData.physical.daysRemaining !== null && (
                     <span style={{ marginLeft: '8px', fontWeight: '600' }}>
                       (D-{deepCheckupData.physical.daysRemaining})

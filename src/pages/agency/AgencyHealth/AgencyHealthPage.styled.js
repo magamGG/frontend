@@ -404,6 +404,32 @@ export const MonitoringHeader = styled.div`
   margin-bottom: 12px;
 `;
 
+export const MonitoringTabWrap = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+`;
+
+export const MonitoringTabButton = styled.button`
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border: none;
+  background-color: ${props => props.$active ? '#6E8FB3' : 'white'};
+  color: ${props => props.$active ? 'white' : '#5a6067'};
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+  &:first-of-type {
+    border-right: 1px solid var(--border);
+  }
+  &:hover:not(:disabled) {
+    background-color: ${props => props.$active ? '#5a7a9e' : '#f1f5f9'};
+  }
+`;
+
 export const MonitoringChartContainer = styled.div`
   flex-shrink: 0;
 `;
