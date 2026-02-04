@@ -89,7 +89,7 @@ export function AgencyWorkcationPage() {
   const [members, setMembers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // DB에서 워케이션/재택근무 중인 직원 조회
+  // attendance_request에서 승인된 워케이션/재택근무 조회
   useEffect(() => {
     const fetchWorkcationMembers = async () => {
       if (!agencyNo) {
@@ -112,7 +112,7 @@ export function AgencyWorkcationPage() {
         
         console.log('📋 근태 신청 목록:', requestsList);
         
-        // 2. 승인된 재택근무/워케이션 신청 필터링 (현재 날짜가 기간 내에 있는 것만)
+        // 2. 승인된 워케이션/재택근무 신청 필터링 (현재 날짜가 기간 내에 있는 것만)
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         
@@ -440,7 +440,7 @@ export function AgencyWorkcationPage() {
                   <MemberCardHeaderContent>
                     <MemberCardBadges>
                       <Badge className="bg-white/20 text-white border-none">
-                        워케이션 진행 중
+                        {member.workcationType} 진행 중
                       </Badge>
                       <Badge className="bg-white/90 text-[#3F4A5A] border-none">
                         D-{daysRemaining}
@@ -605,7 +605,7 @@ export function AgencyWorkcationPage() {
                       </div>
                     </DetailMemberInfo>
                     <Badge className="bg-white/20 text-white border-none text-sm">
-                      워케이션 진행 중
+                      {selectedMember?.workcationType} 진행 중
                     </Badge>
                   </DetailMemberHeader>
 
