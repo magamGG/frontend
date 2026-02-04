@@ -117,7 +117,6 @@ export function AgencyWorkcationPage() {
         console.log('📋 근태 신청 목록:', requestsList);
         
         // 2. 승인된 워케이션 신청만 필터링 (재택근무 제외, 현재 날짜가 기간 내에 있는 것만)
-        // DB ATTENDANCE_REQUEST_TYPE: 워케이션 | 재택 | 재택근무 등
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         
@@ -433,7 +432,7 @@ export function AgencyWorkcationPage() {
                   <MemberCardHeaderContent>
                     <MemberCardBadges>
                       <Badge className="bg-white/20 text-white border-none">
-                        워케이션 진행 중
+                        {member.workcationType} 진행 중
                       </Badge>
                       <Badge className="bg-white/90 text-[#3F4A5A] border-none">
                         D-{daysRemaining}
@@ -598,7 +597,7 @@ export function AgencyWorkcationPage() {
                       </div>
                     </DetailMemberInfo>
                     <Badge className="bg-white/20 text-white border-none text-sm">
-                      워케이션 진행 중
+                      {selectedMember?.workcationType} 진행 중
                     </Badge>
                   </DetailMemberHeader>
 

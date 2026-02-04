@@ -123,7 +123,7 @@ export function Header({
       time: "2시간 전",
       isRead: false,
       type: "success",
-      linkedPage: "attendance",
+      linkedPage: "approvals",
     },
     {
       id: 4,

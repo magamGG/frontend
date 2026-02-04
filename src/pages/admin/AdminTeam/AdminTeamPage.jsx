@@ -14,7 +14,7 @@ import {
 import { Card } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-import { memberService, leaveService, attendanceService } from '@/api';
+import { memberService, projectService, leaveService, attendanceService } from '@/api';
 import { API_BASE_URL } from '@/api/config';
 import useAuthStore from '@/store/authStore';
 import { toast } from 'sonner';
@@ -58,26 +58,98 @@ import {
   EmployeeDetailName,
   EmployeeDetailBadges,
   EmployeeDetailContact,
-  HealthCheckCard,
-  HealthCheckTitle,
-  HealthCheckContent,
-  HealthMetrics,
-  HealthMetric,
-  HealthMetricLabel,
-  HealthMetricValue,
-  HealthMetricDivider,
-  MemoSection,
-  MemoLabel,
-  MemoInput,
-  ChartContainer,
-  LineChartWrapper,
+  EmptyStateContainer,
+  EmptyStateMessage,
   PieChartWrapper,
   PieChartCenterText,
   PieChartDays,
-  PieChartLabel,
-  EmptyStateContainer,
-  EmptyStateMessage,
+  LeaveListSection,
+  LeaveListScroll,
+  AttendanceStatsSection,
 } from './AdminTeamPage.styled';
+
+// 근태 타입별 색상 (leave_request 기준, 있는 것만 표시)
+const LEAVE_TYPE_COLORS = {
+  연차: '#3B82F6',
+  병가: '#EF4444',
+  워케이션: '#10B981',
+  재택근무: '#8B5CF6',
+  휴가: '#F59E0B',
+  반차: '#EAB308',
+  반반차: '#6B7280',
+};
+
+// 근태 통계: member_no 기준 attendance 확인 후, 출근일이면 attendance_request 승인 건으로 타입 표시(워케이션 등), 승인 없으면 출근
+// 출근하지 않았지만 승인된 연차/휴가 신청이 있는 날도 해당 타입으로 집계됨
+function AttendanceStatsChart({ stats }) {
+  const totalCount = stats?.totalCount ?? 0;
+  const typeCounts = stats?.typeCounts ?? [];
+  const now = new Date();
+  const daysSoFar = now.getDate();
+  // typeCounts의 모든 count 합 = 출근 + 승인된 근태 신청(연차/휴가 등)이 있는 날 수
+  const accountedDays = typeCounts.reduce((sum, tc) => sum + (Number(tc.count) || 0), 0);
+  // 미출근 = 이번 달 1일~오늘 일수 - (출근 + 승인된 근태 신청이 있는 날 수)
+  const 미출근일수 = Math.max(0, daysSoFar - accountedDays);
+  const 출근Color = '#22c55e';
+  const 미출근Color = '#e2e8f0';
+
+  // 통계 표시는 그대로 두되, "미출근"은 차트·텍스트 리스트에서 제외
+  const rows = [
+    ...typeCounts.map((tc) => ({
+      label: tc.type || '출근',
+      value: Number(tc.count) || 0,
+      color: tc.type === '출근' ? 출근Color : (LEAVE_TYPE_COLORS[tc.type] || '#6B7280'),
+    })),
+    // { label: '미출근', value: 미출근일수, color: 미출근Color },
+  ].filter((r) => r.value > 0);
+
+  const pieData = rows.map((r) => ({ name: r.label, value: r.value, color: r.color }));
+  const centerDays = pieData.reduce((sum, d) => sum + d.value, 0);
+  const isEmpty = pieData.length === 0;
+
+  return (
+    <div className="flex flex-row items-center gap-4">
+      <PieChartWrapper style={{ width: 160, height: 160 }}>
+        {isEmpty ? (
+          <div className="flex items-center justify-center w-full h-full text-lg font-semibold text-muted-foreground">
+            0일
+          </div>
+        ) : (
+          <>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={45}
+                  outerRadius={70}
+                  paddingAngle={2}
+                  dataKey="value"
+                >
+                  {pieData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+            <PieChartCenterText>
+              <PieChartDays>{centerDays}일</PieChartDays>
+            </PieChartCenterText>
+          </>
+        )}
+      </PieChartWrapper>
+      <div className="flex flex-col gap-2">
+        {rows.map(({ label, value, color }) => (
+          <div key={label} className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: color }} />
+            <span className="text-sm text-foreground">{label} {value}일</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function AdminTeamPage() {
   const user = useAuthStore((state) => state.user);
@@ -89,6 +161,7 @@ export function AdminTeamPage() {
   const [employeeDetails, setEmployeeDetails] = useState({}); // 직원별 상세 정보 캐시
   const [loadingDetails, setLoadingDetails] = useState(new Set()); // 상세 로딩 중인 id
   const [agencyLeaveRequests, setAgencyLeaveRequests] = useState([]); // 에이전시 소속 근태 신청 목록
+  const [myProjectCount, setMyProjectCount] = useState(null);
 
   const REQUEST_STATUS_MAP = {
     PENDING: { label: '대기', color: '#F59E0B' },
@@ -105,6 +178,20 @@ export function AdminTeamPage() {
       return str;
     }
   };
+
+  // 현재 로그인 계정(담당자)의 담당 프로젝트 수 (PROJECT_MEMBER 기준)
+  useEffect(() => {
+    if (!user?.memberNo) return;
+    const fetchCount = async () => {
+      try {
+        const list = await projectService.getManagedProjects();
+        setMyProjectCount(Array.isArray(list) ? list.length : 0);
+      } catch {
+        setMyProjectCount(0);
+      }
+    };
+    fetchCount();
+  }, [user?.memberNo]);
 
   // 현재 로그인한 담당자의 managerNo 조회 및 배정된 작가 목록 가져오기
   useEffect(() => {
@@ -139,7 +226,6 @@ export function AdminTeamPage() {
         // 3. 작가 데이터를 컴포넌트 형식으로 변환
         const imageBaseUrl = API_BASE_URL || 'http://localhost:8888';
         const mappedEmployees = artistsList.map((artist) => {
-          // 프로필 이미지 URL 구성
           let profileImageUrl = null;
           if (artist.memberProfileImage) {
             if (artist.memberProfileImage.startsWith('http://') || artist.memberProfileImage.startsWith('https://')) {
@@ -150,25 +236,36 @@ export function AdminTeamPage() {
               profileImageUrl = `${imageBaseUrl}/uploads/${artist.memberProfileImage}`;
             }
           }
-          
           return {
             id: artist.memberNo,
             name: artist.memberName,
             email: artist.memberEmail,
             phone: artist.memberPhone || '',
-            role: artist.memberRole, // 원본 역할 그대로 표시
-            originalRole: artist.memberRole, // 원본 역할 저장
-            status: artist.memberStatus === 'ACTIVE' ? '근무중' 
-              : artist.memberStatus === 'ON_LEAVE' ? '휴가' 
-              : artist.memberStatus === 'SICK_LEAVE' ? '병가' 
+            role: artist.memberRole,
+            originalRole: artist.memberRole,
+            status: artist.memberStatus === 'ACTIVE' ? '근무중'
+              : artist.memberStatus === 'ON_LEAVE' ? '휴가'
+              : artist.memberStatus === 'SICK_LEAVE' ? '병가'
               : '근무중',
-            projectCount: 0, // 프로젝트 수는 상세 정보에서 가져옴
-            healthCheck: null, // 건강 체크는 상세 정보에서 가져옴
-            profileImage: profileImageUrl, // 프로필 이미지 URL
+            projectCount: 0,
+            profileImage: profileImageUrl,
           };
         });
 
-        setEmployees(mappedEmployees);
+        // 4. 참여 중인 프로젝트 수를 먼저 조회한 뒤 한 번에 설정 (클릭 전에도 카드에 올바른 개수 표시)
+        const withCounts = await Promise.all(
+          mappedEmployees.map(async (emp) => {
+            try {
+              const res = await memberService.getMemberDetails(emp.id);
+              const data = res?.data != null ? res.data : (Array.isArray(res) ? res[0] : res);
+              const projectCount = (data?.currentProjects?.length ?? 0);
+              return { ...emp, projectCount };
+            } catch {
+              return { ...emp, projectCount: 0 };
+            }
+          })
+        );
+        setEmployees(withCounts);
       } catch (error) {
         console.error('작가 목록 조회 실패:', error);
         toast.error('작가 목록을 불러오는데 실패했습니다.');
@@ -264,7 +361,6 @@ export function AdminTeamPage() {
         ...prev,
         [employeeId]: {
           ...data,
-          healthCheck,
           projectCount,
           attendanceStats,
         },
@@ -286,7 +382,7 @@ export function AdminTeamPage() {
       // employees 상태도 업데이트
       setEmployees(prev => prev.map(emp => 
         emp.id === employeeId 
-          ? { ...emp, projectCount, healthCheck, profileImage: profileImageUrl || emp.profileImage }
+          ? { ...emp, projectCount, profileImage: profileImageUrl || emp.profileImage }
           : emp
       ));
     } catch (error) {
@@ -302,7 +398,6 @@ export function AdminTeamPage() {
   };
 
   const totalArtists = employees.length;
-  const worksInProgress = employees.reduce((sum, emp) => sum + emp.projectCount, 0);
   const activeArtists = employees.filter(emp => emp.status === '근무중').length;
 
   const filteredEmployees = employees.filter(emp => {
@@ -364,8 +459,8 @@ export function AdminTeamPage() {
                 <Briefcase className="w-6 h-6" />
               </StatCardIcon>
               <StatCardContent>
-                <StatCardLabel>진행 중인 작품</StatCardLabel>
-                <StatCardValue>{worksInProgress}개</StatCardValue>
+                <StatCardLabel>진행 중인 프로젝트</StatCardLabel>
+                <StatCardValue>{myProjectCount ?? 0}개</StatCardValue>
               </StatCardContent>
             </StatCard>
             
@@ -446,135 +541,6 @@ export function AdminTeamPage() {
                 </EmployeeRight>
               </EmployeeDetailHeader>
             </EmployeeDetailCard>
-
-            {/* 건강 체크 결과 카드 */}
-            {selectedEmployee.healthCheck ? (
-              <HealthCheckCard>
-                <HealthCheckTitle>
-                  {selectedEmployee.healthCheck.date ? `${selectedEmployee.healthCheck.date} 건강 체크 결과` : '건강 체크 결과'}
-                </HealthCheckTitle>
-                <HealthCheckContent>
-                  {/* 왼쪽: 건강 메트릭 */}
-                  <div>
-                    <HealthMetrics>
-                      <HealthMetric>
-                        <HealthMetricLabel>오늘 컨디션</HealthMetricLabel>
-                        <HealthMetricValue>{selectedEmployee.healthCheck.condition}</HealthMetricValue>
-                      </HealthMetric>
-                      <HealthMetricDivider />
-                      <HealthMetric>
-                        <HealthMetricLabel>수면 시간</HealthMetricLabel>
-                        <HealthMetricValue>{selectedEmployee.healthCheck.sleepHours}(시간)</HealthMetricValue>
-                      </HealthMetric>
-                      <HealthMetricDivider />
-                      <HealthMetric>
-                        <HealthMetricLabel>신체 불편함</HealthMetricLabel>
-                        <HealthMetricValue>{selectedEmployee.healthCheck.physicalDiscomfort}</HealthMetricValue>
-                      </HealthMetric>
-                    </HealthMetrics>
-                    <MemoSection>
-                      <MemoLabel>메모 내용</MemoLabel>
-                      <MemoInput
-                        type="text"
-                        placeholder="오늘은 키위가 먹고싶네여...."
-                        value={selectedEmployee.healthCheck.memo}
-                        readOnly
-                      />
-                    </MemoSection>
-                  </div>
-
-                  {/* 중앙: 라인 차트 - 최근 7일간 건강 점수 추이 */}
-                  {selectedEmployee.healthCheck?.healthScoreData && selectedEmployee.healthCheck.healthScoreData.length > 0 ? (
-                    <ChartContainer>
-                      <LineChartWrapper>
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={selectedEmployee.healthCheck.healthScoreData}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                            <XAxis 
-                              dataKey="date" 
-                              stroke="#5a6067"
-                              tick={{ fontSize: 12 }}
-                              label={{ value: '날짜', position: 'insideBottom', offset: -5, style: { textAnchor: 'middle', fill: '#5a6067' } }}
-                            />
-                            <YAxis 
-                              stroke="#5a6067"
-                              tick={{ fontSize: 12 }}
-                              domain={[0, 100]}
-                              ticks={[0, 25, 50, 75, 100]}
-                              label={{ value: '건강 점수', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fill: '#5a6067' } }}
-                            />
-                            <Tooltip 
-                              formatter={(value) => [`${value}점`, '건강 점수']}
-                              labelFormatter={(label) => `${label}`}
-                            />
-                            <Line 
-                              type="monotone" 
-                              dataKey="score" 
-                              stroke="#3B82F6" 
-                              strokeWidth={2}
-                              dot={{ fill: '#3B82F6', r: 4 }}
-                              activeDot={{ r: 6 }}
-                              name="건강 점수"
-                            />
-                          </LineChart>
-                        </ResponsiveContainer>
-                      </LineChartWrapper>
-                    </ChartContainer>
-                  ) : (
-                    <ChartContainer>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#9CA3AF' }}>
-                        건강 점수 데이터가 없습니다
-                      </div>
-                    </ChartContainer>
-                  )}
-
-                  {/* 오른쪽: 원형 차트 - 최근 30일간 건강 상태 분포도 */}
-                  {selectedEmployee.healthCheck?.healthStatusDistribution && selectedEmployee.healthCheck.healthStatusDistribution.length > 0 ? (
-                    <PieChartWrapper>
-                      <ResponsiveContainer width={140} height={140}>
-                        <PieChart>
-                          <Pie
-                            data={selectedEmployee.healthCheck.healthStatusDistribution}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={45}
-                            outerRadius={70}
-                            paddingAngle={2}
-                            dataKey="value"
-                          >
-                            {selectedEmployee.healthCheck.healthStatusDistribution.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                          </Pie>
-                          <Tooltip 
-                            formatter={(value, name) => [`${value}일`, name]}
-                          />
-                        </PieChart>
-                      </ResponsiveContainer>
-                      <PieChartCenterText>
-                        <PieChartDays>{selectedEmployee.healthCheck.totalCheckDays || 0} 일</PieChartDays>
-                        <PieChartLabel>총 체크일</PieChartLabel>
-                      </PieChartCenterText>
-                    </PieChartWrapper>
-                  ) : (
-                    <PieChartWrapper>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#9CA3AF' }}>
-                        건강 상태 분포 데이터가 없습니다
-                      </div>
-                    </PieChartWrapper>
-                  )}
-                </HealthCheckContent>
-              </HealthCheckCard>
-            ) : (
-              <HealthCheckCard>
-                <HealthCheckTitle>건강 체크 결과</HealthCheckTitle>
-                <HealthCheckContent>
-                  <div style={{ textAlign: 'center', padding: '2rem', color: '#9CA3AF' }}>
-                    건강 체크 정보가 없습니다
-                  </div>
-                </HealthCheckContent>
-              </HealthCheckCard>
-            )}
           </EmployeeDetailView>
         </AdminTeamBody>
       </AdminTeamRoot>
@@ -608,8 +574,8 @@ export function AdminTeamPage() {
               <Briefcase className="w-6 h-6" />
             </StatCardIcon>
             <StatCardContent>
-              <StatCardLabel>진행 중인 작품</StatCardLabel>
-              <StatCardValue>{worksInProgress}개</StatCardValue>
+              <StatCardLabel>진행 중인 프로젝트</StatCardLabel>
+              <StatCardValue>{myProjectCount ?? 0}개</StatCardValue>
             </StatCardContent>
           </StatCard>
           
