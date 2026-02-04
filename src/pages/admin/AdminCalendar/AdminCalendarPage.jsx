@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { CalendarComponent } from '@/components/common/Calendar';
 
-const currentMonth = '2026년 1월';
-
 export function AdminCalendarPage() {
   // TODO: Zustand store mapping - 작가 목록
   const artists = [
@@ -201,7 +199,6 @@ export function AdminCalendarPage() {
 
   return (
     <CalendarComponent
-      currentMonth={currentMonth}
       events={filteredSchedule}
       attendanceData={currentAttendanceData}
       dayNotes={currentDayNotes}

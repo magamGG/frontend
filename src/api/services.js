@@ -125,6 +125,14 @@ export const attendanceService = {
   },
 };
 
+// 메모 서비스 (개인 메모 - 아티스트 대시보드)
+export const memoService = {
+  getList: () => api.get(API_ENDPOINTS.MEMO.LIST),
+  create: (data) => api.post(API_ENDPOINTS.MEMO.CREATE, { memoName: data.memoName || data.title, memoText: data.memoText || data.content }),
+  update: (memoNo, data) => api.put(API_ENDPOINTS.MEMO.UPDATE(memoNo), { memoName: data.memoName ?? data.title, memoText: data.memoText ?? data.content }),
+  delete: (memoNo) => api.delete(API_ENDPOINTS.MEMO.DELETE(memoNo)),
+};
+
 // 연차/휴가 서비스
 export const leaveService = {
   // 연차 신청
@@ -311,6 +319,11 @@ export const projectService = {
   // 아티스트 대시보드 오늘 할 일 - 담당 배정 + 마감일 오늘 + 미완료(N) 칸반 카드만
   getMyTodayTasks: () => {
     return api.get(API_ENDPOINTS.PROJECTS.TODAY_TASKS);
+  },
+
+  // 아티스트 캘린더: 담당자 배정 칸반 카드 월별 (KANBAN_CARD_STARTED_AT/ENDED_AT, PROJECT_COLOR)
+  getMyCalendarCards: (year, month) => {
+    return api.get(API_ENDPOINTS.PROJECTS.MY_CALENDAR_CARDS(year, month));
   },
 
   // 회원별 칸반 카드 통계 (진행중/완료 작업 개수) - 워케이션 등 원격 관리용
