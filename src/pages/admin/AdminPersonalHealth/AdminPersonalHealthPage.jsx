@@ -209,21 +209,11 @@ export function AdminPersonalHealthPage() {
     try {
       setIsLoadingPhysicalQuestions(true);
       
-      // 로그인한 사용자의 AgencyNo 가져오기
-      const agencyNo = user?.agencyNo;
-      if (!agencyNo) {
-        toast.error('에이전시 정보를 찾을 수 없습니다.');
-        return;
-      }
-      
-      // 백엔드 API 호출 - AgencyNo와 "월간 신체" 타입으로 질문 조회
-      // 백엔드 처리: HealthSurveyController.getQuestionsBySurveyType() 
-      // → HealthSurveyServiceImpl.getQuestionsBySurveyType()
-      // → HealthSurveyQuestionRepository.findByHealthSurvey_Agency_AgencyNoAndHealthSurveyQuestionTypeOrderByHealthSurveyOrderAsc()
-      // AgencyNo와 HEALTH_SURVEY_QUESTION_TYPE 컬럼으로 필터링하여 조회
-      const questions = await api.get(`/api/health-surveys/type/월간 신체/questions`, {
-        params: { agencyNo }
-      });
+      // 백엔드 API 호출 - 타입으로만 질문 조회 (소속 상관없이 모든 문항 공통 사용)
+      // 백엔드 처리: HealthSurveyController.getQuestionsByType() 
+      // → HealthSurveyServiceImpl.getQuestionsByType()
+      // → HealthSurveyQuestionRepository.findByHealthSurveyQuestionTypeOrderByHealthSurveyOrderAsc()
+      const questions = await api.get(`/api/health-surveys/type/월간 신체/questions`);
       
       // healthSurveyOrder 순서로 정렬
       const sortedQuestions = questions.sort((a, b) => 
@@ -246,21 +236,11 @@ export function AdminPersonalHealthPage() {
     try {
       setIsLoadingMentalQuestions(true);
       
-      // 로그인한 사용자의 AgencyNo 가져오기
-      const agencyNo = user?.agencyNo;
-      if (!agencyNo) {
-        toast.error('에이전시 정보를 찾을 수 없습니다.');
-        return;
-      }
-      
-      // 백엔드 API 호출 - AgencyNo와 "월간 정신" 타입으로 질문 조회
-      // 백엔드 처리: HealthSurveyController.getQuestionsBySurveyType() 
-      // → HealthSurveyServiceImpl.getQuestionsBySurveyType()
-      // → HealthSurveyQuestionRepository.findByHealthSurvey_Agency_AgencyNoAndHealthSurveyQuestionTypeOrderByHealthSurveyOrderAsc()
-      // AgencyNo와 HEALTH_SURVEY_QUESTION_TYPE 컬럼으로 필터링하여 조회
-      const questions = await api.get(`/api/health-surveys/type/월간 정신/questions`, {
-        params: { agencyNo }
-      });
+      // 백엔드 API 호출 - 타입으로만 질문 조회 (소속 상관없이 모든 문항 공통 사용)
+      // 백엔드 처리: HealthSurveyController.getQuestionsByType() 
+      // → HealthSurveyServiceImpl.getQuestionsByType()
+      // → HealthSurveyQuestionRepository.findByHealthSurveyQuestionTypeOrderByHealthSurveyOrderAsc()
+      const questions = await api.get(`/api/health-surveys/type/월간 정신/questions`);
       
       // healthSurveyOrder 순서로 정렬
       const sortedQuestions = questions.sort((a, b) => 
@@ -512,23 +492,19 @@ export function AdminPersonalHealthPage() {
     }
 
     try {
-      // healthSurveyNo를 질문 데이터에서 가져오기
-      const healthSurveyNo = mentalDeepQuestions[0]?.healthSurveyNo;
-      if (!healthSurveyNo) {
-        toast.error('설문 정보를 찾을 수 없습니다.');
-        return;
-      }
+      // answers 배열 생성 (questionId와 score 매핑)
+      const answers = mentalDeepQuestions.map((question, index) => ({
+        questionId: question.healthSurveyQuestionNo,
+        score: mentalDeepAnswers[index]
+      }));
 
-      // 각 문항별 점수의 총합 계산 (프론트엔드에서 로직 처리)
-      const totalScore = mentalDeepAnswers.reduce((sum, score) => sum + (score || 0), 0);
-
-      // API 호출 (총점만 전송, 백엔드에서 HEALTH_SURVEY_QUESTION_ITEM_ANSWER_SCORE에 저장)
+      // API 호출 - 엔드포인트 변경 및 요청 형식 변경
       // 백엔드 처리: HealthSurveyController.submitSurveyResponse()
       // → HealthSurveyServiceImpl.submitSurveyResponse()
       // → HealthSurveyQuestion의 HEALTH_SURVEY_QUESTION_TYPE으로 위험도 평가
-      const result = await api.post(`/api/health-surveys/${healthSurveyNo}/responses`, {
+      const result = await api.post(`/api/health-surveys/responses`, {
         memberNo: memberNo,
-        totalScore: totalScore
+        answers: answers
       });
 
       // 설문 제출 성공 후 상태 조회 함수 호출하여 최신 상태 가져오기
@@ -562,23 +538,19 @@ export function AdminPersonalHealthPage() {
     }
 
     try {
-      // healthSurveyNo를 질문 데이터에서 가져오기
-      const healthSurveyNo = physicalDeepQuestions[0]?.healthSurveyNo;
-      if (!healthSurveyNo) {
-        toast.error('설문 정보를 찾을 수 없습니다.');
-        return;
-      }
+      // answers 배열 생성 (questionId와 score 매핑)
+      const answers = physicalDeepQuestions.map((question, index) => ({
+        questionId: question.healthSurveyQuestionNo,
+        score: physicalDeepAnswers[index]
+      }));
 
-      // 각 문항별 점수의 총합 계산 (프론트엔드에서 로직 처리)
-      const totalScore = physicalDeepAnswers.reduce((sum, score) => sum + (score || 0), 0);
-
-      // API 호출 (총점만 전송, 백엔드에서 HEALTH_SURVEY_QUESTION_ITEM_ANSWER_SCORE에 저장)
+      // API 호출 - 엔드포인트 변경 및 요청 형식 변경
       // 백엔드 처리: HealthSurveyController.submitSurveyResponse()
       // → HealthSurveyServiceImpl.submitSurveyResponse()
       // → HealthSurveyQuestion의 HEALTH_SURVEY_QUESTION_TYPE으로 위험도 평가
-      const result = await api.post(`/api/health-surveys/${healthSurveyNo}/responses`, {
+      const result = await api.post(`/api/health-surveys/responses`, {
         memberNo: memberNo,
-        totalScore: totalScore
+        answers: answers
       });
 
       // 설문 제출 성공 후 상태 조회 함수 호출하여 최신 상태 가져오기
