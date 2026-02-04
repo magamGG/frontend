@@ -326,21 +326,6 @@ export const projectService = {
 
 // 캘린더 서비스
 export const calendarService = {
-  // 일정 생성
-  createEvent: (eventData) => {
-    return api.post(API_ENDPOINTS.CALENDAR.CREATE_EVENT, eventData);
-  },
-  
-  // 월별 일정 조회
-  getEventsByMonth: (year, month) => {
-    return api.get(API_ENDPOINTS.CALENDAR.EVENTS_BY_MONTH(year, month));
-  },
-  
-  // 다가오는 일정 조회 (작가 대시보드 "다음 연재 프로젝트"용)
-  getUpcomingEvents: (limit = 10) => {
-    return api.get(API_ENDPOINTS.CALENDAR.UPCOMING_EVENTS(limit));
-  },
-
   // 담당자 대시보드 마감 임박 현황 (오늘~4일 후별 건수)
   getDeadlineCounts: () => {
     return api.get(API_ENDPOINTS.CALENDAR.DEADLINE_COUNTS);

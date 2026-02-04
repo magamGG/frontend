@@ -120,9 +120,6 @@ export const API_ENDPOINTS = {
 
   // 캘린더 API
   CALENDAR: {
-    CREATE_EVENT: `/api/calendar/events`, // POST: 일정 생성
-    EVENTS_BY_MONTH: (year, month) => `/api/calendar/events?year=${year}&month=${month}`, // GET: 월별 일정 조회
-    UPCOMING_EVENTS: (limit = 10) => `/api/calendar/events/upcoming?limit=${limit}`, // GET: 다가오는 일정 (작가 대시보드용)
     DEADLINE_COUNTS: `/api/calendar/deadline-counts`, // GET: 담당자 대시보드 마감 임박 현황
     DEADLINE_COUNTS_BY_AGENCY: (agencyNo) => `/api/calendar/deadline-counts/agency/${agencyNo}`, // GET: 에이전시 대시보드 마감 임박 현황
   },
