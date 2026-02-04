@@ -22,7 +22,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, 
 import { ProjectListModal } from '@/components/modals/ProjectListModal';
 import { AttendanceListModal } from '@/components/modals/AttendanceListModal';
 import { toast } from 'sonner';
-import { leaveService, attendanceService, memberService, calendarService, projectService } from '@/api/services';
+import { leaveService, attendanceService, memberService, projectService } from '@/api/services';
 import useAuthStore from '@/store/authStore';
 import { LeaveRequestEditModal } from '@/components/modals/LeaveRequestEditModal';
 import svgPaths from '@/imports/svg-oq0e8tu4xb';
@@ -269,6 +269,32 @@ export function AdminDashboardPage({ onNavigateToSection }) {
   const [managedProjects, setManagedProjects] = useState([]);
   const [managedProjectsLoading, setManagedProjectsLoading] = useState(false);
 
+  // YYYY-MM-DD → "N월 N일" (마감 보정용)
+  const formatDeadlineFromIso = (isoStr) => {
+    if (!isoStr) return null;
+    const d = new Date(isoStr);
+    if (Number.isNaN(d.getTime())) return null;
+    return `${d.getMonth() + 1}월 ${d.getDate()}일`;
+  };
+
+  // 주기 기준 다음 연재일 계산 (프로젝트 목록과 동일 로직 - deadline '-' 보정용)
+  const getNextScheduleDateFromProject = (p) => {
+    const startDateStr = p.projectStartedAt
+      ? (typeof p.projectStartedAt === 'string' ? p.projectStartedAt.slice(0, 10) : null)
+      : null;
+    if (!startDateStr || p.projectCycle == null || isNaN(Number(p.projectCycle))) return null;
+    const start = new Date(startDateStr);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    start.setHours(0, 0, 0, 0);
+    const daysDiff = Math.floor((today - start) / (1000 * 60 * 60 * 24));
+    if (daysDiff < 0) return start;
+    const n = daysDiff === 0 ? 0 : Math.ceil(daysDiff / Number(p.projectCycle));
+    const next = new Date(start);
+    next.setDate(start.getDate() + n * Number(p.projectCycle));
+    return next;
+  };
+
   useEffect(() => {
     const fetchManagedProjects = async () => {
       const memberNo = useAuthStore.getState().user?.memberNo;
@@ -276,16 +302,33 @@ export function AdminDashboardPage({ onNavigateToSection }) {
 
       setManagedProjectsLoading(true);
       try {
-        const list = await projectService.getManagedProjects();
-        const arr = Array.isArray(list) ? list : [];
-        const mapped = arr.map((p) => ({
-          id: p.projectNo,
-          name: p.projectName || '-',
-          artist: p.artist || '-',
-          status: p.status || '정상',
-          progress: p.progress ?? 0,
-          deadline: p.deadline || '-',
-        }));
+        const [managedList, projectsList] = await Promise.all([
+          projectService.getManagedProjects(),
+          projectService.getProjects(0, 100),
+        ]);
+        const arr = Array.isArray(managedList) ? managedList : [];
+        const fullList = Array.isArray(projectsList) ? projectsList : projectsList?.content ?? projectsList?.data ?? [];
+        const mapped = arr.map((p) => {
+          let deadline = p.deadline || '-';
+          if (deadline === '-') {
+            const full = fullList.find((x) => x.projectNo === p.projectNo);
+            if (full) {
+              const nextDate = getNextScheduleDateFromProject(full);
+              if (nextDate) {
+                const iso = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}-${String(nextDate.getDate()).padStart(2, '0')}`;
+                deadline = formatDeadlineFromIso(iso) || '-';
+              }
+            }
+          }
+          return {
+            id: p.projectNo,
+            name: p.projectName || '-',
+            artist: p.artist || '-',
+            status: p.status || '정상',
+            progress: p.progress ?? 0,
+            deadline,
+          };
+        });
         setManagedProjects(mapped);
       } catch (err) {
         console.error('담당 프로젝트 현황 조회 실패:', err);
@@ -389,7 +432,7 @@ export function AdminDashboardPage({ onNavigateToSection }) {
     const fetchDeadlineCounts = async () => {
       setDeadlineLoading(true);
       try {
-        const list = await calendarService.getDeadlineCounts();
+        const list = await projectService.getDeadlineCounts();
         const arr = Array.isArray(list) ? list : [];
         if (arr.length >= 5) {
           setDeadlineData(arr);

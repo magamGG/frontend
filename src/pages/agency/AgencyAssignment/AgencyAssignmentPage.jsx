@@ -423,16 +423,16 @@ export function AgencyAssignmentPage() {
 
       {/* Assignment Modal */}
       <Dialog open={isAssignModalOpen} onOpenChange={setIsAssignModalOpen}>
-        <DialogContent className="sm:max-w-[700px] max-h-[80vh] bg-white">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-[700px] max-h-[85vh] flex flex-col bg-white p-6">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>{selectedManager?.name} - 작가 배정 관리</DialogTitle>
             <DialogDescription>
               담당 작가를 추가하거나 제거할 수 있습니다.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-6 overflow-y-auto max-h-[60vh]">
-            {/* Currently Assigned Artists */}
+          <div className="space-y-6 overflow-y-auto min-h-0 flex-1 pr-1 hide-scrollbar">
+            {/* 담당 작가 - 2명 높이만 보이고 나머지는 스크롤 */}
             <div>
               <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
                 <Users className="w-4 h-4" />
@@ -440,13 +440,13 @@ export function AgencyAssignmentPage() {
               </h3>
               
               {assignedArtists.length > 0 ? (
-                <div className="space-y-2">
+                <div className="overflow-y-auto max-h-[176px] space-y-2 pr-1 hide-scrollbar">
                   {assignedArtists.map((artist) => (
                     <div 
                       key={artist.id}
-                      className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
+                      className="flex items-center justify-between p-3 bg-muted/30 rounded-lg flex-shrink-0"
                     >
-                      <div className="flex items-center gap-3 flex-1">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
                         <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
                           {artist.profileImage ? (
                             <img 
@@ -461,14 +461,14 @@ export function AgencyAssignmentPage() {
                           ) : null}
                           <User className="w-5 h-5 text-muted-foreground" style={{ display: artist.profileImage ? 'none' : 'block' }} />
                         </div>
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="font-medium text-foreground">{artist.name}</span>
+                            <span className="font-medium text-foreground truncate">{artist.name}</span>
                             <Badge className={getStatusColor(artist.status)} style={{ fontSize: '10px' }}>
                               {artist.status}
                             </Badge>
                           </div>
-                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground truncate">
                             <span>{artist.email}</span>
                             <span>프로젝트: {artist.projects}개</span>
                           </div>
@@ -478,7 +478,7 @@ export function AgencyAssignmentPage() {
                         variant="outline"
                         size="sm"
                         onClick={() => handleUnassignArtist(artist.id)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
                       >
                         <X className="w-4 h-4" />
                       </Button>
@@ -493,7 +493,7 @@ export function AgencyAssignmentPage() {
               )}
             </div>
 
-            {/* Unassigned Artists */}
+            {/* 미배정 작가 - 2명 높이만 보이고 나머지는 스크롤 */}
             <div>
               <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
                 <UserPlus className="w-4 h-4" />
@@ -501,13 +501,13 @@ export function AgencyAssignmentPage() {
               </h3>
               
               {unassignedArtists.length > 0 ? (
-                <div className="space-y-2">
+                <div className="overflow-y-auto max-h-[176px] space-y-2 pr-1 hide-scrollbar">
                   {unassignedArtists.map((artist) => (
                     <div 
                       key={artist.id}
-                      className="flex items-center justify-between p-3 bg-blue-50/50 rounded-lg border border-blue-100"
+                      className="flex items-center justify-between p-3 bg-blue-50/50 rounded-lg border border-blue-100 flex-shrink-0"
                     >
-                      <div className="flex items-center gap-3 flex-1">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
                         <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
                           {artist.profileImage ? (
                             <img 
@@ -522,14 +522,14 @@ export function AgencyAssignmentPage() {
                           ) : null}
                           <User className="w-5 h-5 text-muted-foreground" style={{ display: artist.profileImage ? 'none' : 'block' }} />
                         </div>
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="font-medium text-foreground">{artist.name}</span>
+                            <span className="font-medium text-foreground truncate">{artist.name}</span>
                             <Badge className={getStatusColor(artist.status)} style={{ fontSize: '10px' }}>
                               {artist.status}
                             </Badge>
                           </div>
-                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground truncate">
                             <span>{artist.email}</span>
                             <span>프로젝트: {artist.projects}개</span>
                           </div>
@@ -539,7 +539,7 @@ export function AgencyAssignmentPage() {
                         variant="outline"
                         size="sm"
                         onClick={() => handleAssignArtist(artist.id)}
-                        className="text-primary hover:bg-primary/10"
+                        className="text-primary hover:bg-primary/10 flex-shrink-0"
                       >
                         <UserPlus className="w-4 h-4 mr-1" />
                         배정
@@ -556,7 +556,7 @@ export function AgencyAssignmentPage() {
             </div>
           </div>
 
-          <div className="flex justify-end pt-4 border-t border-border">
+          <div className="flex justify-end pt-4 mt-4 border-t border-border flex-shrink-0">
             <Button onClick={() => setIsAssignModalOpen(false)}>
               완료
             </Button>

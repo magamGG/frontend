@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { Card } from '@/app/components/ui/card';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-import { memberService } from '@/api';
+import { memberService, projectService } from '@/api';
 import { API_BASE_URL } from '@/api/config';
 import useAuthStore from '@/store/authStore';
 import { toast } from 'sonner';
@@ -86,6 +86,22 @@ export function AdminTeamPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [employeeDetails, setEmployeeDetails] = useState({}); // 직원별 상세 정보 캐시
   const [loadingDetails, setLoadingDetails] = useState(new Set()); // 상세 로딩 중인 id
+  /** 현재 로그인 계정이 PROJECT_MEMBER에 등록된 프로젝트 수 */
+  const [myProjectCount, setMyProjectCount] = useState(null);
+
+  // 현재 로그인 계정 소속 프로젝트 수 (PROJECT_MEMBER 기준)
+  useEffect(() => {
+    if (!user?.memberNo) return;
+    const fetchCount = async () => {
+      try {
+        const res = await projectService.getMyProjectCount();
+        setMyProjectCount(Number(res?.count ?? res?.data?.count ?? 0));
+      } catch {
+        setMyProjectCount(0);
+      }
+    };
+    fetchCount();
+  }, [user?.memberNo]);
 
   // 현재 로그인한 담당자의 managerNo 조회 및 배정된 작가 목록 가져오기
   useEffect(() => {
@@ -232,7 +248,6 @@ export function AdminTeamPage() {
   };
 
   const totalArtists = employees.length;
-  const worksInProgress = employees.reduce((sum, emp) => sum + emp.projectCount, 0);
   const activeArtists = employees.filter(emp => emp.status === '근무중').length;
 
   const filteredEmployees = employees.filter(emp => {
@@ -289,8 +304,8 @@ export function AdminTeamPage() {
                 <Briefcase className="w-6 h-6" />
               </StatCardIcon>
               <StatCardContent>
-                <StatCardLabel>진행 중인 작품</StatCardLabel>
-                <StatCardValue>{worksInProgress}개</StatCardValue>
+                <StatCardLabel>진행 중인 프로젝트</StatCardLabel>
+                <StatCardValue>{myProjectCount ?? 0}개</StatCardValue>
               </StatCardContent>
             </StatCard>
             
@@ -533,8 +548,8 @@ export function AdminTeamPage() {
               <Briefcase className="w-6 h-6" />
             </StatCardIcon>
             <StatCardContent>
-              <StatCardLabel>진행 중인 작품</StatCardLabel>
-              <StatCardValue>{worksInProgress}개</StatCardValue>
+              <StatCardLabel>진행 중인 프로젝트</StatCardLabel>
+              <StatCardValue>{myProjectCount ?? 0}개</StatCardValue>
             </StatCardContent>
           </StatCard>
           

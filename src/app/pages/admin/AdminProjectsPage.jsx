@@ -8,16 +8,21 @@ import { toast } from 'sonner';
 import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
 import { ProjectDetailPage } from '@/app/pages/artist/ProjectDetailPage';
 import { getProjectThumbnailUrl, PROJECT_THUMBNAIL_PLACEHOLDER } from '@/api/config';
+import { projectService } from '@/api';
+import useAuthStore from '@/store/authStore';
 
 
 
 
 
 export function AdminProjectsPage() {
+  const user = useAuthStore((state) => state.user);
   const [selectedProject, setSelectedProject] = useState(null);
   const [showDetailPage, setShowDetailPage] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  
+  /** 로그인 회원이 PROJECT_MEMBER에 등록된 프로젝트 수 (member → project_member count) */
+  const [myProjectCount, setMyProjectCount] = useState(null);
+
   // 필터 상태
   const [statusFilters, setStatusFilters] = useState(['전체']);
   const [selectedArtistFilter, setSelectedArtistFilter] = useState(null);
@@ -51,6 +56,20 @@ export function AdminProjectsPage() {
 
   const [artists] = useState([]);
   const [projects, setProjects] = useState([]);
+
+  // 담당 프로젝트 수: member → project_member 기준 count (API)
+  useEffect(() => {
+    if (!user?.memberNo) return;
+    const fetchCount = async () => {
+      try {
+        const res = await projectService.getMyProjectCount();
+        setMyProjectCount(Number(res?.count ?? res?.data?.count ?? 0));
+      } catch {
+        setMyProjectCount(0);
+      }
+    };
+    fetchCount();
+  }, [user?.memberNo]);
 
   // 상태 필터 토글
   const toggleFilter = (filter) => {
@@ -202,10 +221,10 @@ export function AdminProjectsPage() {
     setShowDetailPage(true);
   };
 
-  // 통계 계산
+  // 통계 계산 (담당 프로젝트 수는 member → project_member count API 사용)
   const stats = {
     totalArtists: new Set(projects.map(p => p.artistId)).size, // 팀당 작가 수
-    totalProjects: projects.length, // 담당 프로젝트 수
+    totalProjects: myProjectCount ?? projects.length, // 담당 프로젝트 수: 로그인 회원 소속 프로젝트 수
     todayDeadlines: projects.filter(p => 
       p.deadline.includes('D-0') || p.deadline.includes('D-1') || p.deadline.includes('D-2')
     ).slice(0, 3).length, // 오늘 마감 작품 3개

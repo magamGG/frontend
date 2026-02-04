@@ -95,6 +95,8 @@ export function AdminProjectsPage() {
 
   const [projects, setProjects] = useState([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
+  /** 로그인 회원이 PROJECT_MEMBER에 등록된 프로젝트 수 (API 카운트) */
+  const [myProjectCount, setMyProjectCount] = useState(null);
 
   const memberNo = user?.memberNo;
 
@@ -107,6 +109,7 @@ export function AdminProjectsPage() {
     return `${year}-${month}-${day}`;
   };
 
+  // 백엔드와 동일: 다음 연재일 = start + ceil(경과일/주기)*주기 (오늘이 연재일이면 오늘)
   const calculateNextScheduleDate = (startDate, scheduleDays) => {
     if (!startDate || !scheduleDays || isNaN(scheduleDays)) return null;
     const start = new Date(startDate);
@@ -115,9 +118,9 @@ export function AdminProjectsPage() {
     start.setHours(0, 0, 0, 0);
     const daysDiff = Math.floor((today - start) / (1000 * 60 * 60 * 24));
     if (daysDiff < 0) return start;
-    const cyclesPassed = Math.floor(daysDiff / scheduleDays);
+    const n = daysDiff === 0 ? 0 : Math.ceil(daysDiff / scheduleDays);
     const nextDate = new Date(start);
-    nextDate.setDate(start.getDate() + (cyclesPassed + 1) * scheduleDays);
+    nextDate.setDate(start.getDate() + n * scheduleDays);
     return nextDate;
   };
 
@@ -129,7 +132,7 @@ export function AdminProjectsPage() {
     next.setHours(0, 0, 0, 0);
     const daysDiff = Math.round((next - today) / (1000 * 60 * 60 * 24));
     if (daysDiff > 0) return `D-${daysDiff}`;
-    if (daysDiff === 0) return 'D-Day';
+    if (daysDiff === 0) return 'D-DAY';
     return `D+${Math.abs(daysDiff)}`;
   };
 
@@ -178,6 +181,21 @@ export function AdminProjectsPage() {
       }
     };
     fetchProjects();
+  }, [memberNo]);
+
+  // 로그인 회원 소속 프로젝트 수 (PROJECT_MEMBER 기준)
+  useEffect(() => {
+    if (!memberNo) return;
+    const fetchMyProjectCount = async () => {
+      try {
+        const res = await projectService.getMyProjectCount();
+        const count = res?.count ?? res?.data?.count ?? 0;
+        setMyProjectCount(Number(count));
+      } catch {
+        setMyProjectCount(0);
+      }
+    };
+    fetchMyProjectCount();
   }, [memberNo]);
 
   // 작가 목록 API 조회 (에이전시별)
@@ -271,8 +289,17 @@ export function AdminProjectsPage() {
   const [isCreateLoading, setIsCreateLoading] = useState(false);
 
   const handleAddProject = async () => {
-    if (!newProjectForm.artistId || !newProjectForm.title || !newProjectForm.genre) {
+    const titleTrimmed = (newProjectForm.title || '').trim();
+    if (!newProjectForm.artistId || !titleTrimmed || !newProjectForm.genre) {
       toast.error('필수 항목(작가, 프로젝트명, 장르)을 모두 입력해주세요.');
+      return;
+    }
+
+    const isDuplicateName = projects.some(
+      (p) => (p.title || '').trim().toLowerCase() === titleTrimmed.toLowerCase()
+    );
+    if (isDuplicateName) {
+      toast.error('이미 같은 이름의 프로젝트가 있습니다.');
       return;
     }
 
@@ -296,7 +323,7 @@ export function AdminProjectsPage() {
       }
 
       const response = await projectService.createProject({
-        projectName: newProjectForm.title,
+        projectName: titleTrimmed,
         artistMemberNo: newProjectForm.artistId,
         projectStatus: '연재',
         projectColor: '기본색',
@@ -329,6 +356,7 @@ export function AdminProjectsPage() {
       };
 
       setProjects((prev) => [newProject, ...prev]);
+      setMyProjectCount((prev) => (prev ?? 0) + 1);
       setIsAddModalOpen(false);
       setNewProjectForm({
         artistId: 0,
@@ -342,7 +370,7 @@ export function AdminProjectsPage() {
       });
       toast.success('프로젝트가 추가되었습니다.');
     } catch (err) {
-      const msg = err?.message || '프로젝트 추가에 실패했습니다.';
+      const msg = err?.response?.data?.message || err?.message || '프로젝트 추가에 실패했습니다.';
       toast.error(msg);
     } finally {
       setIsCreateLoading(false);
@@ -382,8 +410,8 @@ export function AdminProjectsPage() {
 
   const stats = {
     totalArtists: new Set(projects.map((p) => p.artistId)).size,
-    totalProjects: projects.length,
-    todayDeadlines: projects.filter((p) => p.deadline.includes('D-0') || p.deadline.includes('D-1') || p.deadline.includes('D-2')).slice(0, 3).length,
+    totalProjects: myProjectCount ?? projects.length,
+    todayDeadlines: projects.filter((p) => p.deadline && (p.deadline === 'D-DAY' || p.deadline.includes('D-0') || p.deadline.includes('D-1') || p.deadline.includes('D-2'))).slice(0, 3).length,
   };
 
 
@@ -397,6 +425,7 @@ export function AdminProjectsPage() {
   const handleProjectDelete = () => {
     if (selectedProject) {
       setProjects((prev) => prev.filter((p) => p.id !== selectedProject.id));
+      setMyProjectCount((prev) => Math.max(0, (prev ?? 1) - 1));
       setSelectedProject(null);
     }
     setShowDetailPage(false);
