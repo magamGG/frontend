@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { Card } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
-import { Mail, Lock, User, Phone, Building, Briefcase, Edit, Check, Palette, Pen, BookOpen, Paintbrush, ArrowLeft } from 'lucide-react';
+import { Mail, Lock, User, Phone, Building, Briefcase, Edit, Check, Palette, Pen, BookOpen, Paintbrush, ArrowLeft, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 import { memberService } from '@/api';
 import {
@@ -390,6 +390,7 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                   <InputGroup>
                     <InputLabel>주소</InputLabel>
                     <InputWrapper>
+                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--muted-foreground)' }} />
                       <InputField
                         type="text"
                         name="address"
