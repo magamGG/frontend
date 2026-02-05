@@ -49,6 +49,7 @@ export const API_ENDPOINTS = {
     MANAGERS: (agencyNo) => `/api/members/agency/${agencyNo}/managers`,
     ARTISTS: (agencyNo) => `/api/members/agency/${agencyNo}/artists`,
     ARTISTS_BY_MANAGER: (managerNo) => `/api/members/manager/${managerNo}/artists`,
+    ARTISTS_BY_MANAGER_MEMBER: (memberNo) => `/api/members/manager/by-member/${memberNo}/artists`,
     WORKING_ARTISTS: (managerNo) => `/api/members/manager/${managerNo}/working-artists`,
     ASSIGN: (artistNo, managerNo) => `/api/members/${artistNo}/assign/${managerNo}`,
     UNASSIGN: (artistNo) => `/api/members/${artistNo}/assign`,
@@ -116,6 +117,7 @@ export const API_ENDPOINTS = {
     FEEDBACK: (limit = 50) => `/api/projects/feedback?limit=${limit}`, // GET: 작가 대시보드 피드백(프로젝트 코멘트 목록)
     TODAY_TASKS: `/api/projects/my-today-tasks`, // GET: 아티스트 대시보드 오늘 할 일 (담당+마감일 오늘+미완료 칸반 카드)
     MY_CALENDAR_CARDS: (year, month) => `/api/projects/my-calendar-cards?year=${year}&month=${month}`, // GET: 아티스트 캘린더 담당 칸반 카드 (월별)
+    MY_DEADLINE_CARDS: `/api/projects/my-deadline-cards`, // GET: 마감임박 업무 (ENDED_AT >= 오늘, 이전 제외)
     KANBAN_STATS: (memberNo) => `/api/projects/member/${memberNo}/kanban-stats`, // GET: 회원별 칸반 카드 통계 (진행중/완료 개수)
     NEXT_SERIAL: (limit = 10) => `/api/projects/next-serial?limit=${limit}`, // GET: 아티스트 대시보드 다음 연재 프로젝트 (PROJECT_MEMBER+PROJECT_STARTED_AT/CYCLE)
     KANBAN_BOARDS: (projectNo) => `/api/projects/${projectNo}/kanban-board`, // POST: 칸반 보드 추가
@@ -140,12 +142,13 @@ export const API_ENDPOINTS = {
     DELETE: (notificationNo) => `/api/notifications/${notificationNo}`, // DELETE: 알림 삭제
   },
 
-  // 메모 API (개인 메모 - 아티스트 대시보드)
+  // 메모 API (개인 메모 - 아티스트 대시보드 / 캘린더 메모 - 타입 '캘린더')
   MEMO: {
     LIST: `/api/memo`, // GET: 개인 메모 목록
-    CREATE: `/api/memo`, // POST: 개인 메모 저장
-    UPDATE: (memoNo) => `/api/memo/${memoNo}`, // PUT: 개인 메모 수정
-    DELETE: (memoNo) => `/api/memo/${memoNo}`, // DELETE: 개인 메모 삭제
+    CALENDAR: `/api/memo/calendar`, // GET: 캘린더 메모 목록 (타입 '캘린더')
+    CREATE: `/api/memo`, // POST: 개인/캘린더 메모 저장
+    UPDATE: (memoNo) => `/api/memo/${memoNo}`, // PUT: 메모 수정
+    DELETE: (memoNo) => `/api/memo/${memoNo}`, // DELETE: 메모 삭제
   },
 
   // 건강 관리 API
@@ -170,6 +173,8 @@ export const API_ENDPOINTS = {
     HEALTH_MONITORING_DETAIL: (agencyNo, type) => `/api/agency/${agencyNo}/health-monitoring-detail?type=${type || 'mental'}`, // GET: 검진 모니터링 상세 목록 (정신/신체)
     HEALTH_SCHEDULE: (agencyNo) => `/api/agency/${agencyNo}/health-schedule`, // GET: 건강 검진 일정, PUT: 설정 수정 (period, cycle)
     UNSCREENED_LIST: (agencyNo) => `/api/agency/${agencyNo}/unscreened-list`, // GET: 미검진 인원 목록 (정신/신체 구분)
+    UNSCREENED_NOTIFY: (agencyNo, memberNo) => `/api/agency/${agencyNo}/unscreened-notify/${memberNo}`, // POST: 미검진 1명 알림
+    UNSCREENED_NOTIFY_BULK: (agencyNo) => `/api/agency/${agencyNo}/unscreened-notify-bulk`, // POST: 7일 이상 지연 일괄 알림
     DEADLINE_COUNTS: (agencyNo) => `/api/agency/${agencyNo}/deadline-counts`, // GET: 마감 임박 현황 (담당자 관리 프로젝트 업무, 오늘~4일 후)
   },
 };

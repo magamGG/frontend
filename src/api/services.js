@@ -41,6 +41,11 @@ export const memberService = {
     return api.get(API_ENDPOINTS.MEMBERS.ARTISTS_BY_MANAGER(managerNo));
   },
 
+  /** 담당자 회원 번호(memberNo)로 배정된 작가만 조회 (ARTIST_ASSIGNMENT) */
+  getArtistsByManagerMemberNo: (memberNo) => {
+    return api.get(API_ENDPOINTS.MEMBERS.ARTISTS_BY_MANAGER_MEMBER(memberNo));
+  },
+
   /** 로그인 회원의 배정 작가 목록 (MANAGER·ARTIST_ASSIGNMENT, 담당자만 해당) */
   getMyAssignedArtists: () => {
     return api.get(API_ENDPOINTS.MEMBERS.MY_ASSIGNED_ARTISTS);
@@ -128,7 +133,13 @@ export const attendanceService = {
 // 메모 서비스 (개인 메모 - 아티스트 대시보드)
 export const memoService = {
   getList: () => api.get(API_ENDPOINTS.MEMO.LIST),
-  create: (data) => api.post(API_ENDPOINTS.MEMO.CREATE, { memoName: data.memoName || data.title, memoText: data.memoText || data.content }),
+  getCalendarList: () => api.get(API_ENDPOINTS.MEMO.CALENDAR),
+  create: (data) => api.post(API_ENDPOINTS.MEMO.CREATE, {
+    memoName: data.memoName || data.title,
+    memoText: data.memoText ?? data.content,
+    memoType: data.memoType,
+    calendarMemoDate: data.calendarMemoDate,
+  }),
   update: (memoNo, data) => api.put(API_ENDPOINTS.MEMO.UPDATE(memoNo), { memoName: data.memoName ?? data.title, memoText: data.memoText ?? data.content }),
   delete: (memoNo) => api.delete(API_ENDPOINTS.MEMO.DELETE(memoNo)),
 };
@@ -326,6 +337,11 @@ export const projectService = {
     return api.get(API_ENDPOINTS.PROJECTS.MY_CALENDAR_CARDS(year, month));
   },
 
+  // 마감임박 업무: KANBAN_CARD_ENDED_AT >= 오늘, 이전 날짜 제외
+  getMyDeadlineCards: () => {
+    return api.get(API_ENDPOINTS.PROJECTS.MY_DEADLINE_CARDS);
+  },
+
   // 회원별 칸반 카드 통계 (진행중/완료 작업 개수) - 워케이션 등 원격 관리용
   getKanbanStatsForMember: (memberNo) => {
     return api.get(API_ENDPOINTS.PROJECTS.KANBAN_STATS(memberNo));
@@ -486,6 +502,16 @@ export const agencyService = {
   // 에이전시 미검진 인원 목록 (정신/신체 중 하나라도 미검진이면 포함)
   getAgencyUnscreenedList: (agencyNo) => {
     return api.get(API_ENDPOINTS.AGENCY.UNSCREENED_LIST(agencyNo));
+  },
+
+  // 미검진 인원 1명에게 검진 알림 발송
+  sendUnscreenedNotification: (agencyNo, memberNo) => {
+    return api.post(API_ENDPOINTS.AGENCY.UNSCREENED_NOTIFY(agencyNo, memberNo));
+  },
+
+  // 7일 이상 지연 미검진 인원에게 검진 알림 일괄 발송
+  sendUnscreenedBulkNotification: (agencyNo) => {
+    return api.post(API_ENDPOINTS.AGENCY.UNSCREENED_NOTIFY_BULK(agencyNo));
   },
 
   // 에이전시 마감 임박 현황 (담당자 관리 프로젝트 업무, 오늘~4일 후 5개 집계)
