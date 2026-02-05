@@ -315,7 +315,7 @@ export const DateEventsArea = styled.div`
   margin-bottom: 1.75rem;
 `;
 
-// 일정 바 (여러 날짜에 걸친 작업)
+// 일정 바 (여러 날짜에 걸친 작업) — $topOffset(행 인덱스)만큼 margin-top으로 겹침 방지
 export const EventBar = styled.div`
   font-size: 0.75rem;
   padding: 0.25rem 0.5rem;
@@ -332,6 +332,7 @@ export const EventBar = styled.div`
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   flex-shrink: 0;
   height: 1.5rem;
+  margin-top: ${props => (props.$topOffset != null && props.$topOffset > 0 ? `calc(${props.$topOffset} * (1.5rem + 2px))` : '0')};
   cursor: ${props => (props.$isGrouped ? 'pointer' : 'default')};
   
   &:hover {
@@ -359,6 +360,7 @@ export const GroupedEventBar = styled.div`
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   flex-shrink: 0;
   height: 1.5rem;
+  margin-top: ${props => (props.$topOffset != null && props.$topOffset > 0 ? `calc(${props.$topOffset} * (1.5rem + 2px))` : '0')};
   cursor: pointer;
   transition: all 0.2s;
   
