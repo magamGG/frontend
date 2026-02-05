@@ -575,15 +575,15 @@ export function AgencyDashboardPage() {
             <PieChartSection>
               <PieChartContainer>
                 <ResponsiveContainer width="100%" height={200}>
-                  <PieChart>
+                    <PieChart>
                     <Pie
                       data={healthTab === 'mental' ? healthMentalData : healthPhysicalData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={0}
-                      outerRadius={100}
+                      innerRadius={50}
+                      outerRadius={80}
                       fill="#8884d8"
-                      paddingAngle={2}
+                      paddingAngle={5}
                       dataKey="value"
                       label={renderHealthLabel(healthTab === 'mental' ? healthMentalData : healthPhysicalData)}
                       labelLine={false}

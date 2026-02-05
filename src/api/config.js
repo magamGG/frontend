@@ -49,6 +49,7 @@ export const API_ENDPOINTS = {
     MANAGERS: (agencyNo) => `/api/members/agency/${agencyNo}/managers`,
     ARTISTS: (agencyNo) => `/api/members/agency/${agencyNo}/artists`,
     ARTISTS_BY_MANAGER: (managerNo) => `/api/members/manager/${managerNo}/artists`,
+    ARTISTS_BY_MANAGER_MEMBER: (memberNo) => `/api/members/manager/by-member/${memberNo}/artists`,
     WORKING_ARTISTS: (managerNo) => `/api/members/manager/${managerNo}/working-artists`,
     ASSIGN: (artistNo, managerNo) => `/api/members/${artistNo}/assign/${managerNo}`,
     UNASSIGN: (artistNo) => `/api/members/${artistNo}/assign`,
@@ -172,6 +173,8 @@ export const API_ENDPOINTS = {
     HEALTH_MONITORING_DETAIL: (agencyNo, type) => `/api/agency/${agencyNo}/health-monitoring-detail?type=${type || 'mental'}`, // GET: 검진 모니터링 상세 목록 (정신/신체)
     HEALTH_SCHEDULE: (agencyNo) => `/api/agency/${agencyNo}/health-schedule`, // GET: 건강 검진 일정, PUT: 설정 수정 (period, cycle)
     UNSCREENED_LIST: (agencyNo) => `/api/agency/${agencyNo}/unscreened-list`, // GET: 미검진 인원 목록 (정신/신체 구분)
+    UNSCREENED_NOTIFY: (agencyNo, memberNo) => `/api/agency/${agencyNo}/unscreened-notify/${memberNo}`, // POST: 미검진 1명 알림
+    UNSCREENED_NOTIFY_BULK: (agencyNo) => `/api/agency/${agencyNo}/unscreened-notify-bulk`, // POST: 7일 이상 지연 일괄 알림
     DEADLINE_COUNTS: (agencyNo) => `/api/agency/${agencyNo}/deadline-counts`, // GET: 마감 임박 현황 (담당자 관리 프로젝트 업무, 오늘~4일 후)
   },
 };

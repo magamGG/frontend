@@ -63,7 +63,12 @@ export function LeaveRequestModal({ open, onOpenChange }) {
   const [showHalfDayTypeDropdown, setShowHalfDayTypeDropdown] = useState(false);
   const [remainingLeave, setRemainingLeave] = useState(null);
 
-  const { getMemberName } = useAuthStore();
+  const { getMemberName, user } = useAuthStore();
+  // 휴재: 웹툰 작가, 웹소설 작가, 담당자만 표시 (어시스트 제외)
+  const canShowHiatus = ['웹툰 작가', '웹소설 작가', '담당자'].includes(user?.memberRole || '');
+  const leaveTypes = canShowHiatus
+    ? ['연차', '반차', '병가', '워케이션', '재택근무', '휴재']
+    : ['연차', '반차', '병가', '워케이션', '재택근무'];
 
   // Get projects from localStorage
   const [projects, setProjects] = useState([]);
@@ -101,7 +106,12 @@ export function LeaveRequestModal({ open, onOpenChange }) {
     }
   }, [selectedType, getMemberName]);
 
-  const leaveTypes = ['연차', '반차', '병가', '워케이션', '재택근무', '휴재'];
+  // 휴재 미표시 역할인데 선택이 휴재면 연차로 초기화
+  useEffect(() => {
+    if (!canShowHiatus && selectedType === '휴재') {
+      setSelectedType('연차');
+    }
+  }, [canShowHiatus, selectedType]);
 
   const projectOptions = ['선택 안 함', ...projects.map(p => `${p.title} (${p.currentEpisode})`)];
 

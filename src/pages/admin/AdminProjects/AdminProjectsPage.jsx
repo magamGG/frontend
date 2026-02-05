@@ -89,9 +89,9 @@ export function AdminProjectsPage() {
   const { user } = useAuthStore();
   const agencyNo = user?.agencyNo;
 
-  // 작가 목록 (API에서 조회)
-  const [artists, setArtists] = useState([]);
-  const [artistsLoading, setArtistsLoading] = useState(false);
+  // 로그인 본인에게 배정된 작가만 (ARTIST_ASSIGNMENT + 웹툰/웹소설 작가)
+  const [assignedArtists, setAssignedArtists] = useState([]);
+  const [assignedArtistsLoading, setAssignedArtistsLoading] = useState(false);
 
   const [projects, setProjects] = useState([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
@@ -198,29 +198,23 @@ export function AdminProjectsPage() {
     fetchMyProjectCount();
   }, [memberNo]);
 
-  // 작가 목록 API 조회 (에이전시별)
+  // 로그인 본인에게 배정된 작가만 조회 (ARTIST_ASSIGNMENT) — 담당자는 본인 고정
   useEffect(() => {
-    if (!agencyNo) return;
-    const fetchArtists = async () => {
-      setArtistsLoading(true);
-      try {
-        const response = await memberService.getArtistsByAgency(agencyNo);
-        const list = Array.isArray(response) ? response : response?.data ?? [];
-        setArtists(
-          list.map((m) => ({
-            id: m.memberNo,
-            name: m.memberName || m.memberEmail,
-          }))
-        );
-      } catch (err) {
-        toast.error('작가 목록을 불러오는데 실패했습니다.');
-        setArtists([]);
-      } finally {
-        setArtistsLoading(false);
-      }
-    };
-    fetchArtists();
-  }, [agencyNo]);
+    if (!memberNo) {
+      setAssignedArtists([]);
+      return;
+    }
+    setAssignedArtistsLoading(true);
+    setAssignedArtists([]);
+    memberService
+      .getArtistsByManagerMemberNo(memberNo)
+      .then((list) => {
+        const arr = Array.isArray(list) ? list : list?.data ?? [];
+        setAssignedArtists(arr.map((a) => ({ id: a.memberNo, name: a.memberName || a.memberEmail })));
+      })
+      .catch(() => setAssignedArtists([]))
+      .finally(() => setAssignedArtistsLoading(false));
+  }, [memberNo]);
 
   useEffect(() => {
     const headerTitle = document.querySelector('h1.text-2xl.font-bold');
@@ -268,6 +262,14 @@ export function AdminProjectsPage() {
     }
   };
 
+  // 작가별 필터 옵션: 프로젝트 목록에 등장하는 작가만 (배정 작가 API와 별도)
+  const artistFilterOptions = Array.from(
+    projects.reduce((acc, p) => {
+      if (p.artistId && (p.artistName || p.artistId)) acc.set(p.artistId, p.artistName || `작가 ${p.artistId}`);
+      return acc;
+    }, new Map())
+  ).map(([id, name]) => ({ id, name }));
+
   // 필터링된 프로젝트
   const filteredProjects = projects.filter((project) => {
     const statusMatch = statusFilter === '전체' || statusFilter === project.serialStatus;
@@ -303,9 +305,9 @@ export function AdminProjectsPage() {
       return;
     }
 
-    const selectedArtist = artists.find((a) => a.id === newProjectForm.artistId);
+    const selectedArtist = assignedArtists.find((a) => a.id === newProjectForm.artistId);
     if (!selectedArtist) {
-      toast.error('작가를 선택해주세요.');
+      toast.error('본인에게 배정된 작가를 선택해주세요.');
       return;
     }
 
@@ -455,7 +457,21 @@ export function AdminProjectsPage() {
             <AdminProjectsTitle>프로젝트 관리</AdminProjectsTitle>
             <AdminProjectsDescription>담당 작가들의 작품을 관리하세요</AdminProjectsDescription>
           </AdminProjectsHeaderLeft>
-          <PrimaryButton onClick={() => setIsAddModalOpen(true)}>
+          <PrimaryButton
+            onClick={() => {
+              setNewProjectForm({
+                artistId: 0,
+                title: '',
+                platform: '네이버 웹툰',
+                genre: '',
+                schedule: '',
+                startDate: '',
+                thumbnail: '',
+                thumbnailFile: null,
+              });
+              setIsAddModalOpen(true);
+            }}
+          >
             <Plus className="w-4 h-4 mr-2" />
             프로젝트 추가
           </PrimaryButton>
@@ -499,7 +515,7 @@ export function AdminProjectsPage() {
               >
                 전체
               </Button>
-              {artists.map((artist) => (
+              {artistFilterOptions.map((artist) => (
                 <Button
                   key={artist.id}
                   variant={selectedArtistFilter === artist.id ? 'default' : 'outline'}
@@ -597,20 +613,26 @@ export function AdminProjectsPage() {
       {/* 작품 추가 모달 */}
       <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="프로젝트 추가">
         <AdminProjectModalForm>
-          {/* 작가 선택 */}
+          {/* 작가 선택 (로그인 본인에게 배정된 작가만) */}
           <AdminProjectModalField>
             <AdminProjectModalLabel>
               작가 선택 <RequiredMark>*</RequiredMark>
             </AdminProjectModalLabel>
             <AdminProjectModalSelect
-              value={newProjectForm.artistId}
-              onChange={(e) => setNewProjectForm({ ...newProjectForm, artistId: Number(e.target.value) })}
-              disabled={artistsLoading}
+              value={newProjectForm.artistId || ''}
+              onChange={(e) => setNewProjectForm((prev) => ({ ...prev, artistId: Number(e.target.value) || 0 }))}
+              disabled={!memberNo || assignedArtistsLoading}
             >
-              <option value={0}>
-                {artistsLoading ? '작가 목록 불러오는 중...' : artists.length === 0 ? '등록된 작가가 없습니다' : '작가를 선택하세요'}
+              <option value="">
+                {!memberNo
+                  ? '로그인 정보가 없습니다'
+                  : assignedArtistsLoading
+                    ? '작가 목록 불러오는 중...'
+                    : assignedArtists.length === 0
+                      ? '본인에게 배정된 작가가 없습니다'
+                      : '작가를 선택하세요'}
               </option>
-              {artists.map((artist) => (
+              {assignedArtists.map((artist) => (
                 <option key={artist.id} value={artist.id}>
                   {artist.name}
                 </option>

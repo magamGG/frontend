@@ -41,6 +41,11 @@ export const memberService = {
     return api.get(API_ENDPOINTS.MEMBERS.ARTISTS_BY_MANAGER(managerNo));
   },
 
+  /** 담당자 회원 번호(memberNo)로 배정된 작가만 조회 (ARTIST_ASSIGNMENT) */
+  getArtistsByManagerMemberNo: (memberNo) => {
+    return api.get(API_ENDPOINTS.MEMBERS.ARTISTS_BY_MANAGER_MEMBER(memberNo));
+  },
+
   /** 로그인 회원의 배정 작가 목록 (MANAGER·ARTIST_ASSIGNMENT, 담당자만 해당) */
   getMyAssignedArtists: () => {
     return api.get(API_ENDPOINTS.MEMBERS.MY_ASSIGNED_ARTISTS);
@@ -497,6 +502,16 @@ export const agencyService = {
   // 에이전시 미검진 인원 목록 (정신/신체 중 하나라도 미검진이면 포함)
   getAgencyUnscreenedList: (agencyNo) => {
     return api.get(API_ENDPOINTS.AGENCY.UNSCREENED_LIST(agencyNo));
+  },
+
+  // 미검진 인원 1명에게 검진 알림 발송
+  sendUnscreenedNotification: (agencyNo, memberNo) => {
+    return api.post(API_ENDPOINTS.AGENCY.UNSCREENED_NOTIFY(agencyNo, memberNo));
+  },
+
+  // 7일 이상 지연 미검진 인원에게 검진 알림 일괄 발송
+  sendUnscreenedBulkNotification: (agencyNo) => {
+    return api.post(API_ENDPOINTS.AGENCY.UNSCREENED_NOTIFY_BULK(agencyNo));
   },
 
   // 에이전시 마감 임박 현황 (담당자 관리 프로젝트 업무, 오늘~4일 후 5개 집계)

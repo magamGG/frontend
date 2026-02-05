@@ -84,10 +84,10 @@ export function AgencyProjectsPage() {
   const [sortType, setSortType] = useState(null);
   const [sortOrder, setSortOrder] = useState('asc');
 
-  // 작품 추가 폼 상태
+  // 작품 추가 폼 상태 (작가는 담당자별 ARTIST_ASSIGNMENT 배정 작가만 선택)
   const [newProjectForm, setNewProjectForm] = useState({
     managerId: 0,
-    artistName: '',
+    artistId: 0,
     title: '',
     platform: '네이버 웹툰',
     genre: '',
@@ -96,6 +96,9 @@ export function AgencyProjectsPage() {
     thumbnail: '',
     thumbnailFile: null,
   });
+
+  const [assignedArtists, setAssignedArtists] = useState([]);
+  const [assignedArtistsLoading, setAssignedArtistsLoading] = useState(false);
 
   // 페이지 제목 변경을 위한 헤더 업데이트
   useEffect(() => {
@@ -189,7 +192,7 @@ export function AgencyProjectsPage() {
       try {
         const response = await memberService.getManagersByAgency(agencyNo);
         const list = Array.isArray(response) ? response : response?.data ?? [];
-        setManagers(list.map((m) => ({ id: m.memberNo, name: m.memberName || m.memberEmail })));
+        setManagers(list.map((m) => ({ id: m.memberNo, name: m.memberName || m.memberEmail, managerNo: m.managerNo })));
       } catch (err) {
         toast.error('담당자 목록을 불러오는데 실패했습니다.');
         setManagers([]);
@@ -218,6 +221,24 @@ export function AgencyProjectsPage() {
     };
     fetchProjects();
   }, [agencyNo]);
+
+  // 담당자 선택 시 해당 담당자에게 배정된 작가만 조회 (ARTIST_ASSIGNMENT, memberNo 기준 API 사용)
+  useEffect(() => {
+    if (!newProjectForm.managerId) {
+      setAssignedArtists([]);
+      return;
+    }
+    setAssignedArtistsLoading(true);
+    setAssignedArtists([]);
+    memberService
+      .getArtistsByManagerMemberNo(newProjectForm.managerId)
+      .then((list) => {
+        const arr = Array.isArray(list) ? list : list?.data ?? [];
+        setAssignedArtists(arr.map((a) => ({ id: a.memberNo, name: a.memberName || a.memberEmail })));
+      })
+      .catch(() => setAssignedArtists([]))
+      .finally(() => setAssignedArtistsLoading(false));
+  }, [newProjectForm.managerId]);
 
   // 상태 필터 선택 핸들러 (단일 선택)
   const handleFilterChange = (filter) => {
@@ -295,24 +316,23 @@ export function AgencyProjectsPage() {
     return `${month}월 ${day}일 (${weekday})`;
   };
 
-  // 작품 추가 핸들러
+  // 작품 추가 핸들러 (배정 작가만 선택 가능, API로 프로젝트 생성)
   const handleAddProject = async () => {
-    if (!newProjectForm.managerId || !newProjectForm.artistName || !newProjectForm.title || !newProjectForm.genre) {
-      toast.error('필수 항목을 모두 입력해주세요.');
+    if (!newProjectForm.managerId || !newProjectForm.artistId || !newProjectForm.title || !newProjectForm.genre) {
+      toast.error('담당자, 작가, 프로젝트명, 장르를 모두 입력해주세요.');
       return;
     }
 
-    const selectedManager = managers.find(m => m.id === newProjectForm.managerId);
-    if (!selectedManager) {
-      toast.error('담당자를 선택해주세요.');
+    const selectedManager = managers.find((m) => m.id === newProjectForm.managerId);
+    const selectedArtist = assignedArtists.find((a) => a.id === newProjectForm.artistId);
+    if (!selectedManager || !selectedArtist) {
+      toast.error('담당자와 배정 작가를 선택해주세요.');
       return;
     }
 
-    // 다음 연재 일정 계산
     const scheduleDays = newProjectForm.schedule ? Number(newProjectForm.schedule) : null;
-    const nextScheduleDate = calculateNextScheduleDate(newProjectForm.startDate, scheduleDays);
+    const startDate = newProjectForm.startDate ? `${newProjectForm.startDate}T00:00:00` : null;
 
-    // 썸네일 업로드 → PROJECT.THUMBNAIL_FILE에 파일명 저장
     let thumbnailFileName = null;
     if (newProjectForm.thumbnailFile) {
       try {
@@ -328,40 +348,45 @@ export function AgencyProjectsPage() {
       }
     }
 
-    const newProject = {
-      id: Date.now(),
-      title: newProjectForm.title,
-      platform: newProjectForm.platform,
-      status: 'normal',
-      serialStatus: '연재',
-      currentEpisode: 1,
-      deadline: 'D-7',
-      genre: newProjectForm.genre,
-      schedule: newProjectForm.schedule || '미정',
-      scheduleDays: scheduleDays ?? null,
-      startDate: newProjectForm.startDate || null,
-      nextScheduleDate: nextScheduleDate ? formatDate(nextScheduleDate) : null,
-      thumbnail: thumbnailFileName || newProjectForm.thumbnail || null,
-      artistName: newProjectForm.artistName,
-      artistId: Date.now(),
-      managerName: selectedManager.name,
-      managerId: newProjectForm.managerId,
-    };
+    try {
+      const response = await projectService.createProject({
+        projectName: newProjectForm.title.trim(),
+        artistMemberNo: newProjectForm.artistId,
+        projectStatus: '연재',
+        projectColor: '기본색',
+        projectCycle: scheduleDays || undefined,
+        projectStartedAt: startDate || undefined,
+        projectGenre: newProjectForm.genre.trim() || undefined,
+        platform: newProjectForm.platform || undefined,
+        thumbnailFile: thumbnailFileName || undefined,
+      });
 
-    setProjects([...projects, newProject]);
-    setIsAddModalOpen(false);
-    setNewProjectForm({
-      managerId: 0,
-      artistName: '',
-      title: '',
-      platform: '네이버 웹툰',
-      genre: '',
-      schedule: '',
-      startDate: '',
-      thumbnail: '',
-      thumbnailFile: null,
-    });
-    toast.success('작품이 추가되었습니다.');
+      const nextScheduleDate = calculateNextScheduleDate(newProjectForm.startDate, scheduleDays);
+      const newProject = mapApiProjectToFrontend({
+        ...response,
+        artistName: response.artistName || selectedArtist.name,
+        artistMemberNo: response.artistMemberNo || newProjectForm.artistId,
+        managerName: response.managerName || selectedManager.name,
+        managerMemberNo: response.managerMemberNo ?? newProjectForm.managerId,
+      });
+      setProjects((prev) => [newProject, ...prev]);
+      setIsAddModalOpen(false);
+      setNewProjectForm({
+        managerId: 0,
+        artistId: 0,
+        title: '',
+        platform: '네이버 웹툰',
+        genre: '',
+        schedule: '',
+        startDate: '',
+        thumbnail: '',
+        thumbnailFile: null,
+      });
+      toast.success('작품이 추가되었습니다.');
+    } catch (err) {
+      const msg = err?.response?.data?.message || err?.message || '프로젝트 추가에 실패했습니다.';
+      toast.error(msg);
+    }
   };
 
   // 썸네일 파일 선택 핸들러
@@ -686,7 +711,13 @@ export function AgencyProjectsPage() {
                 </AgencyProjectModalLabel>
                 <AgencyProjectModalSelect
                   value={newProjectForm.managerId}
-                  onChange={(e) => setNewProjectForm({ ...newProjectForm, managerId: Number(e.target.value) })}
+                  onChange={(e) =>
+                    setNewProjectForm({
+                      ...newProjectForm,
+                      managerId: Number(e.target.value),
+                      artistId: 0,
+                    })
+                  }
                 >
                   <option value={0}>담당자를 선택하세요</option>
                   {managers.map((manager) => (
@@ -697,17 +728,31 @@ export function AgencyProjectsPage() {
                 </AgencyProjectModalSelect>
               </AgencyProjectModalField>
 
-              {/* 작가명 */}
+              {/* 작가 선택 (해당 담당자에게 배정된 작가만 표시) */}
               <AgencyProjectModalField>
                 <AgencyProjectModalLabel>
-                  작가명 <span style={{ color: 'var(--destructive)' }}>*</span>
+                  작가 선택 <span style={{ color: 'var(--destructive)' }}>*</span>
                 </AgencyProjectModalLabel>
-                <AgencyProjectModalInput
-                  type="text"
-                  value={newProjectForm.artistName}
-                  onChange={(e) => setNewProjectForm({ ...newProjectForm, artistName: e.target.value })}
-                  placeholder="작가명을 입력하세요"
-                />
+                <AgencyProjectModalSelect
+                  value={newProjectForm.artistId}
+                  onChange={(e) => setNewProjectForm({ ...newProjectForm, artistId: Number(e.target.value) })}
+                  disabled={assignedArtistsLoading || !newProjectForm.managerId}
+                >
+                  <option value={0}>
+                    {!newProjectForm.managerId
+                      ? '담당자를 먼저 선택하세요'
+                      : assignedArtistsLoading
+                        ? '배정 작가 불러오는 중...'
+                        : assignedArtists.length === 0
+                          ? '배정된 작가가 없습니다'
+                          : '작가를 선택하세요'}
+                  </option>
+                  {assignedArtists.map((artist) => (
+                    <option key={artist.id} value={artist.id}>
+                      {artist.name}
+                    </option>
+                  ))}
+                </AgencyProjectModalSelect>
               </AgencyProjectModalField>
 
               {/* 프로젝트명 */}

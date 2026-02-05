@@ -98,15 +98,10 @@ export function UnscreenedDetailPage({ onBack }) {
     return m >= p ? m : p;
   };
 
-  // 지연 일수 (다음 검진일 기준, 오늘 초과 시)
+  // 지연 일수 (백엔드에서 health_survey 생성일·cycle·period 기준으로 계산된 값 사용)
   const getDaysOverdue = (person) => {
-    if (!nextCheckupDate) return null;
-    const next = new Date(nextCheckupDate.replace(/\./g, '-'));
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    next.setHours(0, 0, 0, 0);
-    const diff = Math.floor((today - next) / (1000 * 60 * 60 * 24));
-    return diff > 0 ? diff : 0;
+    if (person?.daysOverdue != null) return person.daysOverdue;
+    return null;
   };
 
   // 필터링된 데이터
@@ -122,9 +117,17 @@ export function UnscreenedDetailPage({ onBack }) {
     })
     .sort((a, b) => (getDaysOverdue(b) ?? 0) - (getDaysOverdue(a) ?? 0));
 
-  // 알람 발송 핸들러
-  const handleSendAlarm = (personName) => {
-    toast.success(`${personName}님에게 검진 알림을 발송했습니다.`);
+  // 알람 발송 핸들러 (해당 회원 member_no로 NOTIFICATION 저장)
+  const handleSendAlarm = (person) => {
+    if (!agencyNo || !person?.memberNo) return;
+    agencyService
+      .sendUnscreenedNotification(agencyNo, person.memberNo)
+      .then(() => {
+        toast.success(`${person.memberName ?? '해당 인원'}님에게 검진 알림을 발송했습니다.`);
+      })
+      .catch((err) => {
+        toast.error(err?.response?.data?.message ?? '알림 발송에 실패했습니다.');
+      });
   };
 
   // 7일 이상 지연 인원 일괄 알람 발송
@@ -134,7 +137,15 @@ export function UnscreenedDetailPage({ onBack }) {
       toast.info('7일 이상 지연된 인원이 없습니다.');
       return;
     }
-    toast.success(`${overdueCount}명에게 검진 알림을 일괄 발송했습니다.`);
+    if (!agencyNo) return;
+    agencyService
+      .sendUnscreenedBulkNotification(agencyNo)
+      .then(() => {
+        toast.success(`${overdueCount}명에게 검진 알림을 일괄 발송했습니다.`);
+      })
+      .catch((err) => {
+        toast.error(err?.response?.data?.message ?? '일괄 알림 발송에 실패했습니다.');
+      });
   };
 
   // 통계 (정신 미검진 = MENTAL_ONLY + BOTH, 신체 미검진 = PHYSICAL_ONLY + BOTH)
@@ -227,7 +238,7 @@ export function UnscreenedDetailPage({ onBack }) {
                       <TableHeaderCell>이름</TableHeaderCell>
                       <TableHeaderCell>직책</TableHeaderCell>
                       <TableHeaderCell $align="center">미검진 유형</TableHeaderCell>
-                      <TableHeaderCell $align="center">다음 검진 예정일</TableHeaderCell>
+                      <TableHeaderCell $align="center">검진 만료일</TableHeaderCell>
                       <TableHeaderCell $align="center">지연 일수</TableHeaderCell>
                       <TableHeaderCell $align="right">마지막 검사일</TableHeaderCell>
                       <TableHeaderCell $align="right"></TableHeaderCell>
@@ -266,7 +277,7 @@ export function UnscreenedDetailPage({ onBack }) {
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleSendAlarm(person.memberName);
+                                handleSendAlarm(person);
                               }}
                             >
                               <Bell className="w-3.5 h-3.5" />
