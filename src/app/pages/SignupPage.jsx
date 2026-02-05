@@ -88,6 +88,7 @@ export function SignupPage({ onSignup, onBackToLogin }) {
     password: '',
     confirmPassword: '',
     phone: '',
+    address: '',
     organization: '',
   });
 
@@ -337,6 +338,21 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                       required
                     />
                   </div>
+                </div>
+              </div>
+
+              {/* Address */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground">주소</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleInputChange}
+                    placeholder="주소를 입력하세요 (예: 서울시 강남구 역삼동 123-45)"
+                    className="w-full pl-3 pr-3 py-2 text-sm bg-muted/30 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground placeholder:text-muted-foreground"
+                  />
                 </div>
               </div>
 
