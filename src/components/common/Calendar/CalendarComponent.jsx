@@ -192,6 +192,10 @@ export function CalendarComponent({
   LeaveRequestModalComponent,
   /** 보기 월 변경 시 호출 (아티스트 캘린더에서 월별 칸반 카드 로드용) */
   onViewMonthChange,
+  /** 마감임박 업무 (ENDED_AT >= 오늘). 있으면 사이드바에 이 목록 사용 */
+  deadlineEvents = [],
+  /** true이면 작품 관련 섹션을 마감임박 업무로만 사용 (빈 경우 "마감 임박 업무가 없습니다" 표시) */
+  useDeadlineSection = false,
 }) {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(openAttendanceModal || false);
@@ -703,18 +707,11 @@ export function CalendarComponent({
                               } else if (bar.type === 'single') {
                                 const event = bar.event;
                                 const displayColor = getWorkStageColor(event.workStage) || event.color || 'var(--accent)';
-                                const stageLabel = getWorkStageLabel(event.workStage);
                                 const actualEndDate = event.endDate || (cell.day + bar.duration - 1);
                                 const displayEndDate = bar.duration > 1 ? Math.min(actualEndDate, lastDayOfWeek, viewMonthDays) : cell.day;
                                 const displayDaySpan = displayEndDate - cell.day + 1;
                                 const barWidth = displayDaySpan > 1 ? `calc(${displayDaySpan * 100}% + ${(displayDaySpan - 1) * 2}px)` : '100%';
-                                let displayTitle = event.title;
-                                if (event.category === 'work' && event.project) {
-                                  const truncatedProject = truncateProjectName(event.project);
-                                  const episodePart = event.episode ? ` ${event.episode}` : '';
-                                  const stagePart = stageLabel ? ` ${stageLabel}` : '';
-                                  displayTitle = `${truncatedProject}${episodePart}${stagePart}`;
-                                }
+                                const displayTitle = event.title || '업무';
                                 result.push(
                                   <EventBar
                                     key={`${event.id ?? event.idx}-${cell.day}-${row}`}
@@ -747,14 +744,7 @@ export function CalendarComponent({
                               } else if (bar.type === 'daySingle') {
                                 const event = bar.event;
                                 const displayColor = getWorkStageColor(event.workStage) || event.color || 'var(--accent)';
-                                const stageLabel = getWorkStageLabel(event.workStage);
-                                let displayTitle = event.title;
-                                if (event.category === 'work' && event.project) {
-                                  const truncatedProject = truncateProjectName(event.project);
-                                  const episodePart = event.episode ? ` ${event.episode}` : '';
-                                  const stagePart = stageLabel ? ` ${stageLabel}` : '';
-                                  displayTitle = `${truncatedProject}${episodePart}${stagePart}`;
-                                }
+                                const displayTitle = event.title || '업무';
                                 result.push(
                                   <EventBar
                                     key={`${event.id ?? event.idx}-${cell.day}-${row}`}
@@ -796,36 +786,55 @@ export function CalendarComponent({
           {/* Right Column - Upcoming Events (1/3) */}
           <UpcomingEventsSidebar>
             <UpcomingEventsCard>
-              <UpcomingEventsTitle>다가오는 캘린더</UpcomingEventsTitle>
+              <UpcomingEventsTitle>마감임박 업무</UpcomingEventsTitle>
               <UpcomingEventsContent>
-                {/* 작품 관련 일정 */}
+                {/* 마감임박 업무 (deadlineEvents 있으면 API 데이터, 없으면 기존 월 내 일정) */}
                 <WorkEventsSection>
                   <SectionHeader>
                     <SectionDot $color="var(--primary)" />
                     <SectionTitle>작품 관련</SectionTitle>
-                    <SectionCount>최근 3개</SectionCount>
+                    <SectionCount>{useDeadlineSection ? '마감일 순' : '최근 3개'}</SectionCount>
                   </SectionHeader>
                   <UpcomingEventsList>
-                    {upcomingEvents
-                      .filter((e) => e.category === 'work')
-                      .slice(0, 3)
+                    {(useDeadlineSection ? deadlineEvents.slice(0, 10) : upcomingEvents.filter((e) => e.category === 'work').slice(0, 3))
                       .map((event, idx) => {
-                        const displayColor = getWorkStageColor(event.workStage) || event.color || 'var(--accent)';
-                        const stageLabel = getWorkStageLabel(event.workStage);
-                        const truncatedProject = event.project ? truncateProjectName(event.project) : '';
-
+                        const isDeadline = useDeadlineSection;
+                        const displayColor = isDeadline ? (event.color || 'var(--accent)') : (getWorkStageColor(event.workStage) || event.color || 'var(--accent)');
+                        const endDateStr = isDeadline ? event.endDate : null;
+                        const endParts = endDateStr ? endDateStr.split('-').map(Number) : null;
+                        const displayMonth = endParts ? endParts[1] : viewMonth;
+                        const displayDay = endParts ? endParts[2] : event.date;
+                        const handleClick = () => {
+                          if (isDeadline && endParts) {
+                            const [y, m, d] = endParts;
+                            setViewDate(new Date(y, m - 1, d));
+                            setSelectedDate(d);
+                            setSelectedCellYear(y);
+                            setSelectedCellMonth(m);
+                            const dayNote = dayNotes.find((n) => n.date === d);
+                            setCurrentNote(dayNote?.note || '');
+                            setIsDayDetailModalOpen(true);
+                          } else {
+                            handleDateClick(event.date);
+                          }
+                        };
                         return (
-                          <UpcomingEventItem key={idx} onClick={() => handleDateClick(event.date)}>
+                          <UpcomingEventItem key={isDeadline ? (event.id ?? idx) : idx} onClick={handleClick}>
                             <UpcomingEventContent>
                               <UpcomingEventColorBar $color={displayColor} />
                               <UpcomingEventDetails>
                                 <UpcomingEventTitle>
-                                  {truncatedProject} {event.episode} {stageLabel}
+                                  {event.title || '업무'}
                                 </UpcomingEventTitle>
-                                <UpcomingEventDate>{viewMonth}월 {event.date}일</UpcomingEventDate>
-                                {event.startDate && event.endDate && event.startDate !== event.endDate && (
+                                <UpcomingEventDate>{displayMonth}월 {displayDay}일</UpcomingEventDate>
+                                {!isDeadline && event.startDate != null && event.endDate != null && event.startDate !== event.endDate && (
                                   <UpcomingEventDuration>
                                     ({event.endDate - event.startDate + 1}일 작업)
+                                  </UpcomingEventDuration>
+                                )}
+                                {isDeadline && event.days != null && event.days > 1 && (
+                                  <UpcomingEventDuration>
+                                    ({event.days}일 작업)
                                   </UpcomingEventDuration>
                                 )}
                               </UpcomingEventDetails>
@@ -834,8 +843,11 @@ export function CalendarComponent({
                         );
                       })}
 
-                    {upcomingEvents.filter((e) => e.category === 'work').length === 0 && (
+                    {!useDeadlineSection && upcomingEvents.filter((e) => e.category === 'work').length === 0 && (
                       <EmptyState>예정된 작품 일정이 없습니다</EmptyState>
+                    )}
+                    {useDeadlineSection && deadlineEvents.length === 0 && (
+                      <EmptyState>마감 임박 업무가 없습니다</EmptyState>
                     )}
                   </UpcomingEventsList>
                 </WorkEventsSection>
@@ -1168,14 +1180,7 @@ export function CalendarComponent({
             <EventsListContainer>
               {groupedEventsData.events.map((event, idx) => {
                 const displayColor = getWorkStageColor(event.workStage) || event.color || 'var(--accent)';
-                const stageLabel = getWorkStageLabel(event.workStage);
-                let displayTitle = event.title;
-                if (event.category === 'work' && event.project) {
-                  const truncatedProject = truncateProjectName(event.project);
-                  const episodePart = event.episode ? ` ${event.episode}` : '';
-                  const stagePart = stageLabel ? ` ${stageLabel}` : '';
-                  displayTitle = `${truncatedProject}${episodePart}${stagePart}`;
-                }
+                const displayTitle = event.title || '업무';
 
                 return (
                   <EventDetailCard key={idx} $color={displayColor}>
