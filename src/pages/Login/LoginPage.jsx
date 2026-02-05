@@ -13,7 +13,6 @@ import {
   LogoTitleSection,
   LogoIconWrapper,
   MainTitle,
-  SubTitle,
   LoginCard,
   FormSection,
   InputGroup,
@@ -106,7 +105,6 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
               transition={{ delay: 0.3 }}
             >
               <MainTitle>마감지기</MainTitle>
-              <SubTitle>웹툰 제작사를 위한 B2B SaaS 대시보드</SubTitle>
             </motion.div>
           </LogoTitleSection>
 
@@ -228,7 +226,6 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
               </LinkButton>
             </p>
             <p style={{ margin: 0 }}>
-              비밀번호를 까먹으셨나요?{' '}
               <LinkButton type="button" onClick={onShowForgotPassword} style={{ fontWeight: 500 }}>
                 비밀번호 찾기
               </LinkButton>

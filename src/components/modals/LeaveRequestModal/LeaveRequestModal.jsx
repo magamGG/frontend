@@ -91,31 +91,25 @@ export function LeaveRequestModal({ open, onOpenChange }) {
     }
   }, [selectedType]);
 
-  // Get current user's remaining leave
+  // 연차/반차 선택 시 해당 회원의 LEAVE_BALANCE_REMAIN_DAYS API 조회
   useEffect(() => {
     if (selectedType === '연차' || selectedType === '반차') {
-      const memberName = getMemberName();
-      const employees = JSON.parse(localStorage.getItem('agencyEmployees') || '[]');
-      
-      if (memberName && employees.length > 0) {
-        // Find employee by name
-        const employee = employees.find(emp => emp.name === memberName);
-        if (employee) {
-          setRemainingLeave(employee.remainingLeave);
-        } else {
-          // If not found, try to get first employee as fallback
-          setRemainingLeave(employees[0]?.remainingLeave || null);
-        }
-      } else if (employees.length > 0) {
-        // Fallback: use first employee
-        setRemainingLeave(employees[0]?.remainingLeave || null);
-      } else {
+      const memberNo = user?.memberNo;
+      if (!memberNo) {
         setRemainingLeave(null);
+        return;
       }
+      leaveService
+        .getLeaveBalance(memberNo)
+        .then((res) => {
+          const remain = res?.leaveBalanceRemainDays ?? res?.data?.leaveBalanceRemainDays;
+          setRemainingLeave(remain != null ? Math.round(Number(remain)) : null);
+        })
+        .catch(() => setRemainingLeave(null));
     } else {
       setRemainingLeave(null);
     }
-  }, [selectedType, getMemberName]);
+  }, [selectedType, user?.memberNo]);
 
   // 휴재 미표시 역할인데 선택이 휴재면 연차로 초기화
   useEffect(() => {
@@ -677,10 +671,6 @@ export function LeaveRequestModal({ open, onOpenChange }) {
                 <InfoItem>
                   <InfoBullet>●</InfoBullet>
                   <span>{getInfoText()}</span>
-                </InfoItem>
-                <InfoItem>
-                  <InfoBullet>●</InfoBullet>
-                  <span>상태는 PENDING으로 저장되며, 승인/반려/취소는 관리자가 처리합니다.</span>
                 </InfoItem>
               </InfoList>
             )}
