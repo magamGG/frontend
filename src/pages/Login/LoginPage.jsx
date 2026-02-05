@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion } from 'motion/react';
 import { Button } from '@/app/components/ui/button';
 import { Card } from '@/app/components/ui/card';
-import { Mail, Lock, Edit, Building, Users, UserPlus } from 'lucide-react';
+import { Mail, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { authService } from '@/api';
 import useAuthStore from '@/store/authStore';
@@ -27,56 +27,7 @@ import {
   Divider,
   DividerText,
   Footer,
-  DemoAccountBar,
-  DemoAccountBarContainer,
-  DemoAccountBarItem,
-  DemoAccountBarIcon,
-  DemoAccountBarLabel,
 } from './LoginPage.styled';
-
-// 사용자 역할 타입 상수
-const USER_ROLE_TYPES = {
-  INDIVIDUAL: 'individual',
-  MANAGER: 'manager',
-  AGENCY: 'agency',
-  ALL: 'all',
-};
-
-// 데모 계정 설정 (memberNo: 0이면 PROJECT_MEMBER 조회 시 항상 0건 → 담당 프로젝트 수 0개로 표시됨)
-// 실제 담당자/에이전시 계정의 MEMBER_NO를 넣으면 데모에서도 프로젝트 수가 표시됨
-const DEMO_MEMBER_NO = 1;
-
-const demoAccountList = [
-  {
-    id: USER_ROLE_TYPES.INDIVIDUAL,
-    icon: Edit,
-    label: '개인작가',
-    email: 'demo@artist.com',
-    color: '#a855f7',
-  },
-  {
-    id: USER_ROLE_TYPES.MANAGER,
-    icon: Building,
-    label: '담당자',
-    email: 'demo@manager.com',
-    color: '#3b82f6',
-  },
-  {
-    id: USER_ROLE_TYPES.AGENCY,
-    icon: Users,
-    label: '에이전시',
-    email: 'demo@agency.com',
-    color: '#22c55e',
-  },
-  {
-    id: 'no-agency',
-    icon: UserPlus,
-    label: '소속없음',
-    email: 'demo@individual.com',
-    color: '#6b7280',
-  },
-];
-
 
 export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
   const [emailInput, setEmailInput] = useState('');
@@ -121,37 +72,6 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleDemoLogin = (account) => {
-    // 데모 계정은 로그인 API 호출 없이 바로 로그인 처리
-    // account.id를 실제 MEMBER_ROLE 값으로 매핑
-    let memberRole = '';
-    let agencyNo = null;
-    
-    if (account.id === USER_ROLE_TYPES.INDIVIDUAL) {
-      memberRole = '웹툰 작가';
-      agencyNo = 1; // 데모는 기본적으로 에이전시 소속
-    } else if (account.id === USER_ROLE_TYPES.MANAGER) {
-      memberRole = '담당자';
-      agencyNo = 1; // 데모는 기본적으로 에이전시 소속
-    } else if (account.id === USER_ROLE_TYPES.AGENCY) {
-      memberRole = '에이전시 관리자';
-      agencyNo = 1; // 에이전시 관리자는 항상 에이전시 소속
-    } else if (account.id === 'no-agency') {
-      // 비소속 계정
-      memberRole = '웹툰 작가';
-      agencyNo = null; // 비소속
-    }
-    
-    login({
-      token: 'demo-token',
-      memberNo: DEMO_MEMBER_NO,
-      memberName: '데모 사용자',
-      memberRole: memberRole,
-      agencyNo: agencyNo,
-    });
-    onLogin(memberRole, agencyNo);
   };
 
   return (
@@ -231,7 +151,7 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
                     </InputWrapper>
                   </InputGroup>
 
-                  {/* Remember & Forgot */}
+                  {/* Remember */}
                   <CheckboxLinkGroup>
                     <CheckboxLabel>
                       <input
@@ -246,9 +166,6 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
                       />
                       <span>로그인 상태 유지</span>
                     </CheckboxLabel>
-                    <LinkButton type="button" onClick={onShowForgotPassword}>
-                      비밀번호 찾기
-                    </LinkButton>
                   </CheckboxLinkGroup>
 
                   {/* Login Button */}
@@ -298,42 +215,27 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
           </motion.div>
 
           {/* Footer */}
-          <motion.p
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.7 }}
             style={{ textAlign: 'center', fontSize: '14px', color: 'var(--muted-foreground)', marginTop: '24px' }}
           >
-            계정이 없으신가요?{' '}
-            <LinkButton onClick={onShowSignup} style={{ fontWeight: 500 }}>
-              회원가입
-            </LinkButton>
-          </motion.p>
+            <p style={{ margin: 0, marginBottom: '8px' }}>
+              계정이 없으신가요?{' '}
+              <LinkButton onClick={onShowSignup} style={{ fontWeight: 500 }}>
+                회원가입
+              </LinkButton>
+            </p>
+            <p style={{ margin: 0 }}>
+              비밀번호를 까먹으셨나요?{' '}
+              <LinkButton type="button" onClick={onShowForgotPassword} style={{ fontWeight: 500 }}>
+                비밀번호 찾기
+              </LinkButton>
+            </p>
+          </motion.div>
         </LoginContainer>
       </motion.div>
-
-      {/* 체험 계정 바 (오른쪽 하단) */}
-      <DemoAccountBar>
-        <DemoAccountBarContainer>
-          {demoAccountList.map((account) => {
-            const AccountIcon = account.icon;
-            return (
-              <DemoAccountBarItem
-                key={account.id}
-                onClick={() => handleDemoLogin(account)}
-                $color={account.color}
-                disabled={isLoading}
-                title={account.email}
-              >
-                <DemoAccountBarIcon $color={account.color}>
-                  <AccountIcon size={16} />
-                </DemoAccountBarIcon>
-                <DemoAccountBarLabel>{account.label}</DemoAccountBarLabel>
-              </DemoAccountBarItem>
-            );
-          })}
-        </DemoAccountBarContainer>
-      </DemoAccountBar>
     </LoginRoot>
   );
 }
