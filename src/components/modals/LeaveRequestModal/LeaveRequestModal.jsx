@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Upload, FileText, Calendar, AlertCircle } from 'lucide-react';
 import useAuthStore from '@/store/authStore';
-import { leaveService, memberService } from '@/api/services';
+import { leaveService, memberService, projectService } from '@/api/services';
 import {
   ModalHeader,
   ModalTitle,
@@ -70,15 +70,26 @@ export function LeaveRequestModal({ open, onOpenChange }) {
     ? ['연차', '반차', '병가', '워케이션', '재택근무', '휴재']
     : ['연차', '반차', '병가', '워케이션', '재택근무'];
 
-  // Get projects from localStorage
+  // Get projects from API (휴재 선택 시에만)
   const [projects, setProjects] = useState([]);
   useEffect(() => {
-    const stored = localStorage.getItem('projectsData');
-    if (stored) {
-      const data = JSON.parse(stored);
-      setProjects(data);
+    const fetchProjects = async () => {
+      try {
+        const response = await projectService.getProjects();
+        const projectsList = Array.isArray(response) ? response : response?.data ?? [];
+        setProjects(projectsList);
+      } catch (error) {
+        console.error('프로젝트 목록 조회 실패:', error);
+        setProjects([]);
+      }
+    };
+    
+    if (selectedType === '휴재') {
+      fetchProjects();
+    } else {
+      setProjects([]);
     }
-  }, []);
+  }, [selectedType]);
 
   // Get current user's remaining leave
   useEffect(() => {
@@ -113,7 +124,14 @@ export function LeaveRequestModal({ open, onOpenChange }) {
     }
   }, [canShowHiatus, selectedType]);
 
-  const projectOptions = ['선택 안 함', ...projects.map(p => `${p.title} (${p.currentEpisode})`)];
+  // 프로젝트 옵션 구조: { label, projectNo }
+  const projectOptions = [
+    { label: '선택 안 함', projectNo: null },
+    ...projects.map(p => ({
+      label: p.projectName || p.title || '',
+      projectNo: p.projectNo
+    }))
+  ];
 
   // Reset form when type changes
   useEffect(() => {
@@ -265,6 +283,11 @@ export function LeaveRequestModal({ open, onOpenChange }) {
     const requestTypeForApi = selectedType === '반차' && (halfDayType === '반차' || halfDayType === '반반차')
       ? halfDayType
       : selectedType;
+    // 선택한 프로젝트의 projectNo 찾기
+    const selectedProjectNo = selectedType === '휴재' && selectedProject !== '선택 안 함'
+      ? projectOptions.find(opt => opt.label === selectedProject)?.projectNo || null
+      : null;
+
     const requestData = {
       attendanceRequestType: requestTypeForApi,
       attendanceRequestStartDate: startDate,
@@ -273,6 +296,7 @@ export function LeaveRequestModal({ open, onOpenChange }) {
       attendanceRequestReason: reason,
       workcationLocation: selectedType === '워케이션' ? (location || null) : null,
       medicalFileUrl: uploadedFileName || null,
+      projectNo: selectedProjectNo,
     };
 
     try {
@@ -574,18 +598,21 @@ export function LeaveRequestModal({ open, onOpenChange }) {
                 
                 {showProjectDropdown && (
                   <DropdownMenu>
-                    {projectOptions.map((option) => (
-                      <DropdownItem
-                        key={option}
-                        onClick={() => {
-                          setSelectedProject(option);
-                          setShowProjectDropdown(false);
-                        }}
-                        $isSelected={selectedProject === option}
-                      >
-                        {option}
-                      </DropdownItem>
-                    ))}
+                    {projectOptions.map((option) => {
+                      const optionLabel = typeof option === 'object' ? option.label : option;
+                      return (
+                        <DropdownItem
+                          key={optionLabel}
+                          onClick={() => {
+                            setSelectedProject(optionLabel);
+                            setShowProjectDropdown(false);
+                          }}
+                          $isSelected={selectedProject === optionLabel}
+                        >
+                          {optionLabel}
+                        </DropdownItem>
+                      );
+                    })}
                   </DropdownMenu>
                 )}
               </div>
