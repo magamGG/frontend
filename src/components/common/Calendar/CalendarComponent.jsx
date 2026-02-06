@@ -802,8 +802,15 @@ export function CalendarComponent({
                         const displayColor = isDeadline ? (event.color || 'var(--accent)') : (getWorkStageColor(event.workStage) || event.color || 'var(--accent)');
                         const endDateStr = isDeadline ? event.endDate : null;
                         const endParts = endDateStr ? endDateStr.split('-').map(Number) : null;
+                        const startDateStr = isDeadline ? event.startDate : null;
+                        const startParts = startDateStr ? startDateStr.split('-').map(Number) : null;
                         const displayMonth = endParts ? endParts[1] : viewMonth;
                         const displayDay = endParts ? endParts[2] : event.date;
+                        const dateRangeLabel = isDeadline && startParts && endParts
+                          ? (startParts[1] === endParts[1] && startParts[2] === endParts[2]
+                            ? `${endParts[1]}월 ${endParts[2]}일`
+                            : `${startParts[1]}월 ${startParts[2]}일 ~ ${endParts[1]}월 ${endParts[2]}일`)
+                          : null;
                         const handleClick = () => {
                           if (isDeadline && endParts) {
                             const [y, m, d] = endParts;
@@ -826,15 +833,12 @@ export function CalendarComponent({
                                 <UpcomingEventTitle>
                                   {event.title || '업무'}
                                 </UpcomingEventTitle>
-                                <UpcomingEventDate>{displayMonth}월 {displayDay}일</UpcomingEventDate>
+                                <UpcomingEventDate>
+                                  {isDeadline && dateRangeLabel ? dateRangeLabel : `${displayMonth}월 ${displayDay}일`}
+                                </UpcomingEventDate>
                                 {!isDeadline && event.startDate != null && event.endDate != null && event.startDate !== event.endDate && (
                                   <UpcomingEventDuration>
                                     ({event.endDate - event.startDate + 1}일 작업)
-                                  </UpcomingEventDuration>
-                                )}
-                                {isDeadline && event.days != null && event.days > 1 && (
-                                  <UpcomingEventDuration>
-                                    ({event.days}일 작업)
                                   </UpcomingEventDuration>
                                 )}
                               </UpcomingEventDetails>
