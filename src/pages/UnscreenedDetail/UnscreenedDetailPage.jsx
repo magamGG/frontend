@@ -6,7 +6,7 @@ import { Input } from '@/app/components/ui/input';
 import { ArrowLeft, Search, Calendar, Clock, Bell } from 'lucide-react';
 import { toast } from 'sonner';
 import useAuthStore from '@/store/authStore';
-import { agencyService } from '@/api/services';
+import { agencyService, managerService } from '@/api/services';
 import {
   UnscreenedDetailRoot,
   UnscreenedDetailBody,
@@ -47,7 +47,7 @@ function getStatusLabel(status) {
   return status || '-';
 }
 
-export function UnscreenedDetailPage({ onBack }) {
+export function UnscreenedDetailPage({ onBack, managerMode = false }) {
   const { user } = useAuthStore();
   const agencyNo = user?.agencyNo;
 
@@ -58,6 +58,18 @@ export function UnscreenedDetailPage({ onBack }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (managerMode) {
+      setLoading(true);
+      managerService
+        .getUnscreenedList()
+        .then((res) => {
+          setUnscreenedData(res?.items ?? []);
+          setNextCheckupDate(res?.nextCheckupDate ?? null);
+        })
+        .catch(() => setUnscreenedData([]))
+        .finally(() => setLoading(false));
+      return;
+    }
     if (!agencyNo) {
       setUnscreenedData([]);
       setLoading(false);
@@ -72,7 +84,7 @@ export function UnscreenedDetailPage({ onBack }) {
       })
       .catch(() => setUnscreenedData([]))
       .finally(() => setLoading(false));
-  }, [agencyNo]);
+  }, [agencyNo, managerMode]);
 
   // 유형별 배지 색상 (status: BOTH | MENTAL_ONLY | PHYSICAL_ONLY)
   const getTypeBadgeStyle = (status) => {

@@ -6,7 +6,7 @@ import { Input } from '@/app/components/ui/input';
 import { ArrowLeft, Search, TrendingUp, AlertTriangle, Bell } from 'lucide-react';
 import { toast } from 'sonner';
 import useAuthStore from '@/store/authStore';
-import { agencyService } from '@/api/services';
+import { agencyService, managerService } from '@/api/services';
 import {
   MonitoringDetailRoot,
   MonitoringDetailBody,
@@ -40,7 +40,7 @@ import {
 
 const STATUS_FILTERS = ['전체', '위험', '경고', '주의', '정상', '미검진'];
 
-export function MonitoringDetailPage({ onBack, initialTab = 'mental' }) {
+export function MonitoringDetailPage({ onBack, initialTab = 'mental', managerMode = false }) {
   const { user } = useAuthStore();
   const agencyNo = user?.agencyNo;
 
@@ -51,6 +51,17 @@ export function MonitoringDetailPage({ onBack, initialTab = 'mental' }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (managerMode) {
+      setLoading(true);
+      managerService
+        .getHealthMonitoringDetail(detailTab)
+        .then((res) => {
+          setMonitoringData(res?.items ?? []);
+        })
+        .catch(() => setMonitoringData([]))
+        .finally(() => setLoading(false));
+      return;
+    }
     if (!agencyNo) {
       setMonitoringData([]);
       setLoading(false);
@@ -64,7 +75,7 @@ export function MonitoringDetailPage({ onBack, initialTab = 'mental' }) {
       })
       .catch(() => setMonitoringData([]))
       .finally(() => setLoading(false));
-  }, [agencyNo, detailTab]);
+  }, [agencyNo, detailTab, managerMode]);
 
   // 상태별 배지 색상
   const getStatusBadgeClass = (status) => {

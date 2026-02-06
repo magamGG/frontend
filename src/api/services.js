@@ -530,6 +530,14 @@ export const agencyService = {
   },
 };
 
+// 담당자(manager) 서비스 — X-Member-No로 담당자 식별, 배정 작가(ARTIST_ASSIGNMENT)만 대상
+export const managerService = {
+  getHealthDistribution: () => api.get(API_ENDPOINTS.MANAGER.HEALTH_DISTRIBUTION),
+  getHealthSchedule: () => api.get(API_ENDPOINTS.MANAGER.HEALTH_SCHEDULE),
+  getUnscreenedList: () => api.get(API_ENDPOINTS.MANAGER.UNSCREENED_LIST),
+  getHealthMonitoringDetail: (type) => api.get(API_ENDPOINTS.MANAGER.HEALTH_MONITORING_DETAIL(type || 'mental')),
+};
+
 export default {
   authService,
   memberService,
@@ -540,4 +548,5 @@ export default {
   notificationService,
   healthService,
   agencyService,
+  managerService,
 };

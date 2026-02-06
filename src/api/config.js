@@ -177,6 +177,14 @@ export const API_ENDPOINTS = {
     UNSCREENED_NOTIFY_BULK: (agencyNo) => `/api/agency/${agencyNo}/unscreened-notify-bulk`, // POST: 7일 이상 지연 일괄 알림
     DEADLINE_COUNTS: (agencyNo) => `/api/agency/${agencyNo}/deadline-counts`, // GET: 마감 임박 현황 (담당자 관리 프로젝트 업무, 오늘~4일 후)
   },
+
+  // 담당자(manager) API (X-Member-No로 담당자 식별, 배정 작가만 대상)
+  MANAGER: {
+    HEALTH_DISTRIBUTION: `/api/managers/health-distribution`, // GET: 담당자 배정 작가 건강 인원 분포 (정신/신체)
+    HEALTH_SCHEDULE: `/api/managers/health-schedule`, // GET: 담당자 소속 에이전시 건강 검진 일정
+    UNSCREENED_LIST: `/api/managers/unscreened-list`, // GET: 담당자 배정 작가 미검진 인원 목록
+    HEALTH_MONITORING_DETAIL: (type) => `/api/managers/health-monitoring-detail?type=${type || 'mental'}`, // GET: 담당자 배정 작가 검진 모니터링 상세 (정신/신체)
+  },
 };
 
 export default {

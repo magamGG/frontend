@@ -466,6 +466,77 @@ export const DistributionLegendValue = styled.span`
   color: #1f2328;
 `;
 
+// 검진 모니터링 도넛 카드용 (정신/신체 탭 + 도넛 + 범례)
+export const MonitoringTabWrap = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  overflow: hidden;
+`;
+
+export const MonitoringTabButton = styled.button`
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border: none;
+  background-color: ${props => props.$active ? '#6E8FB3' : 'white'};
+  color: ${props => props.$active ? 'white' : '#5a6067'};
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+  &:first-of-type {
+    border-right: 1px solid var(--border, #e2e8f0);
+  }
+  &:hover:not(:disabled) {
+    background-color: ${props => props.$active ? '#5a7a9e' : '#f1f5f9'};
+  }
+`;
+
+export const MonitoringChartContainer = styled.div`
+  flex-shrink: 0;
+`;
+
+export const HealthLegendContainer = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+`;
+
+export const HealthLegendItem = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+`;
+
+export const HealthLegendColor = styled.div`
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background-color: ${props => props.$color};
+  margin-right: 6px;
+`;
+
+export const HealthLegendLabel = styled.span`
+  font-size: 0.75rem;
+  color: #6E8FB3;
+  flex: 1;
+`;
+
+export const HealthLegendValue = styled.span`
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #1f2328;
+`;
+
+export const MonitoringFooter = styled.div`
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+  text-align: center;
+`;
+
 // 검진 모니터링 카드
 export const MonitoringCard = styled.div`
   padding: 20px;
