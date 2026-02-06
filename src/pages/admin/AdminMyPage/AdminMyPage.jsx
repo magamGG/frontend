@@ -71,13 +71,40 @@ import {
   MotionWrapper,
 } from './AdminMyPage.styled';
 
-// 근태 타입 정의 및 색상 매핑
+// 근태 타입 정의 및 색상 매핑 (연차/병가는 '휴가'로 표시)
 const ATTENDANCE_TYPE_COLORS = {
   '출근': '#00ACC1',
   '휴가': '#757575',
   '재택근무': '#FF9800',
   '워케이션': '#9C27B0',
+  '휴재': '#6B7280',
 };
+
+// API typeCounts에서 반차/반반차 제외, 연차·병가 → '휴가'로 합쳐 표시
+function formatAttendanceTypeCounts(typeCounts) {
+  if (!Array.isArray(typeCounts)) return [];
+  const filtered = typeCounts.filter(
+    (item) => item.type !== '반차' && item.type !== '반반차' && item.type !== '휴재'
+  );
+  const leaveLabel = '휴가';
+  const leaveTypes = ['연차', '병가'];
+  const byDisplayName = {};
+  filtered.forEach((item) => {
+    const displayName = leaveTypes.includes(item.type) ? leaveLabel : item.type;
+    if (!byDisplayName[displayName]) {
+      byDisplayName[displayName] = {
+        count: 0,
+        color: ATTENDANCE_TYPE_COLORS[displayName] || '#6E8FB3',
+      };
+    }
+    byDisplayName[displayName].count += Number(item.count ?? 0);
+  });
+  return Object.entries(byDisplayName).map(([name, { count, color }]) => ({
+    name,
+    value: count,
+    color,
+  }));
+}
 
 // Custom tooltip for the pie chart
 /**
@@ -186,14 +213,10 @@ export function AdminMyPage({ onClose, onLogout }) {
         
         try {
           const statistics = await attendanceService.getStatistics(memberNo, year, month);
-          const formattedData = statistics.typeCounts.map(item => ({
-            name: item.type,
-            value: Number(item.count), // Long을 Number로 변환
-            color: ATTENDANCE_TYPE_COLORS[item.type] || '#6E8FB3',
-          }));
-          
+          const formattedData = formatAttendanceTypeCounts(statistics.typeCounts ?? []);
           setAttendanceData(formattedData);
-          setTotalDays(statistics.totalCount || 0);
+          const totalFromTypes = formattedData.reduce((sum, item) => sum + item.value, 0);
+          setTotalDays(totalFromTypes > 0 ? totalFromTypes : (statistics.totalCount || 0));
         } catch (error) {
           console.error('근태 통계 조회 실패:', error);
           setAttendanceData([]);
