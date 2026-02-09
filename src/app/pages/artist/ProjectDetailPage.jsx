@@ -23,25 +23,38 @@ import {
 import { toast } from 'sonner';
 import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
 import { useDrag, useDrop } from 'react-dnd';
+import { getProjectThumbnailUrl, PROJECT_THUMBNAIL_PLACEHOLDER } from '@/api/config';
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 const ITEM_TYPE = 'KANBAN_CARD';
 
-/**
- * 드래그 가능한 카드 컴포넌트
- * @param {Object} props - 컴포넌트 props
- * @param {Object} props.card - 칸반 카드 객체
- * @param {Function} props.onEdit - 카드 편집 핸들러
- * @param {Function} props.onDelete - 카드 삭제 핸들러
- * @param {string} props.projectColor - 프로젝트 색상
- */
+// 드래그 가능한 카드 컴포넌트
 function DraggableCard({ 
   card, 
   onEdit, 
   onDelete,
   projectColor
+}: { 
+  card: KanbanCard; 
+  onEdit: (card) => void;
+  onDelete: (cardId) => void;
+  projectColor: string;
 }) {
   const [{ isDragging }, drag] = useDrag({
-    type: ITEM_TYPE,
+    type,
     item: { id: card.id, boardId: card.boardId },
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
@@ -97,17 +110,7 @@ function DraggableCard({
   );
 }
 
-/**
- * 드롭 가능한 보드 컴포넌트
- * @param {Object} props - 컴포넌트 props
- * @param {Object} props.board - 칸반 보드 객체
- * @param {Function} props.onCardDrop - 카드 드롭 핸들러
- * @param {Function} props.onEdit - 카드 편집 핸들러
- * @param {Function} props.onDelete - 카드 삭제 핸들러
- * @param {Function} props.onAddCard - 카드 추가 핸들러
- * @param {Function} props.onDeleteBoard - 보드 삭제 핸들러
- * @param {string} props.projectColor - 프로젝트 색상
- */
+// 드롭 가능한 보드 컴포넌트
 function DroppableBoard({
   board,
   onCardDrop,
@@ -116,10 +119,18 @@ function DroppableBoard({
   onAddCard,
   onDeleteBoard,
   projectColor
+}: {
+  board: KanbanBoard;
+  onCardDrop: (cardId, sourceBoardId, targetBoardId) => void;
+  onEdit: (card) => void;
+  onDelete: (cardId) => void;
+  onAddCard: (boardId) => void;
+  onDeleteBoard: (boardId) => void;
+  projectColor: string;
 }) {
   const [{ isOver }, drop] = useDrop({
-    accept: ITEM_TYPE,
-    drop: (item) => {
+    accept,
+    drop: (item: { id: number; boardId) => {
       if (item.boardId !== board.id) {
         onCardDrop(item.id, item.boardId, board.id);
       }
@@ -171,19 +182,14 @@ function DroppableBoard({
   );
 }
 
-/**
- * ProjectDetailPage component
- * 프로젝트 상세 페이지 - 칸반 보드, 팀원 관리, 일정 관리 기능을 제공합니다
- * 
- * @param {Object} props - 컴포넌트 props
- * @param {Object} props.project - 프로젝트 객체
- * @param {Function} props.onBack - 뒤로가기 핸들러
- * @param {boolean} [props.isArtistView=false] - 작가 뷰인지 담당자 뷰인지 구분
- */
 export function ProjectDetailPage({ 
   project, 
   onBack,
   isArtistView = false, // 작가 뷰인지 담당자 뷰인지 구분
+}: { 
+  project: Project; 
+  onBack: () => void;
+  isArtistView?: boolean;
 }) {
   // 편집 모드 상태
   const [isEditMode, setIsEditMode] = useState(false);
@@ -212,7 +218,7 @@ export function ProjectDetailPage({
   // 팀원 데이터
   const [teamMembers, setTeamMembers] = useState([
     {
-      id: 1,
+      id,
       name: '김작가',
       role: '메인 작가',
       email: 'kim@example.com',
@@ -221,7 +227,7 @@ export function ProjectDetailPage({
       avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
     },
     {
-      id: 2,
+      id,
       name: '이채색',
       role: '채색 담당',
       email: 'lee@example.com',
@@ -230,7 +236,7 @@ export function ProjectDetailPage({
       avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
     },
     {
-      id: 3,
+      id,
       name: '박배경',
       role: '배경 작가',
       email: 'park@example.com',
@@ -239,7 +245,7 @@ export function ProjectDetailPage({
       avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150',
     },
     {
-      id: 4,
+      id,
       name: '최스토리',
       role: '스토리 작가',
       email: 'choi@example.com',
@@ -252,7 +258,7 @@ export function ProjectDetailPage({
   // 추가 가능한 팀원 리스트
   const [availableMembers] = useState([
     {
-      id: 5,
+      id,
       name: '정어시',
       role: '어시스턴트',
       email: 'jung@example.com',
@@ -260,7 +266,7 @@ export function ProjectDetailPage({
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
     },
     {
-      id: 6,
+      id,
       name: '한효과',
       role: '효과 담당',
       email: 'han@example.com',
@@ -268,7 +274,7 @@ export function ProjectDetailPage({
       avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150',
     },
     {
-      id: 7,
+      id,
       name: '송편집',
       role: '편집 담당',
       email: 'song@example.com',
@@ -280,25 +286,25 @@ export function ProjectDetailPage({
   // 칸반 보드 데이터
   const [boards, setBoards] = useState([
     {
-      id: 1,
+      id,
       title: '할 일',
       cards: [
-        { id: 1, title: '43화 스토리보드', description: '스토리 구성 및 콘티 작업', startDate: '2025-01-15', dueDate: '2025-01-20', boardId: 1 },
-        { id: 2, title: '44화 스크립트 검토', description: '작가와 스크립트 회의', startDate: '2025-01-17', dueDate: '2025-01-22', boardId: 1 },
+        { id, title: '43화 스토리보드', description: '스토리 구성 및 콘티 작업', startDate: '2025-01-15', dueDate: '2025-01-20', boardId,
+        { id, title: '44화 스크립트 검토', description: '작가와 스크립트 회의', startDate: '2025-01-17', dueDate: '2025-01-22', boardId,
       ],
     },
     {
-      id: 2,
+      id,
       title: '진행중',
       cards: [
-        { id: 3, title: '42화 채색', description: '메인 씬 채색 작업', startDate: '2025-01-16', dueDate: '2025-01-18', boardId: 2 },
+        { id, title: '42화 채색', description: '메인 씬 채색 작업', startDate: '2025-01-16', dueDate: '2025-01-18', boardId,
       ],
     },
     {
-      id: 3,
+      id,
       title: '완료',
       cards: [
-        { id: 4, title: '41화 업로드', description: '네이버 웹툰 업로드 완료', startDate: '2025-01-13', dueDate: '2025-01-14', boardId: 3 },
+        { id, title: '41화 업로드', description: '네이버 웹툰 업로드 완료', startDate: '2025-01-13', dueDate: '2025-01-14', boardId,
       ],
     },
   ]);
@@ -307,7 +313,7 @@ export function ProjectDetailPage({
   const [weeklySchedule] = useState([
     { date: '1/15', day: '오늘 (수)', events: ['42화 채색 마감', '팀 미팅 3PM'] },
     { date: '1/16', day: '목', events: ['43화 스토리보드 시작'] },
-    { date: '1/17', day: '금', events: [] },
+    { date: '1/17', day: '금', events,
     { date: '1/18', day: '토', events: ['42화 최종 검수'] },
     { date: '1/19', day: '일', events: ['42화 업로드'] },
     { date: '1/20', day: '월', events: ['43화 스토리보드 마감'] },
@@ -336,10 +342,10 @@ export function ProjectDetailPage({
   const [selectedAssignee, setSelectedAssignee] = useState(null);
   
   const [cardForm, setCardForm] = useState({
-    title: '',
-    description: '',
-    startDate: '',
-    dueDate: '',
+    title,
+    description,
+    startDate,
+    dueDate,
   });
 
   const [newBoardTitle, setNewBoardTitle] = useState('');
@@ -368,14 +374,11 @@ export function ProjectDetailPage({
   const handleChangeThumbnail = () => {
     const newUrl = prompt('새 이미지 URL을 입력하세요:', editedProject.thumbnail);
     if (newUrl) {
-      setEditedProject({ ...editedProject, thumbnail: newUrl });
+      setEditedProject({ ...editedProject, thumbnail);
     }
   };
 
   // 팀원 삭제 (수정 모드에서만 임시 상태에 적용)
-  /**
-   * @param {number} memberId
-   */
   const handleDeleteTeamMember = (memberId) => {
     if (editingTeamMembers.length <= 1) {
       toast.error('최소 1명의 팀원은 필요합니다.');
@@ -393,7 +396,7 @@ export function ProjectDetailPage({
 
     const newMembers = availableMembers
       .filter(m => selectedMemberIds.includes(m.id))
-      .map(m => ({ ...m, status: '출근' }));
+      .map(m => ({ ...m, status: '출근'));
 
     setEditingTeamMembers([...editingTeamMembers, ...newMembers]);
     setIsAddTeamMemberModalOpen(false);
@@ -422,9 +425,6 @@ export function ProjectDetailPage({
   };
 
   // 팀원 체크박스 토글
-  /**
-   * @param {number} memberId
-   */
   const toggleMemberSelection = (memberId) => {
     setSelectedMemberIds(prev => 
       prev.includes(memberId)
@@ -439,9 +439,6 @@ export function ProjectDetailPage({
   );
 
   // 상태별 테두리 색상
-  /**
-   * @param {string} status
-   */
   const getStatusBorderColor = (status) => {
     switch (status) {
       case '출근':
@@ -456,9 +453,6 @@ export function ProjectDetailPage({
   };
 
   // 상태별 배지 색상
-  /**
-   * @param {string} status
-   */
   const getStatusBadgeColor = (status) => {
     switch (status) {
       case '출근':
@@ -473,11 +467,6 @@ export function ProjectDetailPage({
   };
 
   // 카드 드롭 핸들러
-  /**
-   * @param {number} cardId
-   * @param {number} sourceBoardId
-   * @param {number} targetBoardId
-   */
   const handleCardDrop = (cardId, sourceBoardId, targetBoardId) => {
     setBoards((prevBoards) => {
       const newBoards = [...prevBoards];
@@ -523,8 +512,8 @@ export function ProjectDetailPage({
       const newCard = {
         id: Date.now(),
         ...cardForm,
-        boardId: currentBoardId,
-        assignedTo: selectedAssignee,
+        boardId,
+        assignedTo,
       };
 
       setBoards((prevBoards) =>
@@ -540,16 +529,13 @@ export function ProjectDetailPage({
     setIsCardModalOpen(false);
     setEditingCard(null);
     setCurrentBoardId(null);
-    setCardForm({ title: '', description: '', startDate: '', dueDate: '' });
+    setCardForm({ title, description, startDate, dueDate);
     setSelectedAssignee(null);
     setNewComment('');
     setCardComments([]);
   };
 
   // 카드 삭제
-  /**
-   * @param {number} cardId
-   */
   const handleDeleteCard = (cardId) => {
     setBoards((prevBoards) =>
       prevBoards.map((board) => ({
@@ -569,8 +555,8 @@ export function ProjectDetailPage({
 
     const newBoard = {
       id: Date.now(),
-      title: newBoardTitle,
-      cards: [],
+      title,
+      cards,
     };
 
     setBoards([...boards, newBoard]);
@@ -580,9 +566,6 @@ export function ProjectDetailPage({
   };
 
   // 보드 삭제
-  /**
-   * @param {number} boardId
-   */
   const handleDeleteBoard = (boardId) => {
     if (boards.length <= 1) {
       toast.error('최소 1개의 보드는 필요합니다.');
@@ -603,7 +586,7 @@ export function ProjectDetailPage({
     const comment = {
       id: Date.now(),
       author: '김작가', // 아티스트 이름
-      content: newComment,
+      content,
       createdAt: new Date().toLocaleString('ko-KR'),
       role: 'artist' // 아티스트
     };
@@ -617,32 +600,11 @@ export function ProjectDetailPage({
     setEditingCard(updatedCard);
     setCardComments([...(editingCard.comments || []), comment]);
 
-    // localStorage에 피드백 저장
-    const feedback = {
-      id: `artist-${Date.now()}`,
-      projectId: project.id,
-      project: project.title,
-      cardTitle: editingCard.title,
-      content: newComment,
-      from: '김작가',
-      date: '방금 전',
-      isRead: false,
-      role: 'artist'
-    };
-
-    const existingFeedbacks = localStorage.getItem('artistFeedbacks');
-    const feedbacks = existingFeedbacks ? JSON.parse(existingFeedbacks) : [];
-    feedbacks.unshift(feedback);
-    localStorage.setItem('artistFeedbacks', JSON.stringify(feedbacks));
-
     setNewComment('');
     toast.success('코멘트가 추가되었습니다.');
   };
 
   // 코멘트 수정 시작
-  /**
-   * @param {Object} comment
-   */
   const handleStartEditComment = (comment) => {
     setEditingComment(comment);
     setEditingCommentContent(comment.content);
@@ -672,9 +634,7 @@ export function ProjectDetailPage({
         ...board,
         cards: board.cards.map((card) =>
           card.id === editingCard.id
-            ? updatedCard
-            : card
-        ),
+            ? updatedCard),
       }))
     );
 
@@ -684,9 +644,6 @@ export function ProjectDetailPage({
   };
 
   // 코멘트 삭제
-  /**
-   * @param {number} commentId
-   */
   const handleDeleteComment = (commentId) => {
     if (!editingCard) return;
 
@@ -706,9 +663,7 @@ export function ProjectDetailPage({
         ...board,
         cards: board.cards.map((card) =>
           card.id === editingCard.id
-            ? updatedCard
-            : card
-        ),
+            ? updatedCard),
       }))
     );
 
@@ -776,7 +731,7 @@ export function ProjectDetailPage({
                     onClick={isEditMode ? handleChangeThumbnail : undefined}
                   >
                     <ImageWithFallback
-                      src={editedProject.thumbnail || 'https://images.unsplash.com/photo-1591788806059-cb6e2f6a2498?w=400'}
+                      src={getProjectThumbnailUrl(editedProject.thumbnail) || PROJECT_THUMBNAIL_PLACEHOLDER}
                       alt={editedProject.title}
                       className="w-32 h-44 object-cover rounded-lg border-2 border-border shadow-md"
                     />
@@ -846,7 +801,7 @@ export function ProjectDetailPage({
                         onChange={(e) => setEditedProject({ ...editedProject, serialStatus: e.target.value })}
                         className="text-sm px-3 py-1 border border-border rounded-md bg-background text-foreground"
                       >
-                        <option>연재중</option>
+                        <option>연재</option>
                         <option>휴재</option>
                         <option>완결</option>
                       </select>
@@ -1003,7 +958,7 @@ export function ProjectDetailPage({
         <div>
           {/* 팀원 목록 */}
           <div className="space-y-0 divide-y divide-border">
-            {(isTeamEditMode ? editingTeamMembers : teamMembers).map((member) => (
+            {teamMembers.map((member) => (
               <div
                 key={member.id}
                 className="py-3 px-2 flex items-center justify-between hover:bg-muted/30 transition-colors"
@@ -1022,7 +977,7 @@ export function ProjectDetailPage({
                   {/* 이름과 역할 */}
                   <div className="flex-1 min-w-0">
                     <h4 className="font-semibold text-foreground text-sm">{member.name}</h4>
-                    <p className="text-xs text-muted-foreground">{member.role}</p>
+                    <p className="text-xs text-muted-foreground">{member.memberRole || member.role}</p>
                   </div>
 
                   {/* 현재 상태 */}
@@ -1031,14 +986,15 @@ export function ProjectDetailPage({
                   </Badge>
                 </div>
 
-                {/* 팀원 수정 모드일 때만 삭제 버튼 표시 */}
-                {isTeamEditMode && (
+                {/* 팀원 삭제 버튼 — 작가/담당자에는 미노출 */}
+                {member.role !== '작가' && member.role !== '담당자' && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDeleteTeamMember(member.id);
                     }}
                     className="ml-2 text-muted-foreground hover:text-destructive p-1"
+                    title="팀원 삭제"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -1047,55 +1003,17 @@ export function ProjectDetailPage({
             ))}
           </div>
 
-          {/* 수정 모드가 아닐 때: 하단에 수정 버튼 (가운데 정렬, 얇은 구분선 위) - 담당자 뷰에서만 표시 */}
-          {!isTeamEditMode && !isArtistView && (
-            <>
-              <div className="border-t border-border mt-4 mb-3" />
-              <div className="flex justify-center">
-                <Button
-                  size="sm"
-                  onClick={handleStartTeamEdit}
-                  variant="outline"
-                >
-                  <Edit className="w-4 h-4 mr-2" />
-                  수정
-                </Button>
-              </div>
-            </>
-          )}
-
-          {/* 수정 모드일 때: 하단에 저장/취소 버튼 */}
-          {isTeamEditMode && (
-            <>
-              {/* 팀원 추가 버튼 */}
-              <div className="mt-4">
-                <Button
-                  variant="outline"
-                  className="w-full border-dashed"
-                  onClick={() => setIsAddTeamMemberModalOpen(true)}
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  팀원 추가
-                </Button>
-              </div>
-              
-              <div className="flex gap-2 mt-6 pt-4 border-t border-border">
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={handleCancelTeamEdit}
-                >
-                  취소
-                </Button>
-                <Button
-                  className="flex-1 bg-primary hover:bg-primary/90"
-                  onClick={handleSaveTeamEdit}
-                >
-                  저장
-                </Button>
-              </div>
-            </>
-          )}
+          {/* 팀원 추가 버튼 */}
+          <div className="mt-4">
+            <Button
+              variant="outline"
+              className="w-full border-dashed"
+              onClick={() => setIsAddTeamMemberModalOpen(true)}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              팀원 추가
+            </Button>
+          </div>
         </div>
       </Modal>
 
@@ -1139,7 +1057,7 @@ export function ProjectDetailPage({
                     
                     <div className="flex-1 min-w-0">
                       <h4 className="font-semibold text-foreground text-sm">{member.name}</h4>
-                      <p className="text-xs text-muted-foreground">{member.role}</p>
+                      <p className="text-xs text-muted-foreground">{member.memberRole || member.role}</p>
                     </div>
                   </label>
                 ))}
@@ -1197,7 +1115,7 @@ export function ProjectDetailPage({
                 <Briefcase className="w-5 h-5 text-muted-foreground" />
                 <div>
                   <p className="text-xs text-muted-foreground">직무</p>
-                  <p className="text-sm font-medium text-foreground">{selectedMember.role}</p>
+                  <p className="text-sm font-medium text-foreground">{selectedMember.memberRole || selectedMember.role}</p>
                 </div>
               </div>
 
@@ -1228,7 +1146,7 @@ export function ProjectDetailPage({
           setIsCardModalOpen(false);
           setEditingCard(null);
           setCurrentBoardId(null);
-          setCardForm({ title: '', description: '', startDate: '', dueDate: '' });
+          setCardForm({ title, description, startDate, dueDate);
           setSelectedAssignee(null);
           setNewComment('');
           setCardComments([]);
@@ -1291,7 +1209,7 @@ export function ProjectDetailPage({
                   <option value="">선택하세요</option>
                   {teamMembers.map((member) => (
                     <option key={member.id} value={member.id}>
-                      {member.name} - {member.role}
+                      {member.name} - {member.memberRole || member.role}
                     </option>
                   ))}
                 </select>
@@ -1321,7 +1239,7 @@ export function ProjectDetailPage({
                   setIsCardModalOpen(false);
                   setEditingCard(null);
                   setCurrentBoardId(null);
-                  setCardForm({ title: '', description: '', startDate: '', dueDate: '' });
+                  setCardForm({ title, description, startDate, dueDate);
                   setSelectedAssignee(null);
                   setNewComment('');
                   setCardComments([]);

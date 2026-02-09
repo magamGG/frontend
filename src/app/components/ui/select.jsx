@@ -10,31 +10,29 @@ import {
 
 import { cn } from "./utils";
 
-/**
- * Select component
- */
-function Select({ ...props }) {
+function Select({
+  ...props
+}) {
   return <SelectPrimitive.Root data-slot="select" {...props} />;
 }
 
-/**
- * SelectGroup component
- */
-function SelectGroup({ ...props }) {
+function SelectGroup({
+  ...props
+}) {
   return <SelectPrimitive.Group data-slot="select-group" {...props} />;
 }
 
-/**
- * SelectValue component
- */
-function SelectValue({ ...props }) {
+function SelectValue({
+  ...props
+}) {
   return <SelectPrimitive.Value data-slot="select-value" {...props} />;
 }
 
 /**
- * SelectTrigger component
  * @param {Object} props
- * @param {string} [props.size] - Size variant (sm, default)
+ * @param {string} [props.className]
+ * @param {"sm" | "default"} [props.size="default"]
+ * @param {React.ReactNode} [props.children]
  */
 function SelectTrigger({
   className,
@@ -60,11 +58,6 @@ function SelectTrigger({
   );
 }
 
-/**
- * SelectContent component
- * @param {Object} props
- * @param {string} [props.position] - Position (popper, item-aligned)
- */
 function SelectContent({
   className,
   children,
@@ -100,9 +93,6 @@ function SelectContent({
   );
 }
 
-/**
- * SelectLabel component
- */
 function SelectLabel({
   className,
   ...props
@@ -116,9 +106,6 @@ function SelectLabel({
   );
 }
 
-/**
- * SelectItem component
- */
 function SelectItem({
   className,
   children,
@@ -143,9 +130,6 @@ function SelectItem({
   );
 }
 
-/**
- * SelectSeparator component
- */
 function SelectSeparator({
   className,
   ...props
@@ -159,9 +143,6 @@ function SelectSeparator({
   );
 }
 
-/**
- * SelectScrollUpButton component
- */
 function SelectScrollUpButton({
   className,
   ...props
@@ -180,9 +161,6 @@ function SelectScrollUpButton({
   );
 }
 
-/**
- * SelectScrollDownButton component
- */
 function SelectScrollDownButton({
   className,
   ...props

@@ -5,17 +5,19 @@ import { Label } from '@/app/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/app/components/ui/dialog';
 import { useState } from 'react';
 
-interface SurveyManagementPageProps {
-  onBack?: () => void;
-}
 
-export function SurveyManagementPage({ onBack }: SurveyManagementPageProps) {
+
+/**
+ * @param {Object} props
+ * @param {Function} props.onBack
+ */
+export function SurveyManagementPage({ onBack }) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(true);
-  const [activeTab, setActiveTab] = useState<'mental' | 'physical'>('mental');
+  const [activeTab, setActiveTab] = useState('mental');
 
   const surveys = [
     {
-      id: 1,
+      id,
       title: '일일 간편 체크',
       description: '총 5개 문항으로 구성됨',
       status: '진행중',

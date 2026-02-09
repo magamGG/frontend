@@ -4,9 +4,6 @@ import * as React from "react";
 
 import { cn } from "./utils";
 
-/**
- * Table component
- */
 function Table({ className, ...props }) {
   return (
     <div
@@ -22,9 +19,6 @@ function Table({ className, ...props }) {
   );
 }
 
-/**
- * TableHeader component
- */
 function TableHeader({ className, ...props }) {
   return (
     <thead
@@ -35,9 +29,6 @@ function TableHeader({ className, ...props }) {
   );
 }
 
-/**
- * TableBody component
- */
 function TableBody({ className, ...props }) {
   return (
     <tbody
@@ -48,9 +39,6 @@ function TableBody({ className, ...props }) {
   );
 }
 
-/**
- * TableFooter component
- */
 function TableFooter({ className, ...props }) {
   return (
     <tfoot
@@ -64,9 +52,6 @@ function TableFooter({ className, ...props }) {
   );
 }
 
-/**
- * TableRow component
- */
 function TableRow({ className, ...props }) {
   return (
     <tr
@@ -80,9 +65,6 @@ function TableRow({ className, ...props }) {
   );
 }
 
-/**
- * TableHead component
- */
 function TableHead({ className, ...props }) {
   return (
     <th
@@ -96,9 +78,6 @@ function TableHead({ className, ...props }) {
   );
 }
 
-/**
- * TableCell component
- */
 function TableCell({ className, ...props }) {
   return (
     <td
@@ -112,9 +91,6 @@ function TableCell({ className, ...props }) {
   );
 }
 
-/**
- * TableCaption component
- */
 function TableCaption({
   className,
   ...props
@@ -122,7 +98,8 @@ function TableCaption({
   return (
     <caption
       data-slot="table-caption"
-      className={cn("text-muted-foreground mt-4 text-sm", className)}
+      className={cn(className)}
+      style={{ color: 'var(--muted-foreground)', marginTop: '16px', fontSize: '0.875rem' }}
       {...props}
     />
   );

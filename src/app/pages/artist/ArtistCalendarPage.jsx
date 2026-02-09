@@ -7,13 +7,16 @@ import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { LeaveRequestModal } from '@/app/components/modals/LeaveRequestModal';
 
+
+
+
+
+
+
 /**
- * ArtistCalendarPage component
- * 작가 캘린더 페이지 - 일정 관리 및 근태 신청 기능을 제공합니다
- * 
- * @param {Object} props - 컴포넌트 props
- * @param {boolean} [props.openAttendanceModal] - 근태 모달 열림 여부
- * @param {Function} [props.onCloseAttendanceModal] - 근태 모달 닫기 콜백
+ * @param {Object} [props]
+ * @param {Function} [props.openAttendanceModal]
+ * @param {Function} [props.onCloseAttendanceModal]
  */
 export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal } = {}) {
   const daysOfWeek = ['일', '월', '화', '수', '목', '금', '토'];
@@ -21,42 +24,30 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
   
   // 작업 단계 정의
   const workStages = [
-    { value: 'storyboard', label: '콘티', color: '#FCD34D' },
-    { value: 'sketch', label: '스케치', color: '#FB923C' },
-    { value: 'lineart', label: '선화', color: '#60A5FA' },
-    { value: 'coloring', label: '채색', color: '#F472B6' },
-    { value: 'background', label: '배경', color: '#4ADE80' },
-    { value: 'effects', label: '후보정', color: '#A78BFA' },
-    { value: 'review', label: '검수', color: '#F87171' },
+    { value, label: '콘티', color: '#FCD34D' },
+    { value, label: '스케치', color: '#FB923C' },
+    { value, label: '선화', color: '#60A5FA' },
+    { value, label: '채색', color: '#F472B6' },
+    { value, label: '배경', color: '#4ADE80' },
+    { value, label: '후보정', color: '#A78BFA' },
+    { value, label: '검수', color: '#F87171' },
   ];
 
-  /**
-   * 작업 단계로 색상 가져오기
-   * @param {string} [stage] - 작업 단계
-   * @returns {string|null} 색상 코드 또는 null
-   */
+  // 작업 단계로 색상 가져오기
   const getWorkStageColor = (stage) => {
     if (!stage) return null;
     const stageInfo = workStages.find(s => s.value === stage);
     return stageInfo ? stageInfo.color : null;
   };
 
-  /**
-   * 작업 단계로 라벨 가져오기
-   * @param {string} [stage] - 작업 단계
-   * @returns {string} 라벨 문자열
-   */
+  // 작업 단계로 라벨 가져오기
   const getWorkStageLabel = (stage) => {
     if (!stage) return '';
     const stageInfo = workStages.find(s => s.value === stage);
     return stageInfo ? stageInfo.label : '';
   };
 
-  /**
-   * 웹툰 제목 자르기 (4글자 초과 시)
-   * @param {string} name - 웹툰 제목
-   * @returns {string} 잘린 제목
-   */
+  // 웹툰 제목 자르기 (4글자 초과 시)
   const truncateProjectName = (name) => {
     if (name.length > 4) {
       return name.substring(0, 4) + '...';
@@ -76,72 +67,72 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
   const [selectedMemoDate, setSelectedMemoDate] = useState(null);
   const [editingMemoContent, setEditingMemoContent] = useState('');
   const [newEvent, setNewEvent] = useState({
-    title: '',
-    startDate: '',
-    endDate: '',
-    category: 'work',
+    title,
+    startDate,
+    endDate,
+    category,
     project: '내 웹툰',
     color: '#6E8FB3',
-    description: '',
-    workType: 'serialization',
-    workStage: '', // 작업 단계
+    description,
+    workType,
+    workStage, // 작업 단계
   });
   const [attendanceRequest, setAttendanceRequest] = useState({
-    type: 'break',
-    startDate: '',
-    endDate: '',
-    reason: '',
+    type,
+    startDate,
+    endDate,
+    reason,
   });
   const [dayNotes, setDayNotes] = useState([
-    { date: 5, note: '마감일 점검 필요' },
-    { date: 15, note: '휴식 필요' },
+    { date, note: '마감일 점검 필요' },
+    { date, note: '휴식 필요' },
   ]);
   const [currentNote, setCurrentNote] = useState('');
 
   // 근태 데이터 상태 (임시 데이터 포함)
   const [attendanceData, setAttendanceData] = useState([
     {
-      id: 1,
-      type: 'workation',
+      id,
+      type,
       typeName: '워케이션',
       startDate: '2026-01-05',
       endDate: '2026-01-07',
-      days: 3,
+      days,
       reason: '제주도 워케이션',
-      status: 'approved',
+      status,
       requestDate: '2025-12-20',
     },
     {
-      id: 2,
-      type: 'break',
+      id,
+      type,
       typeName: '휴재',
       startDate: '2026-01-10',
       endDate: '2026-01-12',
-      days: 3,
+      days,
       reason: '개인 사유',
-      status: 'approved',
+      status,
       requestDate: '2026-01-05',
     },
     {
-      id: 3,
-      type: 'break',
+      id,
+      type,
       typeName: '휴재',
       startDate: '2026-01-20',
       endDate: '2026-01-20',
-      days: 1,
+      days,
       reason: '건강 문제',
-      status: 'approved',
+      status,
       requestDate: '2026-01-19',
     },
     {
-      id: 4,
-      type: 'workation',
+      id,
+      type,
       typeName: '워케이션',
       startDate: '2026-01-25',
       endDate: '2026-01-27',
-      days: 3,
+      days,
       reason: '강릉 워케이션',
-      status: 'approved',
+      status,
       requestDate: '2026-01-10',
     },
   ]);
@@ -149,11 +140,7 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
   // 작품 데이터 상태
   const [projectsData, setProjectsData] = useState([]);
 
-  /**
-   * 특정 날짜에 근태가 있는지 확인하는 함수
-   * @param {number} day - 날짜 (일)
-   * @returns {string|null} 근태 유형 또는 null
-   */
+  // 특정 날짜에 근태가 있는지 확인하는 함수
   const getAttendanceForDate = (day) => {
     const dateStr = `2026-01-${day.toString().padStart(2, '0')}`;
     
@@ -171,11 +158,7 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
     return null;
   };
 
-  /**
-   * 근태 유형에 따른 배경색 반환
-   * @param {string|null} type - 근태 유형
-   * @returns {string} Tailwind CSS 클래스명
-   */
+  // 근태 유형에 따른 배경색 반환
   const getAttendanceBackgroundColor = (type) => {
     if (!type) return '';
     
@@ -192,34 +175,34 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
   // 모든 일정 데이터
   const [allEvents, setAllEvents] = useState([
     // EP.42 마감 (1일)
-    { id: '1', date: 5, title: 'EP.42 마감', workType: 'serialization', workStage: 'review', category: 'work', project: '나의 히어로', episode: 'EP.42', description: '최종 검수 및 업로드', color: '#EF4444', startDate: 5, endDate: 5 },
+    { id, date, title: 'EP.42 마감', workType, workStage, category, project: '나의 히어로', episode: 'EP.42', description: '최종 검수 및 업로드', color: '#EF4444', startDate, endDate,
     
     // EP.43 콘티 (2일)
-    { id: '2', date: 6, title: 'EP.43 콘티', workType: 'serialization', workStage: 'storyboard', category: 'work', project: '나의 히어로', episode: 'EP.43', color: '#F59E0B', startDate: 6, endDate: 7 },
-    { id: '3', date: 7, title: 'EP.43 콘티', workType: 'serialization', workStage: 'storyboard', category: 'work', project: '나의 히어로', episode: 'EP.43', color: '#F59E0B', startDate: 6, endDate: 7 },
+    { id, date, title: 'EP.43 콘티', workType, workStage, category, project: '나의 히어로', episode: 'EP.43', color: '#F59E0B', startDate, endDate,
+    { id, date, title: 'EP.43 콘티', workType, workStage, category, project: '나의 히어로', episode: 'EP.43', color: '#F59E0B', startDate, endDate,
     
     // EP.43 스케치 (1일)
-    { id: '4', date: 8, title: 'EP.43 스케치', workType: 'serialization', workStage: 'sketch', category: 'work', project: '나의 히어로', episode: 'EP.43', color: '#F59E0B', startDate: 8, endDate: 8 },
+    { id, date, title: 'EP.43 스케치', workType, workStage, category, project: '나의 히어로', episode: 'EP.43', color: '#F59E0B', startDate, endDate,
     
     // EP.43 선화 (2일)
-    { id: '5', date: 14, title: 'EP.43 선화', workType: 'serialization', workStage: 'lineart', category: 'work', project: '나의 히어로', episode: 'EP.43', color: '#F59E0B', startDate: 14, endDate: 15 },
-    { id: '6', date: 15, title: 'EP.43 선화', workType: 'serialization', workStage: 'lineart', category: 'work', project: '나의 히어로', episode: 'EP.43', color: '#F59E0B', startDate: 14, endDate: 15 },
+    { id, date, title: 'EP.43 선화', workType, workStage, category, project: '나의 히어로', episode: 'EP.43', color: '#F59E0B', startDate, endDate,
+    { id, date, title: 'EP.43 선화', workType, workStage, category, project: '나의 히어로', episode: 'EP.43', color: '#F59E0B', startDate, endDate,
     
     // EP.43 채색 (3일)
-    { id: '7', date: 16, title: 'EP.43 채색', workType: 'serialization', workStage: 'coloring', category: 'work', project: '나의 히어로', episode: 'EP.43', color: '#F59E0B', startDate: 16, endDate: 18 },
-    { id: '8', date: 17, title: 'EP.43 채색', workType: 'serialization', workStage: 'coloring', category: 'work', project: '나의 히어로', episode: 'EP.43', color: '#F59E0B', startDate: 16, endDate: 18 },
-    { id: '9', date: 18, title: 'EP.43 ', workType: 'serialization', workStage: 'coloring', category: 'work', project: '나의 히어로', episode: 'EP.43', color: '#F59E0B', startDate: 16, endDate: 18 },
+    { id, date, title: 'EP.43 채색', workType, workStage, category, project: '나의 히어로', episode: 'EP.43', color: '#F59E0B', startDate, endDate,
+    { id, date, title: 'EP.43 채색', workType, workStage, category, project: '나의 히어로', episode: 'EP.43', color: '#F59E0B', startDate, endDate,
+    { id, date, title: 'EP.43 ', workType, workStage, category, project: '나의 히어로', episode: 'EP.43', color: '#F59E0B', startDate, endDate,
     
     // EP.43 배경 (1일)
-    { id: '10', date: 19, title: 'EP.43 배경', workType: 'serialization', workStage: 'background', category: 'work', project: '나의 히어로', episode: 'EP.43', color: '#F59E0B', startDate: 19, endDate: 19 },
+    { id, date, title: 'EP.43 배경', workType, workStage, category, project: '나의 히어로', episode: 'EP.43', color: '#F59E0B', startDate, endDate,
     
     // 신작 콘티 (2일)
-    { id: '11', date: 21, title: '신작 콘티', workType: 'serialization', workStage: 'storyboard', category: 'work', project: '별빛 아래서', episode: 'EP.01', description: '신작 기획', color: '#8B5CF6', startDate: 21, endDate: 22 },
-    { id: '12', date: 22, title: '신작 콘티', workType: 'serialization', workStage: 'storyboard', category: 'work', project: '별빛 아래서', episode: 'EP.01', description: '신작 기획', color: '#8B5CF6', startDate: 21, endDate: 22 },
+    { id, date, title: '신작 콘티', workType, workStage, category, project: '별빛 아래서', episode: 'EP.01', description: '신작 기획', color: '#8B5CF6', startDate, endDate,
+    { id, date, title: '신작 콘티', workType, workStage, category, project: '별빛 아래서', episode: 'EP.01', description: '신작 기획', color: '#8B5CF6', startDate, endDate,
     
     // EP.44 후보정 (2일)
-    { id: '13', date: 24, title: 'EP.44 후보정', workType: 'serialization', workStage: 'effects', category: 'work', project: '나의 히어로', episode: 'EP.44', color: '#F59E0B', startDate: 24, endDate: 25 },
-    { id: '14', date: 25, title: 'EP.44 후보정', workType: 'serialization', workStage: 'effects', category: 'work', project: '나의 히어로', episode: 'EP.44', color: '#F59E0B', startDate: 24, endDate: 25 },
+    { id, date, title: 'EP.44 후보정', workType, workStage, category, project: '나의 히어로', episode: 'EP.44', color: '#F59E0B', startDate, endDate,
+    { id, date, title: 'EP.44 후보정', workType, workStage, category, project: '나의 히어로', episode: 'EP.44', color: '#F59E0B', startDate, endDate,
   ]);
 
   // 근태 데이터를 일정으로 변환하여 가
@@ -274,10 +257,6 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
     .sort((a, b) => a.date - b.date)
     .slice(0, 5);
 
-  /**
-   * 날짜 클릭 핸들러
-   * @param {number} day - 날짜 (일)
-   */
   const handleDateClick = (day) => {
     setSelectedDate(day);
     const dayNote = dayNotes.find(n => n.date === day);
@@ -285,27 +264,16 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
     setIsDayDetailModalOpen(true);
   };
 
-  /**
-   * 날짜 단일 클릭 핸들러
-   * @param {number} day - 날짜 (일)
-   */
   const handleDateSingleClick = (day) => {
     setSelectedDate(day);
   };
 
-  /**
-   * 날짜 더블 클릭 핸들러
-   * @param {number} day - 날짜 (일)
-   */
   const handleDateDoubleClick = (day) => {
     const dayNote = dayNotes.find(n => n.date === day);
     setCurrentNote(dayNote?.note || '');
     setIsDayDetailModalOpen(true);
   };
 
-  /**
-   * 메모 저장 핸들러
-   */
   const handleSaveNote = () => {
     if (selectedDate === null) return;
     
@@ -313,10 +281,10 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
     if (currentNote.trim()) {
       if (existingNoteIndex >= 0) {
         const updated = [...dayNotes];
-        updated[existingNoteIndex] = { date: selectedDate, note: currentNote };
+        updated[existingNoteIndex] = { date, note: currentNote };
         setDayNotes(updated);
       } else {
-        setDayNotes([...dayNotes, { date: selectedDate, note: currentNote }]);
+        setDayNotes([...dayNotes, { date, note);
       }
       toast.success('메모가 저장되었습니다.');
     } else {
@@ -327,9 +295,6 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
     }
   };
 
-  /**
-   * 근태 신청 제출 핸들러
-   */
   const handleAttendanceSubmit = () => {
     if (!attendanceRequest.startDate || !attendanceRequest.endDate || !attendanceRequest.reason) {
       toast.error('모든 필수 항목을 입력해주세요.');
@@ -355,16 +320,16 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
     };
 
     const newRequestData = {
-      id: newId,
+      id,
       type: attendanceRequest.type,
       typeName: typeNameMap[attendanceRequest.type],
       startDate: attendanceRequest.startDate,
       endDate: attendanceRequest.endDate,
-      days: days,
+      days,
       reason: attendanceRequest.reason,
-      status: 'approved', // 자동 승인으로 설정
+      status, // 자동 승인으로 설정
       requestDate: new Date().toISOString().split('T')[0],
-      rejectionReason: '',
+      rejectionReason,
     };
 
     // localStorage에 저장
@@ -375,10 +340,10 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
     
     // 폼 초기화
     setAttendanceRequest({
-      type: 'break',
-      startDate: '',
-      endDate: '',
-      reason: '',
+      type,
+      startDate,
+      endDate,
+      reason,
     });
 
     // 즉시 근태 데이터 다시 로드하여 화면에 반영
@@ -394,11 +359,6 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
     }
   };
 
-  /**
-   * 타입에 따른 색상 반환
-   * @param {string} type - 타입
-   * @returns {string} Tailwind CSS 클래스명
-   */
   const getTypeColor = (type) => {
     switch (type) {
       case 'break':
@@ -412,9 +372,6 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
     }
   };
 
-  /**
-   * 일정 추가 핸들러
-   */
   const handleAddEvent = () => {
     const event = {
       id: Date.now().toString(),
@@ -422,7 +379,7 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
       title: newEvent.title,
       workType: newEvent.workType,
       category: newEvent.category,
-      project: newEvent.category === 'work' ? newEvent.project : undefined,
+      project: newEvent.category === 'work' ? newEvent.project,
       description: newEvent.description,
       color: newEvent.color,
       workStage: newEvent.workStage, // 작업 단계 추가
@@ -430,47 +387,36 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
     setAllEvents([...allEvents, event]);
     setIsAddModalOpen(false);
     setNewEvent({
-      title: '',
-      startDate: '',
-      endDate: '',
-      category: 'work',
+      title,
+      startDate,
+      endDate,
+      category,
       project: '내 웹툰',
       color: '#6E8FB3',
-      description: '',
-      workType: 'serialization',
-      workStage: '', // 작업 단계 초기화
+      description,
+      workType,
+      workStage, // 작업 단계 초기화
     });
     toast.success('일정이 추가되었습니다.');
   };
 
-  /**
-   * 일정 수정 핸들러
-   */
   const handleEditEvent = () => {
     if (!editingEvent) return;
     
     const updatedEvents = allEvents.map(e => 
-      e.id === editingEvent.id ? editingEvent : e
-    );
+      e.id === editingEvent.id ? editingEvent);
     setAllEvents(updatedEvents);
     setIsEditModalOpen(false);
     setEditingEvent(null);
     toast.success('일정이 수정되었습니다.');
   };
 
-  /**
-   * 일정 삭제 핸들러
-   * @param {string} eventId - 일정 ID
-   */
   const handleDeleteEvent = (eventId) => {
     setAllEvents(allEvents.filter(e => e.id !== eventId));
     setSelectedDate(null);
     toast.success('일정이 삭제되었습니다.');
   };
 
-  /**
-   * 편집 모달 열기
-   */
   const openEditModal = () => {
     const eventToEdit = selectedDateEvents[selectedEventIndex];
     if (eventToEdit) {
@@ -480,20 +426,12 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
     }
   };
 
-  /**
-   * 이벤트에 대한 편집 모달 열기
-   * @param {Object} event - 이벤트 객체
-   */
   const openEditModalForEvent = (event) => {
     setEditingEvent({ ...event });
     setIsDayDetailModalOpen(false);
     setIsEditModalOpen(true);
   };
 
-  /**
-   * 상세 모달에서 일정 삭제
-   * @param {string} eventId - 일정 ID
-   */
   const handleDeleteEventFromDetail = (eventId) => {
     setAllEvents(allEvents.filter(e => e.id !== eventId));
     const remainingEvents = selectedDateEvents.filter(e => e.id !== eventId);
@@ -503,10 +441,7 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
     toast.success('일정이 삭제되었습니다.');
   };
 
-  /**
-   * 메모 클릭 핸들러
-   * @param {number} date - 날짜 (일)
-   */
+  // 메모 클릭 핸들러
   const handleMemoClick = (date) => {
     const dayNote = dayNotes.find(n => n.date === date);
     if (dayNote) {
@@ -516,9 +451,7 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
     }
   };
 
-  /**
-   * 메모 수정 저장 핸들러
-   */
+  // 메모 수정 저장
   const handleSaveMemoEdit = () => {
     if (selectedMemoDate === null) return;
     
@@ -526,10 +459,10 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
     if (editingMemoContent.trim()) {
       if (existingNoteIndex >= 0) {
         const updated = [...dayNotes];
-        updated[existingNoteIndex] = { date: selectedMemoDate, note: editingMemoContent };
+        updated[existingNoteIndex] = { date, note: editingMemoContent };
         setDayNotes(updated);
       } else {
-        setDayNotes([...dayNotes, { date: selectedMemoDate, note: editingMemoContent }]);
+        setDayNotes([...dayNotes, { date, note);
       }
       toast.success('메모가 수정되었습니다.');
     }
@@ -538,9 +471,7 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
     setEditingMemoContent('');
   };
 
-  /**
-   * 메모 삭제 핸들러
-   */
+  // 메모 삭제
   const handleDeleteMemo = () => {
     if (selectedMemoDate === null) return;
     
@@ -612,12 +543,12 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
                   {/* Calendar dates grid */}
                   <div className="grid grid-cols-7 grid-rows-5 flex-1 border-l border-t border-border">
                     {/* Empty cells before first day */}
-                    {Array.from({ length: 3 }).map((_, i) => (
+                    {Array.from({ length).map((_, i) => (
                       <div key={`empty-${i}`} className="w-full h-full border-r border-b border-border" />
                     ))}
 
                     {/* Days */}
-                    {Array.from({ length: 31 }).map((_, i) => {
+                    {Array.from({ length).map((_, i) => {
                       const day = i + 1;
                       const isToday = day === 13;
                       const dayEvents = filteredEvents.filter(e => e.date === day);
@@ -628,7 +559,7 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
                       // 요일 계산 (1일이 수요일이므로 day + 2를 7로 나눈 나머지)
                       const dayOfWeek = (day + 2) % 7; // 0: 일요일, 1: 월요일, ..., 6: 토요일
 
-                      // 해당 날짜에 시작하는 작업 또는 주의 시작(일요일)에 이어지는 작업 필터링
+                      // �� 날짜에 시작하는 작업 또는 주의 시작(일요일)에 이어지는 작업 필터링
                       const startingEvents = dayEvents.filter(e => {
                         // 작업의 실제 시작일이면 표시
                         if (!e.startDate || e.startDate === day) return true;
@@ -670,7 +601,7 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
                               
                               // 실제 표시할 마지막 날 (작업 종료일과 주 마지막 날 중 작은 값)
                               const displayEndDate = isMultiDay 
-                                ? Math.min(event.endDate, lastDayOfWeek, 31)
+                                ? Math.min(event.endDate!, lastDayOfWeek, 31)
                                 : day;
                               
                               const daySpan = displayEndDate - day + 1;
@@ -694,13 +625,13 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
                                   key={idx}
                                   className="text-xs px-2 py-1.5 truncate font-semibold rounded shadow-sm"
                                   style={{ 
-                                    backgroundColor: displayColor,
+                                    backgroundColor,
                                     color: '#FFFFFF',
-                                    width: barWidth,
+                                    width,
                                     position: daySpan > 1 ? 'absolute' : 'relative',
-                                    left: daySpan > 1 ? 0 : undefined,
+                                    left: daySpan > 1 ? 0,
                                     top: daySpan > 1 ? `${idx * 28}px` : undefined,
-                                    zIndex: daySpan > 1 ? 10 : 1,
+                                    zIndex: daySpan > 1 ? 10,
                                   }}
                                 >
                                   {displayTitle}
@@ -710,7 +641,7 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
                             
                             {/* 진행 중인 작업은 공간만 차지 (보이지 않음) */}
                             {ongoingEvents.slice(0, 3).map((_, idx) => (
-                              <div key={`ongoing-${idx}`} className="text-xs py-1.5" style={{ height: '28px', visibility: 'hidden' }}>
+                              <div key={`ongoing-${idx}`} className="text-xs py-1.5" style={{ height, visibility: 'hidden' }}>
                                 &nbsp;
                               </div>
                             ))}
@@ -739,7 +670,7 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
                     })}
 
                     {/* Empty cells after last day */}
-                    {Array.from({ length: 3 }).map((_, i) => (
+                    {Array.from({ length).map((_, i) => (
                       <div key={`empty-end-${i}`} className="w-full h-full border-r border-b border-border" />
                     ))}
                   </div>
@@ -774,7 +705,7 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
                             <div className="flex items-start gap-2">
                               <div 
                                 className="w-1 h-full rounded-full flex-shrink-0 mt-1"
-                                style={{ backgroundColor: displayColor, minHeight: '40px' }}
+                                style={{ backgroundColor, minHeight: '40px' }}
                               />
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-medium text-foreground truncate">
@@ -904,7 +835,7 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
             <label className="text-sm font-medium text-foreground mb-1 block">유형</label>
             <select
               value={newEvent.workType}
-              onChange={(e) => setNewEvent({ ...newEvent, workType: e.target.value })}
+              onChange={(e) => setNewEvent({ ...newEvent, workType: e.target.value)}
               className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring outline-none text-sm bg-background text-foreground"
             >
               <option value="serialization">연재</option>
@@ -933,7 +864,7 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
             <label className="text-sm font-medium text-foreground mb-1 block">카테고리</label>
             <select
               value={newEvent.category}
-              onChange={(e) => setNewEvent({ ...newEvent, category: e.target.value })}
+              onChange={(e) => setNewEvent({ ...newEvent, category: e.target.value)}
               className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring outline-none text-sm bg-background text-foreground"
             >
               <option value="personal">개인 일정</option>
@@ -1044,7 +975,7 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
               <label className="text-sm font-medium text-foreground mb-1 block">유형</label>
               <select
                 value={editingEvent.workType}
-                onChange={(e) => setEditingEvent({ ...editingEvent, workType: e.target.value })}
+                onChange={(e) => setEditingEvent({ ...editingEvent, workType: e.target.value)}
                 className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring outline-none text-sm bg-background text-foreground"
               >
                 <option value="serialization">연재</option>
@@ -1073,7 +1004,7 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
               <label className="text-sm font-medium text-foreground mb-1 block">카테고리</label>
               <select
                 value={editingEvent.category}
-                onChange={(e) => setEditingEvent({ ...editingEvent, category: e.target.value })}
+                onChange={(e) => setEditingEvent({ ...editingEvent, category: e.target.value)}
                 className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring outline-none text-sm bg-background text-foreground"
               >
                 <option value="personal">개인 일정</option>

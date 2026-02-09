@@ -5,11 +5,6 @@ import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 
 import { cn } from "./utils";
 
-/**
- * TooltipProvider component
- * @param {Object} props
- * @param {number} [props.delayDuration] - Delay duration
- */
 function TooltipProvider({
   delayDuration = 0,
   ...props
@@ -23,29 +18,22 @@ function TooltipProvider({
   );
 }
 
-/**
- * Tooltip component
- */
-function Tooltip({ ...props }) {
+function Tooltip({
+  ...props
+}) {
   return (
-    <TooltipProvider>
+    
       <TooltipPrimitive.Root data-slot="tooltip" {...props} />
     </TooltipProvider>
   );
 }
 
-/**
- * TooltipTrigger component
- */
-function TooltipTrigger({ ...props }) {
+function TooltipTrigger({
+  ...props
+}) {
   return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />;
 }
 
-/**
- * TooltipContent component
- * @param {Object} props
- * @param {number} [props.sideOffset] - Side offset
- */
 function TooltipContent({
   className,
   sideOffset = 0,
@@ -64,7 +52,7 @@ function TooltipContent({
         {...props}
       >
         {children}
-        <TooltipPrimitive.Arrow className="bg-primary fill-primary z-50 size-2.5 translate-y-[calc(-50%_-_2px)] rotate-45 rounded-[2px]" />
+        <TooltipPrimitive.Arrow style={{ backgroundColor: 'var(--primary)', fill: 'var(--primary)', zIndex: '50', width: '10px', height: '10px', transform: 'translateY(calc(-50% - 2px)) rotate(45deg)', borderRadius: '2px' }} />
       </TooltipPrimitive.Content>
     </TooltipPrimitive.Portal>
   );

@@ -1,1 +1,1 @@
-export { WorkcationPage as AdminWorkcationPage } from '@/app/pages/WorkcationPage';
+export { WorkcationPage@/app/pages/WorkcationPage';

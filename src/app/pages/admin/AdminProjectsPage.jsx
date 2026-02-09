@@ -7,15 +7,22 @@ import { BookOpen, Users, Calendar, AlertCircle, Plus, Search, ArrowUpDown } fro
 import { toast } from 'sonner';
 import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
 import { ProjectDetailPage } from '@/app/pages/artist/ProjectDetailPage';
+import { getProjectThumbnailUrl, PROJECT_THUMBNAIL_PLACEHOLDER } from '@/api/config';
+import { projectService } from '@/api';
+import useAuthStore from '@/store/authStore';
 
-/**
- * AdminProjectsPage component
- */
+
+
+
+
 export function AdminProjectsPage() {
+  const user = useAuthStore((state) => state.user);
   const [selectedProject, setSelectedProject] = useState(null);
   const [showDetailPage, setShowDetailPage] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  
+  /** 로그인 회원이 PROJECT_MEMBER에 등록된 프로젝트 수 (member → project_member count) */
+  const [myProjectCount, setMyProjectCount] = useState(null);
+
   // 필터 상태
   const [statusFilters, setStatusFilters] = useState(['전체']);
   const [selectedArtistFilter, setSelectedArtistFilter] = useState(null);
@@ -47,111 +54,25 @@ export function AdminProjectsPage() {
     }
   }, [showDetailPage]);
 
-  // 작가 목록 (샘플 데이터)
-  const [artists] = useState<Artist[]>([
-    { id: 1, name: '김작가' },
-    { id: 2, name: '이작가' },
-    { id: 3, name: '박작가' },
-    { id: 4, name: '최작가' },
-    { id: 5, name: '정작가' },
-  ]);
+  const [artists] = useState([]);
+  const [projects, setProjects] = useState([]);
 
-  const [projects, setProjects] = useState([
-    {
-      id: 1,
-      title: '로맨스 판타지',
-      platform: '네이버 웹툰',
-      status: 'urgent',
-      serialStatus: '연재중',
-      currentEpisode: 42,
-      deadline: 'D-2',
-      genre: '로맨스/판타지',
-      description: '매주 일요일 업데이트. 현재 스토리보드 단계입니다.',
-      schedule: '매주 일요일 오전 10시',
-      thumbnail: 'https://images.unsplash.com/photo-1591788806059-cb6e2f6a2498?w=400',
-      artistName: '김작가',
-      artistId: 1,
-    },
-    {
-      id: 2,
-      title: '학원물',
-      platform: '카카오페이지',
-      status: 'normal',
-      serialStatus: '연재중',
-      currentEpisode: 15,
-      deadline: 'D-5',
-      genre: '학원/일상',
-      description: '매주 수요일 업데이트. 러프 스케치 단계입니다.',
-      schedule: '매주 수요일 오후 2시',
-      thumbnail: 'https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?w=400',
-      artistName: '이작가',
-      artistId: 2,
-    },
-    {
-      id: 3,
-      title: '미스터리 스릴러',
-      platform: '레진코믹스',
-      status: 'normal',
-      serialStatus: '휴재',
-      currentEpisode: 28,
-      deadline: '휴재중',
-      genre: '미스터리/스릴러',
-      description: '2025년 3월 재연재 예정',
-      schedule: '휴재중 (3월 재개 예정)',
-      thumbnail: 'https://images.unsplash.com/photo-1618556662146-0c86c2466516?w=400',
-      artistName: '박작가',
-      artistId: 3,
-    },
-    {
-      id: 4,
-      title: '액션 판타지',
-      platform: '네이버 시리즈',
-      status: 'completed',
-      serialStatus: '완결',
-      currentEpisode: 120,
-      deadline: '완결',
-      genre: '액션/판타지',
-      description: '총 120화 완결. 조회수 2.5M을 기록했습니다.',
-      schedule: '완결 (2024년 12월)',
-      thumbnail: 'https://images.unsplash.com/photo-1618519764620-7403abdbdfe9?w=400',
-      artistName: '최작가',
-      artistId: 4,
-    },
-    {
-      id: 5,
-      title: '일상 코미디',
-      platform: '카카오웹툰',
-      status: 'normal',
-      serialStatus: '연재중',
-      currentEpisode: 35,
-      deadline: 'D-7',
-      genre: '일상/코미디',
-      description: '매주 금요일 업데이트',
-      schedule: '매주 금요일 오후 6시',
-      thumbnail: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=400',
-      artistName: '김작가',
-      artistId: 1,
-    },
-  ]);
-
-  // localStorage에서 작품 데이터 로드
+  // 담당 프로젝트 수: member → project_member 기준 count (API)
   useEffect(() => {
-    const stored = localStorage.getItem('adminProjectsData');
-    if (stored) {
-      const data = JSON.parse(stored);
-      if (data.length > 0) {
-        setProjects(data);
+    if (!user?.memberNo) return;
+    const fetchCount = async () => {
+      try {
+        const res = await projectService.getMyProjectCount();
+        setMyProjectCount(Number(res?.count ?? res?.data?.count ?? 0));
+      } catch {
+        setMyProjectCount(0);
       }
-    }
-  }, []);
-
-  // 작품 데이터가 변경될 때마다 localStorage에 저장
-  useEffect(() => {
-    localStorage.setItem('adminProjectsData', JSON.stringify(projects));
-  }, [projects]);
+    };
+    fetchCount();
+  }, [user?.memberNo]);
 
   // 상태 필터 토글
-  const toggleFilter = (filter: string) => {
+  const toggleFilter = (filter) => {
     if (filter === '전체') {
       setStatusFilters(['전체']);
     } else {
@@ -175,7 +96,7 @@ export function AdminProjectsPage() {
   });
 
   // 정렬 핸들러
-  const handleSort = (type: SortType) => {
+  const handleSort = (type) => {
     if (sortType === type) {
       if (sortOrder === 'asc') {
         // 1번 클릭 → 2번 클릭: 내림차순으로 변경
@@ -204,7 +125,7 @@ export function AdminProjectsPage() {
 
     if (sortType === 'deadline') {
       // 마감일자 정렬
-      const getDeadlineValue = (deadline: string): number => {
+      const getDeadlineValue = (deadline) => {
         if (deadline === '완결') return 9999;
         if (deadline === '휴재중') return 9998;
         if (deadline.startsWith('D-')) {
@@ -240,19 +161,20 @@ export function AdminProjectsPage() {
       id: Date.now(),
       title: newProjectForm.title,
       platform: newProjectForm.platform,
-      status: 'normal',
-      serialStatus: '연재중',
-      currentEpisode: 1,
+      status,
+      serialStatus: '연재',
+      currentEpisode,
       deadline: 'D-7',
       genre: newProjectForm.genre,
       schedule: newProjectForm.schedule || '미정',
-      thumbnail: newProjectForm.thumbnail || 'https://images.unsplash.com/photo-1591788806059-cb6e2f6a2498?w=400',
+      thumbnail: newProjectForm.thumbnail || null,
       artistName: selectedArtist.name,
       artistId: newProjectForm.artistId,
     };
 
     setProjects([...projects, newProject]);
     setIsAddModalOpen(false);
+    // 폼 초기화
     setNewProjectForm({
       artistId: 0,
       title: '',
@@ -266,10 +188,6 @@ export function AdminProjectsPage() {
   };
 
   // 썸네일 파일 선택 핸들러
-  /**
-   * Handle thumbnail change
-   * @param {React.ChangeEvent<HTMLInputElement>} e - Input change event
-   */
   const handleThumbnailChange = (e) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -285,7 +203,7 @@ export function AdminProjectsPage() {
         return;
       }
 
-      // 파일을 읽어서 미리보기 URL 생성
+      // 파일을 읽어서 미리보기 URL 생성 + thumbnailFile에 실제 파일 보관
       const reader = new FileReader();
       reader.onload = (event) => {
         const result = event.target?.result;
@@ -299,28 +217,24 @@ export function AdminProjectsPage() {
     }
   };
 
-  /**
-   * Handle project click
-   * @param {Object} project - Project object
-   */
   const handleProjectClick = (project) => {
     setSelectedProject(project);
     setShowDetailPage(true);
   };
 
-  // 통계 계산
+  // 통계 계산 (담당 프로젝트 수는 member → project_member count API 사용)
   const stats = {
     totalArtists: new Set(projects.map(p => p.artistId)).size, // 팀당 작가 수
-    totalProjects: projects.length, // 담당 프로젝트 수
+    totalProjects: myProjectCount ?? projects.length, // 담당 프로젝트 수: 로그인 회원 소속 프로젝트 수
     todayDeadlines: projects.filter(p => 
       p.deadline.includes('D-0') || p.deadline.includes('D-1') || p.deadline.includes('D-2')
     ).slice(0, 3).length, // 오늘 마감 작품 3개
   };
 
   // 상태별 배지 색상
-  const getStatusBadgeColor = (status: string) => {
+  const getStatusBadgeColor = (status) => {
     switch (status) {
-      case '연재중':
+      case '연재':
         return 'bg-green-500 hover:bg-green-600';
       case '휴재':
         return 'bg-orange-500 hover:bg-orange-600';
@@ -421,15 +335,13 @@ export function AdminProjectsPage() {
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-medium text-foreground">상태:</span>
                     <div className="flex gap-2">
-                      {['전체', '연재중', '휴재', '완결'].map((filter) => (
-                        <Button
+                      {['전체', '연재', '휴재', '완결'].map((filter) => (
+                        <Button>
                           key={filter}
                           variant={statusFilters.includes(filter) ? 'default' : 'outline'}
                           size="sm"
                           onClick={() => toggleFilter(filter)}
-                          className={statusFilters.includes(filter) ? getStatusBadgeColor(filter === '전체' ? '' : filter) : ''}
-                        >
-                          {filter}
+                          className={statusFilters.includes(filter) ? getStatusBadgeColor(filter === '전체' ? '' : filter) {filter}
                         </Button>
                       ))}
                     </div>
@@ -489,7 +401,7 @@ export function AdminProjectsPage() {
                     {/* 왼쪽: 썸네일 */}
                     <div className="flex-shrink-0">
                       <ImageWithFallback
-                        src={project.thumbnail || 'https://images.unsplash.com/photo-1591788806059-cb6e2f6a2498?w=400'}
+                        src={getProjectThumbnailUrl(project.thumbnail) || PROJECT_THUMBNAIL_PLACEHOLDER}
                         alt={project.title}
                         className="w-24 h-32 object-cover rounded-md border-2 border-border"
                       />
@@ -522,9 +434,6 @@ export function AdminProjectsPage() {
                       <Badge className={getStatusBadgeColor(project.serialStatus)}>
                         {project.serialStatus}
                       </Badge>
-                      <p className="text-sm text-muted-foreground">
-                        현재 {project.currentEpisode}화
-                      </p>
                       <p className="text-xs text-muted-foreground">
                         마감: {project.deadline}
                       </p>
@@ -544,7 +453,7 @@ export function AdminProjectsPage() {
             </div>
           </div>
         </div>
-      )}
+      )} 
 
       {/* 작품 추가 모달 */}
       <Modal

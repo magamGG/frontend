@@ -7,10 +7,10 @@ import { BookOpen, Users, Calendar, AlertCircle, ArrowUpDown } from 'lucide-reac
 import { toast } from 'sonner';
 import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
 import { ProjectDetailPage } from './ProjectDetailPage';
+import { getProjectThumbnailUrl, PROJECT_THUMBNAIL_PLACEHOLDER } from '@/api/config';
 
-/**
- * ArtistProjectsPage component
- */
+
+
 export function ArtistProjectsPage() {
   const [selectedProject, setSelectedProject] = useState(null);
   const [showDetailPage, setShowDetailPage] = useState(false);
@@ -30,81 +30,9 @@ export function ArtistProjectsPage() {
     }
   }, [showDetailPage]);
 
-  const [projects, setProjects] = useState([
-    {
-      id: 1,
-      title: '로맨스 판타지',
-      platform: '네이버 웹툰',
-      status: 'urgent',
-      serialStatus: '연재중',
-      currentEpisode: 42,
-      deadline: 'D-2',
-      genre: '로맨스/판타지',
-      description: '매주 일요일 업데이트. 현재 스토리보드 단계입니다.',
-      schedule: '매주 일요일 오전 10시',
-      thumbnail: 'https://images.unsplash.com/photo-1591788806059-cb6e2f6a2498?w=400',
-    },
-    {
-      id: 2,
-      title: '학원물',
-      platform: '카카오페이지',
-      status: 'normal',
-      serialStatus: '연재중',
-      currentEpisode: 15,
-      deadline: 'D-5',
-      genre: '학원/일상',
-      description: '매주 수요일 업데이트. 러프 스케치 단계입니다.',
-      schedule: '매주 수요일 오후 2시',
-      thumbnail: 'https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?w=400',
-    },
-    {
-      id: 3,
-      title: '미스터리 스릴러',
-      platform: '레진코믹스',
-      status: 'normal',
-      serialStatus: '휴재',
-      currentEpisode: 28,
-      deadline: '휴재중',
-      genre: '미스터리/스릴러',
-      description: '2025년 3월 재연재 예정',
-      schedule: '휴재중 (3월 재개 예정)',
-      thumbnail: 'https://images.unsplash.com/photo-1618556662146-0c86c2466516?w=400',
-    },
-    {
-      id: 4,
-      title: '액션 판타지',
-      platform: '네이버 시리즈',
-      status: 'completed',
-      serialStatus: '완결',
-      currentEpisode: 120,
-      deadline: '완결',
-      genre: '액션/판타지',
-      description: '총 120화 완결. 조회수 2.5M을 기록했습니다.',
-      schedule: '완결 (2024년 12월)',
-      thumbnail: 'https://images.unsplash.com/photo-1618519764620-7403abdbdfe9?w=400',
-    },
-  ]);
+  const [projects, setProjects] = useState([]);
 
-  // localStorage에서 작품 데이터 로드
-  useEffect(() => {
-    const stored = localStorage.getItem('projectsData');
-    if (stored) {
-      const data = JSON.parse(stored);
-      if (data.length > 0) {
-        setProjects(data);
-      }
-    }
-  }, []);
-
-  // 작품 데이터가 변경될 때마다 localStorage에 저장
-  useEffect(() => {
-    localStorage.setItem('projectsData', JSON.stringify(projects));
-  }, [projects]);
-
-  /**
-   * Toggle filter selection
-   * @param {string} filter - Filter value to toggle
-   */
+  // 필터 토글 핸들러
   const toggleFilter = (filter) => {
     if (filter === '전체') {
       setStatusFilters(['전체']);
@@ -113,9 +41,9 @@ export function ArtistProjectsPage() {
         ? statusFilters.filter(f => f !== filter)
         : [...statusFilters.filter(f => f !== '전체'), filter];
       
-      // 연재중, 휴재, 완결이 모두 선택되면 전체로 변경
+      // 연재, 휴재, 완결이 모두 선택되면 전체로 변경
       if (newFilters.length === 3 && 
-          newFilters.includes('연재중') && 
+          newFilters.includes('연재') && 
           newFilters.includes('휴재') && 
           newFilters.includes('완결')) {
         setStatusFilters(['전체']);
@@ -131,19 +59,11 @@ export function ArtistProjectsPage() {
     return statusFilters.includes(project.serialStatus);
   });
 
-  /**
-   * Handle project click
-   * @param {Object} project - Project object
-   */
   const handleProjectClick = (project) => {
     setSelectedProject(project);
     setShowDetailPage(true);
   };
 
-  /**
-   * Handle project deletion
-   * @param {number} projectId - Project ID to delete
-   */
   const handleDeleteProject = (projectId) => {
     setProjects((prevProjects) => prevProjects.filter((project) => project.id !== projectId));
     toast.success('작품이 삭제되었습니다.');
@@ -152,19 +72,15 @@ export function ArtistProjectsPage() {
   // 통계 계산
   const stats = {
     total: projects.length,
-    ongoing: projects.filter(p => p.serialStatus === '연재중').length,
+    ongoing: projects.filter(p => p.serialStatus === '연재').length,
     paused: projects.filter(p => p.serialStatus === '휴재').length,
     completed: projects.filter(p => p.serialStatus === '완결').length,
   };
 
-  /**
-   * Get badge color for status
-   * @param {string} status - Status string
-   * @returns {string} CSS class for badge color
-   */
+  // 상태별 배지 색상
   const getStatusBadgeColor = (status) => {
     switch (status) {
-      case '연재중':
+      case '연재':
         return 'bg-green-500 hover:bg-green-600';
       case '휴재':
         return 'bg-orange-500 hover:bg-orange-600';
@@ -206,7 +122,7 @@ export function ArtistProjectsPage() {
               <Card className="p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <AlertCircle className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-xs font-medium text-muted-foreground">연재중</span>
+                  <span className="text-xs font-medium text-muted-foreground">연재</span>
                 </div>
                 <p className="text-2xl font-bold text-foreground">{stats.ongoing}개</p>
               </Card>
@@ -226,15 +142,13 @@ export function ArtistProjectsPage() {
               <div className="flex items-center gap-3">
                 <span className="text-sm font-medium text-foreground">상태:</span>
                 <div className="flex gap-2">
-                  {['전체', '연재중', '휴재', '완결'].map((filter) => (
+                  {['전체', '연재', '휴재', '완결'].map((filter) => (
                     <Button
                       key={filter}
                       variant={statusFilters.includes(filter) ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => toggleFilter(filter)}
-                      className={statusFilters.includes(filter) ? getStatusBadgeColor(filter === '전체' ? '' : filter) : ''}
-                    >
-                      {filter}
+                      className={statusFilters.includes(filter) ? getStatusBadgeColor(filter === '전체' ? '' : filter) {filter}
                     </Button>
                   ))}
                 </div>
@@ -253,7 +167,7 @@ export function ArtistProjectsPage() {
                     {/* 왼쪽: 썸네일 */}
                     <div className="flex-shrink-0">
                       <ImageWithFallback
-                        src={project.thumbnail || 'https://images.unsplash.com/photo-1591788806059-cb6e2f6a2498?w=400'}
+                        src={getProjectThumbnailUrl(project.thumbnail) || PROJECT_THUMBNAIL_PLACEHOLDER}
                         alt={project.title}
                         className="w-24 h-32 object-cover rounded-md border-2 border-border"
                       />

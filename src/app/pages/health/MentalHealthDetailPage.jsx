@@ -5,26 +5,28 @@ import { Input } from '@/app/components/ui/input';
 import { useState } from 'react';
 
 const riskData = [
-  { name: '정상', value: 4, color: '#52C41A' },
-  { name: '주의', value: 3, color: '#FA8C16' },
-  { name: '위험', value: 2, color: '#FF4D4F' },
+  { name: '정상', value, color: '#52C41A' },
+  { name: '주의', value, color: '#FA8C16' },
+  { name: '위험', value, color: '#FF4D4F' },
 ];
 
 const participants = [
-  { name: '송도동', dept: '개발팀', status: '완료', statusColor: 'bg-green-50 text-green-700', score: 85, risk: '위험', riskColor: 'bg-red-50 text-red-700', date: '2026.01.18' },
-  { name: '강호배', dept: '영업팀', status: '대기', statusColor: 'bg-orange-50 text-orange-700', score: '-', risk: '-', riskColor: '', date: '-' },
-  { name: '이수민', dept: '기획팀', status: '완료', statusColor: 'bg-green-50 text-green-700', score: 92, risk: '정상', riskColor: 'bg-green-50 text-green-700', date: '2026.01.19' },
-  { name: '박지훈', dept: '디자인팀', status: '완료', statusColor: 'bg-green-50 text-green-700', score: 78, risk: '주의', riskColor: 'bg-orange-50 text-orange-700', date: '2026.01.17' },
-  { name: '최은영', dept: '마케팅팀', status: '진행중', statusColor: 'bg-blue-50 text-blue-700', score: '-', risk: '-', riskColor: '', date: '-' },
-  { name: '김태양', dept: '개발팀', status: '완료', statusColor: 'bg-green-50 text-green-700', score: 88, risk: '주의', riskColor: 'bg-orange-50 text-orange-700', date: '2026.01.20' },
-  { name: '정민서', dept: '인사팀', status: '완료', statusColor: 'bg-green-50 text-green-700', score: 95, risk: '정상', riskColor: 'bg-green-50 text-green-700', date: '2026.01.18' },
+  { name: '송도동', dept: '개발팀', status: '완료', statusColor: 'bg-green-50 text-green-700', score, risk: '위험', riskColor: 'bg-red-50 text-red-700', date: '2026.01.18' },
+  { name: '강호배', dept: '영업팀', status: '대기', statusColor: 'bg-orange-50 text-orange-700', score: '-', risk: '-', riskColor, date: '-' },
+  { name: '이수민', dept: '기획팀', status: '완료', statusColor: 'bg-green-50 text-green-700', score, risk: '정상', riskColor: 'bg-green-50 text-green-700', date: '2026.01.19' },
+  { name: '박지훈', dept: '디자인팀', status: '완료', statusColor: 'bg-green-50 text-green-700', score, risk: '주의', riskColor: 'bg-orange-50 text-orange-700', date: '2026.01.17' },
+  { name: '최은영', dept: '마케팅팀', status: '진행중', statusColor: 'bg-blue-50 text-blue-700', score: '-', risk: '-', riskColor, date: '-' },
+  { name: '김태양', dept: '개발팀', status: '완료', statusColor: 'bg-green-50 text-green-700', score, risk: '주의', riskColor: 'bg-orange-50 text-orange-700', date: '2026.01.20' },
+  { name: '정민서', dept: '인사팀', status: '완료', statusColor: 'bg-green-50 text-green-700', score, risk: '정상', riskColor: 'bg-green-50 text-green-700', date: '2026.01.18' },
 ];
 
-interface MentalHealthDetailPageProps {
-  onBack?: () => void;
-}
 
-export function MentalHealthDetailPage({ onBack }: MentalHealthDetailPageProps) {
+
+/**
+ * @param {Object} props
+ * @param {Function} props.onBack
+ */
+export function MentalHealthDetailPage({ onBack }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('전체');
 

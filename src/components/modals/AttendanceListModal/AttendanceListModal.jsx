@@ -42,7 +42,7 @@ export function AttendanceListModal({ open, onOpenChange, attendances }) {
     switch (type) {
       case '워케이션':
         return 'bg-purple-500 text-white';
-      case '휴재':
+      case '휴가':
         return 'bg-gray-500 text-white';
       case '재택근무':
         return 'bg-blue-500 text-white';
@@ -77,7 +77,7 @@ export function AttendanceListModal({ open, onOpenChange, attendances }) {
         aria-describedby={undefined}
       >
         <DialogHeader>
-          <DialogTitle className="text-xl text-[#1F2328]">금주 근태 전체 목록</DialogTitle>
+          <DialogTitle className="text-xl" style={{ color: 'var(--foreground)' }}>금주 근태 전체 목록</DialogTitle>
         </DialogHeader>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '8px 0', flex: 1, overflow: 'hidden' }}>
           {/* 검색 */}
@@ -88,7 +88,13 @@ export function AttendanceListModal({ open, onOpenChange, attendances }) {
             <Input
               type="text"
               placeholder="이름 또는 근태 유형 검색..."
-              className="pl-10 h-9 bg-[#FAFAFA] border-[#DADDE1] text-[#1F2328] text-sm focus:ring-[#6E8FB3]"
+              className="pl-10 h-9 text-sm"
+              style={{ 
+                backgroundColor: 'var(--card)', 
+                borderColor: 'var(--border)', 
+                color: 'var(--foreground)',
+                '--tw-ring-color': 'var(--accent)'
+              }}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -128,13 +134,13 @@ export function AttendanceListModal({ open, onOpenChange, attendances }) {
                 <StatLabel>전체 근태</StatLabel>
               </StatItem>
               <StatItem>
-                <StatValue style={{ color: '#10b981' }}>
+                <StatValue style={{ color: 'var(--chart-2)' }}>
                   {attendances.filter((a) => a.status === '승인').length}
                 </StatValue>
                 <StatLabel>승인</StatLabel>
               </StatItem>
               <StatItem>
-                <StatValue style={{ color: '#eab308' }}>
+                <StatValue style={{ color: 'var(--chart-4)' }}>
                   {attendances.filter((a) => a.status === '대기').length}
                 </StatValue>
                 <StatLabel>대기</StatLabel>

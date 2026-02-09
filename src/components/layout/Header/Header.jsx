@@ -2,6 +2,11 @@ import { motion, AnimatePresence } from "motion/react";
 import { Bell, Plus, User, X, ChevronRight } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Badge } from "@/app/components/ui/badge";
+import { memberService } from '@/api/services';
+import { getMemberProfileUrl } from '@/api/config';
+import useAuthStore from '@/store/authStore';
+import { notificationService } from "@/api/services";
+import { toast } from "sonner";
 import {
   HeaderContainer,
   HeaderContent,
@@ -81,8 +86,16 @@ export function Header({
   onAttendanceClick,
   userRole,
 }) {
+  const { user } = useAuthStore();
+  const memberNo = user?.memberNo;
+
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef(null);
+
+  // 사용자 정보 state
+  const [memberName, setMemberName] = useState('');
+  const [memberRole, setMemberRole] = useState('');
+  const [profileImage, setProfileImage] = useState(null);
 
   const [notifications, setNotifications] = useState([
     {
@@ -96,7 +109,7 @@ export function Header({
     },
     {
       id: 2,
-      title: "일정 알림",
+      title: "캘린더 알림",
       message: "내일 편집자 미팅이 예정되어 있습니다.",
       time: "30분 전",
       isRead: false,
@@ -110,7 +123,7 @@ export function Header({
       time: "2시간 전",
       isRead: false,
       type: "success",
-      linkedPage: "attendance",
+      linkedPage: "approvals",
     },
     {
       id: 4,
@@ -131,10 +144,120 @@ export function Header({
       linkedPage: "projects",
     },
   ]);
+  const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
+
+  // 알림 목록 조회
+  const fetchNotifications = async () => {
+    try {
+      setIsLoadingNotifications(true);
+      const response = await notificationService.getNotifications();
+      
+      // DB notificationStatus: Y = 안 읽음(false), N = 읽음(true)
+      const formattedNotifications = response.map((n) => ({
+          id: n.notificationNo,
+          title: n.notificationName || '알림',
+          message: n.notificationText || '',
+          time: formatTimeAgo(n.notificationCreatedAt),
+          isRead: n.notificationStatus === 'N',
+          type: getNotificationType(n.notificationType),
+          linkedPage: getLinkedPage(n.notificationType),
+        }));
+      
+      setNotifications(formattedNotifications);
+    } catch (error) {
+      console.error('알림 목록 조회 실패:', error);
+      // 에러 시 빈 배열 유지
+    } finally {
+      setIsLoadingNotifications(false);
+    }
+  };
+
+  // 시간 포맷팅 (몇 분 전, 몇 시간 전 등)
+  const formatTimeAgo = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return '방금 전';
+    if (diffMins < 60) return `${diffMins}분 전`;
+    if (diffHours < 24) return `${diffHours}시간 전`;
+    if (diffDays < 7) return `${diffDays}일 전`;
+    return date.toLocaleDateString();
+  };
+
+  // 알림 타입에 따른 UI 타입 반환
+  const getNotificationType = (type) => {
+    switch (type) {
+      case 'JOIN_REQ':
+        return 'info';
+      case 'LEAVE_REQ':
+        return 'warning';
+      case 'APPROVED':
+        return 'success';
+      case 'REJECTED':
+        return 'error';
+      case 'ASSIGNMENT':
+        return 'info';
+      default:
+        return 'info';
+    }
+  };
+
+  // 알림 타입에 따른 연결 페이지 반환
+  const getLinkedPage = (type) => {
+    switch (type) {
+      case 'JOIN_REQ':
+        return 'approvals';
+      case 'LEAVE_REQ':
+        return 'approvals';
+      case 'APPROVED':
+      case 'REJECTED':
+        return 'dashboard';
+      case 'ASSIGNMENT':
+        return 'assignment';
+      default:
+        return 'dashboard';
+    }
+  };
+
+  // 컴포넌트 마운트 시 알림 목록 조회
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
 
   const unreadCount = notifications.filter(
     (n) => !n.isRead,
   ).length;
+
+  // 사용자 정보 로드
+  const loadUserInfo = async () => {
+    if (!memberNo) return;
+    try {
+      const myPageData = await memberService.getMyPageInfo(memberNo);
+      setMemberName(myPageData.memberName || '');
+      setMemberRole(myPageData.memberRole || '');
+      setProfileImage(getMemberProfileUrl(myPageData.memberProfileImage));
+    } catch (error) {
+      console.error('사용자 정보 로드 실패:', error);
+      setMemberName(user?.memberName || '');
+      setMemberRole(user?.memberRole || '');
+    }
+  };
+
+  useEffect(() => {
+    loadUserInfo();
+  }, [memberNo, user]);
+
+  // 마이페이지에서 프로필 사진 업로드 후 헤더 갱신
+  useEffect(() => {
+    const handleProfileUpdated = () => loadUserInfo();
+    window.addEventListener('profile-image-updated', handleProfileUpdated);
+    return () => window.removeEventListener('profile-image-updated', handleProfileUpdated);
+  }, [memberNo]);
 
   // Close notification panel when clicking outside
   useEffect(() => {
@@ -162,13 +285,21 @@ export function Header({
     };
   }, [showNotifications]);
 
-  const handleNotificationClick = (notification) => {
-    // 읽음 처리
-    setNotifications(
-      notifications.map((n) =>
-        n.id === notification.id ? { ...n, isRead: true } : n,
-      ),
-    );
+  const handleNotificationClick = async (notification) => {
+    // 읽지 않은 알림인 경우에만 API 호출
+    if (!notification.isRead) {
+      try {
+        await notificationService.markAsRead(notification.id);
+        // 로컬 상태 업데이트
+        setNotifications(
+          notifications.map((n) =>
+            n.id === notification.id ? { ...n, isRead: true } : n,
+          ),
+        );
+      } catch (error) {
+        console.error('알림 읽음 처리 실패:', error);
+      }
+    }
 
     // 페이지 이동
     const sectionIndex = sections.findIndex(
@@ -180,15 +311,29 @@ export function Header({
     }
   };
 
-  const markAllAsRead = () => {
-    setNotifications(
-      notifications.map((n) => ({ ...n, isRead: true })),
-    );
+  const markAllAsRead = async () => {
+    try {
+      await notificationService.markAllAsRead();
+      // 로컬 상태 업데이트
+      setNotifications(
+        notifications.map((n) => ({ ...n, isRead: true })),
+      );
+    } catch (error) {
+      console.error('모든 알림 읽음 처리 실패:', error);
+      toast.error('알림 읽음 처리에 실패했습니다.');
+    }
   };
 
-  const deleteNotification = (id, event) => {
+  const deleteNotification = async (id, event) => {
     event.stopPropagation();
-    setNotifications(notifications.filter((n) => n.id !== id));
+    try {
+      await notificationService.deleteNotification(id);
+      // 로컬 상태에서 삭제
+      setNotifications(notifications.filter((n) => n.id !== id));
+    } catch (error) {
+      console.error('알림 삭제 실패:', error);
+      toast.error('알림 삭제에 실패했습니다.');
+    }
   };
 
   const getNotificationBadgeVariant = (type) => {
@@ -357,8 +502,8 @@ export function Header({
                                 </NotificationItemTime>
                                 <span
                                   style={{
-                                    background: notification.type === 'warning' ? 'rgb(254, 226, 226)' : notification.type === 'error' ? 'rgb(254, 226, 226)' : notification.type === 'success' ? '#dcfce7' : '#dbeafe',
-                                    color: notification.type === 'warning' ? 'rgb(239, 68, 68)' : notification.type === 'error' ? 'rgb(239, 68, 68)' : notification.type === 'success' ? '#16a34a' : '#3b82f6',
+                                    background: notification.type === 'warning' ? 'color-mix(in srgb, var(--destructive) 10%, transparent)' : notification.type === 'error' ? 'color-mix(in srgb, var(--destructive) 10%, transparent)' : notification.type === 'success' ? 'color-mix(in srgb, var(--chart-2) 10%, transparent)' : 'color-mix(in srgb, var(--chart-2) 10%, transparent)',
+                                    color: notification.type === 'warning' ? 'var(--destructive)' : notification.type === 'error' ? 'var(--destructive)' : notification.type === 'success' ? 'var(--chart-2)' : 'var(--chart-2)',
                                     fontSize: '10px',
                                     padding: '2px 6px',
                                     borderRadius: '4px',
@@ -403,14 +548,35 @@ export function Header({
             onClick={onProfileClick}
           >
             <ProfileAvatar>
-              <User style={{ width: '16px', height: '16px', color: 'var(--primary-foreground)' }} />
+              {profileImage ? (
+                <img 
+                  src={profileImage} 
+                  alt="Profile" 
+                  style={{ 
+                    width: '100%', 
+                    height: '100%', 
+                    objectFit: 'cover',
+                    borderRadius: '50%'
+                  }}
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.nextSibling?.style?.setProperty('display', 'block');
+                  }}
+                />
+              ) : null}
+              <User style={{ 
+                width: '16px', 
+                height: '16px', 
+                color: 'var(--primary-foreground)',
+                display: profileImage ? 'none' : 'block'
+              }} />
             </ProfileAvatar>
             <ProfileInfo>
               <ProfileName>
-                김작가
+                {memberName || user?.memberName || '사용자'}
               </ProfileName>
               <ProfileRole>
-                에이전시 대표
+                {memberRole || user?.memberRole || ''}
               </ProfileRole>
             </ProfileInfo>
             <ProfileChevron as={ChevronRight} />

@@ -3,9 +3,6 @@ import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
 import { Palmtree, MapPin, Calendar, Plus } from 'lucide-react';
 
-/**
- * WorkcationPage component
- */
 export function WorkcationPage() {
   return (
     <div className="w-full h-full">

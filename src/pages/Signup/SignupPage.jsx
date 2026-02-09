@@ -3,7 +3,9 @@ import { motion } from 'motion/react';
 import { Card } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
-import { Mail, Lock, User, Phone, Building, Briefcase, Edit, Check, Palette, Pen, BookOpen, Paintbrush, ArrowLeft } from 'lucide-react';
+import { Mail, Lock, User, Phone, Building, Briefcase, Edit, Check, Palette, Pen, BookOpen, Paintbrush, ArrowLeft, MapPin } from 'lucide-react';
+import { toast } from 'sonner';
+import { memberService } from '@/api';
 import {
   SignupRoot,
   BackgroundPattern,
@@ -40,21 +42,21 @@ const roleList = [
     icon: Edit,
     title: '아티스트',
     description: '작가 및 어시스트',
-    color: '#a855f7',
+    color: 'var(--status-workation)',
   },
   {
     id: USER_ROLES.MANAGER,
     icon: Briefcase,
     title: '담당자',
     description: '프로젝트 매니저/편집자',
-    color: '#3b82f6',
+    color: 'var(--chart-2)',
   },
   {
     id: USER_ROLES.AGENCY,
     icon: Building,
     title: '에이전시',
     description: '제작사/에이전시 운영자',
-    color: '#22c55e',
+    color: 'var(--chart-2)',
   },
 ];
 
@@ -72,19 +74,22 @@ const artistSpecializationList = [
 export function SignupPage({ onSignup, onBackToLogin }) {
   const [selectedRole, setSelectedRole] = useState(null);
   const [artistSpecialization, setArtistSpecialization] = useState(null);
-  const [customSpecialization, setCustomSpecialization] = useState('');
-  const [formData, setFormData] = useState({
+  const [customSpecializationInput, setCustomSpecializationInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSelectOpen, setIsSelectOpen] = useState(false);
+  const [signupFormData, setSignupFormData] = useState({
     name: '',
     email: '',
     password: '',
     confirmPassword: '',
     phone: '',
+    address: '',
     organization: '',
   });
 
   const handleInputChange = (e) => {
-    setFormData({
-      ...formData,
+    setSignupFormData({
+      ...signupFormData,
       [e.target.name]: e.target.value,
     });
   };
@@ -96,22 +101,70 @@ export function SignupPage({ onSignup, onBackToLogin }) {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!selectedRole) {
-      alert('역할을 선택해주세요.');
+      toast.error('역할을 선택해주세요.');
       return;
     }
     if (selectedRole === USER_ROLES.ARTIST && !artistSpecialization) {
-      alert('세부 직무를 선택해주세요.');
+      toast.error('세부 직무를 선택해주세요.');
       return;
     }
-    if (formData.password !== formData.confirmPassword) {
-      alert('비밀번호가 일치하지 않습니다.');
+    if (signupFormData.password !== signupFormData.confirmPassword) {
+      toast.error('비밀번호가 일치하지 않습니다.');
       return;
     }
-    // TODO: API 호출로 회원가입 처리
-    onSignup();
+
+    setIsLoading(true);
+    try {
+      // DB 스키마에 MEMBER_ID 필드가 없으므로 MEMBER_EMAIL만 사용
+      const memberData = {
+        memberName: signupFormData.name,
+        memberPassword: signupFormData.password,
+        memberEmail: signupFormData.email, // UNIQUE, 로그인 ID로 사용
+        memberPhone: signupFormData.phone,
+        memberAddress: signupFormData.address?.trim() || '',
+        memberRole: selectedRole === USER_ROLES.ARTIST 
+          ? (artistSpecialization === 'webtoon-writer' ? '웹툰 작가'
+            : artistSpecialization === 'webnovel-writer' ? '웹소설 작가'
+            : artistSpecialization === 'assistant-coloring' ? '어시스트 - 채색'
+            : artistSpecialization === 'assistant-lighting' ? '어시스트 - 조명'
+            : artistSpecialization === 'assistant-background' ? '어시스트 - 배경'
+            : artistSpecialization === 'assistant-lineart' ? '어시스트 - 선화'
+            : artistSpecialization === 'assistant-other' ? '어시스트- 기타'
+            : '웹툰 작가')
+          : selectedRole === USER_ROLES.MANAGER ? '담당자'
+          : selectedRole === USER_ROLES.AGENCY ? '에이전시 관리자'
+          : '웹툰 작가',
+      };
+      
+      // 역할별로 다른 필드 추가
+      if (selectedRole === USER_ROLES.ARTIST) {
+        // 아티스트는 선택적으로 에이전시에 속할 수 있으므로 agencyNo는 null (비소속 허용)
+        memberData.agencyNo = null;
+      } else if (selectedRole === USER_ROLES.MANAGER) {
+        // 담당자는 선택적으로 에이전시 코드로 기존 에이전시에 가입 (비소속 허용)
+        // organization 필드가 비어있지 않으면 에이전시 코드로 처리, 비어있으면 비소속
+        if (signupFormData.organization && signupFormData.organization.trim() !== '') {
+          memberData.agencyCode = signupFormData.organization;
+        }
+        // organization이 비어있으면 agencyCode를 보내지 않아서 비소속으로 가입됨
+      } else if (selectedRole === USER_ROLES.AGENCY) {
+        // 에이전시 관리자는 새 에이전시를 생성 (필수)
+        memberData.agencyName = signupFormData.organization;
+      }
+
+      await memberService.register(memberData);
+      toast.success('회원가입이 완료되었습니다.');
+      onSignup();
+    } catch (error) {
+      const errorMessage = error?.message || '회원가입에 실패했습니다. 다시 시도해주세요.';
+      toast.error(errorMessage);
+      console.error('Signup error:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -196,17 +249,34 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
+                                    zIndex: 1,
                                   }}
                                 >
                                   <Check size={12} style={{ color: 'var(--primary-foreground)' }} />
                                 </motion.div>
                               )}
                               
-                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', textAlign: 'center' }}>
-                                <div style={{ width: '48px', height: '48px', backgroundColor: role.color, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <div style={{ 
+                                display: 'flex', 
+                                flexDirection: 'column', 
+                                alignItems: 'center', 
+                                gap: '8px', 
+                                textAlign: 'center',
+                                width: '100%',
+                              }}>
+                                <div style={{ 
+                                  width: '48px', 
+                                  height: '48px', 
+                                  backgroundColor: role.color, 
+                                  borderRadius: '8px', 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  justifyContent: 'center',
+                                  flexShrink: 0,
+                                }}>
                                   <RoleIcon size={24} style={{ color: 'white' }} />
                                 </div>
-                                <div>
+                                <div style={{ width: '100%' }}>
                                   <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--foreground)', margin: 0 }}>{role.title}</p>
                                   <p style={{ fontSize: '12px', color: 'var(--muted-foreground)', margin: 0, lineHeight: '1.2' }}>{role.description}</p>
                                 </div>
@@ -229,10 +299,13 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                         <InputLabel>세부 직무 선택 *</InputLabel>
                         <Select 
                           value={artistSpecialization || ''} 
+                          open={isSelectOpen}
+                          onOpenChange={setIsSelectOpen}
                           onValueChange={(value) => {
                             setArtistSpecialization(value);
+                            setIsSelectOpen(false); // 선택 시 즉시 닫기
                             if (value !== 'assistant-other') {
-                              setCustomSpecialization('');
+                              setCustomSpecializationInput('');
                             }
                           }}
                         >
@@ -266,8 +339,8 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                                 <Edit className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--muted-foreground)' }} />
                                 <InputField
                                   type="text"
-                                  value={customSpecialization}
-                                  onChange={(e) => setCustomSpecialization(e.target.value)}
+                                  value={customSpecializationInput}
+                                  onChange={(e) => setCustomSpecializationInput(e.target.value)}
                                   placeholder="예: 스토리 작가, 3D 배경 등"
                                   required
                                 />
@@ -290,7 +363,7 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                         <InputField
                           type="text"
                           name="name"
-                          value={formData.name}
+                          value={signupFormData.name}
                           onChange={handleInputChange}
                           placeholder="홍길동"
                           required
@@ -305,7 +378,7 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                         <InputField
                           type="tel"
                           name="phone"
-                          value={formData.phone}
+                          value={signupFormData.phone}
                           onChange={handleInputChange}
                           placeholder="010-1234-5678"
                           required
@@ -315,13 +388,27 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                   </FormGrid>
 
                   <InputGroup>
+                    <InputLabel>주소</InputLabel>
+                    <InputWrapper>
+                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--muted-foreground)' }} />
+                      <InputField
+                        type="text"
+                        name="address"
+                        value={signupFormData.address}
+                        onChange={handleInputChange}
+                        placeholder="주소를 입력하세요 (예: 서울시 강남구 역삼동 123-45)"
+                      />
+                    </InputWrapper>
+                  </InputGroup>
+
+                  <InputGroup>
                     <InputLabel>이메일 *</InputLabel>
                     <InputWrapper>
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--muted-foreground)' }} />
                       <InputField
                         type="email"
                         name="email"
-                        value={formData.email}
+                        value={signupFormData.email}
                         onChange={handleInputChange}
                         placeholder="example@email.com"
                         required
@@ -329,19 +416,17 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                     </InputWrapper>
                   </InputGroup>
 
-                  {(selectedRole === USER_ROLES.AGENCY || selectedRole === USER_ROLES.MANAGER) && (
+                  {selectedRole === USER_ROLES.AGENCY && (
                     <InputGroup>
-                      <InputLabel>
-                        {selectedRole === USER_ROLES.AGENCY ? '에이전시명' : '소속 회사'}
-                      </InputLabel>
+                      <InputLabel>에이전시명</InputLabel>
                       <InputWrapper>
                         <Building className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--muted-foreground)' }} />
                         <InputField
                           type="text"
                           name="organization"
-                          value={formData.organization}
+                          value={signupFormData.organization}
                           onChange={handleInputChange}
-                          placeholder={selectedRole === USER_ROLES.AGENCY ? '스튜디오 마감지기' : '소속 회사/팀'}
+                          placeholder="스튜디오 마감지기"
                         />
                       </InputWrapper>
                     </InputGroup>
@@ -355,7 +440,7 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                         <InputField
                           type="password"
                           name="password"
-                          value={formData.password}
+                          value={signupFormData.password}
                           onChange={handleInputChange}
                           placeholder="••••••••"
                           required
@@ -370,7 +455,7 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                         <InputField
                           type="password"
                           name="confirmPassword"
-                          value={formData.confirmPassword}
+                          value={signupFormData.confirmPassword}
                           onChange={handleInputChange}
                           placeholder="••••••••"
                           required

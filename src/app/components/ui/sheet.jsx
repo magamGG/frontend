@@ -1,42 +1,33 @@
 "use client";
 
 import * as React from "react";
-import * as SheetPrimitive from "@radix-ui/react-dialog";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { XIcon } from "lucide-react";
 
 import { cn } from "./utils";
 
-/**
- * Sheet component
- */
 function Sheet({ ...props }) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />;
 }
 
-/**
- * SheetTrigger component
- */
-function SheetTrigger({ ...props }) {
+function SheetTrigger({
+  ...props
+}) {
   return <SheetPrimitive.Trigger data-slot="sheet-trigger" {...props} />;
 }
 
-/**
- * SheetClose component
- */
-function SheetClose({ ...props }) {
+function SheetClose({
+  ...props
+}) {
   return <SheetPrimitive.Close data-slot="sheet-close" {...props} />;
 }
 
-/**
- * SheetPortal component
- */
-function SheetPortal({ ...props }) {
+function SheetPortal({
+  ...props
+}) {
   return <SheetPrimitive.Portal data-slot="sheet-portal" {...props} />;
 }
 
-/**
- * SheetOverlay component
- */
 function SheetOverlay({
   className,
   ...props
@@ -53,11 +44,6 @@ function SheetOverlay({
   );
 }
 
-/**
- * SheetContent component
- * @param {Object} props
- * @param {string} [props.side] - Side (top, right, bottom, left)
- */
 function SheetContent({
   className,
   children,
@@ -65,7 +51,7 @@ function SheetContent({
   ...props
 }) {
   return (
-    <SheetPortal>
+    
       <SheetOverlay />
       <SheetPrimitive.Content
         data-slot="sheet-content"
@@ -93,9 +79,6 @@ function SheetContent({
   );
 }
 
-/**
- * SheetHeader component
- */
 function SheetHeader({ className, ...props }) {
   return (
     <div
@@ -106,9 +89,6 @@ function SheetHeader({ className, ...props }) {
   );
 }
 
-/**
- * SheetFooter component
- */
 function SheetFooter({ className, ...props }) {
   return (
     <div
@@ -119,9 +99,6 @@ function SheetFooter({ className, ...props }) {
   );
 }
 
-/**
- * SheetTitle component
- */
 function SheetTitle({
   className,
   ...props
@@ -135,9 +112,6 @@ function SheetTitle({
   );
 }
 
-/**
- * SheetDescription component
- */
 function SheetDescription({
   className,
   ...props

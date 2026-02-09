@@ -19,9 +19,10 @@ import {
   Trash2
 } from 'lucide-react';
 
-/**
- * AgencyTeamPage component
- */
+
+
+
+
 export function AgencyTeamPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEmployee, setSelectedEmployee] = useState(null);
@@ -31,7 +32,7 @@ export function AgencyTeamPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [employees, setEmployees] = useState([
     {
-      id: 1,
+      id,
       name: '김담당자',
       role: '담당자',
       position: '시니어 매니저',
@@ -43,7 +44,7 @@ export function AgencyTeamPage() {
       participatedProjects: ['로맨스 판타지', '액션 드라마', '일상 코미디', '미스터리 스릴러', 'SF 대작', '판타지 모험', '일상 슬라이스']
     },
     {
-      id: 2,
+      id,
       name: '이담당자',
       role: '담당자',
       position: '매니저',
@@ -55,7 +56,7 @@ export function AgencyTeamPage() {
       participatedProjects: ['학원물', '로맨스 웹툰', '판타지 액션', '스릴러 웹툰', '코미디 시리즈']
     },
     {
-      id: 3,
+      id,
       name: '박담당자',
       role: '담당자',
       position: '주니어 매니저',
@@ -67,7 +68,7 @@ export function AgencyTeamPage() {
       participatedProjects: ['스포츠 드라마', '청춘 로맨스', '학원 코미디']
     },
     {
-      id: 4,
+      id,
       name: '김작가',
       role: '작가',
       position: '메인 작가',
@@ -79,7 +80,7 @@ export function AgencyTeamPage() {
       participatedProjects: ['로맨스 판타지', '액션 드라마', 'SF 대작', '미스터리 시리즈', '일상 웹툰']
     },
     {
-      id: 5,
+      id,
       name: '이작가',
       role: '작가',
       position: '시니어 작가',
@@ -91,7 +92,7 @@ export function AgencyTeamPage() {
       participatedProjects: ['무협 웹툰', '판타지 로맨스', '액션 판타지', '역사 드라마', '로맨스 코미디', '스릴러 웹툰']
     },
     {
-      id: 6,
+      id,
       name: '최어시',
       role: '어시스트',
       position: '배경 어시스트',
@@ -103,7 +104,7 @@ export function AgencyTeamPage() {
       participatedProjects: ['로맨스 판타지', '액션 드라마', 'SF 대작']
     },
     {
-      id: 7,
+      id,
       name: '정어시',
       role: '어시스트',
       position: '채색 어시스트',
@@ -118,13 +119,13 @@ export function AgencyTeamPage() {
 
   // 새 직원 추가 폼 상태
   const [newEmployee, setNewEmployee] = useState({
-    email: '',
+    email,
   });
 
   // 편집 중인 직원 상태
-  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  const [editingEmployee, setEditingEmployee] = useState(null);
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status) => {
     switch (status) {
       case '근무중':
         return 'bg-green-500';
@@ -137,7 +138,7 @@ export function AgencyTeamPage() {
     }
   };
 
-  const getRoleColor = (role: string) => {
+  const getRoleColor = (role) => {
     switch (role) {
       case '담당자':
         return 'bg-blue-100 text-blue-700';
@@ -151,13 +152,13 @@ export function AgencyTeamPage() {
   };
 
   // 역할 필터 토글 핸들러
-  const handleRoleToggle = (role: RoleFilter) => {
+  const handleRoleToggle = (role) => {
     if (role === '전체') {
       setSelectedRoles(['전체']);
       return;
     }
 
-    const otherRoles: RoleFilter[] = ['담당자', '작가', '어시스트'];
+    const otherRoles = ['담당자', '작가', '어시스트'];
     let newSelectedRoles = [...selectedRoles.filter(r => r !== '전체')];
 
     if (newSelectedRoles.includes(role)) {
@@ -183,22 +184,22 @@ export function AgencyTeamPage() {
       return;
     }
 
-    const employee: Employee = {
+    const employee = {
       id: employees.length + 1,
       name: '새 직원',
       role: '담당자',
-      position: '',
+      position,
       email: newEmployee.email,
-      phone: '',
+      phone,
       status: '근무중',
       joinDate: new Date().toISOString().split('T')[0],
-      currentProjects: [],
+      currentProjects,
       participatedProjects: []
     };
 
     setEmployees([...employees, employee]);
     setNewEmployee({
-      email: '',
+      email,
     });
     setIsAddModalOpen(false);
     toast.success(`${employee.name}님을 초대했습니다.`);
@@ -209,15 +210,14 @@ export function AgencyTeamPage() {
     if (!editingEmployee) return;
 
     setEmployees(employees.map(emp => 
-      emp.id === editingEmployee.id ? editingEmployee : emp
-    ));
+      emp.id === editingEmployee.id ? editingEmployee));
     setIsEditModalOpen(false);
     setEditingEmployee(null);
     toast.success('직원 정보가 수정되었습니다.');
   };
 
   // 직원 삭제 핸들러
-  const handleDeleteEmployee = (id: number) => {
+  const handleDeleteEmployee = (id) => {
     if (window.confirm('정말 삭제하시겠습니까?')) {
       setEmployees(employees.filter(emp => emp.id !== id));
       setIsEditModalOpen(false);
@@ -453,7 +453,7 @@ export function AgencyTeamPage() {
 
             {/* Role Filter */}
             <div className="flex items-center gap-2 mb-4">
-              {(['전체', '담당자', '작가', '어시스트'] as RoleFilter[]).map((role) => (
+              {(['전체', '담당자', '작가', '어시스트']).map((role) => (
                 <Button
                   key={role}
                   variant={selectedRoles.includes(role) ? 'default' : 'outline'}
@@ -596,7 +596,7 @@ export function AgencyTeamPage() {
                 <select
                   id="edit-role"
                   value={editingEmployee.role}
-                  onChange={(e) => setEditingEmployee({...editingEmployee, role: e.target.value as '담당자' | '작가' | '어시스트'})}
+                  onChange={(e) => setEditingEmployee({...editingEmployee, role: e.target.value담당자' | '작가' | '어시스트'})}
                   className="w-full px-3 py-2 border border-input rounded-md bg-background"
                 >
                   <option value="담당자">담당자</option>

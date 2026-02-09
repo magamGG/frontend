@@ -13,14 +13,13 @@ import {
   User
 } from 'lucide-react';
 
-/**
- * AdminTeamPage component
- */
+
+
 export function AdminTeamPage() {
   // 메인 작가 목록
   const [mainArtists] = useState([
     {
-      id: 1,
+      id,
       name: '김작가',
       email: 'kim.artist@example.com',
       phone: '010-1234-5678',
@@ -29,10 +28,10 @@ export function AdminTeamPage() {
       joinDate: '2024.03.15',
       status: '활동 중',
       recentActivity: '2시간 전',
-      completedProjects: 12,
+      completedProjects,
     },
     {
-      id: 2,
+      id,
       name: '이작가',
       email: 'lee.artist@example.com',
       phone: '010-2345-6789',
@@ -41,10 +40,10 @@ export function AdminTeamPage() {
       joinDate: '2024.06.20',
       status: '활동 중',
       recentActivity: '1일 전',
-      completedProjects: 8,
+      completedProjects,
     },
     {
-      id: 3,
+      id,
       name: '박작가',
       email: 'park.artist@example.com',
       phone: '010-3456-7890',
@@ -53,7 +52,7 @@ export function AdminTeamPage() {
       joinDate: '2023.12.10',
       status: '활동 중',
       recentActivity: '5시간 전',
-      completedProjects: 15,
+      completedProjects,
     },
   ]);
 
@@ -87,7 +86,7 @@ export function AdminTeamPage() {
                   <Briefcase className="w-6 h-6 text-blue-600" />
                 </div>
                 <div>
-                  <span className="text-sm font-medium text-muted-foreground block">진행 중인 작품</span>
+                  <span className="text-sm font-medium text-muted-foreground block">진행 중인 프로젝트</span>
                   <p className="text-3xl font-bold text-foreground">
                     {mainArtists.reduce((sum, artist) => sum + artist.projects.length, 0)}개
                   </p>
@@ -147,7 +146,7 @@ export function AdminTeamPage() {
                   <div className="flex items-center gap-2 mb-3">
                     <Briefcase className="w-4 h-4 text-muted-foreground" />
                     <span className="text-sm font-medium text-muted-foreground">
-                      진행 중인 작품 ({artist.projects.length})
+                      진행 중인 프로젝트 ({artist.projects.length})
                     </span>
                   </div>
                   <div className="space-y-2">

@@ -46,38 +46,67 @@ export const HeaderTitle = styled.h1`
   margin: 0;
 `;
 
+// 정신/신체 토글
+export const DetailTabWrap = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 8px;
+  padding: 2px;
+  background-color: #e8eaed;
+`;
+
+export const DetailTabButton = styled.button`
+  padding: 6px 14px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background-color: ${props => props.$active ? 'white' : 'transparent'};
+  color: ${props => props.$active ? '#1f2328' : '#6E8FB3'};
+  box-shadow: ${props => props.$active ? '0 1px 2px rgba(0,0,0,0.06)' : 'none'};
+  transition: all 0.2s ease;
+
+  &:hover {
+    color: #1f2328;
+  }
+`;
+
 // 통계 그리드 (데스크탑: 4열)
 export const StatisticsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+  gap: 32px;
   margin-bottom: 8px;
 
   @media (max-width: 1024px) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
   }
 
   @media (max-width: 600px) {
     grid-template-columns: 1fr;
+    gap: 20px;
   }
 `;
 
 export const StatisticsCard = styled.div`
   padding: 16px;
   background-color: white;
-  border: none;
+  border: ${props => props.$hasBorder ? '1px solid #e2e8f0' : 'none'};
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
+  border-radius: 12px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  justify-content: flex-start;
+  align-items: flex-start;
+  min-height: 80px;
 `;
 
 export const StatisticsIcon = styled.div`
   display: flex;
   align-items: center;
-  gap: 4px;
-  margin-bottom: 4px;
   color: ${props => {
     switch (props.$color) {
       case 'red':
@@ -99,12 +128,15 @@ export const StatisticsLabel = styled.div`
       case 'orange':
         return '#ea580c';
       case 'green':
-        return '#16a34a';
+        return '#5a6067';
       default:
         return '#6E8FB3';
     }
   }};
-  margin-bottom: 4px;
+  line-height: 1.2;
+  margin-bottom: 8px;
+  text-align: left;
+  width: 100%;
 `;
 
 export const StatisticsValue = styled.div`
@@ -122,6 +154,9 @@ export const StatisticsValue = styled.div`
         return '#1F2328';
     }
   }};
+  line-height: 1.2;
+  text-align: left;
+  width: 100%;
 `;
 
 // 필터 카드
@@ -155,17 +190,19 @@ export const FilterButtonGroup = styled.div`
 
 export const FilterButton = styled.button`
   height: 36px;
-  font-size: 0.75rem;
-  padding: 0 12px;
-  border-radius: 4px;
+  font-size: 0.875rem;
+  padding: 0 16px;
+  border-radius: 8px;
   transition: all 0.2s;
   cursor: pointer;
-  border: 1px solid var(--border);
-  background-color: ${props => props.variant === 'default' ? 'var(--primary)' : 'transparent'};
-  color: ${props => props.variant === 'default' ? 'var(--primary-foreground)' : 'var(--foreground)'};
+  border: none;
+  background-color: ${props => props.$variant === 'default' ? '#3F4A5A' : '#e8eaed'};
+  color: ${props => props.$variant === 'default' ? 'white' : '#1f2328'};
+  font-weight: 500;
+  white-space: nowrap;
 
   &:hover {
-    opacity: 0.8;
+    background-color: ${props => props.$variant === 'default' ? '#3F4A5A' : '#d4d8dc'};
   }
 `;
 

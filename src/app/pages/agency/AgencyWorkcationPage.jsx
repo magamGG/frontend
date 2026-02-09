@@ -17,16 +17,14 @@ import {
   FileText
 } from 'lucide-react';
 import { mockWorkcationMembers } from '@/app/data/mockData';
+import { WorkcationMember } from '@/app/types';
 
-/**
- * AgencyWorkcationPage component
- */
 export function AgencyWorkcationPage() {
   const [selectedMember, setSelectedMember] = useState(null);
   const [filterRole, setFilterRole] = useState('all');
 
   // Calculate days remaining for each member
-  const getDaysRemaining = (endDate: string) => {
+  const getDaysRemaining = (endDate) => {
     const today = new Date('2026-01-16');
     const end = new Date(endDate);
     const diffTime = end.getTime() - today.getTime();
@@ -34,12 +32,7 @@ export function AgencyWorkcationPage() {
     return diffDays;
   };
 
-  /**
-   * Get role display name
-   * @param {string} role - Role string
-   * @param {string} [customRole] - Custom role string
-   * @returns {string} Display name for role
-   */
+  // Get role display name
   const getRoleDisplay = (role, customRole) => {
     if (role === 'assist' && customRole) return customRole;
     const roleMap = {
@@ -52,11 +45,7 @@ export function AgencyWorkcationPage() {
     return roleMap[role] || role;
   };
 
-  /**
-   * Get priority color
-   * @param {string} priority - Priority string
-   * @returns {string} CSS classes for priority color
-   */
+  // Get priority color
   const getPriorityColor = (priority) => {
     switch (priority) {
       case 'high':
@@ -83,7 +72,7 @@ export function AgencyWorkcationPage() {
     ),
     totalTasks: mockWorkcationMembers.reduce((acc, m) => acc + m.tasks.length, 0),
     completedTasks: mockWorkcationMembers.reduce(
-      (acc, m) => acc + m.tasks.filter(t => t.progress === 100).length, 
+      (acc, m) => acc + (m.completedTaskCount ?? m.tasks?.filter(t => t.progress === 100).length ?? 0),
       0
     ),
   };
@@ -172,9 +161,10 @@ export function AgencyWorkcationPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredMembers.map((member) => {
             const daysRemaining = getDaysRemaining(member.endDate);
-            const avgProgress = Math.round(
-              member.tasks.reduce((acc, t) => acc + t.progress, 0) / member.tasks.length
-            );
+            // 전체 작업 진행률: (완료/전체)*100. API 연동 시 activeTaskCount·completedTaskCount 사용, 목업은 tasks 평균
+            const total = member.activeTaskCount ?? member.tasks?.length ?? 0;
+            const completed = member.completedTaskCount ?? member.tasks?.filter(t => t.progress === 100).length ?? 0;
+            const avgProgress = total > 0 ? Math.round((completed / total) * 100) : (member.tasks?.length ? Math.round(member.tasks.reduce((acc, t) => acc + t.progress, 0) / member.tasks.length) : 0);
 
             return (
               <Card 
@@ -253,7 +243,7 @@ export function AgencyWorkcationPage() {
                   <div className="flex items-center justify-between pt-2 border-t border-[#DADDE1]">
                     <div className="flex items-center gap-4 text-sm">
                       <span className="text-[#6E8FB3]">
-                        작업 <span className="font-semibold text-[#1F2328]">{member.tasks.length}개</span>
+                        작업 <span className="font-semibold text-[#1F2328]">{member.activeTaskCount ?? member.taskCount ?? member.tasks?.length ?? 0}개</span>
                       </span>
                     </div>
                     <Button 

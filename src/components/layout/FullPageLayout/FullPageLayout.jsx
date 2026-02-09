@@ -3,8 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Home, Briefcase, Calendar, Users, Palmtree, Heart, Plane, Bell, User, ClipboardCheck, Activity, UserCog, HeartPulse } from 'lucide-react';
 import { Header } from '../Header';
 import { MyPage } from '@/pages/MyPage';
-import { AdminMyPage } from '@/pages/AdminMyPage';
-import { AgencyMyPage } from '@/pages/AgencyMyPage';
+import { AdminMyPage } from '@/pages/admin/AdminMyPage';
+import { AgencyMyPage } from '@/pages/agency/AgencyMyPage';
 import { LeaveRequestModal } from '@/components/modals/LeaveRequestModal';
 import {
   LayoutContainer,
@@ -55,7 +55,6 @@ const getIconForSection = (sectionId, index) => {
   if (sectionId === 'manager-projects') return Briefcase;
   if (sectionId === 'manager-calendar') return Calendar;
   if (sectionId === 'manager-team') return Users;
-  if (sectionId === 'manager-attendance') return ClipboardCheck;
   
   // 작가 페이지 아이콘 매핑
   if (sectionId === 'individual-dashboard') return Home;

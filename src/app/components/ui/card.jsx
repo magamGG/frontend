@@ -2,15 +2,12 @@ import * as React from "react";
 
 import { cn } from "./utils";
 
-/**
- * Card component
- */
 function Card({ className, ...props }) {
   return (
     <div
       data-slot="card"
       className={cn(
-        "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border",
+        "bg-card text-card-foreground flex flex-col gap-0 rounded-xl border",
         className,
       )}
       {...props}
@@ -18,9 +15,6 @@ function Card({ className, ...props }) {
   );
 }
 
-/**
- * CardHeader component
- */
 function CardHeader({ className, ...props }) {
   return (
     <div
@@ -34,9 +28,6 @@ function CardHeader({ className, ...props }) {
   );
 }
 
-/**
- * CardTitle component
- */
 function CardTitle({ className, ...props }) {
   return (
     <h4
@@ -47,9 +38,6 @@ function CardTitle({ className, ...props }) {
   );
 }
 
-/**
- * CardDescription component
- */
 function CardDescription({ className, ...props }) {
   return (
     <p
@@ -60,9 +48,6 @@ function CardDescription({ className, ...props }) {
   );
 }
 
-/**
- * CardAction component
- */
 function CardAction({ className, ...props }) {
   return (
     <div
@@ -76,9 +61,6 @@ function CardAction({ className, ...props }) {
   );
 }
 
-/**
- * CardContent component
- */
 function CardContent({ className, ...props }) {
   return (
     <div
@@ -89,9 +71,6 @@ function CardContent({ className, ...props }) {
   );
 }
 
-/**
- * CardFooter component
- */
 function CardFooter({ className, ...props }) {
   return (
     <div

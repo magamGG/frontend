@@ -25,13 +25,6 @@ const badgeVariants = cva(
   },
 );
 
-/**
- * Badge component
- * @param {Object} props
- * @param {string} [props.className] - Additional CSS classes
- * @param {string} [props.variant] - Badge variant (default, secondary, destructive, outline)
- * @param {boolean} [props.asChild] - Render as child component
- */
 function Badge({
   className,
   variant,

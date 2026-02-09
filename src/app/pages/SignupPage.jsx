@@ -6,30 +6,29 @@ import { Badge } from '@/app/components/ui/badge';
 import { Mail, Lock, User, Phone, Building, Briefcase, Users, Edit, Check, Palette, Pen, BookOpen, Paintbrush, ArrowLeft } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
 
-/**
- * SignupPage component
- * @param {Object} props
- * @param {Function} props.onSignup - Callback when signup is successful
- * @param {Function} props.onBackToLogin - Callback to go back to login page
- */
+
+
+
+
+
 const roles = [
   {
-    id: 'artist',
-    icon: Edit,
+    id,
+    icon,
     title: '아티스트',
     description: '작가 및 어시스트',
     color: 'bg-purple-500',
   },
   {
-    id: 'manager',
-    icon: Briefcase,
+    id,
+    icon,
     title: '담당자',
     description: '프로젝트 매니저/편집자',
     color: 'bg-blue-500',
   },
   {
-    id: 'agency',
-    icon: Building,
+    id,
+    icon,
     title: '에이전시',
     description: '제작사/에이전시 운영자',
     color: 'bg-green-500',
@@ -40,40 +39,45 @@ const artistSpecializations = [
   {
     value: 'webtoon-writer',
     label: '웹툰 작가',
-    icon: Pen,
+    icon,
   },
   {
     value: 'webnovel-writer',
     label: '웹소설 작가',
-    icon: BookOpen,
+    icon,
   },
   {
-    value: 'assistant-coloring' as ArtistSpecialization,
+    value: 'assistant-coloring',
     label: '어시스트 - 채색',
-    icon: Palette,
+    icon,
   },
   {
-    value: 'assistant-lighting' as ArtistSpecialization,
+    value: 'assistant-lighting',
     label: '어시스트 - 조명',
-    icon: Paintbrush,
+    icon,
   },
   {
-    value: 'assistant-background' as ArtistSpecialization,
+    value: 'assistant-background',
     label: '어시스트 - 배경',
-    icon: Paintbrush,
+    icon,
   },
   {
-    value: 'assistant-lineart' as ArtistSpecialization,
+    value: 'assistant-lineart',
     label: '어시스트 - 선화',
-    icon: Paintbrush,
+    icon,
   },
   {
-    value: 'assistant-other' as ArtistSpecialization,
+    value: 'assistant-other',
     label: '어시스트 - 기타',
-    icon: Paintbrush,
+    icon,
   },
 ];
 
+/**
+ * @param {Object} props
+ * @param {Function} props.onSignup
+ * @param {Function} props.onBackToLogin
+ */
 export function SignupPage({ onSignup, onBackToLogin }) {
   const [selectedRole, setSelectedRole] = useState(null);
   const [artistSpecialization, setArtistSpecialization] = useState(null);
@@ -84,13 +88,10 @@ export function SignupPage({ onSignup, onBackToLogin }) {
     password: '',
     confirmPassword: '',
     phone: '',
+    address: '',
     organization: '',
   });
 
-  /**
-   * Handle input change
-   * @param {React.ChangeEvent<HTMLInputElement>} e - Input change event
-   */
   const handleInputChange = (e) => {
     setFormData({
       ...formData,
@@ -98,10 +99,6 @@ export function SignupPage({ onSignup, onBackToLogin }) {
     });
   };
 
-  /**
-   * Handle role change
-   * @param {string} role - Selected role
-   */
   const handleRoleChange = (role) => {
     setSelectedRole(role);
     // Reset artist specialization when changing role
@@ -110,10 +107,6 @@ export function SignupPage({ onSignup, onBackToLogin }) {
     }
   };
 
-  /**
-   * Handle form submission
-   * @param {React.FormEvent} e - Form event
-   */
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!selectedRole) {
@@ -143,8 +136,8 @@ export function SignupPage({ onSignup, onBackToLogin }) {
 
       {/* Back Button - Fixed Top Left */}
       <motion.button
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
+        initial={{ opacity, x: -20 }}
+        animate={{ opacity, x: 0 }}
         transition={{ delay: 0.2 }}
         onClick={onBackToLogin}
         className="fixed top-8 left-8 z-50 flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors"
@@ -154,8 +147,8 @@ export function SignupPage({ onSignup, onBackToLogin }) {
       </motion.button>
 
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity, y: 20 }}
+        animate={{ opacity, y: 0 }}
         transition={{ duration: 0.6 }}
         className="w-full max-w-4xl px-6 relative z-10"
       >
@@ -164,7 +157,7 @@ export function SignupPage({ onSignup, onBackToLogin }) {
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+            transition={{ delay: 0.2, type, stiffness: 200 }}
             className="inline-flex items-center justify-center w-14 h-14 bg-primary rounded-2xl shadow-2xl mb-3"
           >
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -194,8 +187,8 @@ export function SignupPage({ onSignup, onBackToLogin }) {
 
         {/* Signup Card */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity, y: 20 }}
+          animate={{ opacity, y: 0 }}
           transition={{ delay: 0.5 }}
         >
           <Card className="p-5 shadow-2xl">
@@ -250,9 +243,9 @@ export function SignupPage({ onSignup, onBackToLogin }) {
               {/* Artist Specialization (only shown when artist role is selected) */}
               {selectedRole === 'artist' && (
                 <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
+                  initial={{ opacity, height: 0 }}
+                  animate={{ opacity, height: 'auto' }}
+                  exit={{ opacity, height: 0 }}
                   className="space-y-2"
                 >
                   <label className="text-sm font-medium text-foreground">세부 직무 선택 *</label>
@@ -286,9 +279,9 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                   {/* Custom Specialization Input (shown when "기타" is selected) */}
                   {artistSpecialization === 'assistant-other' && (
                     <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
+                      initial={{ opacity, height: 0 }}
+                      animate={{ opacity, height: 'auto' }}
+                      exit={{ opacity, height: 0 }}
                       className="space-y-1.5"
                     >
                       <label className="text-xs font-medium text-foreground">기타 직무 입력 *</label>
@@ -345,6 +338,21 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                       required
                     />
                   </div>
+                </div>
+              </div>
+
+              {/* Address */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground">주소</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleInputChange}
+                    placeholder="주소를 입력하세요 (예: 서울시 강남구 역삼동 123-45)"
+                    className="w-full pl-3 pr-3 py-2 text-sm bg-muted/30 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground placeholder:text-muted-foreground"
+                  />
                 </div>
               </div>
 

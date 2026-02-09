@@ -22,24 +22,19 @@ const toggleVariants = cva(
       },
     },
     defaultVariants: {
-      variant: "default",
-      size: "default",
+      variant,
+      size,
     },
   },
 );
 
-/**
- * Toggle component
- * @param {Object} props
- * @param {string} [props.variant] - Toggle variant (default, outline)
- * @param {string} [props.size] - Toggle size (default, sm, lg)
- */
 function Toggle({
   className,
   variant,
   size,
   ...props
-}) {
+} &
+  ) {
   return (
     <TogglePrimitive.Root
       data-slot="toggle"

@@ -10,9 +10,12 @@ import { UnscreenedDetailPage } from '@/app/pages/health/UnscreenedDetailPage';
 import { SurveyListManagementPage } from '@/app/pages/health/SurveyListManagementPage';
 import { PieChart, Pie, Cell, Tooltip } from 'recharts';
 
-/**
- * AgencyHealthPage component
- */
+// 검진 모니터링 데이터 타입
+
+
+// 미검진 인원 데이터 타입
+
+
 export function AgencyHealthPage() {
   // 상세 페이지 상태 관리
   const [currentView, setCurrentView] = useState('main');
@@ -21,79 +24,79 @@ export function AgencyHealthPage() {
   const [nextCheckupDate] = useState({
     mentalCheckup: '2026.01.25',
     physicalCheckup: '2026.02.01',
-    daysUntilMental: 5,
-    daysUntilPhysical: 12,
+    daysUntilMental,
+    daysUntilPhysical,
   });
 
   // 심층 검진 검사 데이터
   const [deepCheckupData] = useState({
     mental: {
-      totalEmployees: 12,
-      completed: 8,
-      pending: 4,
-      completionRate: 67,
-      lastUpdated: '2026.01.18 14:30',
+      totalEmployees,
+      completed,
+      pending,
+      completionRate,
+      lastUpdated: '2026.01.18 14,
       completedList: [
-        { id: 1, name: '송도동', date: '2026.01.15', score: 12, status: '주의' },
-        { id: 2, name: '박아시', date: '2026.01.16', score: 5, status: '정상' },
-        { id: 3, name: '이직가', date: '2026.01.17', score: 3, status: '정상' },
-        { id: 4, name: '최소연', date: '2026.01.18', score: 8, status: '주의' },
-        { id: 5, name: '김작가', date: '2026.01.15', score: 2, status: '정상' },
-        { id: 6, name: '정원화', date: '2026.01.16', score: 15, status: '위험' },
-        { id: 7, name: '한민수', date: '2026.01.17', score: 6, status: '정상' },
-        { id: 8, name: '윤서진', date: '2026.01.18', score: 9, status: '주의' },
+        { id, name: '송도동', date: '2026.01.15', score, status: '주의' },
+        { id, name: '박아시', date: '2026.01.16', score, status: '정상' },
+        { id, name: '이직가', date: '2026.01.17', score, status: '정상' },
+        { id, name: '최소연', date: '2026.01.18', score, status: '주의' },
+        { id, name: '김작가', date: '2026.01.15', score, status: '정상' },
+        { id, name: '정원화', date: '2026.01.16', score, status: '위험' },
+        { id, name: '한민수', date: '2026.01.17', score, status: '정상' },
+        { id, name: '윤서진', date: '2026.01.18', score, status: '주의' },
       ].sort((a, b) => b.score - a.score), // 점수 내림차순 정렬
     },
     physical: {
-      totalEmployees: 12,
-      completed: 10,
-      pending: 2,
-      completionRate: 83,
-      lastUpdated: '2026.01.18 15:45',
+      totalEmployees,
+      completed,
+      pending,
+      completionRate,
+      lastUpdated: '2026.01.18 15,
       completedList: [
-        { id: 1, name: '송도동', date: '2026.01.14', score: 18, status: '위험' },
-        { id: 2, name: '박아시', date: '2026.01.15', score: 8, status: '정상' },
-        { id: 3, name: '이직가', date: '2026.01.15', score: 12, status: '주의' },
-        { id: 4, name: '최소연', date: '2026.01.16', score: 5, status: '정상' },
-        { id: 5, name: '김작가', date: '2026.01.16', score: 3, status: '정상' },
-        { id: 6, name: '정원화', date: '2026.01.17', score: 7, status: '정상' },
-        { id: 7, name: '한민수', date: '2026.01.17', score: 11, status: '주의' },
-        { id: 8, name: '윤서진', date: '2026.01.18', score: 4, status: '정상' },
-        { id: 9, name: '강태희', date: '2026.01.18', score: 6, status: '정상' },
-        { id: 10, name: '조민아', date: '2026.01.18', score: 9, status: '주의' },
+        { id, name: '송도동', date: '2026.01.14', score, status: '위험' },
+        { id, name: '박아시', date: '2026.01.15', score, status: '정상' },
+        { id, name: '이직가', date: '2026.01.15', score, status: '주의' },
+        { id, name: '최소연', date: '2026.01.16', score, status: '정상' },
+        { id, name: '김작가', date: '2026.01.16', score, status: '정상' },
+        { id, name: '정원화', date: '2026.01.17', score, status: '정상' },
+        { id, name: '한민수', date: '2026.01.17', score, status: '주의' },
+        { id, name: '윤서진', date: '2026.01.18', score, status: '정상' },
+        { id, name: '강태희', date: '2026.01.18', score, status: '정상' },
+        { id, name: '조민아', date: '2026.01.18', score, status: '주의' },
       ].sort((a, b) => b.score - a.score), // 점수 내림차순 정렬
     },
   });
 
   // 정신 건강 점수 분포 데이터 (도넛 차트용)
   const mentalPieData = [
-    { name: '정상', value: 3, color: '#10B981' },
-    { name: '주의', value: 3, color: '#F59E0B' },
-    { name: '위험', value: 2, color: '#EF4444' },
+    { name: '정상', value, color: '#10B981' },
+    { name: '주의', value, color: '#F59E0B' },
+    { name: '위험', value, color: '#EF4444' },
   ];
 
   // 신체 건강 점수 분포 데이터 (도넛 차트용)
   const physicalPieData = [
-    { name: '정상', value: 6, color: '#10B981' },
-    { name: '주의', value: 3, color: '#F59E0B' },
-    { name: '위험', value: 1, color: '#EF4444' },
+    { name: '정상', value, color: '#10B981' },
+    { name: '주의', value, color: '#F59E0B' },
+    { name: '위험', value, color: '#EF4444' },
   ];
 
   // 검진 모니터링 데이터 (도넛 차트용) - 미검진 인원 추가
   const monitoringStatusData = [
-    { name: '정상', value: 5, color: '#10B981' },
-    { name: '주의', value: 4, color: '#F59E0B' },
-    { name: '위험', value: 3, color: '#EF4444' },
-    { name: '미검진', value: 4, color: '#9CA3AF' },
+    { name: '정상', value, color: '#10B981' },
+    { name: '주의', value, color: '#F59E0B' },
+    { name: '위험', value, color: '#EF4444' },
+    { name: '미검진', value, color: '#9CA3AF' },
   ];
 
   // 미검진 인원 데이터 - 지연 일수 내림차순 정렬
   const [unscreenedData] = useState(
     [
-      { id: 1, name: '김담당', team: '', daysOverdue: 7 },
-      { id: 2, name: '서유진', team: '', daysOverdue: 5 },
-      { id: 3, name: '조수연', team: '', daysOverdue: 3 },
-      { id: 4, name: '김희동', team: '', daysOverdue: 1 },
+      { id, name: '김담당', team, daysOverdue,
+      { id, name: '서유진', team, daysOverdue,
+      { id, name: '조수연', team, daysOverdue,
+      { id, name: '김희동', team, daysOverdue,
     ].sort((a, b) => b.daysOverdue - a.daysOverdue) // 지연 일수 내림차순 정렬
   );
 

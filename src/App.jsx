@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Toaster } from 'sonner';
 import { FullPageLayout } from '@/components/layout/FullPageLayout';
 import { LoginPage } from '@/pages/Login';
@@ -8,36 +8,47 @@ import { JoinAgencyRequestPage } from '@/pages/JoinAgencyRequest';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { ProjectProvider } from '@/contexts/ProjectContext';
+import useAuthStore from '@/store/authStore';
 
-// Import artist pages
-import { ArtistDashboardPage } from '@/pages/ArtistDashboard';
-import { ArtistProjectsPage } from '@/pages/ArtistProjects';
-import { ArtistCalendarPage } from '@/pages/ArtistCalendar';
-import { ArtistWorkationPage } from '@/pages/ArtistWorkation';
-import { ArtistTeamPage } from '@/pages/ArtistTeam';
-import { ArtistHealthPage } from '@/pages/ArtistHealth';
-import { AttendancePage } from '@/pages/Attendance';
+// Lazy load artist pages
+const ArtistDashboardPage = lazy(() => import('@/pages/artist/ArtistDashboard').then(m => ({ default: m.ArtistDashboardPage })));
+const ArtistProjectsPage = lazy(() => import('@/pages/artist/ArtistProjects').then(m => ({ default: m.ArtistProjectsPage })));
+const ArtistCalendarPage = lazy(() => import('@/pages/artist/ArtistCalendar').then(m => ({ default: m.ArtistCalendarPage })));
+const ArtistWorkationPage = lazy(() => import('@/pages/artist/ArtistWorkation').then(m => ({ default: m.ArtistWorkationPage })));
+const ArtistTeamPage = lazy(() => import('@/pages/artist/ArtistTeam').then(m => ({ default: m.ArtistTeamPage })));
+const ArtistHealthPage = lazy(() => import('@/pages/artist/ArtistHealth').then(m => ({ default: m.ArtistHealthPage })));
 
-// Import admin pages
-import { AdminDashboardPage } from '@/pages/AdminDashboard';
-import { AdminProjectsPage } from '@/pages/AdminProjects';
-import { AdminCalendarPage } from '@/pages/AdminCalendar';
-import { AdminTeamPage } from '@/pages/AdminTeam';
-import { AdminHealthPage } from '@/pages/AdminHealth';
-import { AdminPersonalHealthPage } from '@/pages/AdminPersonalHealth';
-import { AdminAbsenteePage } from '@/pages/AdminAbsentee';
-import { AdminMyPage } from '@/pages/AdminMyPage';
-import { AdminWorkcationPage } from '@/pages/AdminWorkcation';
+// Lazy load admin pages
+const AdminDashboardPage = lazy(() => import('@/pages/admin/AdminDashboard').then(m => ({ default: m.AdminDashboardPage })));
+const AdminProjectsPage = lazy(() => import('@/pages/admin/AdminProjects').then(m => ({ default: m.AdminProjectsPage })));
+const AdminCalendarPage = lazy(() => import('@/pages/admin/AdminCalendar').then(m => ({ default: m.AdminCalendarPage })));
+const AdminTeamPage = lazy(() => import('@/pages/admin/AdminTeam').then(m => ({ default: m.AdminTeamPage })));
+const AdminHealthPage = lazy(() => import('@/pages/admin/AdminHealth').then(m => ({ default: m.AdminHealthPage })));
+const AdminPersonalHealthPage = lazy(() => import('@/pages/admin/AdminPersonalHealth').then(m => ({ default: m.AdminPersonalHealthPage })));
+const AdminAbsenteePage = lazy(() => import('@/pages/admin/AdminAbsentee').then(m => ({ default: m.AdminAbsenteePage })));
+const AdminMyPage = lazy(() => import('@/pages/admin/AdminMyPage').then(m => ({ default: m.AdminMyPage })));
+const AdminWorkcationPage = lazy(() => import('@/pages/admin/AdminWorkcation').then(m => ({ default: m.AdminWorkcationPage })));
 
-// Import agency pages
-import { AgencyDashboardPage } from '@/pages/AgencyDashboard';
-import { AgencyProjectsPage } from '@/pages/AgencyProjects';
-import { AgencyTeamPage } from '@/pages/AgencyTeam';
-import { AgencyApprovalsPage } from '@/pages/AgencyApprovals';
-import { AgencyWorkcationPage } from '@/pages/AgencyWorkcation';
-import { AgencyMyPage } from '@/pages/AgencyMyPage';
-import { AgencyHealthPage } from '@/pages/AgencyHealth';
-import { AgencyAssignmentPage } from '@/pages/AgencyAssignment';
+// Lazy load agency pages
+const AgencyDashboardPage = lazy(() => import('@/pages/agency/AgencyDashboard').then(m => ({ default: m.AgencyDashboardPage })));
+const AgencyProjectsPage = lazy(() => import('@/pages/agency/AgencyProjects').then(m => ({ default: m.AgencyProjectsPage })));
+const AgencyTeamPage = lazy(() => import('@/pages/agency/AgencyTeam').then(m => ({ default: m.AgencyTeamPage })));
+const AgencyApprovalsPage = lazy(() => import('@/pages/agency/AgencyApprovals').then(m => ({ default: m.AgencyApprovalsPage })));
+const AgencyWorkcationPage = lazy(() => import('@/pages/agency/AgencyWorkcation').then(m => ({ default: m.AgencyWorkcationPage })));
+const AgencyMyPage = lazy(() => import('@/pages/agency/AgencyMyPage').then(m => ({ default: m.AgencyMyPage })));
+const AgencyHealthPage = lazy(() => import('@/pages/agency/AgencyHealth').then(m => ({ default: m.AgencyHealthPage })));
+const AgencyAssignmentPage = lazy(() => import('@/pages/agency/AgencyAssignment').then(m => ({ default: m.AgencyAssignmentPage })));
+const AgencyLeaveSettingsPage = lazy(() => import('@/pages/agency/AgencyLeaveSettings').then(m => ({ default: m.AgencyLeaveSettingsPage })));
+
+// Loading fallback component
+const PageLoadingFallback = () => (
+  <div className="flex items-center justify-center h-screen bg-gray-50">
+    <div className="text-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+      <p className="text-gray-600">페이지 로딩 중...</p>
+    </div>
+  </div>
+);
 
 /**
  * @typedef {'login' | 'signup' | 'forgot-password' | 'dashboard' | 'join-request'} AuthView
@@ -48,31 +59,91 @@ export default function App() {
   const [authView, setAuthView] = useState('login');
   const [userRole, setUserRole] = useState(null);
   const [hasAgency, setHasAgency] = useState(true); // Track if user has agency affiliation
+  const [isLoading, setIsLoading] = useState(true); // 로딩 상태 (새로고침 시 깜빡임 방지)
+
+  // Zustand store에서 저장된 인증 정보 가져오기
+  const { user, token, isAuthenticated, logout: storeLogout } = useAuthStore();
+
+  // 새로고침 시 로그인 화면으로 이동
+  useEffect(() => {
+    const restoreSession = () => {
+      // 새로고침 시 항상 로그인 화면으로 이동
+      // localStorage에 저장된 인증 정보 초기화
+      if (token || isAuthenticated || user) {
+        storeLogout();
+      }
+      
+      setAuthView('login');
+      setUserRole(null);
+      setHasAgency(false);
+      setIsLoading(false);
+    };
+    
+    restoreSession();
+  }, []);
 
   /**
-   * @param {UserRole} role
-   * @param {boolean} [affiliated=true]
+   * @param {string} memberRole - 백엔드에서 받은 실제 MEMBER_ROLE 값 (예: "웹툰 작가", "담당자", "에이전시 관리자")
+   * @param {number|null} agencyNo - AGENCY_NO 값 (null일 수 있음)
    */
-  const handleLogin = (role, affiliated = true) => {
-    setUserRole(role);
-    setHasAgency(affiliated);
+  const handleLogin = (memberRole, agencyNo) => {
+    // memberRole이 없으면 기본값 처리
+    if (!memberRole) {
+      console.error('memberRole이 없습니다.');
+      return;
+    }
     
-    if (!affiliated && (role === 'individual' || role === 'manager')) {
-      // If no agency affiliation, go to join request page
-      setAuthView('join-request');
+    // 아티스트/담당자 역할 목록
+    const artistAndManagerRoles = [
+      '웹툰 작가',
+      '웹소설 작가',
+      '어시스트 - 채색',
+      '어시스트 - 조명',
+      '어시스트 - 배경',
+      '어시스트 - 선화',
+      '어시스트- 기타',
+      '담당자'
+    ];
+    
+    // 프론트엔드에서 사용할 역할 타입 매핑
+    let roleType = null;
+    let hasAgency = agencyNo !== null && agencyNo !== undefined;
+    
+    if (memberRole === '에이전시 관리자') {
+      // 에이전시 관리자는 항상 대시보드로 이동
+      roleType = 'agency';
+      setAuthView('dashboard');
+    } else if (artistAndManagerRoles.includes(memberRole)) {
+      // 아티스트/담당자 역할인 경우
+      if (!hasAgency) {
+        // AGENCY_NO가 NULL인 경우 비소속 에이전시 가입 요청 페이지로 이동
+        roleType = memberRole === '담당자' ? 'manager' : 'individual';
+        setAuthView('join-request');
+      } else {
+        // AGENCY_NO가 NULL이 아닌 경우 담당자/아티스트 대시보드로 이동
+        roleType = memberRole === '담당자' ? 'manager' : 'individual';
+        setAuthView('dashboard');
+      }
     } else {
+      // 알 수 없는 역할인 경우 기본값으로 처리
+      roleType = 'individual';
       setAuthView('dashboard');
     }
+    
+    setUserRole(roleType);
+    setHasAgency(hasAgency);
   };
 
   const handleSignup = () => {
-    // After successful signup, redirect to dashboard
-    setUserRole('individual'); // Default role for signup
-    setHasAgency(true);
-    setAuthView('dashboard');
+    // 회원가입 완료 후 로그인 페이지로 리다이렉션
+    setAuthView('login');
   };
 
   const handleLogout = () => {
+    // Zustand store에서 로그아웃 (localStorage 클리어)
+    storeLogout();
+    
+    // 로컬 상태 초기화
     setUserRole(null);
     setHasAgency(true);
     setAuthView('login');
@@ -90,10 +161,10 @@ export default function App() {
     setAuthView('login');
   };
 
-  const handleJoinRequestSuccess = () => {
-    // After successful join request, go to dashboard
-    setHasAgency(true);
-    setAuthView('dashboard');
+  const handleJoinRequestAck = () => {
+    // 요청 완료 화면에서 "완료" 클릭 시: 대시보드로 가지 않고 로그인 화면으로만 이동.
+    // 에이전시가 new_request를 승인한 뒤, 사용자가 다시 로그인할 때 agencyNo가 있으므로 그때 대시보드로 이동.
+    setAuthView('login');
   };
 
   // Define sections based on user role
@@ -112,7 +183,7 @@ export default function App() {
         },
         {
           id: 'calendar',
-          title: '일정',
+          title: '캘린더',
           content: (props) => <ArtistCalendarPage {...props} />,
         },
         {
@@ -159,11 +230,6 @@ export default function App() {
           title: '작가 건강관리',
           content: <AdminHealthPage />,
         },
-        {
-          id: 'attendance',
-          title: '근태 관리',
-          content: <AttendancePage />,
-        },
       ]
     : userRole === 'agency'
     ? [
@@ -173,11 +239,10 @@ export default function App() {
           title: '대시보드',
           content: <AgencyDashboardPage />,
         },
-        {
-          id: 'projects',
-          title: '전체 프로젝트',
-          content: <AgencyProjectsPage />,
-        },
+        // 전체 프로젝트(에이전시 모든 프로젝트 조회) — MEMBER_ROLE이 에이전시 관리자일 때만 메뉴 노출
+        ...(user?.memberRole === '에이전시 관리자'
+          ? [{ id: 'projects', title: '전체 프로젝트', content: <AgencyProjectsPage /> }]
+          : []),
         {
           id: 'team',
           title: '전체 직원',
@@ -203,6 +268,11 @@ export default function App() {
           title: '할당 관리',
           content: <AgencyAssignmentPage />,
         },
+        {
+          id: 'leave-settings',
+          title: '연차 설정',
+          content: <AgencyLeaveSettingsPage />,
+        },
       ]
     : [
         // All pages - for development/preview
@@ -218,13 +288,13 @@ export default function App() {
         },
         {
           id: 'individual-calendar',
-          title: '작가 일정',
+          title: '작가 캘린더',
           content: (props) => <ArtistCalendarPage {...props} />,
         },
         {
           id: 'manager-dashboard',
           title: '담당자 대시보드',
-          content: <AdminDashboardPage />,
+          content: (props) => <AdminDashboardPage {...props} />,
         },
         {
           id: 'manager-projects',
@@ -240,11 +310,6 @@ export default function App() {
           id: 'manager-team',
           title: '직원 관리',
           content: <AdminTeamPage />,
-        },
-        {
-          id: 'manager-attendance',
-          title: '근태 관리',
-          content: <AttendancePage />,
         },
         {
           id: 'agency-dashboard',
@@ -298,10 +363,27 @@ export default function App() {
         },
       ];
 
+  // 로딩 중일 때 로딩 화면 표시 (깜빡임 방지)
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">로딩 중...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <DndProvider backend={HTML5Backend}>
       <ProjectProvider>
-        <Toaster position="top-right" />
+        <Toaster 
+          position="top-right" 
+          duration={1000}
+          closeButton={false}
+          className="toast-custom"
+        />
         
         {authView === 'login' && (
           <LoginPage 
@@ -322,12 +404,14 @@ export default function App() {
         {authView === 'join-request' && (
           <JoinAgencyRequestPage 
             onBack={handleBackToLogin}
-            onSuccess={handleJoinRequestSuccess}
+            onSuccess={handleJoinRequestAck}
           />
         )}
 
         {authView === 'dashboard' && (
-          <FullPageLayout sections={sections} onLogout={handleLogout} userRole={userRole} />
+          <Suspense fallback={<PageLoadingFallback />}>
+            <FullPageLayout sections={sections} onLogout={handleLogout} userRole={userRole} />
+          </Suspense>
         )}
       </ProjectProvider>
     </DndProvider>

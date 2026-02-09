@@ -12,7 +12,8 @@ export const SearchIcon = styled.div`
   transform: translateY(-50%);
   width: 16px;
   height: 16px;
-  color: rgba(31, 35, 40, 0.4);
+  color: var(--muted-foreground);
+  opacity: 0.6;
 `;
 
 export const AttendanceList = styled.div`
@@ -26,13 +27,13 @@ export const AttendanceList = styled.div`
 
 export const AttendanceItem = styled.div`
   padding: 16px;
-  background-color: #FAFAFA;
+  background-color: var(--card);
   border-radius: 8px;
-  border: 1px solid #DADDE1;
+  border: 1px solid var(--border);
   transition: all 0.2s;
 
   &:hover {
-    border-color: #6E8FB3;
+    border-color: var(--accent);
   }
 `;
 
@@ -51,18 +52,18 @@ export const AttendanceNameGroup = styled.div`
 
 export const AttendanceName = styled.span`
   font-weight: 500;
-  color: #1F2328;
+  color: var(--foreground);
 `;
 
 export const AttendanceDate = styled.p`
   font-size: 14px;
-  color: rgba(31, 35, 40, 0.6);
+  color: var(--muted-foreground);
   margin: 0;
 `;
 
 export const StatsContainer = styled.div`
-  background-color: #FAFAFA;
-  border: 1px solid #DADDE1;
+  background-color: var(--card);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 16px;
   flex-shrink: 0;
@@ -80,18 +81,18 @@ export const StatItem = styled.div``;
 export const StatValue = styled.p`
   font-size: 24px;
   font-weight: bold;
-  color: #1F2328;
+  color: var(--foreground);
   margin: 0;
 `;
 
 export const StatLabel = styled.p`
   font-size: 12px;
-  color: rgba(31, 35, 40, 0.6);
+  color: var(--muted-foreground);
   margin: 0;
 `;
 
 export const EmptyMessage = styled.div`
   text-align: center;
   padding: 32px 0;
-  color: rgba(31, 35, 40, 0.6);
+  color: var(--muted-foreground);
 `;

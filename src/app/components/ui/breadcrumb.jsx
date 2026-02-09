@@ -4,16 +4,10 @@ import { ChevronRight, MoreHorizontal } from "lucide-react";
 
 import { cn } from "./utils";
 
-/**
- * Breadcrumb component
- */
 function Breadcrumb({ ...props }) {
   return <nav aria-label="breadcrumb" data-slot="breadcrumb" {...props} />;
 }
 
-/**
- * BreadcrumbList component
- */
 function BreadcrumbList({ className, ...props }) {
   return (
     <ol
@@ -27,9 +21,6 @@ function BreadcrumbList({ className, ...props }) {
   );
 }
 
-/**
- * BreadcrumbItem component
- */
 function BreadcrumbItem({ className, ...props }) {
   return (
     <li
@@ -40,11 +31,6 @@ function BreadcrumbItem({ className, ...props }) {
   );
 }
 
-/**
- * BreadcrumbLink component
- * @param {Object} props
- * @param {boolean} [props.asChild] - Render as child component
- */
 function BreadcrumbLink({
   asChild,
   className,
@@ -61,9 +47,6 @@ function BreadcrumbLink({
   );
 }
 
-/**
- * BreadcrumbPage component
- */
 function BreadcrumbPage({ className, ...props }) {
   return (
     <span
@@ -71,15 +54,13 @@ function BreadcrumbPage({ className, ...props }) {
       role="link"
       aria-disabled="true"
       aria-current="page"
-      className={cn("text-foreground font-normal", className)}
+      className={cn(className)}
+      style={{ color: 'var(--foreground)', fontWeight: '400' }}
       {...props}
     />
   );
 }
 
-/**
- * BreadcrumbSeparator component
- */
 function BreadcrumbSeparator({
   children,
   className,
@@ -98,9 +79,6 @@ function BreadcrumbSeparator({
   );
 }
 
-/**
- * BreadcrumbEllipsis component
- */
 function BreadcrumbEllipsis({
   className,
   ...props
@@ -110,7 +88,8 @@ function BreadcrumbEllipsis({
       data-slot="breadcrumb-ellipsis"
       role="presentation"
       aria-hidden="true"
-      className={cn("flex size-9 items-center justify-center", className)}
+      className={cn(className)}
+      style={{ display: 'flex', width: '36px', height: '36px', alignItems: 'center', justifyContent: 'center' }}
       {...props}
     >
       <MoreHorizontal className="size-4" />

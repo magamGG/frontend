@@ -8,9 +8,6 @@ import {
 import { cn } from "./utils";
 import { Button, buttonVariants } from "./button";
 
-/**
- * Pagination component
- */
 function Pagination({ className, ...props }) {
   return (
     <nav
@@ -23,9 +20,6 @@ function Pagination({ className, ...props }) {
   );
 }
 
-/**
- * PaginationContent component
- */
 function PaginationContent({
   className,
   ...props
@@ -39,18 +33,13 @@ function PaginationContent({
   );
 }
 
-/**
- * PaginationItem component
- */
 function PaginationItem({ ...props }) {
   return <li data-slot="pagination-item" {...props} />;
 }
 
 /**
- * PaginationLink component
  * @param {Object} props
- * @param {boolean} [props.isActive] - Is active page
- * @param {string} [props.size] - Button size
+ * @param {string} [props.size]
  */
 function PaginationLink({
   className,
@@ -75,9 +64,6 @@ function PaginationLink({
   );
 }
 
-/**
- * PaginationPrevious component
- */
 function PaginationPrevious({
   className,
   ...props
@@ -95,9 +81,6 @@ function PaginationPrevious({
   );
 }
 
-/**
- * PaginationNext component
- */
 function PaginationNext({
   className,
   ...props
@@ -115,9 +98,6 @@ function PaginationNext({
   );
 }
 
-/**
- * PaginationEllipsis component
- */
 function PaginationEllipsis({
   className,
   ...props

@@ -14,9 +14,10 @@ import {
   Briefcase
 } from 'lucide-react';
 
-/**
- * AgencyAssignmentPage component
- */
+
+
+
+
 export function AgencyAssignmentPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedManager, setSelectedManager] = useState(null);
@@ -24,81 +25,74 @@ export function AgencyAssignmentPage() {
 
   // 담당자 목록
   const [managers, setManagers] = useState([
-    { id: 1, name: '김담당자', email: 'kim@agency.com', position: '시니어 매니저', assignedArtists: 5 },
-    { id: 2, name: '이담당자', email: 'lee@agency.com', position: '매니저', assignedArtists: 3 },
-    { id: 3, name: '박담당자', email: 'park@agency.com', position: '주니어 매니저', assignedArtists: 2 },
-    { id: 4, name: '최담당자', email: 'choi@agency.com', position: '매니저', assignedArtists: 4 },
-    { id: 5, name: '정담당자', email: 'jung@agency.com', position: '시니어 매니저', assignedArtists: 6 },
+    { id, name: '김담당자', email: 'kim@agency.com', position: '시니어 매니저', assignedArtists,
+    { id, name: '이담당자', email: 'lee@agency.com', position: '매니저', assignedArtists,
+    { id, name: '박담당자', email: 'park@agency.com', position: '주니어 매니저', assignedArtists,
+    { id, name: '최담당자', email: 'choi@agency.com', position: '매니저', assignedArtists,
+    { id, name: '정담당자', email: 'jung@agency.com', position: '시니어 매니저', assignedArtists,
   ]);
 
   // 작가 목록
-  const [artists, setArtists] = useState<Artist[]>([
+  const [artists, setArtists] = useState([
     {
-      id: 1,
+      id,
       name: '김작가',
       email: 'kim.artist@agency.com',
       phone: '010-1111-2222',
-      projects: 2,
+      projects,
       status: '활동중',
-      assignedManager: managers[0]
-    },
+      assignedManager,
     {
-      id: 2,
+      id,
       name: '이작가',
       email: 'lee.artist@agency.com',
       phone: '010-2222-3333',
-      projects: 3,
+      projects,
       status: '활동중',
-      assignedManager: managers[1]
-    },
+      assignedManager,
     {
-      id: 3,
+      id,
       name: '박작가',
       email: 'park.artist@agency.com',
       phone: '010-3333-4444',
-      projects: 1,
+      projects,
       status: '활동중',
-      assignedManager: managers[2]
-    },
+      assignedManager,
     {
-      id: 4,
+      id,
       name: '최작가',
       email: 'choi.artist@agency.com',
       phone: '010-4444-5555',
-      projects: 0,
+      projects,
       status: '신인',
-      assignedManager: undefined
-    },
+      assignedManager,
     {
-      id: 5,
+      id,
       name: '정작가',
       email: 'jung.artist@agency.com',
       phone: '010-5555-6666',
-      projects: 2,
+      projects,
       status: '휴식',
-      assignedManager: managers[0]
-    },
+      assignedManager,
     {
-      id: 6,
+      id,
       name: '한작가',
       email: 'han.artist@agency.com',
       phone: '010-6666-7777',
-      projects: 4,
+      projects,
       status: '활동중',
-      assignedManager: managers[1]
-    },
+      assignedManager,
     {
-      id: 7,
+      id,
       name: '강작가',
       email: 'kang.artist@agency.com',
       phone: '010-7777-8888',
-      projects: 1,
+      projects,
       status: '신인',
-      assignedManager: undefined
-    },
+      assignedManager,
   ]);
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status) => {
     switch (status) {
       case '활동중':
         return 'bg-green-100 text-green-700';
@@ -111,7 +105,7 @@ export function AgencyAssignmentPage() {
     }
   };
 
-  const handleAssignArtist = (artistId: number) => {
+  const handleAssignArtist = (artistId) => {
     if (!selectedManager) return;
 
     setArtists(prev => prev.map(artist =>
@@ -129,7 +123,7 @@ export function AgencyAssignmentPage() {
     toast.success(`${artists.find(a => a.id === artistId)?.name}를 ${selectedManager.name}에게 배정했습니다.`);
   };
 
-  const handleUnassignArtist = (artistId: number) => {
+  const handleUnassignArtist = (artistId) => {
     const artist = artists.find(a => a.id === artistId);
     if (!artist || !artist.assignedManager || !selectedManager) return;
 
@@ -148,7 +142,7 @@ export function AgencyAssignmentPage() {
     toast.success(`${artist.name}의 담당자 배정을 해제했습니다.`);
   };
 
-  const openAssignModal = (manager: Manager) => {
+  const openAssignModal = (manager) => {
     setSelectedManager(manager);
     setIsAssignModalOpen(true);
   };
@@ -240,16 +234,16 @@ export function AgencyAssignmentPage() {
 
       {/* Assignment Modal */}
       <Dialog open={isAssignModalOpen} onOpenChange={setIsAssignModalOpen}>
-        <DialogContent className="sm:max-w-[700px] max-h-[80vh]">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-[700px] max-h-[85vh] flex flex-col bg-white p-6">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>{selectedManager?.name} - 작가 배정 관리</DialogTitle>
             <DialogDescription>
               담당 작가를 추가하거나 제거할 수 있습니다.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-6 overflow-y-auto max-h-[60vh]">
-            {/* Currently Assigned Artists */}
+          <div className="space-y-6 overflow-y-auto min-h-0 flex-1 pr-1 hide-scrollbar">
+            {/* 담당 작가 - 2명 높이만 보이고 나머지는 스크롤 */}
             <div>
               <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
                 <Users className="w-4 h-4" />
@@ -257,20 +251,20 @@ export function AgencyAssignmentPage() {
               </h3>
               
               {assignedArtists.length > 0 ? (
-                <div className="space-y-2">
+                <div className="overflow-y-auto max-h-[176px] space-y-2 pr-1 hide-scrollbar">
                   {assignedArtists.map((artist) => (
                     <div 
                       key={artist.id}
-                      className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
+                      className="flex items-center justify-between p-3 bg-muted/30 rounded-lg flex-shrink-0"
                     >
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium text-foreground">{artist.name}</span>
+                          <span className="font-medium text-foreground truncate">{artist.name}</span>
                           <Badge className={getStatusColor(artist.status)} style={{ fontSize: '10px' }}>
                             {artist.status}
                           </Badge>
                         </div>
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground truncate">
                           <span>{artist.email}</span>
                           <span>프로젝트: {artist.projects}개</span>
                         </div>
@@ -279,7 +273,7 @@ export function AgencyAssignmentPage() {
                         variant="outline"
                         size="sm"
                         onClick={() => handleUnassignArtist(artist.id)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
                       >
                         <X className="w-4 h-4" />
                       </Button>
@@ -294,7 +288,7 @@ export function AgencyAssignmentPage() {
               )}
             </div>
 
-            {/* Unassigned Artists */}
+            {/* 미배정 작가 - 2명 높이만 보이고 나머지는 스크롤 */}
             <div>
               <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
                 <UserPlus className="w-4 h-4" />
@@ -302,20 +296,20 @@ export function AgencyAssignmentPage() {
               </h3>
               
               {unassignedArtists.length > 0 ? (
-                <div className="space-y-2">
+                <div className="overflow-y-auto max-h-[176px] space-y-2 pr-1 hide-scrollbar">
                   {unassignedArtists.map((artist) => (
                     <div 
                       key={artist.id}
-                      className="flex items-center justify-between p-3 bg-blue-50/50 rounded-lg border border-blue-100"
+                      className="flex items-center justify-between p-3 bg-blue-50/50 rounded-lg border border-blue-100 flex-shrink-0"
                     >
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium text-foreground">{artist.name}</span>
+                          <span className="font-medium text-foreground truncate">{artist.name}</span>
                           <Badge className={getStatusColor(artist.status)} style={{ fontSize: '10px' }}>
                             {artist.status}
                           </Badge>
                         </div>
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground truncate">
                           <span>{artist.email}</span>
                           <span>프로젝트: {artist.projects}개</span>
                         </div>
@@ -324,7 +318,7 @@ export function AgencyAssignmentPage() {
                         variant="outline"
                         size="sm"
                         onClick={() => handleAssignArtist(artist.id)}
-                        className="text-primary hover:bg-primary/10"
+                        className="text-primary hover:bg-primary/10 flex-shrink-0"
                       >
                         <UserPlus className="w-4 h-4 mr-1" />
                         배정
@@ -341,7 +335,7 @@ export function AgencyAssignmentPage() {
             </div>
           </div>
 
-          <div className="flex justify-end pt-4 border-t border-border">
+          <div className="flex justify-end pt-4 mt-4 border-t border-border flex-shrink-0">
             <Button onClick={() => setIsAssignModalOpen(false)}>
               완료
             </Button>

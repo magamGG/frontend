@@ -2,12 +2,6 @@ import * as React from "react";
 
 import { cn } from "./utils";
 
-/**
- * Input component
- * @param {Object} props
- * @param {string} [props.className] - Additional CSS classes
- * @param {string} [props.type] - Input type
- */
 function Input({ className, type, ...props }) {
   return (
     <input

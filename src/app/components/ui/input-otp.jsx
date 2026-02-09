@@ -6,11 +6,6 @@ import { MinusIcon } from "lucide-react";
 
 import { cn } from "./utils";
 
-/**
- * InputOTP component
- * @param {Object} props
- * @param {string} [props.containerClassName] - Container CSS classes
- */
 function InputOTP({
   className,
   containerClassName,
@@ -29,24 +24,17 @@ function InputOTP({
   );
 }
 
-/**
- * InputOTPGroup component
- */
 function InputOTPGroup({ className, ...props }) {
   return (
     <div
       data-slot="input-otp-group"
-      className={cn("flex items-center gap-1", className)}
+      className={cn(className)}
+      style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
       {...props}
     />
   );
 }
 
-/**
- * InputOTPSlot component
- * @param {Object} props
- * @param {number} props.index - Slot index
- */
 function InputOTPSlot({
   index,
   className,
@@ -75,9 +63,6 @@ function InputOTPSlot({
   );
 }
 
-/**
- * InputOTPSeparator component
- */
 function InputOTPSeparator({ ...props }) {
   return (
     <div data-slot="input-otp-separator" role="separator" {...props}>

@@ -15,27 +15,24 @@ import {
   Brain
 } from 'lucide-react';
 
-/**
- * MasterStyleGuidePage component
- */
 export function MasterStyleGuidePage() {
   // Mock data for monitoring
   const monitoringData = [
-    { name: '김민준', mentalScore: 85, physicalScore: 92, risk: '낮음', date: '2026-01-15' },
-    { name: '이서연', mentalScore: 72, physicalScore: 78, risk: '중간', date: '2026-01-14' },
-    { name: '박지호', mentalScore: 95, physicalScore: 88, risk: '낮음', date: '2026-01-14' },
-    { name: '최유나', mentalScore: 68, physicalScore: 71, risk: '중간', date: '2026-01-13' },
+    { name: '김민준', mentalScore, physicalScore, risk: '낮음', date: '2026-01-15' },
+    { name: '이서연', mentalScore, physicalScore, risk: '중간', date: '2026-01-14' },
+    { name: '박지호', mentalScore, physicalScore, risk: '낮음', date: '2026-01-14' },
+    { name: '최유나', mentalScore, physicalScore, risk: '중간', date: '2026-01-13' },
   ];
 
   // Non-participants data
   const nonParticipants = [
-    { name: '강호배', team: '영업팀', daysOverdue: 7 },
-    { name: '조인혜', team: '개발팀', daysOverdue: 8 },
-    { name: '서동혁', team: '경영지원', daysOverdue: 9 },
-    { name: '김미영', team: '디자인팀', daysOverdue: 10 },
+    { name: '강호배', team: '영업팀', daysOverdue,
+    { name: '조인혜', team: '개발팀', daysOverdue,
+    { name: '서동혁', team: '경영지원', daysOverdue,
+    { name: '김미영', team: '디자인팀', daysOverdue,
   ];
 
-  const getRiskColor = (risk: string) => {
+  const getRiskColor = (risk) => {
     switch (risk) {
       case '낮음':
         return 'bg-green-500/10 text-green-700';
@@ -67,7 +64,7 @@ export function MasterStyleGuidePage() {
           {/* Top Row - Schedule Cards */}
           <div className=\"grid grid-cols-2 gap-6 mb-6\">
             {/* 다음 검진 예정일 - 정신 건강 */}
-            <Card className=\"p-6\" style={{ borderRadius: '16px', background: '#FFFFFF' }}>
+            <Card className=\"p-6\" style={{ borderRadius, background: '#FFFFFF' }}>
               <div className=\"flex items-start justify-between mb-4\">
                 <div>
                   <p className=\"text-sm font-medium\" style={{ color: '#6B7280' }}>다음 검진 예정일</p>
@@ -82,7 +79,7 @@ export function MasterStyleGuidePage() {
             </Card>
 
             {/* 다음 검진 예정일 - 신체 건강 */}
-            <Card className=\"p-6\" style={{ borderRadius: '16px', background: '#FFFFFF' }}>
+            <Card className=\"p-6\" style={{ borderRadius, background: '#FFFFFF' }}>
               <div className=\"flex items-start justify-between mb-4\">
                 <div>
                   <p className=\"text-sm font-medium\" style={{ color: '#6B7280' }}>다음 검진 예정일</p>
@@ -100,7 +97,7 @@ export function MasterStyleGuidePage() {
           {/* Middle Row - Detailed Status */}
           <div className=\"grid grid-cols-2 gap-6 mb-6\">
             {/* 정신 건강 심층 검사 */}
-            <Card className=\"p-6\" style={{ borderRadius: '16px', background: '#FFFFFF' }}>
+            <Card className=\"p-6\" style={{ borderRadius, background: '#FFFFFF' }}>
               <div className=\"flex items-center justify-between mb-4\">
                 <h3 className=\"text-lg font-bold\" style={{ color: '#1F2328' }}>정신 건강 심층 검사</h3>
                 <Badge className=\"px-3 py-1\" style={{ background: '#9C27B0', color: '#FFFFFF' }}>67%</Badge>
@@ -127,7 +124,7 @@ export function MasterStyleGuidePage() {
             </Card>
 
             {/* 신체 건강 심층 검사 */}
-            <Card className=\"p-6\" style={{ borderRadius: '16px', background: '#FFFFFF' }}>
+            <Card className=\"p-6\" style={{ borderRadius, background: '#FFFFFF' }}>
               <div className=\"flex items-center justify-between mb-4\">
                 <h3 className=\"text-lg font-bold\" style={{ color: '#1F2328' }}>신체 건강 심층 검사</h3>
                 <Badge className=\"px-3 py-1\" style={{ background: '#00ACC1', color: '#FFFFFF' }}>83%</Badge>
@@ -157,7 +154,7 @@ export function MasterStyleGuidePage() {
           {/* Bottom Row - Risk & Survey */}
           <div className=\"grid grid-cols-2 gap-6 mb-6\">
             {/* 위험 */}
-            <Card className=\"p-6\" style={{ borderRadius: '16px', background: '#FFFFFF' }}>
+            <Card className=\"p-6\" style={{ borderRadius, background: '#FFFFFF' }}>
               <div className=\"flex items-center gap-2 mb-4\">
                 <AlertTriangle className=\"w-5 h-5\" style={{ color: '#EF4444' }} />
                 <h3 className=\"text-lg font-bold\" style={{ color: '#1F2328' }}>위험</h3>
@@ -181,7 +178,7 @@ export function MasterStyleGuidePage() {
             </Card>
 
             {/* 설문 목록 */}
-            <Card className=\"p-6\" style={{ borderRadius: '16px', background: '#FFFFFF' }}>
+            <Card className=\"p-6\" style={{ borderRadius, background: '#FFFFFF' }}>
               <div className=\"flex items-center gap-2 mb-4\">
                 <FileText className=\"w-5 h-5\" style={{ color: '#6E8FB3' }} />
                 <h3 className=\"text-lg font-bold\" style={{ color: '#1F2328' }}>설문 목록</h3>
@@ -224,7 +221,7 @@ export function MasterStyleGuidePage() {
           {/* Bottom Section - Monitors & Non-participants */}
           <div className=\"grid grid-cols-2 gap-6\">
             {/* 검진 모니터링 */}
-            <Card className=\"p-6\" style={{ borderRadius: '16px', background: '#FFFFFF' }}>
+            <Card className=\"p-6\" style={{ borderRadius, background: '#FFFFFF' }}>
               <div className=\"flex items-center gap-2 mb-4\">
                 <Activity className=\"w-5 h-5\" style={{ color: '#6E8FB3' }} />
                 <h3 className=\"text-lg font-bold\" style={{ color: '#1F2328' }}>검진 모니터링</h3>
@@ -271,7 +268,7 @@ export function MasterStyleGuidePage() {
             </Card>
 
             {/* 미검진 인원 집중 관리 */}
-            <Card className=\"p-6\" style={{ borderRadius: '16px', background: '#FFFFFF' }}>
+            <Card className=\"p-6\" style={{ borderRadius, background: '#FFFFFF' }}>
               <div className=\"mb-4\">
                 <h3 className=\"text-lg font-bold mb-1\" style={{ color: '#1F2328' }}>미검진 인원 집중 관리</h3>
                 <p className=\"text-xs\" style={{ color: '#6B7280' }}>직원을 위치하기 전송 위해 미검진 인원을 보내드립니다.</p>

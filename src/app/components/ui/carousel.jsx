@@ -7,15 +7,15 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import { cn } from "./utils";
 import { Button } from "./button";
 
-/**
- * CarouselContext value
- */
+
+
+
+
+
+
+
 const CarouselContext = React.createContext(null);
 
-/**
- * useCarousel hook
- * @returns {Object} Carousel context value
- */
 function useCarousel() {
   const context = React.useContext(CarouselContext);
 
@@ -27,12 +27,13 @@ function useCarousel() {
 }
 
 /**
- * Carousel component
  * @param {Object} props
- * @param {string} [props.orientation] - Orientation (horizontal, vertical)
- * @param {Object} [props.opts] - Carousel options
- * @param {Function} [props.setApi] - Set API callback
- * @param {Array} [props.plugins] - Carousel plugins
+ * @param {"horizontal" | "vertical"} [props.orientation="horizontal"]
+ * @param {Object} [props.opts]
+ * @param {Function} [props.setApi]
+ * @param {Array} [props.plugins]
+ * @param {string} [props.className]
+ * @param {React.ReactNode} [props.children]
  */
 function Carousel({
   orientation = "horizontal",
@@ -100,10 +101,10 @@ function Carousel({
     <CarouselContext.Provider
       value={{
         carouselRef,
-        api: api,
+        api,
         opts,
         orientation:
-          orientation || (opts?.axis === "y" ? "vertical" : "horizontal"),
+          orientation || (opts?.axis === "y" ? "vertical" ),
         scrollPrev,
         scrollNext,
         canScrollPrev,
@@ -124,9 +125,6 @@ function Carousel({
   );
 }
 
-/**
- * CarouselContent component
- */
 function CarouselContent({ className, ...props }) {
   const { carouselRef, orientation } = useCarousel();
 
@@ -148,9 +146,6 @@ function CarouselContent({ className, ...props }) {
   );
 }
 
-/**
- * CarouselItem component
- */
 function CarouselItem({ className, ...props }) {
   const { orientation } = useCarousel();
 
@@ -169,12 +164,6 @@ function CarouselItem({ className, ...props }) {
   );
 }
 
-/**
- * CarouselPrevious component
- * @param {Object} props
- * @param {string} [props.variant] - Button variant
- * @param {string} [props.size] - Button size
- */
 function CarouselPrevious({
   className,
   variant = "outline",
@@ -205,12 +194,6 @@ function CarouselPrevious({
   );
 }
 
-/**
- * CarouselNext component
- * @param {Object} props
- * @param {string} [props.variant] - Button variant
- * @param {string} [props.size] - Button size
- */
 function CarouselNext({
   className,
   variant = "outline",

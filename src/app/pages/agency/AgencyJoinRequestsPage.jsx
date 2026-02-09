@@ -19,85 +19,78 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-/**
- * AgencyJoinRequestsPage component
- */
+
+
 export function AgencyJoinRequestsPage() {
   const [requests, setRequests] = useState([
     {
-      id: '1',
+      id,
       name: '김작가',
       email: 'kim.artist@example.com',
       phone: '010-1234-5678',
       position: '웹툰 작가',
-      userType: 'individual',
+      userType,
       agencyCode: 'AGENCY-2026-001',
       message: '안녕하세요. 웹툰 작가 김작가입니다. 귀사와 함께 작업하고 싶습니다.',
       requestDate: '2026-01-17',
-      status: 'pending'
-    },
+      status,
     {
-      id: '2',
+      id,
       name: '이담당',
       email: 'lee.manager@example.com',
       phone: '010-9876-5432',
       position: '프로젝트 매니저',
-      userType: 'manager',
+      userType,
       agencyCode: 'AGENCY-2026-001',
       message: '프로젝트 관리 경력 5년차 이담당입니다.',
       requestDate: '2026-01-16',
-      status: 'pending'
-    },
+      status,
     {
-      id: '3',
+      id,
       name: '박신입',
       email: 'park.newbie@example.com',
       phone: '010-5555-7777',
       position: '어시스턴트',
-      userType: 'individual',
+      userType,
       agencyCode: 'AGENCY-2026-001',
-      message: '',
+      message,
       requestDate: '2026-01-15',
-      status: 'approved'
-    }
-  ]);
+      status);
 
-  const [selectedRequest, setSelectedRequest] = useState<JoinRequest | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   const pendingRequests = requests.filter(r => r.status === 'pending');
   const processedRequests = requests.filter(r => r.status !== 'pending');
 
-  const handleViewDetail = (request: JoinRequest) => {
+  const handleViewDetail = (request) => {
     setSelectedRequest(request);
     setIsDetailModalOpen(true);
   };
 
-  const handleApprove = (requestId: string) => {
+  const handleApprove = (requestId) => {
     setRequests(prev => 
       prev.map(req => 
         req.id === requestId 
-          ? { ...req, status: 'approved' as const }
-          : req
+          ? { ...req, status: 'approved': req
       )
     );
     toast.success('가입 요청이 승인되었습니다.');
     setIsDetailModalOpen(false);
   };
 
-  const handleReject = (requestId: string) => {
+  const handleReject = (requestId) => {
     setRequests(prev => 
       prev.map(req => 
         req.id === requestId 
-          ? { ...req, status: 'rejected' as const }
-          : req
+          ? { ...req, status: 'rejected': req
       )
     );
     toast.success('가입 요청이 거절되었습니다.');
     setIsDetailModalOpen(false);
   };
 
-  const getStatusBadge = (status: JoinRequest['status']) => {
+  const getStatusBadge = (status) => {
     switch (status) {
       case 'pending':
         return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">대기중</Badge>;
@@ -108,7 +101,7 @@ export function AgencyJoinRequestsPage() {
     }
   };
 
-  const getUserTypeBadge = (userType: 'individual' | 'manager') => {
+  const getUserTypeBadge = (userType) => {
     return userType === 'individual' 
       ? <Badge className="bg-purple-100 text-purple-700 border-purple-200">작가</Badge>
       : <Badge className="bg-blue-100 text-blue-700 border-blue-200">담당자</Badge>;
@@ -182,8 +175,8 @@ export function AgencyJoinRequestsPage() {
               {pendingRequests.map((request) => (
                 <motion.div
                   key={request.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
+                  initial={{ opacity, y: 20 }}
+                  animate={{ opacity, y: 0 }}
                   transition={{ duration: 0.3 }}
                 >
                   <Card className="p-6 hover:shadow-lg transition-shadow">
