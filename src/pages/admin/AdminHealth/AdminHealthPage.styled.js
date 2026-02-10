@@ -562,6 +562,29 @@ export const MonitoringCardHeader = styled.div`
   }
 `;
 
+/** 헤더 왼쪽 영역 전체 클릭 가능하도록 넓게 잡음 */
+export const MonitoringCardHeaderTitleArea = styled.div`
+  flex: 1;
+  min-width: 0;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+`;
+
+export const MonitoringCardTitle = styled.h2`
+  font-size: 16px;
+  font-weight: 700;
+  color: #1f2328;
+  margin: 0 0 4px 0;
+`;
+
+export const MonitoringCardSubtitle = styled.p`
+  font-size: 12px;
+  color: #6E8FB3;
+  margin: 0;
+`;
+
 export const MonitoringTable = styled.table`
   width: 100%;
   border-collapse: collapse;

@@ -340,7 +340,7 @@ export function ProjectDetailPage({
             memberRole: m.memberRole || '',
             email: m.memberEmail || '',
             phone: m.memberPhone || '',
-            status: m.memberStatus === '휴면' ? '휴면' : '출근',
+            status: m.todayAttendanceStatus || (m.memberStatus === '휴면' ? '휴면' : '작업 시작 전'),
             avatar: getMemberProfileUrl(m.memberProfileImage),
           }))
         );
@@ -681,7 +681,7 @@ export function ProjectDetailPage({
           memberRole: m.memberRole || '',
           email: m.memberEmail || '',
           phone: m.memberPhone || '',
-          status: m.memberStatus === '휴면' ? '휴면' : '출근',
+          status: m.todayAttendanceStatus || (m.memberStatus === '휴면' ? '휴면' : '작업 시작 전'),
           avatar: getMemberProfileUrl(m.memberProfileImage),
         }))
       );
@@ -717,7 +717,7 @@ export function ProjectDetailPage({
         memberRole: m.memberRole || '',
         email: m.memberEmail || '',
         phone: m.memberPhone || '',
-        status: m.memberStatus === '휴면' ? '휴면' : '출근',
+        status: m.todayAttendanceStatus || (m.memberStatus === '휴면' ? '휴면' : '작업 시작 전'),
         avatar: getMemberProfileUrl(m.memberProfileImage),
       }));
       setTeamMembers(refreshed);
@@ -762,11 +762,16 @@ export function ProjectDetailPage({
     am => !currentTeam.some(tm => tm.id === am.id)
   );
 
-  // 상태별 테두리 색상
+  // 상태별 테두리 색상 (작업중/작업 종료/작업 시작 전)
   const getStatusBorderColor = (status) => {
     switch (status) {
+      case '작업중':
       case '출근':
         return 'border-green-500';
+      case '작업 종료':
+        return 'border-blue-500';
+      case '작업 시작 전':
+        return 'border-amber-500';
       case '워케이션':
         return 'border-red-500';
       case '재택근무':
@@ -781,12 +786,17 @@ export function ProjectDetailPage({
   // 상태별 배지 색상
   const getStatusBadgeColor = (status) => {
     switch (status) {
+      case '작업중':
       case '출근':
         return 'bg-green-500 hover:bg-green-600';
-      case '워케이션':
-        return 'bg-red-500 hover:bg-red-600';
+      case '작업 종료':
+        return 'bg-blue-500 hover:bg-blue-600';
+      case '작업 시작 전':
+        return 'bg-amber-500 hover:bg-amber-600';
       case '휴면':
         return 'bg-gray-500 hover:bg-gray-600';
+      case '워케이션':
+        return 'bg-red-500 hover:bg-red-600';
       case '재택근무':
         return 'bg-blue-500 hover:bg-blue-600';
       default:

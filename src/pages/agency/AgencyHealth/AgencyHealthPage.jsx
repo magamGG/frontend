@@ -46,14 +46,12 @@ import {
   LegendLabel,
   LegendValue,
   MonitoringGrid,
-  MonitoringCard,
-  MonitoringHeader,
+  HealthGridCard,
+  HealthGridCardHeader,
   MonitoringTabWrap,
   MonitoringTabButton,
   MonitoringChartContainer,
   MonitoringFooter,
-  UnscreenedCard,
-  UnscreenedHeader,
   UnscreenedList,
   UnscreenedItem,
   UnscreenedAvatar,
@@ -377,11 +375,11 @@ export function AgencyHealthPage() {
 
   // 상세 페이지 표시 조건부 렌더링
   if (currentView === 'mental-detail') {
-    return <MentalHealthDetailPage onBack={() => setCurrentView('main')} />;
+    return <MentalHealthDetailPage agencyNo={user?.agencyNo} onBack={() => setCurrentView('main')} />;
   }
   
   if (currentView === 'physical-detail') {
-    return <PhysicalHealthDetailPage onBack={() => setCurrentView('main')} />;
+    return <PhysicalHealthDetailPage agencyNo={user?.agencyNo} onBack={() => setCurrentView('main')} />;
   }
   
   if (currentView === 'risk-analysis') {
@@ -584,32 +582,38 @@ export function AgencyHealthPage() {
           </CheckupItem>
         </CheckupDateGrid>
 
-        {/* 하단: 검진 모니터링 및 미검진 인원 */}
+        {/* 하단: 검진 모니터링 및 미검진 인원 (동일 영역 컴포넌트) */}
         <MonitoringGrid>
           {/* 검진 모니터링 (정신/신체 토글) */}
-          <MonitoringCard onClick={() => setCurrentView('monitoring-detail')}>
-            <MonitoringHeader>
+          <HealthGridCard onClick={() => setCurrentView('monitoring-detail')}>
+            <HealthGridCardHeader>
               <h2 className="text-sm font-bold" style={{ color: '#1f2328' }}>검진 모니터링</h2>
-              <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center gap-2">
                 <MonitoringTabWrap>
                   <MonitoringTabButton
                     type="button"
                     $active={monitoringTab === 'mental'}
-                    onClick={() => setMonitoringTab('mental')}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMonitoringTab('mental');
+                    }}
                   >
                     정신 건강
                   </MonitoringTabButton>
                   <MonitoringTabButton
                     type="button"
                     $active={monitoringTab === 'physical'}
-                    onClick={() => setMonitoringTab('physical')}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMonitoringTab('physical');
+                    }}
                   >
                     신체 건강
                   </MonitoringTabButton>
                 </MonitoringTabWrap>
-                <ChevronRight className="w-4 h-4" style={{ color: '#6E8FB3' }} />
+                <ChevronRight className="w-4 h-4 shrink-0" style={{ color: '#6E8FB3' }} />
               </div>
-            </MonitoringHeader>
+            </HealthGridCardHeader>
 
             <div className="flex items-center justify-between gap-4">
               <MonitoringChartContainer>
@@ -648,14 +652,14 @@ export function AgencyHealthPage() {
                 {monitoringTab === 'mental' ? '정신 건강' : '신체 건강'} · 전체 인원(에이전시 관리자 제외)
               </span>
             </MonitoringFooter>
-          </MonitoringCard>
+          </HealthGridCard>
 
           {/* 미검진 인원 집중 관리 */}
-          <UnscreenedCard onClick={() => setCurrentView('unscreened-detail')}>
-            <UnscreenedHeader>
+          <HealthGridCard onClick={() => setCurrentView('unscreened-detail')}>
+            <HealthGridCardHeader>
               <h2 className="text-sm font-bold" style={{ color: '#1f2328' }}>미검진 인원 집중 관리</h2>
               <ChevronRight className="w-4 h-4" style={{ color: '#6E8FB3' }} />
-            </UnscreenedHeader>
+            </HealthGridCardHeader>
 
             <UnscreenedList>
               {unscreenedData.length === 0 ? (
@@ -689,7 +693,7 @@ export function AgencyHealthPage() {
                 })
               )}
             </UnscreenedList>
-          </UnscreenedCard>
+          </HealthGridCard>
         </MonitoringGrid>
       </AgencyHealthBody>
 
