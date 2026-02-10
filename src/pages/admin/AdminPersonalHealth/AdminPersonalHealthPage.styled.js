@@ -163,12 +163,15 @@ export const CompletedStatusValue = styled.span`
   color: #1f2328;
 `;
 
-// 결과 상세 박스
+// 결과 상세 박스 (정신/신체 동일 높이 - QuickDASH 기준 min-height, 알림 박스 하단 정렬)
 export const ResultDetailBox = styled.div`
+  display: flex;
+  flex-direction: column;
   padding: 16px;
   background-color: #fafafa;
   border-radius: 8px;
   margin-bottom: 16px;
+  min-height: 206px;
 `;
 
 export const ResultDetailTitle = styled.h3`
@@ -176,6 +179,22 @@ export const ResultDetailTitle = styled.h3`
   font-weight: 700;
   color: #1f2328;
   margin: 0 0 8px 0;
+`;
+
+export const ResultDetailContentSection = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+`;
+
+export const ResultDetailMainText = styled.p`
+  flex: 1;
+  font-size: 12px;
+  color: #6e8fb3;
+  line-height: 1.6;
+  margin: 0 0 12px 0;
+  min-height: 0;
 `;
 
 export const ResultDetailText = styled.p`
@@ -186,6 +205,8 @@ export const ResultDetailText = styled.p`
 `;
 
 export const ResultDetailAlert = styled.div`
+  margin-top: auto;
+  min-height: 62px;
   padding: 12px;
   background-color: #fff7ed;
   border: 1px solid #fed7aa;

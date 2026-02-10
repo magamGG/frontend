@@ -283,6 +283,16 @@ export const projectService = {
     return api.get(API_ENDPOINTS.PROJECTS.ADDABLE_MEMBERS(projectNo));
   },
 
+  // 담당자 배치 가능 담당자 목록 (프로젝트 작가들이 ARTIST_ASSIGNMENT로 연결된 담당자만)
+  getAssignableManagers: (projectNo) => {
+    return api.get(API_ENDPOINTS.PROJECTS.ASSIGNABLE_MANAGERS(projectNo));
+  },
+
+  // 담당자 배치 (PROJECT_MEMBER role 담당자 및 KANBAN_CARD 담당자 업데이트)
+  assignManagerToProject: (projectNo, managerNo) => {
+    return api.put(API_ENDPOINTS.PROJECTS.ASSIGN_MANAGER(projectNo), { managerNo });
+  },
+
   // 프로젝트 목록 조회 (로그인 회원 소속 프로젝트)
   getProjects: (page = 0, size = 10) => {
     return api.get(API_ENDPOINTS.PROJECTS.LIST(page, size));

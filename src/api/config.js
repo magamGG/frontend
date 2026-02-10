@@ -108,6 +108,8 @@ export const API_ENDPOINTS = {
     DELETE: (projectNo) => `/api/projects/${projectNo}`, // DELETE: 프로젝트 삭제
     MEMBERS: (projectNo) => `/api/projects/${projectNo}/members`, // GET: 프로젝트 멤버 목록, POST: 팀원 추가
     MEMBER_DELETE: (projectNo, projectMemberNo) => `/api/projects/${projectNo}/members/remove/${projectMemberNo}`, // DELETE: 프로젝트 팀원 삭제
+    ASSIGNABLE_MANAGERS: (projectNo) => `/api/projects/${projectNo}/assignable-managers`, // GET: 담당자 배치 가능 담당자 목록 (ARTIST_ASSIGNMENT 기준)
+    ASSIGN_MANAGER: (projectNo) => `/api/projects/${projectNo}/assign-manager`, // PUT: 담당자 배치
     ADDABLE_MEMBERS: (projectNo) => `/api/projects/${projectNo}/addable-members`, // GET: 추가 가능 팀원 (담당자/작가 제외, 미소속)
     KANBAN: (projectNo) => `/api/projects/${projectNo}/kanban`, // GET: 칸반 보드 조회
     MANAGED: `/api/projects/managed`, // GET: 담당자 대시보드 담당 프로젝트 현황

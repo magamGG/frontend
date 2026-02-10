@@ -2,7 +2,10 @@ import { ArrowLeft, Search } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
+import useAuthStore from '@/store/authStore';
+import { agencyService, managerService } from '@/api/services';
 import {
   PhysicalHealthDetailRoot,
   PhysicalHealthDetailBody,
@@ -42,48 +45,127 @@ import {
   RiskBadge,
 } from './PhysicalHealthDetailPage.styled';
 
-// TODO: Zustand store mapping - 신체 건강 검사 데이터
-const riskData = [
-  { name: '정상', value: 5, color: '#52C41A' },
-  { name: '주의', value: 2, color: '#FA8C16' },
-  { name: '위험', value: 2, color: '#FF4D4F' },
-];
+const RISK_COLORS = {
+  정상: '#52C41A',
+  주의: '#FA8C16',
+  위험: '#FF4D4F',
+  경고: '#CA8A04',
+  미검진: '#94A3B8',
+};
 
-const initialParticipants = [
-  { name: '송도동', dept: '개발팀', status: '완료', statusColor: 'bg-green-50 text-green-700', score: 92, risk: '위험', riskColor: 'bg-red-50 text-red-700', date: '2026.01.18' },
-  { name: '강호배', dept: '영업팀', status: '대기', statusColor: 'bg-orange-50 text-orange-700', score: '-', risk: '-', riskColor: '', date: '-' },
-  { name: '이수민', dept: '기획팀', status: '완료', statusColor: 'bg-green-50 text-green-700', score: 88, risk: '정상', riskColor: 'bg-green-50 text-green-700', date: '2026.01.19' },
-  { name: '박지훈', dept: '디자인팀', status: '완료', statusColor: 'bg-green-50 text-green-700', score: 95, risk: '정상', riskColor: 'bg-green-50 text-green-700', date: '2026.01.17' },
-  { name: '최은영', dept: '마케팅팀', status: '진행중', statusColor: 'bg-blue-50 text-blue-700', score: '-', risk: '-', riskColor: '', date: '-' },
-  { name: '김태양', dept: '개발팀', status: '완료', statusColor: 'bg-green-50 text-green-700', score: 78, risk: '주의', riskColor: 'bg-orange-50 text-orange-700', date: '2026.01.20' },
-  { name: '정민서', dept: '인사팀', status: '완료', statusColor: 'bg-green-50 text-green-700', score: 90, risk: '정상', riskColor: 'bg-green-50 text-green-700', date: '2026.01.18' },
-  { name: '한소희', dept: '재무팀', status: '완료', statusColor: 'bg-green-50 text-green-700', score: 85, risk: '주의', riskColor: 'bg-orange-50 text-orange-700', date: '2026.01.21' },
-];
+const STATUS_FILTERS = ['전체', '완료', '대기'];
 
-const STATUS_FILTERS = ['전체', '완료', '진행중', '대기'];
+export function PhysicalHealthDetailPage({ onBack, agencyNo: agencyNoProp }) {
+  const user = useAuthStore((s) => s.user);
+  const agencyNo = agencyNoProp ?? user?.agencyNo;
+  const isManager = user?.memberRole === '담당자';
 
-export function PhysicalHealthDetailPage({ onBack }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('전체');
+  const [loading, setLoading] = useState(true);
+  const [participants, setParticipants] = useState([]);
+  const [progressRate, setProgressRate] = useState(0);
+  const [completedCount, setCompletedCount] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
+  const [deadlineDate, setDeadlineDate] = useState('-');
+  const [daysUntilDeadline, setDaysUntilDeadline] = useState(0);
+  const [riskData, setRiskData] = useState([]);
 
-  const filteredParticipants = initialParticipants
-    .filter((participant) => {
-      const matchesSearch = participant.name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesFilter = filterStatus === '전체' || participant.status === filterStatus;
+  useEffect(() => {
+    if (!isManager && !agencyNo) {
+      setLoading(false);
+      return;
+    }
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [detailRes, scheduleRes] = await Promise.all([
+          isManager
+            ? managerService.getHealthMonitoringDetail('physical')
+            : agencyService.getHealthMonitoringDetail(agencyNo, 'physical'),
+          isManager
+            ? managerService.getHealthSchedule()
+            : agencyService.getAgencyHealthSchedule(agencyNo),
+        ]);
+        const items = detailRes?.items ?? [];
+        const total = items.length;
+        const completed = items.filter((i) => i.status !== '미검진').length;
+        const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+        setTotalCount(total);
+        setCompletedCount(completed);
+        setProgressRate(rate);
+        setDeadlineDate(scheduleRes?.nextCheckupDate ?? '-');
+        setDaysUntilDeadline(scheduleRes?.daysUntil ?? 0);
+
+        const list = items.map((i) => {
+          const progressStatus = i.status === '미검진' ? '대기' : '완료';
+          const statusColor = progressStatus === '완료' ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-700';
+          const riskColor =
+            i.status === '정상'
+              ? 'bg-green-50 text-green-700'
+              : i.status === '주의' || i.status === '경고'
+                ? 'bg-orange-50 text-orange-700'
+                : i.status === '위험'
+                  ? 'bg-red-50 text-red-700'
+                  : '';
+          return {
+            memberNo: i.memberNo,
+            name: i.memberName ?? '-',
+            dept: i.position ?? '-',
+            status: progressStatus,
+            statusColor,
+            score: i.totalScore ?? '-',
+            risk: i.status === '미검진' ? '-' : i.status,
+            riskColor,
+            date: i.lastCheckDate ? i.lastCheckDate.replace(/-/g, '.') : '-',
+          };
+        });
+        setParticipants(list);
+
+        const riskOrder = ['위험', '경고', '주의', '정상', '미검진'];
+        const counts = {};
+        riskOrder.forEach((r) => (counts[r] = 0));
+        items.forEach((i) => {
+          const s = i.status || '미검진';
+          counts[s] = (counts[s] || 0) + 1;
+        });
+        setRiskData(
+          riskOrder.filter((name) => counts[name] > 0).map((name) => ({ name, value: counts[name], color: RISK_COLORS[name] || '#94A3B8' }))
+        );
+      } catch (err) {
+        console.error('신체 건강 검사 상세 조회 실패:', err);
+        toast.error('데이터를 불러오는데 실패했습니다.');
+        setParticipants([]);
+        setRiskData([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [agencyNo, isManager]);
+
+  const filteredParticipants = participants
+    .filter((p) => {
+      const matchesSearch = (p.name || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesFilter = filterStatus === '전체' || p.status === filterStatus;
       return matchesSearch && matchesFilter;
     })
     .sort((a, b) => {
-      // 점수 내림차순 정렬 (점수가 높은 순)
       const scoreA = typeof a.score === 'number' ? a.score : -1;
       const scoreB = typeof b.score === 'number' ? b.score : -1;
       return scoreB - scoreA;
     });
 
-  const progressRate = 56;
-  const completedCount = 5;
-  const totalCount = 9;
-  const deadlineDate = '2026.02.01';
-  const daysUntilDeadline = 14;
+  if (loading) {
+    return (
+      <PhysicalHealthDetailRoot>
+        <PhysicalHealthDetailBody>
+          <div className="flex items-center justify-center py-24 text-muted-foreground">로딩 중...</div>
+        </PhysicalHealthDetailBody>
+      </PhysicalHealthDetailRoot>
+    );
+  }
 
   return (
     <PhysicalHealthDetailRoot>

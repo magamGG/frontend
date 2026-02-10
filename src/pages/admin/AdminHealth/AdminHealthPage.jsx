@@ -75,6 +75,10 @@ import {
   DistributionLegendLabel,
   DistributionLegendValue,
   MonitoringCard,
+  MonitoringCardHeader,
+  MonitoringCardHeaderTitleArea,
+  MonitoringCardTitle,
+  MonitoringCardSubtitle,
   UnscreenedCard,
   UnscreenedCardHeader,
   UnscreenedCardTitle,
@@ -94,7 +98,6 @@ import {
   HealthLegendColor,
   HealthLegendLabel,
   HealthLegendValue,
-  MonitoringFooter,
 } from './AdminHealthPage.styled';
 
 const defaultMonitoringPieData = [
@@ -428,11 +431,16 @@ export function AdminHealthPage() {
 
         <StatsGrid>
         {/* 검진 모니터링 (배정 작가) - 정신/신체 도넛 차트 (에이전시 건강관리와 동일) */}
-        <MonitoringCard onClick={() => setCurrentView('monitoring-detail')}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <h2 className="text-sm font-bold" style={{ color: '#1f2328' }}>검진 모니터링</h2>
-            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-              <MonitoringTabWrap>
+        <MonitoringCard>
+          <MonitoringCardHeader onClick={() => setCurrentView('monitoring-detail')}>
+            <MonitoringCardHeaderTitleArea>
+              <MonitoringCardTitle>검진 모니터링</MonitoringCardTitle>
+              <MonitoringCardSubtitle>
+                {monitoringTab === 'mental' ? '정신 건강' : '신체 건강'} · 담당자 배정 작가
+              </MonitoringCardSubtitle>
+            </MonitoringCardHeaderTitleArea>
+            <div className="flex items-center gap-2">
+              <MonitoringTabWrap onClick={(e) => e.stopPropagation()}>
                 <MonitoringTabButton
                   type="button"
                   $active={monitoringTab === 'mental'}
@@ -450,7 +458,7 @@ export function AdminHealthPage() {
               </MonitoringTabWrap>
               <ChevronRight className="w-4 h-4" style={{ color: '#6E8FB3' }} />
             </div>
-          </div>
+          </MonitoringCardHeader>
 
           <div className="flex items-center justify-between gap-4">
             <MonitoringChartContainer>
@@ -485,12 +493,6 @@ export function AdminHealthPage() {
               ))}
             </HealthLegendContainer>
           </div>
-
-          <MonitoringFooter>
-            <span className="text-xs" style={{ color: '#6E8FB3' }}>
-              {monitoringTab === 'mental' ? '정신 건강' : '신체 건강'} · 담당자 배정 작가
-            </span>
-          </MonitoringFooter>
         </MonitoringCard>
 
           {/* 미검진 인원 */}
