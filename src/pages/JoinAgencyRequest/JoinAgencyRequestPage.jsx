@@ -9,6 +9,7 @@ import { Building2, User, Mail, Phone, Key, Send, ArrowLeft, CheckCircle2, Edit 
 import { toast } from 'sonner';
 import { agencyService, memberService } from '@/api';
 import useAuthStore from '@/store/authStore';
+import { formatPhoneNumber, normalizePhoneNumber } from '@/utils/phoneFormatter';
 import {
   JoinAgencyRequestRoot,
   BackgroundPattern,
@@ -137,7 +138,13 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
   }, [step, agencyName]);
 
   const handleEditInputChange = (field, value) => {
-    setEditFormData(prev => ({ ...prev, [field]: value }));
+    // 연락처 입력 시 자동 포맷팅
+    if (field === 'phone') {
+      const formatted = formatPhoneNumber(value);
+      setEditFormData(prev => ({ ...prev, [field]: formatted }));
+    } else {
+      setEditFormData(prev => ({ ...prev, [field]: value }));
+    }
   };
 
   const handleSaveProfile = async () => {
@@ -162,7 +169,7 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
     try {
       await memberService.updateProfile(user.memberNo, {
         memberName: editFormData.name,
-        memberPhone: editFormData.phone,
+        memberPhone: normalizePhoneNumber(editFormData.phone), // DB 저장용 포맷
         memberAddress: '', // 주소는 필요시 추가
       });
       
@@ -446,14 +453,13 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
               <Label htmlFor="edit-phone" style={{ fontSize: '14px', color: 'var(--foreground)' }}>연락처 *</Label>
               <Input
                 id="edit-phone"
+                type="tel"
                 value={editFormData.phone}
                 onChange={(e) => handleEditInputChange('phone', e.target.value)}
-                placeholder="010-0000-0000"
+                placeholder="010-1234-5678"
+                maxLength={13}
                 style={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
               />
-              <p style={{ fontSize: '12px', color: 'var(--muted-foreground)', margin: 0 }}>
-                하이픈(-)을 포함하여 입력해주세요
-              </p>
             </div>
           </div>
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', paddingTop: '16px', borderTop: '1px solid var(--border)' }}>

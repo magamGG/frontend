@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Card } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Mail, Lock, User, Phone, Building, Briefcase, Edit, Check, Palette, Pen, BookOpen, Paintbrush, ArrowLeft, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 import { memberService } from '@/api';
+import { formatPhoneNumber, normalizePhoneNumber } from '@/utils/phoneFormatter';
 import {
   SignupRoot,
   BackgroundPattern,
@@ -88,10 +89,21 @@ export function SignupPage({ onSignup, onBackToLogin }) {
   });
 
   const handleInputChange = (e) => {
-    setSignupFormData({
-      ...signupFormData,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+    
+    // 연락처 입력 시 자동 포맷팅
+    if (name === 'phone') {
+      const formatted = formatPhoneNumber(value);
+      setSignupFormData({
+        ...signupFormData,
+        [name]: formatted,
+      });
+    } else {
+      setSignupFormData({
+        ...signupFormData,
+        [name]: value,
+      });
+    }
   };
 
   const handleRoleChange = (role) => {
@@ -123,7 +135,7 @@ export function SignupPage({ onSignup, onBackToLogin }) {
         memberName: signupFormData.name,
         memberPassword: signupFormData.password,
         memberEmail: signupFormData.email, // UNIQUE, 로그인 ID로 사용
-        memberPhone: signupFormData.phone,
+        memberPhone: normalizePhoneNumber(signupFormData.phone), // DB 저장용 포맷
         memberAddress: signupFormData.address?.trim() || '',
         memberRole: selectedRole === USER_ROLES.ARTIST 
           ? (artistSpecialization === 'webtoon-writer' ? '웹툰 작가'
@@ -381,6 +393,7 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                           value={signupFormData.phone}
                           onChange={handleInputChange}
                           placeholder="010-1234-5678"
+                          maxLength={13}
                           required
                         />
                       </InputWrapper>
