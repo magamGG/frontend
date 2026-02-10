@@ -129,7 +129,7 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
               {agencyName ? `${agencyName}에 요청이 전송되었습니다!` : '요청이 전송되었습니다!'}
             </h2>
             <p className="text-muted-foreground mb-6">
-              에이전시 담당자가 검토 후 승인하면<br />
+              에이전시 관리자가 검토 후 승인하면<br />
               알림을 받으실 수 있습니다.
             </p>
 
@@ -146,10 +146,6 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">연락처</span>
                   <span className="font-medium text-foreground">{userData.phone}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">회사 코드</span>
-                  <span className="font-medium text-foreground">{agencyCode}</span>
                 </div>
               </div>
             </div>

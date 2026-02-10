@@ -267,7 +267,7 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
                   {agencyName ? `${agencyName}에 요청이 전송되었습니다!` : '요청이 전송되었습니다!'}
                 </SuccessTitle>
                 <SuccessDescription>
-                  에이전시 담당자가 검토 후 승인하면 알림을 받으실 수 있습니다.
+                  에이전시 관리자가 검토 후 승인하면 알림을 받으실 수 있습니다.
                   <br />
                   승인 후 다시 로그인하시면 대시보드로 이동합니다.
                 </SuccessDescription>
@@ -284,10 +284,6 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
                   <InfoRow>
                     <InfoLabel>연락처</InfoLabel>
                     <InfoValue>{userData.phone}</InfoValue>
-                  </InfoRow>
-                  <InfoRow>
-                    <InfoLabel>회사 코드</InfoLabel>
-                    <InfoValue>{agencyCodeInput || '미입력'}</InfoValue>
                   </InfoRow>
                 </SuccessInfoBox>
 
