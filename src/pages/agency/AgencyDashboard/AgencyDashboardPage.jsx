@@ -15,7 +15,13 @@ import {
   Activity,
   AlertCircle
 } from 'lucide-react';
-import { Modal } from '@/components/common/Modal';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/app/components/ui/dialog';
 import { toast } from 'sonner';
 import useAuthStore from '@/store/authStore';
 import { agencyService, leaveService } from '@/api/services';
@@ -89,12 +95,16 @@ export function AgencyDashboardPage() {
         const rate = data?.averageDeadlineComplianceRate ?? 0;
         const artists = data?.activeArtistCount ?? 0;
         const projects = data?.activeProjectCount ?? 0;
+        const complianceChange = data?.complianceRateChange ?? null;
+        const artistChange = data?.activeArtistChange ?? null;
+        const projectChange = data?.activeProjectChange ?? null;
         setMetrics([
           {
             id: 1,
             label: '평균 마감 준수율',
             value: `${rate}%`,
-            change: data?.complianceRateChange ?? '-',
+            change: complianceChange ?? '-',
+            changeColor: complianceChange ? (complianceChange.includes('+') || complianceChange.includes('대비 +') ? '#10B981' : complianceChange.includes('대비 -') ? '#EF4444' : '#10B981') : undefined,
             icon: Target,
             color: '#10B981',
             bgColor: '#F0FDF4',
@@ -104,7 +114,8 @@ export function AgencyDashboardPage() {
             id: 2,
             label: '활동 작가',
             value: `${artists}명`,
-            change: data?.activeArtistChange ?? '-',
+            change: artistChange ?? '-',
+            changeColor: artistChange ? (artistChange.includes('+') || artistChange.includes('대비 증가') ? '#10B981' : artistChange.includes('대비 -') ? '#EF4444' : '#3B82F6') : undefined,
             icon: Users,
             color: '#3B82F6',
             bgColor: '#EFF6FF',
@@ -114,7 +125,8 @@ export function AgencyDashboardPage() {
             id: 3,
             label: '진행 프로젝트',
             value: `${projects}개`,
-            change: data?.activeProjectChange ?? '-',
+            change: projectChange ?? '-',
+            changeColor: projectChange ? (projectChange.includes('+') || projectChange.includes('대비 증가') ? '#10B981' : projectChange.includes('대비 -') ? '#EF4444' : '#9333EA') : undefined,
             icon: Briefcase,
             color: '#9333EA',
             bgColor: '#F3E8FF',
@@ -170,15 +182,23 @@ export function AgencyDashboardPage() {
 
       const raw = Array.isArray(requestsRes) ? requestsRes : (requestsRes?.data ?? []);
       const filtered = raw.filter((r) => r.attendanceRequestStatus !== 'CANCELLED');
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
       setAttendanceRequests(
-        filtered.map((r) => ({
-          id: String(r.attendanceRequestNo ?? r.memberNo),
-          typeName: r.attendanceRequestType ?? '-',
-          startDate: formatDateKr(r.attendanceRequestStartDate),
-          endDate: formatDateKr(r.attendanceRequestEndDate),
-          status: REQUEST_STATUS_MAP[r.attendanceRequestStatus] ?? '-',
-          attendanceRequestNo: r.attendanceRequestNo,
-        }))
+        filtered
+          .filter((r) => {
+            const endAt = r.attendanceRequestEndDate ? new Date(r.attendanceRequestEndDate) : null;
+            return !endAt || endAt >= todayStart;
+          })
+          .map((r) => ({
+            id: String(r.attendanceRequestNo ?? r.memberNo),
+            applicantName: r.memberName ?? '-',
+            typeName: r.attendanceRequestType ?? '-',
+            startDate: formatDateKr(r.attendanceRequestStartDate),
+            endDate: formatDateKr(r.attendanceRequestEndDate),
+            status: REQUEST_STATUS_MAP[r.attendanceRequestStatus] ?? '-',
+            attendanceRequestNo: r.attendanceRequestNo,
+          }))
       );
     } catch (err) {
       console.error('마감 임박/신청 현황 조회 실패:', err);
@@ -207,7 +227,7 @@ export function AgencyDashboardPage() {
 
   // 작품별 아티스트 분포 (DB 연동)
   const [artistDistributionData, setArtistDistributionData] = useState([]);
-  const [maxArtistProjectName, setMaxArtistProjectName] = useState(null);
+  const [maxArtistProjectNames, setMaxArtistProjectNames] = useState([]);
 
   useEffect(() => {
     const fetchComplianceAndDistribution = async () => {
@@ -225,14 +245,27 @@ export function AgencyDashboardPage() {
         setComplianceMonthOverMonthChange(trendRes?.monthOverMonthChange ?? null);
 
         const dist = distRes?.distribution ?? [];
-        setArtistDistributionData(dist.map((d) => ({ name: d.name ?? '-', artists: d.artists ?? 0 })));
-        setMaxArtistProjectName(distRes?.maxArtistProjectName ?? null);
+        const mapped = dist.map((d) => ({ name: d.name ?? '-', artists: Number(d.artists) || 0 }));
+        setArtistDistributionData(mapped);
+        const namesFromApi = Array.isArray(distRes?.maxArtistProjectNames)
+          ? distRes.maxArtistProjectNames
+          : (distRes?.maxArtistProjectName ? [distRes.maxArtistProjectName] : []);
+        if (namesFromApi.length > 0) {
+          setMaxArtistProjectNames(namesFromApi);
+        } else if (mapped.length > 0) {
+          const maxArtists = Math.max(...mapped.map((d) => d.artists));
+          setMaxArtistProjectNames(
+            maxArtists > 0 ? mapped.filter((d) => d.artists === maxArtists).map((d) => d.name) : []
+          );
+        } else {
+          setMaxArtistProjectNames([]);
+        }
       } catch (err) {
         console.error('준수율 추이/아티스트 분포 조회 실패:', err);
         setComplianceData([]);
         setComplianceMonthOverMonthChange(null);
         setArtistDistributionData([]);
-        setMaxArtistProjectName(null);
+        setMaxArtistProjectNames([]);
       }
     };
     fetchComplianceAndDistribution();
@@ -305,30 +338,6 @@ export function AgencyDashboardPage() {
     fetchAttendanceAndHealth();
   }, [user?.agencyNo]);
 
-  // 건강 인원 분포 레이블 렌더링 (데이터 배열 전달)
-  const renderHealthLabel = (chartData) => (props) => {
-    const RADIAN = Math.PI / 180;
-    const { cx, cy, midAngle, innerRadius, outerRadius, name, value } = props;
-    const entry = chartData.find(item => item.name === name && item.value === value);
-    const color = entry?.color || '#000';
-    const labelRadius = outerRadius + 30;
-    const x = cx + Math.cos(-midAngle * RADIAN) * labelRadius;
-    const y = cy + Math.sin(-midAngle * RADIAN) * labelRadius;
-    return (
-      <text
-        x={x}
-        y={y}
-        fill={color}
-        textAnchor={x > cx ? 'start' : 'end'}
-        dominantBaseline="central"
-        fontSize={14}
-        fontWeight={500}
-      >
-        {`${name} ${value}명`}
-      </text>
-    );
-  };
-
   return (
     <AgencyDashboardRoot>
       <AgencyDashboardBody>
@@ -342,7 +351,9 @@ export function AgencyDashboardPage() {
                   <div style={{ flex: 1 }}>
                     <MetricLabel>{metric.label}</MetricLabel>
                     <MetricValue>{metric.value}</MetricValue>
-                    <MetricChange $color={metric.color}>{metric.change}</MetricChange>
+                    <MetricChange $color={metric.changeColor ?? metric.color}>
+                      {metric.change !== '-' && metric.change != null ? metric.change : '전월 대비 0%'}
+                    </MetricChange>
                   </div>
                   <MetricIcon $bgColor={metric.iconBgColor} $color={metric.color}>
                     <Icon className="w-5 h-5" />
@@ -470,13 +481,13 @@ export function AgencyDashboardPage() {
               )}
             </ChartContainer>
 
-            {maxArtistProjectName && (
+            {maxArtistProjectNames.length > 0 && (
               <ChartAlert $bgColor="#EFF6FF" $borderColor="#BFDBFE">
                 <ChartAlertIcon>
                   <Users className="w-4 h-4" style={{ color: '#3B82F6' }} />
                 </ChartAlertIcon>
                 <ChartAlertText $color="#1E3A8A">
-                  {maxArtistProjectName}에 가장 많은 아티스트가 배정되어 있습니다
+                  {maxArtistProjectNames.join(', ')}에 가장 많은 아티스트가 배정되어 있습니다
                 </ChartAlertText>
               </ChartAlert>
             )}
@@ -585,8 +596,6 @@ export function AgencyDashboardPage() {
                       fill="#8884d8"
                       paddingAngle={5}
                       dataKey="value"
-                      label={renderHealthLabel(healthTab === 'mental' ? healthMentalData : healthPhysicalData)}
-                      labelLine={false}
                       isAnimationActive={true}
                       animationDuration={200}
                     >
@@ -724,7 +733,7 @@ export function AgencyDashboardPage() {
                             {request.typeName}
                           </p>
                           <p style={{ fontSize: '12px', color: 'var(--muted-foreground)', margin: 0 }}>
-                            {request.startDate} ~ {request.endDate}
+                            {request.applicantName} · {request.startDate} ~ {request.endDate}
                           </p>
                         </div>
                         <div
@@ -749,82 +758,55 @@ export function AgencyDashboardPage() {
           </ChartCard>
         </ChartsGrid>
 
-        {/* 신청 현황 모달 */}
-        <Modal 
-          isOpen={showAttendanceModal} 
-          onClose={() => setShowAttendanceModal(false)} 
-          title={
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <FileText className="w-5 h-5" style={{ color: 'var(--foreground)' }} />
-              <span>신청 현황 목록</span>
-            </div>
-          }
-          maxWidth="lg"
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {attendanceRequests.map((request) => {
-              const statusColor = 
-                request.status === REQUEST_STATUS.PENDING ? '#F59E0B' :
-                request.status === REQUEST_STATUS.APPROVED ? '#10B981' :
-                '#EF4444';
-              
-              return (
-                <div
-                  key={request.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '16px',
-                    backgroundColor: '#F9FAFB',
-                    border: '1px solid var(--border)',
-                    borderRadius: '8px',
-                  }}
-                >
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-                    <div
-                      style={{
-                        display: 'inline-block',
-                        padding: '4px 12px',
-                        borderRadius: '4px',
-                        backgroundColor: '#E5E7EB',
-                        color: '#6B7280',
-                        fontSize: '12px',
-                        fontWeight: 500,
-                        marginBottom: '8px',
-                        width: 'fit-content',
-                      }}
-                    >
-                      프로젝트
-                    </div>
-                    <p style={{ fontSize: '16px', fontWeight: 600, color: 'var(--foreground)', margin: '0 0 4px 0' }}>
-                      {request.typeName}
-                    </p>
-                    <p style={{ fontSize: '14px', color: 'var(--foreground)', margin: '0 0 12px 0' }}>
-                      {request.startDate} ~ {request.endDate}
-                    </p>
-                    <p style={{ fontSize: '12px', color: 'var(--muted-foreground)', margin: 0 }}>
-                      남은 일수 • {request.status}
-                    </p>
-                  </div>
+        {/* 신청 현황 모달 (담당자-작가 배정 모달과 동일한 Dialog + X 닫기) */}
+        <Dialog open={showAttendanceModal} onOpenChange={setShowAttendanceModal}>
+          <DialogContent className="sm:max-w-[500px] max-h-[85vh] flex flex-col bg-white p-6">
+            <DialogHeader className="flex-shrink-0">
+              <DialogTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5" style={{ color: 'var(--foreground)' }} />
+                신청 현황 목록
+              </DialogTitle>
+              <DialogDescription>
+                에이전시 소속 근태 신청 목록입니다. 종료일이 지난 신청은 제외됩니다.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 overflow-y-auto min-h-0 flex-1 pr-1">
+              {attendanceRequests.map((request) => {
+                const statusColor =
+                  request.status === REQUEST_STATUS.PENDING ? '#F59E0B' :
+                  request.status === REQUEST_STATUS.APPROVED ? '#10B981' :
+                  '#EF4444';
+                return (
                   <div
-                    style={{
-                      padding: '4px 12px',
-                      borderRadius: '9999px',
-                      backgroundColor: statusColor,
-                      color: 'white',
-                      fontSize: '12px',
-                      fontWeight: 600,
-                      whiteSpace: 'nowrap',
-                    }}
+                    key={request.id}
+                    className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-border"
                   >
-                    {request.status}
+                    <div className="flex flex-col gap-1 flex-1 min-w-0">
+                      <p className="text-sm text-muted-foreground m-0">
+                        {request.applicantName}
+                      </p>
+                      <p className="text-base font-semibold text-foreground m-0">
+                        {request.typeName}
+                      </p>
+                      <p className="text-sm text-foreground m-0">
+                        {request.startDate} ~ {request.endDate}
+                      </p>
+                      <p className="text-xs text-muted-foreground m-0">
+                        {request.status}
+                      </p>
+                    </div>
+                    <div
+                      className="flex-shrink-0 px-3 py-1 rounded-full text-white text-xs font-semibold"
+                      style={{ backgroundColor: statusColor }}
+                    >
+                      {request.status}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        </Modal>
+                );
+              })}
+            </div>
+          </DialogContent>
+        </Dialog>
 
       </AgencyDashboardBody>
     </AgencyDashboardRoot>

@@ -713,7 +713,7 @@ export function AgencyTeamPage() {
                               </Card>
                             ) : (
                               <Card className="p-4 border border-border flex-1 flex flex-col min-h-[220px]">
-                                <div className="text-center py-6 text-sm text-muted-foreground flex-1 flex items-center justify-center">검진을 하지 않았습니다</div>
+                                <div className="text-center py-6 text-sm text-muted-foreground flex-1 flex items-center justify-center">오늘 체크하지 않았습니다</div>
                               </Card>
                             )}
                           </div>

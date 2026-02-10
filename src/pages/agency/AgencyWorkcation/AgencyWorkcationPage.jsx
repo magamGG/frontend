@@ -82,28 +82,31 @@ import {
 export function AgencyWorkcationPage() {
   const { user } = useAuthStore();
   const agencyNo = user?.agencyNo;
-  
+  const isManager = user?.memberRole === '담당자';
+
   const [selectedMember, setSelectedMember] = useState(null);
   const [sortType, setSortType] = useState(null);
   const [sortOrder, setSortOrder] = useState('asc');
   const [members, setMembers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // attendance_request에서 승인된 워케이션/재택근무 조회
+  // attendance_request에서 승인된 워케이션/재택근무 조회 (담당자: 배정 작가만, 에이전시: 소속 전체)
   useEffect(() => {
     const fetchWorkcationMembers = async () => {
-      if (!agencyNo) {
-        console.log('❌ agencyNo가 없어서 종료');
+      if (!isManager && !agencyNo) {
+        console.log('❌ 에이전시 소속이 아니어서 종료');
         setIsLoading(false);
         return;
       }
 
       setIsLoading(true);
       try {
-        console.log('📡 워케이션/재택근무 직원 조회 시작:', { agencyNo });
+        console.log('📡 워케이션/재택근무 직원 조회 시작:', { isManager, agencyNo });
         
-        // 1. 에이전시 소속 근태 신청 목록 조회
-        const response = await leaveService.getAgencyRequests(agencyNo);
+        // 1. 담당자면 배정 작가 근태 신청만, 에이전시면 소속 전체 근태 신청 조회
+        const response = isManager
+          ? await leaveService.getManagerRequests()
+          : await leaveService.getAgencyRequests(agencyNo);
         const requestsList = Array.isArray(response?.data) 
           ? response.data 
           : Array.isArray(response) 
@@ -256,7 +259,7 @@ export function AgencyWorkcationPage() {
     };
     
     fetchWorkcationMembers();
-  }, [agencyNo]);
+  }, [agencyNo, isManager]);
 
   // Calculate days remaining for each member
   const getDaysRemaining = (endDate) => {
