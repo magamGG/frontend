@@ -98,6 +98,27 @@ export function SignupPage({ onSignup, onBackToLogin }) {
         ...signupFormData,
         [name]: formatted,
       });
+    } else if (name === 'name') {
+      // 이름은 한글, 영문만 허용 (공백 제외)
+      const filtered = value.replace(/[^가-힣a-zA-Z]/g, '');
+      setSignupFormData({
+        ...signupFormData,
+        [name]: filtered,
+      });
+    } else if (name === 'password' || name === 'confirmPassword') {
+      // 비밀번호는 띄어쓰기 제거
+      const filtered = value.replace(/\s/g, '');
+      setSignupFormData({
+        ...signupFormData,
+        [name]: filtered,
+      });
+    } else if (name === 'email') {
+      // 이메일은 띄어쓰기 제거
+      const filtered = value.replace(/\s/g, '');
+      setSignupFormData({
+        ...signupFormData,
+        [name]: filtered,
+      });
     } else {
       setSignupFormData({
         ...signupFormData,

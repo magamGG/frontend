@@ -93,10 +93,28 @@ export function SignupPage({ onSignup, onBackToLogin }) {
   });
 
   const handleInputChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+    
+    // 비밀번호는 띄어쓰기 제거
+    if (name === 'password' || name === 'confirmPassword') {
+      const filtered = value.replace(/\s/g, '');
+      setFormData({
+        ...formData,
+        [name]: filtered,
+      });
+    } else if (name === 'email') {
+      // 이메일은 띄어쓰기 제거
+      const filtered = value.replace(/\s/g, '');
+      setFormData({
+        ...formData,
+        [name]: filtered,
+      });
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value,
+      });
+    }
   };
 
   const handleRoleChange = (role) => {

@@ -154,7 +154,11 @@ export function ForgotPasswordPage({ onBackToLogin }) {
                     <input
                       type="email"
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={(e) => {
+                        // 이메일은 띄어쓰기 제거
+                        const filtered = e.target.value.replace(/\s/g, '');
+                        setEmail(filtered);
+                      }}
                       placeholder="kim.artist@example.com"
                       className="w-full pl-11 pr-4 py-3 bg-muted/30 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground placeholder:text-muted-foreground"
                       required
@@ -213,7 +217,11 @@ export function ForgotPasswordPage({ onBackToLogin }) {
                     <input
                       type="password"
                       value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
+                      onChange={(e) => {
+                        // 비밀번호는 띄어쓰기 제거
+                        const filtered = e.target.value.replace(/\s/g, '');
+                        setNewPassword(filtered);
+                      }}
                       placeholder="••••••••"
                       className="w-full pl-11 pr-4 py-3 bg-muted/30 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground placeholder:text-muted-foreground"
                       required
@@ -228,7 +236,11 @@ export function ForgotPasswordPage({ onBackToLogin }) {
                     <input
                       type="password"
                       value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      onChange={(e) => {
+                        // 비밀번호는 띄어쓰기 제거
+                        const filtered = e.target.value.replace(/\s/g, '');
+                        setConfirmPassword(filtered);
+                      }}
                       placeholder="••••••••"
                       className="w-full pl-11 pr-4 py-3 bg-muted/30 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground placeholder:text-muted-foreground"
                       required

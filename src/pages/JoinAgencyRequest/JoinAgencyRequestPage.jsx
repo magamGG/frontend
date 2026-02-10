@@ -142,6 +142,14 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
     if (field === 'phone') {
       const formatted = formatPhoneNumber(value);
       setEditFormData(prev => ({ ...prev, [field]: formatted }));
+    } else if (field === 'name') {
+      // 이름은 한글, 영문만 허용 (공백 제외)
+      const filtered = value.replace(/[^가-힣a-zA-Z]/g, '');
+      setEditFormData(prev => ({ ...prev, [field]: filtered }));
+    } else if (field === 'email') {
+      // 이메일은 띄어쓰기 제거
+      const filtered = value.replace(/\s/g, '');
+      setEditFormData(prev => ({ ...prev, [field]: filtered }));
     } else {
       setEditFormData(prev => ({ ...prev, [field]: value }));
     }
@@ -389,9 +397,17 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
                       <InputField
                         id="agencyCode"
                         type="text"
+                        inputMode="numeric"
                         placeholder="예: 12345678901"
                         value={agencyCodeInput}
-                        onChange={(e) => setAgencyCodeInput(e.target.value)}
+                        onChange={(e) => {
+                          // 숫자만 허용
+                          const numbers = e.target.value.replace(/[^\d]/g, '');
+                          // 11자리 제한
+                          const limitedValue = numbers.slice(0, 11);
+                          setAgencyCodeInput(limitedValue);
+                        }}
+                        maxLength={11}
                         disabled={isLoading}
                         required
                         $mono
@@ -436,6 +452,7 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
                 id="edit-name"
                 value={editFormData.name}
                 onChange={(e) => handleEditInputChange('name', e.target.value)}
+                maxLength={20}
                 style={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
               />
             </div>
@@ -446,6 +463,13 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
                 type="email"
                 value={editFormData.email}
                 onChange={(e) => handleEditInputChange('email', e.target.value)}
+                onKeyDown={(e) => {
+                  // 스페이스바 입력 자체를 막기
+                  if (e.key === ' ') {
+                    e.preventDefault();
+                  }
+                }}
+                maxLength={50}
                 style={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
               />
             </div>
