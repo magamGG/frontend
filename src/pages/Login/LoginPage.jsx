@@ -91,11 +91,11 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
               transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
             >
               <LogoIconWrapper>
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="12" cy="8" r="3" fill="currentColor" style={{ color: 'var(--primary-foreground)' }} />
-                  <path d="M12 12C8 12 6 14 6 14V18C6 18 8 20 12 20C16 20 18 18 18 18V14C18 14 16 12 12 12Z" fill="currentColor" style={{ color: 'var(--primary-foreground)' }} />
-                  <path d="M8 6C8 6 9 4 12 4C15 4 16 6 16 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" style={{ color: 'var(--primary-foreground)' }} />
-                </svg>
+                <img 
+                  src="/images/hourglass.png" 
+                  alt="마감지기 로고" 
+                  style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                />
               </LogoIconWrapper>
             </motion.div>
             
