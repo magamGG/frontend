@@ -245,7 +245,7 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
                     <Input
                       id="agencyCode"
                       type="text"
-                      placeholder="예: AGENCY-2026-001"
+                      placeholder="예: 12345678901"
                       value={agencyCode}
                       onChange={(e) => setAgencyCode(e.target.value)}
                       required
@@ -253,7 +253,7 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
                     />
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    에이전시 담당자에게 전용 코드를 문의하세요
+                    에이전시 관리자에게 전용 코드를 문의하세요
                   </p>
                 </div>
               </div>
@@ -269,7 +269,7 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
           {/* Info Box */}
           <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="text-sm text-blue-800">
-              <strong>💡 안내:</strong> 가입 요청 후 에이전시 담당자의 승인이 필요합니다. 
+              <strong>💡 안내:</strong> 가입 요청 후 에이전시 관리자의 승인이 필요합니다. 
               승인 완료 시 등록하신 이메일로 알림이 전송됩니다.
             </p>
           </div>
