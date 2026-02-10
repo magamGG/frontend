@@ -20,7 +20,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { leaveService, attendanceService, calendarService, projectService, memoService } from '@/api/services';
+import { leaveService, attendanceService, calendarService, projectService, memoService, memberService } from '@/api/services';
 import useAuthStore from '@/store/authStore';
 import { LeaveRequestEditModal } from '@/components/modals/LeaveRequestEditModal';
 import {
@@ -175,10 +175,10 @@ const ATTENDANCE_STATUS_CONFIG = {
     icon: Home,
   },
   [ATTENDANCE_TYPE.LEAVE]: {
-    bgColor: '#F5F5F5', // 회색 배경
-    borderColor: 'rgba(107, 114, 128, 0.3)',
-    iconBgColor: 'rgba(107, 114, 128, 0.15)',
-    iconColor: '#6B7280', // 회색
+    bgColor: '#E6FFFA', // 민트색 배경
+    borderColor: 'rgba(45, 212, 191, 0.3)',
+    iconBgColor: 'rgba(45, 212, 191, 0.15)',
+    iconColor: '#14B8A6', // 민트색
     icon: Calendar,
   },
   [ATTENDANCE_TYPE.WORKATION]: {
@@ -316,6 +316,9 @@ export function ArtistDashboardPage() {
   const [attendanceRequestsRefreshTrigger, setAttendanceRequestsRefreshTrigger] = useState(0);
   const [editingAttendanceRequest, setEditingAttendanceRequest] = useState(null);
   const [showEditAttendanceModal, setShowEditAttendanceModal] = useState(false);
+  const [agencyName, setAgencyName] = useState('');
+
+  const authUser = useAuthStore((state) => state.user);
 
   const today = new Date();
   const todayString = `${today.getMonth() + 1}월 ${today.getDate()}일`;
@@ -324,8 +327,30 @@ export function ArtistDashboardPage() {
 
   const getCurrentStatusText = () => {
     const displayType = currentAttendanceType || ATTENDANCE_TYPE.OFFICE;
+    // 출근(OFFICE) 상태에서는 에이전시명을 제목으로 사용
+    if (displayType === ATTENDANCE_TYPE.OFFICE && agencyName) {
+      return agencyName;
+    }
     return `${displayType} 중`;
   };
+
+  // 소속 에이전시 이름 조회 (마이페이지 정보 재사용)
+  useEffect(() => {
+    const fetchAgencyName = async () => {
+      try {
+        const memberNo = authUser?.memberNo;
+        if (!memberNo) return;
+
+        const myPageData = await memberService.getMyPageInfo(memberNo);
+        setAgencyName(myPageData.agencyName || '');
+      } catch (error) {
+        console.error('에이전시명 조회 실패:', error);
+        setAgencyName('');
+      }
+    };
+
+    fetchAgencyName();
+  }, [authUser?.memberNo]);
 
   // 개인 메모 목록 조회 (MEMO 테이블, 타입 '개인')
   useEffect(() => {
@@ -881,20 +906,51 @@ export function ArtistDashboardPage() {
 
               {/* 근태 상태 표시 - API(leaveService.getCurrentStatus, attendanceService.getTodayStatus) 연동 */}
               {(() => {
-                const displayType = currentAttendanceType || ATTENDANCE_TYPE.OFFICE;
-                const displayConfig = ATTENDANCE_STATUS_CONFIG[displayType] || ATTENDANCE_STATUS_CONFIG[ATTENDANCE_TYPE.OFFICE];
-                const DisplayIcon = displayConfig.icon;
+                const rawType = currentAttendanceType || ATTENDANCE_TYPE.OFFICE;
+
+                // 작업 시작 전(출근 전) 상태: 근태 신청도 없고 아직 출근 버튼도 누르지 않은 상태
+                const isPreWork =
+                  !isWorking &&
+                  !currentAttendanceData &&
+                  rawType === ATTENDANCE_TYPE.OFFICE;
+
+                const displayType = rawType;
+                const baseConfig =
+                  ATTENDANCE_STATUS_CONFIG[rawType] || ATTENDANCE_STATUS_CONFIG[ATTENDANCE_TYPE.OFFICE];
+
+                const cardBg = isPreWork
+                  ? '#F3F4F6' // 회색 배경
+                  : baseConfig.bgColor;
+
+                const cardBorder = isPreWork
+                  ? 'rgba(107, 114, 128, 0.3)' // 회색 테두리
+                  : baseConfig.borderColor;
+
+                const iconBgColor = isPreWork
+                  ? 'rgba(107, 114, 128, 0.15)'
+                  : baseConfig.iconBgColor;
+
+                const iconColor = isPreWork
+                  ? '#6B7280'
+                  : baseConfig.iconColor;
+
+                const DisplayIcon = isPreWork ? Clock : baseConfig.icon;
+
                 return (
-                  <AttendanceStatusCard $bgColor={displayConfig.bgColor} $borderColor={displayConfig.borderColor}>
+                  <AttendanceStatusCard $bgColor={cardBg} $borderColor={cardBorder}>
                     <AttendanceStatusContent>
                       <AttendanceStatusLeft>
-                        <AttendanceStatusIconContainer $iconBgColor={displayConfig.iconBgColor}>
-                          <DisplayIcon className="w-6 h-6" style={{ color: displayConfig.iconColor }} />
+                        <AttendanceStatusIconContainer $iconBgColor={iconBgColor}>
+                          <DisplayIcon className="w-6 h-6" style={{ color: iconColor }} />
                         </AttendanceStatusIconContainer>
                         <AttendanceStatusText>
-                          <AttendanceStatusTitle>{displayType} 중</AttendanceStatusTitle>
+                          <AttendanceStatusTitle>
+                            {isPreWork ? '출근 대기중' : `${displayType} 중`}
+                          </AttendanceStatusTitle>
                           <AttendanceStatusDescription>
-                            {displayType === ATTENDANCE_TYPE.OFFICE
+                            {isPreWork
+                              ? '작업 시작 전입니다. 상단 버튼으로 출근을 시작하세요.'
+                              : displayType === ATTENDANCE_TYPE.OFFICE
                               ? '사무실에서 작업 중입니다'
                               : displayType === ATTENDANCE_TYPE.REMOTE
                               ? '자택에서 작업 중입니다'
@@ -907,14 +963,16 @@ export function ArtistDashboardPage() {
                         </AttendanceStatusText>
                       </AttendanceStatusLeft>
                     </AttendanceStatusContent>
-                    {(displayType === ATTENDANCE_TYPE.LEAVE || displayType === ATTENDANCE_TYPE.WORKATION) && currentAttendanceData && (
-                      <AttendancePeriodBox $borderColor={displayConfig.borderColor}>
-                        <AttendancePeriodLabel>
-                          {displayType === ATTENDANCE_TYPE.LEAVE ? '휴가 기간' : '워케이션 기간'}
-                        </AttendancePeriodLabel>
-                        <AttendancePeriodValue>{getAttendancePeriod()}</AttendancePeriodValue>
-                      </AttendancePeriodBox>
-                    )}
+                    {(displayType === ATTENDANCE_TYPE.LEAVE ||
+                      displayType === ATTENDANCE_TYPE.WORKATION) &&
+                      currentAttendanceData && (
+                        <AttendancePeriodBox $borderColor={cardBorder}>
+                          <AttendancePeriodLabel>
+                            {displayType === ATTENDANCE_TYPE.LEAVE ? '휴가 기간' : '워케이션 기간'}
+                          </AttendancePeriodLabel>
+                          <AttendancePeriodValue>{getAttendancePeriod()}</AttendancePeriodValue>
+                        </AttendancePeriodBox>
+                      )}
                   </AttendanceStatusCard>
                 );
               })()}
@@ -975,28 +1033,32 @@ export function ArtistDashboardPage() {
 
               {/* 신청 현황 */}
               <QuickInfoCard>
-                <AttendanceRequestCardHeader onClick={() => setShowAttendanceModal(true)}>
-                  <div>
-                    <FileText className="w-4 h-4" />
-                    <QuickInfoTitle>신청 현황</QuickInfoTitle>
-                  </div>
+                <QuickInfoHeader onClick={() => setShowAttendanceModal(true)} style={{ cursor: 'pointer' }}>
+                  <FileText className="w-4 h-4 text-primary" />
+                  <QuickInfoTitle>신청 현황</QuickInfoTitle>
                   {attendanceRequests.length >= 1 && (
-                    <ChevronRight className="w-4 h-4" />
+                    <ChevronRight className="w-4 h-4 text-muted-foreground ml-auto" />
                   )}
-                </AttendanceRequestCardHeader>
+                </QuickInfoHeader>
                 {attendanceRequests.length >= 1 && (
                   <AttendanceRequestCardList>
                     {attendanceRequests.slice(0, 2).map((request) => {
-                      const statusColor = 
-                        request.status === REQUEST_STATUS.PENDING ? '#F59E0B' :
-                        request.status === REQUEST_STATUS.APPROVED ? '#10B981' :
-                        '#EF4444';
-                      
+                      const statusColor =
+                        request.status === REQUEST_STATUS.PENDING
+                          ? '#F59E0B'
+                          : request.status === REQUEST_STATUS.APPROVED
+                          ? '#10B981'
+                          : '#EF4444';
+
                       return (
                         <AttendanceRequestCardItem key={request.id}>
                           <AttendanceRequestCardItemContent>
-                            <AttendanceRequestCardItemTitle>{request.typeName || request.type}</AttendanceRequestCardItemTitle>
-                            <AttendanceRequestCardItemDate>{request.startDate} ~ {request.endDate}</AttendanceRequestCardItemDate>
+                            <AttendanceRequestCardItemTitle>
+                              {request.typeName || request.type}
+                            </AttendanceRequestCardItemTitle>
+                            <AttendanceRequestCardItemDate>
+                              {request.startDate} ~ {request.endDate}
+                            </AttendanceRequestCardItemDate>
                           </AttendanceRequestCardItemContent>
                           <AttendanceRequestCardItemBadge $statusColor={statusColor}>
                             {request.status}
@@ -1127,9 +1189,30 @@ export function ArtistDashboardPage() {
             </FormLabel>
             <FormInput
               type="text"
-              placeholder="예: 7시간"
+              inputMode="numeric"
+              placeholder="예: 7"
               value={healthSurvey.sleepHours}
-              onChange={(e) => setHealthSurvey({ ...healthSurvey, sleepHours: e.target.value })}
+              onChange={(e) => {
+                // 숫자만 허용, 공백 및 기타 문자 제거, 0~24 범위로 제한, 최대 2자리
+                const numbers = e.target.value.replace(/[^\d]/g, '');
+
+                if (!numbers) {
+                  setHealthSurvey({ ...healthSurvey, sleepHours: '' });
+                  return;
+                }
+
+                let numeric = parseInt(numbers, 10);
+                if (Number.isNaN(numeric)) {
+                  numeric = 0;
+                }
+
+                if (numeric < 0) numeric = 0;
+                if (numeric > 24) numeric = 24;
+
+                const limited = numeric.toString().slice(0, 2);
+                setHealthSurvey({ ...healthSurvey, sleepHours: limited });
+              }}
+              maxLength={2}
             />
           </FormRow>
 
