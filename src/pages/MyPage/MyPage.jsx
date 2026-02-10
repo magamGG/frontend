@@ -516,7 +516,12 @@ export function MyPage({ onClose, onLogout }) {
               <Input
                 id="edit-name"
                 value={userName}
-                onChange={(e) => setUserName(e.target.value)}
+                onChange={(e) => {
+                  // 이름은 한글, 영문만 허용 (공백 제외)
+                  const filtered = e.target.value.replace(/[^가-힣a-zA-Z]/g, '');
+                  setUserName(filtered);
+                }}
+                maxLength={20}
                 className="bg-white border-[#DADDE1] text-[#1F2328]"
               />
             </div>
@@ -528,7 +533,11 @@ export function MyPage({ onClose, onLogout }) {
                 id="edit-password"
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  // 비밀번호는 띄어쓰기 제거
+                  const filtered = e.target.value.replace(/\s/g, '');
+                  setPassword(filtered);
+                }}
                 placeholder="변경할 비밀번호 (변경하지 않으려면 비워두세요)"
                 className="bg-white border-[#DADDE1] text-[#1F2328]"
               />
@@ -541,7 +550,11 @@ export function MyPage({ onClose, onLogout }) {
                 id="edit-confirm-password"
                 type="password"
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                onChange={(e) => {
+                  // 비밀번호는 띄어쓰기 제거
+                  const filtered = e.target.value.replace(/\s/g, '');
+                  setConfirmPassword(filtered);
+                }}
                 placeholder="비밀번호 확인"
                 className="bg-white border-[#DADDE1] text-[#1F2328]"
               />

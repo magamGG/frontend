@@ -36,14 +36,7 @@ import {
   KanbanBoardsContainer,
   WeeklyScheduleSection,
   WeeklyScheduleTitle,
-  WeeklyScheduleList,
-  WeeklyScheduleItem,
-  WeeklyScheduleDate,
-  WeeklyScheduleDay,
-  WeeklyScheduleEvents,
-  WeeklyScheduleEvent,
-  WeeklyScheduleDateContainer,
-  WeeklyScheduleEmptyText,
+  WeeklyScheduleListScroll,
   ReadOnlyCard,
   ReadOnlyCardHeader,
   ReadOnlyCardHeaderContent,
@@ -195,38 +188,35 @@ export function AgencyProjectDetailPage({ project, onBack }) {
     fetchBoards();
   }, [project?.id]);
 
-  // 주간 캘린더: KANBAN_CARD(startDate, dueDate, title, assignedTo) 기반으로 이번 주 일정 표시
-  const weeklySchedule = useMemo(() => {
+  // 주간 업무 내역: 담당자 프로젝트 상세(ProjectDetail) '남은 마감일' 카드와 동일 구조. 마감일 임박 순, D-n 표시, 기간 지난 것은 제외
+  const weeklyWorkList = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
-    const schedule = [];
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() + i);
-      const dateStr = `${d.getMonth() + 1}/${d.getDate()}`;
-      const dayName = i === 0 ? `오늘 (${dayNames[d.getDay()]})` : dayNames[d.getDay()];
-      const yyyyMmDd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      const events = [];
-      boards.forEach((board) => {
-        (board.cards || []).forEach((card) => {
-          const startStr = card.startDate ? String(card.startDate).slice(0, 10) : null;
-          const dueStr = card.dueDate ? String(card.dueDate).slice(0, 10) : null;
-          const assigneeName = card.assignedTo?.name || '';
-          if (startStr && dueStr) {
-            if (yyyyMmDd >= startStr && yyyyMmDd <= dueStr) {
-              events.push({ title: card.title, assigneeName });
-            }
-          } else if (startStr && startStr === yyyyMmDd) {
-            events.push({ title: card.title, assigneeName });
-          } else if (dueStr && dueStr === yyyyMmDd) {
-            events.push({ title: card.title, assigneeName });
-          }
+    const items = [];
+    boards.forEach((board) => {
+      (board.cards || []).forEach((card) => {
+        const dueStr = card.dueDate ? String(card.dueDate).slice(0, 10) : null;
+        if (!dueStr) return;
+        const dueDate = new Date(dueStr);
+        dueDate.setHours(0, 0, 0, 0);
+        const diffMs = dueDate - today;
+        const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+        if (diffDays < 0) return;
+        const dLabel = diffDays === 0 ? 'D-Day' : `D-${diffDays}`;
+        const dateStr = `${dueDate.getMonth() + 1}/${dueDate.getDate()}`;
+        const assigneeName = card.assignedTo?.name || '';
+        items.push({
+          id: `${board.id}-${card.id}`,
+          title: card.title,
+          assigneeName,
+          dueDate: dueStr,
+          dateStr,
+          dLabel,
         });
       });
-      schedule.push({ date: dateStr, day: dayName, events });
-    }
-    return schedule;
+    });
+    items.sort((a, b) => (a.dueDate < b.dueDate ? -1 : a.dueDate > b.dueDate ? 1 : 0));
+    return items;
   }, [boards]);
 
   // 모달 상태
@@ -336,36 +326,31 @@ export function AgencyProjectDetailPage({ project, onBack }) {
             </ProjectManagementSection>
           </ContentGridLeft>
 
-          {/* 오른쪽 열: 주간 캘린더 (KANBAN_CARD 기반) */}
+          {/* 오른쪽 열: 주간 업무 내역 (마감일 임박 순) */}
           <ContentGridRight>
             <WeeklyScheduleSection>
-              <WeeklyScheduleTitle>주간 캘린더</WeeklyScheduleTitle>
+              <WeeklyScheduleTitle>주간 업무 내역</WeeklyScheduleTitle>
 
-              <WeeklyScheduleList>
-                {weeklySchedule.map((schedule, index) => (
-                  <WeeklyScheduleItem key={index}>
-                    <WeeklyScheduleDateContainer>
-                      <WeeklyScheduleDate>{schedule.date}</WeeklyScheduleDate>
-                      <WeeklyScheduleDay>{schedule.day}</WeeklyScheduleDay>
-                    </WeeklyScheduleDateContainer>
-                    {schedule.events.length > 0 ? (
-                      <WeeklyScheduleEvents>
-                        {schedule.events.map((event, eventIndex) => (
-                          <WeeklyScheduleEvent key={eventIndex}>
-                            <Circle className="w-2 h-2 fill-primary text-primary flex-shrink-0" />
-                            <span className="text-xs text-muted-foreground">
-                              {event.title}
-                              {event.assigneeName && ` (${event.assigneeName})`}
-                            </span>
-                          </WeeklyScheduleEvent>
-                        ))}
-                      </WeeklyScheduleEvents>
-                    ) : (
-                      <WeeklyScheduleEmptyText>캘린더 없음</WeeklyScheduleEmptyText>
-                    )}
-                  </WeeklyScheduleItem>
-                ))}
-              </WeeklyScheduleList>
+              <WeeklyScheduleListScroll>
+                {weeklyWorkList.length === 0 ? null : (
+                  weeklyWorkList.map((item) => (
+                    <div
+                      key={item.id}
+                      className="p-3 rounded-lg border-l-4 bg-muted/20"
+                      style={{ borderLeftColor: 'var(--primary)' }}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-semibold text-sm text-foreground">마감일 {item.dateStr}</span>
+                        <span className="text-xs font-medium text-primary">{item.dLabel}</span>
+                      </div>
+                      <p className="text-xs text-foreground">
+                        • {item.title}
+                        {item.assigneeName && <span className="text-muted-foreground"> ({item.assigneeName})</span>}
+                      </p>
+                    </div>
+                  ))
+                )}
+              </WeeklyScheduleListScroll>
             </WeeklyScheduleSection>
           </ContentGridRight>
         </ContentGrid>

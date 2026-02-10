@@ -165,6 +165,7 @@ export const API_ENDPOINTS = {
     GET: (agencyNo) => `/api/agency/${agencyNo}`, // GET: 에이전시 상세 (agencyLeave 등)
     LEAVE: (agencyNo) => `/api/agency/${agencyNo}/leave`, // PUT: 기본 연차(agency_leave) 수정
     JOIN_REQUEST: `/api/agency/join-request`, // POST: 에이전시 가입 요청
+    MY_JOIN_REQUEST: `/api/agency/my-join-request`, // GET: 회원의 대기 중인 가입 요청 조회
     JOIN_REQUESTS: (agencyNo) => `/api/agency/${agencyNo}/join-requests`, // GET: 에이전시 가입 요청 목록 조회
     APPROVE_JOIN_REQUEST: (newRequestNo) => `/api/agency/join-requests/${newRequestNo}/approve`, // POST: 가입 요청 승인
     REJECT_JOIN_REQUEST: (newRequestNo) => `/api/agency/join-requests/${newRequestNo}/reject`, // POST: 가입 요청 거절

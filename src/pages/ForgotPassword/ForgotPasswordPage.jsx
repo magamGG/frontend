@@ -217,9 +217,14 @@ export function ForgotPasswordPage({ onBackToLogin }) {
                         <InputField
                           type="email"
                           value={emailInput}
-                          onChange={(e) => setEmailInput(e.target.value)}
+                          onChange={(e) => {
+                            // 이메일은 띄어쓰기 제거
+                            const filtered = e.target.value.replace(/\s/g, '');
+                            setEmailInput(filtered);
+                          }}
                           disabled={isLoading}
                           placeholder="kim.artist@example.com"
+                          hasIcon
                           required
                         />
                       </InputWrapper>
@@ -277,9 +282,14 @@ export function ForgotPasswordPage({ onBackToLogin }) {
                         <InputField
                           type="password"
                           value={newPasswordInput}
-                          onChange={(e) => setNewPasswordInput(e.target.value)}
+                          onChange={(e) => {
+                            // 비밀번호는 띄어쓰기 제거
+                            const filtered = e.target.value.replace(/\s/g, '');
+                            setNewPasswordInput(filtered);
+                          }}
                           disabled={isLoading}
                           placeholder="••••••••"
+                          hasIcon
                           required
                         />
                       </InputWrapper>
@@ -292,9 +302,14 @@ export function ForgotPasswordPage({ onBackToLogin }) {
                         <InputField
                           type="password"
                           value={confirmPasswordInput}
-                          onChange={(e) => setConfirmPasswordInput(e.target.value)}
+                          onChange={(e) => {
+                            // 비밀번호는 띄어쓰기 제거
+                            const filtered = e.target.value.replace(/\s/g, '');
+                            setConfirmPasswordInput(filtered);
+                          }}
                           disabled={isLoading}
                           placeholder="••••••••"
+                          hasIcon
                           required
                         />
                       </InputWrapper>

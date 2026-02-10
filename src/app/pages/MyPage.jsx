@@ -371,7 +371,12 @@ export function MyPage({ onClose, onLogout }) {
                 <Input
                   id="edit-name"
                   value={userName}
-                  onChange={(e) => setUserName(e.target.value)}
+                  onChange={(e) => {
+                    // 이름은 한글, 영문만 허용 (공백 제외)
+                    const filtered = e.target.value.replace(/[^가-힣a-zA-Z]/g, '');
+                    setUserName(filtered);
+                  }}
+                  maxLength={20}
                   className="bg-white border-[#DADDE1] text-[#1F2328]"
                 />
               </div>
@@ -381,7 +386,11 @@ export function MyPage({ onClose, onLogout }) {
                   id="edit-email"
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    // 이메일은 띄어쓰기 제거
+                    const filtered = e.target.value.replace(/\s/g, '');
+                    setEmail(filtered);
+                  }}
                   className="bg-white border-[#DADDE1] text-[#1F2328]"
                 />
               </div>

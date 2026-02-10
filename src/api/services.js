@@ -454,6 +454,12 @@ export const agencyService = {
     return api.post(API_ENDPOINTS.AGENCY.JOIN_REQUEST, requestData);
   },
 
+  
+  // 회원의 대기 중인 가입 요청 조회
+  getMyPendingJoinRequest: () => {
+    return api.get(API_ENDPOINTS.AGENCY.MY_JOIN_REQUEST);
+  },
+  
   // 에이전시 가입 요청 목록 조회
   getJoinRequests: (agencyNo) => {
     return api.get(API_ENDPOINTS.AGENCY.JOIN_REQUESTS(agencyNo));

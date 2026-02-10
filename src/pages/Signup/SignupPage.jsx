@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Card } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Mail, Lock, User, Phone, Building, Briefcase, Edit, Check, Palette, Pen, BookOpen, Paintbrush, ArrowLeft, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 import { memberService } from '@/api';
+import { formatPhoneNumber, normalizePhoneNumber } from '@/utils/phoneFormatter';
 import {
   SignupRoot,
   BackgroundPattern,
@@ -88,10 +89,42 @@ export function SignupPage({ onSignup, onBackToLogin }) {
   });
 
   const handleInputChange = (e) => {
-    setSignupFormData({
-      ...signupFormData,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+    
+    // 연락처 입력 시 자동 포맷팅
+    if (name === 'phone') {
+      const formatted = formatPhoneNumber(value);
+      setSignupFormData({
+        ...signupFormData,
+        [name]: formatted,
+      });
+    } else if (name === 'name') {
+      // 이름은 한글, 영문만 허용 (공백 제외)
+      const filtered = value.replace(/[^가-힣a-zA-Z]/g, '');
+      setSignupFormData({
+        ...signupFormData,
+        [name]: filtered,
+      });
+    } else if (name === 'password' || name === 'confirmPassword') {
+      // 비밀번호는 띄어쓰기 제거
+      const filtered = value.replace(/\s/g, '');
+      setSignupFormData({
+        ...signupFormData,
+        [name]: filtered,
+      });
+    } else if (name === 'email') {
+      // 이메일은 띄어쓰기 제거
+      const filtered = value.replace(/\s/g, '');
+      setSignupFormData({
+        ...signupFormData,
+        [name]: filtered,
+      });
+    } else {
+      setSignupFormData({
+        ...signupFormData,
+        [name]: value,
+      });
+    }
   };
 
   const handleRoleChange = (role) => {
@@ -123,7 +156,7 @@ export function SignupPage({ onSignup, onBackToLogin }) {
         memberName: signupFormData.name,
         memberPassword: signupFormData.password,
         memberEmail: signupFormData.email, // UNIQUE, 로그인 ID로 사용
-        memberPhone: signupFormData.phone,
+        memberPhone: normalizePhoneNumber(signupFormData.phone), // DB 저장용 포맷
         memberAddress: signupFormData.address?.trim() || '',
         memberRole: selectedRole === USER_ROLES.ARTIST 
           ? (artistSpecialization === 'webtoon-writer' ? '웹툰 작가'
@@ -366,6 +399,7 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                           value={signupFormData.name}
                           onChange={handleInputChange}
                           placeholder="홍길동"
+                          maxLength={20}
                           required
                         />
                       </InputWrapper>
@@ -381,6 +415,7 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                           value={signupFormData.phone}
                           onChange={handleInputChange}
                           placeholder="010-1234-5678"
+                          maxLength={13}
                           required
                         />
                       </InputWrapper>
@@ -397,6 +432,7 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                         value={signupFormData.address}
                         onChange={handleInputChange}
                         placeholder="주소를 입력하세요 (예: 서울시 강남구 역삼동 123-45)"
+                        maxLength={100}
                       />
                     </InputWrapper>
                   </InputGroup>
@@ -410,7 +446,14 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                         name="email"
                         value={signupFormData.email}
                         onChange={handleInputChange}
+                        onKeyDown={(e) => {
+                          // 스페이스바 입력 자체를 막기
+                          if (e.key === ' ') {
+                            e.preventDefault();
+                          }
+                        }}
                         placeholder="example@email.com"
+                        maxLength={50}
                         required
                       />
                     </InputWrapper>
@@ -427,6 +470,7 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                           value={signupFormData.organization}
                           onChange={handleInputChange}
                           placeholder="스튜디오 마감지기"
+                          maxLength={30}
                         />
                       </InputWrapper>
                     </InputGroup>
@@ -443,6 +487,7 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                           value={signupFormData.password}
                           onChange={handleInputChange}
                           placeholder="••••••••"
+                          maxLength={100}
                           required
                         />
                       </InputWrapper>
@@ -458,6 +503,7 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                           value={signupFormData.confirmPassword}
                           onChange={handleInputChange}
                           placeholder="••••••••"
+                          maxLength={100}
                           required
                         />
                       </InputWrapper>

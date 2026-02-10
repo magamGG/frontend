@@ -54,12 +54,9 @@ export const LogoIconWrapper = styled.div`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 80px;
-  height: 80px;
-  background-color: var(--primary);
-  border-radius: 16px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  margin-bottom: 24px;
+  width: 180px;
+  height: 180px;
+  margin-bottom: 0px;
 `;
 
 // 메인 타이틀
