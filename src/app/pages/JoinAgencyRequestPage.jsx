@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Card } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
@@ -8,6 +8,8 @@ import { Badge } from '@/app/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/app/components/ui/dialog';
 import { Building2, User, Mail, Phone, Key, Send, ArrowLeft, CheckCircle2, Edit, Building } from 'lucide-react';
 import { toast } from 'sonner';
+import { agencyService } from '@/api';
+import useAuthStore from '@/store/authStore';
 
 
 
@@ -18,6 +20,7 @@ import { toast } from 'sonner';
  */
 export function JoinAgencyRequestPage({ onBack, onSuccess }) {
   const [step, setStep] = useState('form');
+  const { user } = useAuthStore();
   
   // Mock user data from signup (실제로는 회원가입 시 저장된 정보)
   const [userData, setUserData] = useState({
@@ -29,6 +32,31 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editFormData, setEditFormData] = useState({ ...userData });
   const [agencyCode, setAgencyCode] = useState('');
+
+  // 대기 중인 가입 요청 확인
+  useEffect(() => {
+    const checkPendingRequest = async () => {
+      if (!user?.memberNo) return;
+
+      try {
+        const myRequest = await agencyService.getMyPendingJoinRequest();
+        
+        // 대기 중인 요청이 있으면 success 화면으로 전환
+        if (myRequest && myRequest.newRequestStatus === '대기') {
+          setStep('success');
+          // 에이전시 코드는 요청 정보에 포함되지 않으므로, 필요시 별도 조회
+          // 또는 agencyCode는 빈 상태로 유지
+        }
+      } catch (error) {
+        // 204 No Content는 정상 (대기 중인 요청 없음)
+        if (error?.response?.status !== 204) {
+          console.error('가입 요청 상태 확인 실패:', error);
+        }
+      }
+    };
+
+    checkPendingRequest();
+  }, [user?.memberNo]);
 
   const handleEditInputChange = (field, value) => {
     setEditFormData(prev => ({ ...prev, [field]: value }));
