@@ -72,13 +72,13 @@ export default function App() {
       if (token || isAuthenticated || user) {
         storeLogout();
       }
-      
+
       setAuthView('login');
       setUserRole(null);
       setHasAgency(false);
       setIsLoading(false);
     };
-    
+
     restoreSession();
   }, []);
 
@@ -92,7 +92,7 @@ export default function App() {
       console.error('memberRole이 없습니다.');
       return;
     }
-    
+
     // 아티스트/담당자 역할 목록
     const artistAndManagerRoles = [
       '웹툰 작가',
@@ -104,11 +104,11 @@ export default function App() {
       '어시스트- 기타',
       '담당자'
     ];
-    
+
     // 프론트엔드에서 사용할 역할 타입 매핑
     let roleType = null;
     let hasAgency = agencyNo !== null && agencyNo !== undefined;
-    
+
     if (memberRole === '에이전시 관리자') {
       // 에이전시 관리자는 항상 대시보드로 이동
       roleType = 'agency';
@@ -129,7 +129,7 @@ export default function App() {
       roleType = 'individual';
       setAuthView('dashboard');
     }
-    
+
     setUserRole(roleType);
     setHasAgency(hasAgency);
   };
@@ -142,7 +142,7 @@ export default function App() {
   const handleLogout = () => {
     // Zustand store에서 로그아웃 (localStorage 클리어)
     storeLogout();
-    
+
     // 로컬 상태 초기화
     setUserRole(null);
     setHasAgency(true);
@@ -168,37 +168,37 @@ export default function App() {
   };
 
   // Define sections based on user role
-  const sections = userRole === 'individual' 
+  const sections = userRole === 'individual'
     ? [
-        // Individual (Artist) focused pages
-        {
-          id: 'dashboard',
-          title: '대시보드',
-          content: <ArtistDashboardPage />,
-        },
-        {
-          id: 'projects',
-          title: '프로젝트 관리',
-          content: <ArtistProjectsPage />,
-        },
-        {
-          id: 'calendar',
-          title: '캘린더',
-          content: (props) => <ArtistCalendarPage {...props} />,
-        },
-        {
-          id: 'health',
-          title: '건강관리',
-          content: <ArtistHealthPage />,
-        },
-      ]
+      // Individual (Artist) focused pages
+      {
+        id: 'dashboard',
+        title: '대시보드',
+        content: <ArtistDashboardPage />,
+      },
+      {
+        id: 'projects',
+        title: '프로젝트 관리',
+        content: <ArtistProjectsPage />,
+      },
+      {
+        id: 'calendar',
+        title: '캘린더',
+        content: (props) => <ArtistCalendarPage {...props} />,
+      },
+      {
+        id: 'health',
+        title: '건강관리',
+        content: <ArtistHealthPage />,
+      },
+    ]
     : userRole === 'manager'
-    ? [
+      ? [
         // Manager (Admin) focused pages
         {
           id: 'dashboard',
           title: '대시보드',
-          content: <AdminDashboardPage />,
+          content: (props) => <AdminDashboardPage {...props} />,
         },
         {
           id: 'projects',
@@ -231,137 +231,137 @@ export default function App() {
           content: <AdminHealthPage />,
         },
       ]
-    : userRole === 'agency'
-    ? [
-        // Agency focused pages
-        {
-          id: 'dashboard',
-          title: '대시보드',
-          content: <AgencyDashboardPage />,
-        },
-        // 전체 프로젝트(에이전시 모든 프로젝트 조회) — MEMBER_ROLE이 에이전시 관리자일 때만 메뉴 노출
-        ...(user?.memberRole === '에이전시 관리자'
-          ? [{ id: 'projects', title: '전체 프로젝트', content: <AgencyProjectsPage /> }]
-          : []),
-        {
-          id: 'team',
-          title: '전체 직원',
-          content: <AgencyTeamPage />,
-        },
-        {
-          id: 'approvals',
-          title: '요청 관리',
-          content: <AgencyApprovalsPage />,
-        },
-        {
-          id: 'health',
-          title: '건강관리',
-          content: <AgencyHealthPage />,
-        },
-        {
-          id: 'workcation',
-          title: '원격 관리',
-          content: <AgencyWorkcationPage />,
-        },
-        {
-          id: 'assignment',
-          title: '할당 관리',
-          content: <AgencyAssignmentPage />,
-        },
-        {
-          id: 'leave-settings',
-          title: '연차 설정',
-          content: <AgencyLeaveSettingsPage />,
-        },
-      ]
-    : [
-        // All pages - for development/preview
-        {
-          id: 'individual-dashboard',
-          title: '개인 대시보드',
-          content: <ArtistDashboardPage />,
-        },
-        {
-          id: 'individual-projects',
-          title: '내 작품',
-          content: <ArtistProjectsPage />,
-        },
-        {
-          id: 'individual-calendar',
-          title: '작가 캘린더',
-          content: (props) => <ArtistCalendarPage {...props} />,
-        },
-        {
-          id: 'manager-dashboard',
-          title: '담당자 대시보드',
-          content: (props) => <AdminDashboardPage {...props} />,
-        },
-        {
-          id: 'manager-projects',
-          title: '프로젝트 관리',
-          content: <AdminProjectsPage />,
-        },
-        {
-          id: 'manager-calendar',
-          title: '담당자 캘린더',
-          content: <AdminCalendarPage />,
-        },
-        {
-          id: 'manager-team',
-          title: '직원 관리',
-          content: <AdminTeamPage />,
-        },
-        {
-          id: 'agency-dashboard',
-          title: '에이전시 대시보드',
-          content: <AgencyDashboardPage />,
-        },
-        {
-          id: 'agency-projects',
-          title: '에이전시 프로젝트',
-          content: <AgencyProjectsPage />,
-        },
-        {
-          id: 'agency-team',
-          title: '전체 직원',
-          content: <AgencyTeamPage />,
-        },
-        {
-          id: 'agency-approvals',
-          title: '승인 관리',
-          content: <AgencyApprovalsPage />,
-        },
-        {
-          id: 'health',
-          title: '전사 건강',
-          content: <AdminHealthPage />,
-        },
-        {
-          id: 'workcation',
-          title: '원격 관리',
-          content: <AgencyWorkcationPage />,
-        },
-        {
-          id: 'manager-my-page',
-          title: '내 정보',
-          content: (props) => (
-            <AdminMyPage 
-              onClose={() => props?.onNavigateToSection?.(0)} 
-              onLogout={handleLogout}
-            />
-          ),
-        },
-        {
-          id: 'agency-my-page',
-          title: '내 정보',
-          content: (props) => (
-            <AgencyMyPage 
-              onClose={() => props?.onNavigateToSection?.(0)} 
-              onLogout={handleLogout}
-            />
-          ),
-        },
-      ];
+      : userRole === 'agency'
+        ? [
+          // Agency focused pages
+          {
+            id: 'dashboard',
+            title: '대시보드',
+            content: <AgencyDashboardPage />,
+          },
+          // 전체 프로젝트(에이전시 모든 프로젝트 조회) — MEMBER_ROLE이 에이전시 관리자일 때만 메뉴 노출
+          ...(user?.memberRole === '에이전시 관리자'
+            ? [{ id: 'projects', title: '전체 프로젝트', content: <AgencyProjectsPage /> }]
+            : []),
+          {
+            id: 'team',
+            title: '전체 직원',
+            content: <AgencyTeamPage />,
+          },
+          {
+            id: 'approvals',
+            title: '요청 관리',
+            content: <AgencyApprovalsPage />,
+          },
+          {
+            id: 'health',
+            title: '건강관리',
+            content: <AgencyHealthPage />,
+          },
+          {
+            id: 'workcation',
+            title: '원격 관리',
+            content: <AgencyWorkcationPage />,
+          },
+          {
+            id: 'assignment',
+            title: '할당 관리',
+            content: <AgencyAssignmentPage />,
+          },
+          {
+            id: 'leave-settings',
+            title: '연차 설정',
+            content: <AgencyLeaveSettingsPage />,
+          },
+        ]
+        : [
+          // All pages - for development/preview
+          {
+            id: 'individual-dashboard',
+            title: '개인 대시보드',
+            content: <ArtistDashboardPage />,
+          },
+          {
+            id: 'individual-projects',
+            title: '내 작품',
+            content: <ArtistProjectsPage />,
+          },
+          {
+            id: 'individual-calendar',
+            title: '작가 캘린더',
+            content: (props) => <ArtistCalendarPage {...props} />,
+          },
+          {
+            id: 'manager-dashboard',
+            title: '담당자 대시보드',
+            content: (props) => <AdminDashboardPage {...props} />,
+          },
+          {
+            id: 'manager-projects',
+            title: '프로젝트 관리',
+            content: <AdminProjectsPage />,
+          },
+          {
+            id: 'manager-calendar',
+            title: '담당자 캘린더',
+            content: <AdminCalendarPage />,
+          },
+          {
+            id: 'manager-team',
+            title: '직원 관리',
+            content: <AdminTeamPage />,
+          },
+          {
+            id: 'agency-dashboard',
+            title: '에이전시 대시보드',
+            content: <AgencyDashboardPage />,
+          },
+          {
+            id: 'agency-projects',
+            title: '에이전시 프로젝트',
+            content: <AgencyProjectsPage />,
+          },
+          {
+            id: 'agency-team',
+            title: '전체 직원',
+            content: <AgencyTeamPage />,
+          },
+          {
+            id: 'agency-approvals',
+            title: '승인 관리',
+            content: <AgencyApprovalsPage />,
+          },
+          {
+            id: 'health',
+            title: '전사 건강',
+            content: <AdminHealthPage />,
+          },
+          {
+            id: 'workcation',
+            title: '원격 관리',
+            content: <AgencyWorkcationPage />,
+          },
+          {
+            id: 'manager-my-page',
+            title: '내 정보',
+            content: (props) => (
+              <AdminMyPage
+                onClose={() => props?.onNavigateToSection?.(0)}
+                onLogout={handleLogout}
+              />
+            ),
+          },
+          {
+            id: 'agency-my-page',
+            title: '내 정보',
+            content: (props) => (
+              <AgencyMyPage
+                onClose={() => props?.onNavigateToSection?.(0)}
+                onLogout={handleLogout}
+              />
+            ),
+          },
+        ];
 
   // 로딩 중일 때 로딩 화면 표시 (깜빡임 방지)
   if (isLoading) {
@@ -378,16 +378,16 @@ export default function App() {
   return (
     <DndProvider backend={HTML5Backend}>
       <ProjectProvider>
-        <Toaster 
-          position="top-right" 
+        <Toaster
+          position="top-right"
           duration={1000}
           closeButton={false}
           className="toast-custom"
         />
-        
+
         {authView === 'login' && (
-          <LoginPage 
-            onLogin={handleLogin} 
+          <LoginPage
+            onLogin={handleLogin}
             onShowSignup={handleShowSignup}
             onShowForgotPassword={handleShowForgotPassword}
           />
@@ -402,7 +402,7 @@ export default function App() {
         )}
 
         {authView === 'join-request' && (
-          <JoinAgencyRequestPage 
+          <JoinAgencyRequestPage
             onBack={handleBackToLogin}
             onSuccess={handleJoinRequestAck}
           />
