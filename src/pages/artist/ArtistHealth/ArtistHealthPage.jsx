@@ -33,6 +33,8 @@ import {
   CompletedStatusValue,
   ResultDetailBox,
   ResultDetailTitle,
+  ResultDetailContentSection,
+  ResultDetailMainText,
   ResultDetailText,
   ResultDetailAlert,
   ResultDetailAlertContent,
@@ -715,16 +717,18 @@ export function ArtistHealthPage() {
                 </CompletedStatusBox>
 
                 <ResultDetailBox>
-                  <ResultDetailTitle>검사 결과 (PHQ-9·GAD-7 기준)</ResultDetailTitle>
-                  <ResultDetailText>
-                    귀하의 <strong>월간 정신 건강 총점</strong>은 <strong style={{ color: '#1f2328' }}>{deepCheckupData.mental.score}점</strong>(총 0~67)이며,{' '}
-                    <strong style={{ color: mentalHealthMessages[deepCheckupData.mental.status]?.color || '#1f2328' }}>
-                      {deepCheckupData.mental.status || '미정'}
-                    </strong> 구간(점수 {mentalHealthMessages[deepCheckupData.mental.status]?.scoreBand || '-'}, {mentalHealthMessages[deepCheckupData.mental.status]?.severityLabel || ''})입니다.
-                  </ResultDetailText>
-                  <ResultDetailText style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '4px' }}>
-                    채점 기준: 정상 0~14 · 주의 15~29 · 경고 30~44 · 위험 45+
-                  </ResultDetailText>
+                  <ResultDetailContentSection>
+                    <ResultDetailTitle>검사 결과 (PHQ-9·GAD-7 기준)</ResultDetailTitle>
+                    <ResultDetailMainText>
+                      귀하의 <strong>월간 정신 건강 총점</strong>은 <strong style={{ color: '#1f2328' }}>{deepCheckupData.mental.score}점</strong>(총 0~67)이며,{' '}
+                      <strong style={{ color: mentalHealthMessages[deepCheckupData.mental.status]?.color || '#1f2328' }}>
+                        {deepCheckupData.mental.status || '미정'}
+                      </strong> 구간(점수 {mentalHealthMessages[deepCheckupData.mental.status]?.scoreBand || '-'}, {mentalHealthMessages[deepCheckupData.mental.status]?.severityLabel || ''})입니다.
+                    </ResultDetailMainText>
+                    <ResultDetailText style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '4px', marginBottom: 0 }}>
+                      채점 기준: 정상 0~14 · 주의 15~29 · 경고 30~44 · 위험 45+
+                    </ResultDetailText>
+                  </ResultDetailContentSection>
                   {(() => {
                     const statusInfo = mentalHealthMessages[deepCheckupData.mental.status] || mentalHealthMessages['정상'];
                     return (
@@ -822,17 +826,19 @@ export function ArtistHealthPage() {
                 </CompletedStatusBox>
 
                 <ResultDetailBox>
-                  <ResultDetailTitle>검사 결과 (QuickDASH 기준)</ResultDetailTitle>
-                  <ResultDetailText>
-                    귀하의 <strong>QuickDASH 원점수</strong>는 <strong style={{ color: '#1f2328' }}>{deepCheckupData.physical.score}점</strong>(11~55),{' '}
-                    <strong>정규화 점수</strong>는 <strong style={{ color: '#1f2328' }}>{getQuickDashNormalizedScore(deepCheckupData.physical.score)}점</strong>(0~100, 상지 기능 제한 정도)이며,{' '}
-                    <strong style={{ color: physicalHealthMessages[deepCheckupData.physical.status]?.color || '#1f2328' }}>
-                      {deepCheckupData.physical.status || '미정'}
-                    </strong> 구간(원점수 {physicalHealthMessages[deepCheckupData.physical.status]?.scoreBand || '-'}, {physicalHealthMessages[deepCheckupData.physical.status]?.severityLabel || ''})입니다.
-                  </ResultDetailText>
-                  <ResultDetailText style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '4px' }}>
-                    채점 기준: 정상 11~20 · 주의 21~30 · 경고 31~40 · 위험 41~55 (원점수)
-                  </ResultDetailText>
+                  <ResultDetailContentSection>
+                    <ResultDetailTitle>검사 결과 (QuickDASH 기준)</ResultDetailTitle>
+                    <ResultDetailMainText>
+                      귀하의 <strong>QuickDASH 원점수</strong>는 <strong style={{ color: '#1f2328' }}>{deepCheckupData.physical.score}점</strong>(11~55),{' '}
+                      <strong>정규화 점수</strong>는 <strong style={{ color: '#1f2328' }}>{getQuickDashNormalizedScore(deepCheckupData.physical.score)}점</strong>(0~100, 상지 기능 제한 정도)이며,{' '}
+                      <strong style={{ color: physicalHealthMessages[deepCheckupData.physical.status]?.color || '#1f2328' }}>
+                        {deepCheckupData.physical.status || '미정'}
+                      </strong> 구간(원점수 {physicalHealthMessages[deepCheckupData.physical.status]?.scoreBand || '-'}, {physicalHealthMessages[deepCheckupData.physical.status]?.severityLabel || ''})입니다.
+                    </ResultDetailMainText>
+                    <ResultDetailText style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '4px', marginBottom: 0 }}>
+                      채점 기준: 정상 11~20 · 주의 21~30 · 경고 31~40 · 위험 41~55 (원점수)
+                    </ResultDetailText>
+                  </ResultDetailContentSection>
                   {(() => {
                     const statusInfo = physicalHealthMessages[deepCheckupData.physical.status] || physicalHealthMessages['정상'];
                     return (

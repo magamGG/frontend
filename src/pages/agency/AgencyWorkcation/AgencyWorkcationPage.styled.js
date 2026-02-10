@@ -179,7 +179,7 @@ export const MemberCard = styled.div`
 `;
 
 export const MemberCardHeader = styled.div`
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
   padding: 24px;
   padding-bottom: 32px;
 `;

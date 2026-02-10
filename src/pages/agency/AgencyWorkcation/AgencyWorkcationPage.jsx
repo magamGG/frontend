@@ -15,7 +15,8 @@ import {
   CheckCircle2,
   TrendingUp,
   FileText,
-  ArrowUpDown
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 import { memberService, leaveService, projectService } from '@/api/services';
 import { API_BASE_URL } from '@/api/config';
@@ -367,12 +368,7 @@ export function AgencyWorkcationPage() {
                 style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
               >
                 가나다순
-                {sortType === 'alphabetical' && (
-                  <>
-                    <ArrowUpDown className="w-3 h-3" />
-                    <span style={{ fontSize: '12px' }}>{sortOrder === 'asc' ? '↑' : '↓'}</span>
-                  </>
-                )}
+                {sortType === 'alphabetical' && (sortOrder === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
               </Button>
               <Button
                 variant={sortType === 'imminent' ? 'default' : 'outline'}
@@ -381,12 +377,7 @@ export function AgencyWorkcationPage() {
                 style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
               >
                 연재 임박
-                {sortType === 'imminent' && (
-                  <>
-                    <ArrowUpDown className="w-3 h-3" />
-                    <span style={{ fontSize: '12px' }}>{sortOrder === 'asc' ? '↑' : '↓'}</span>
-                  </>
-                )}
+                {sortType === 'imminent' && (sortOrder === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
               </Button>
             </FilterButtonGroup>
           </div>
@@ -578,7 +569,10 @@ export function AgencyWorkcationPage() {
 
               <DetailModalContent>
                 {/* Member Info Card */}
-                <div className="bg-gradient-to-br from-purple-600 to-purple-800 rounded-lg p-6 text-white">
+                <div
+                  className="rounded-lg p-6 text-white"
+                  style={{ background: 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)' }}
+                >
                   <DetailMemberHeader>
                     <DetailMemberInfo>
                       <DetailMemberAvatar>
