@@ -1,0 +1,15 @@
+/* Pretendard 폰트 import */
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
+
+/* Font Family 변수 */
+:root {
+  --font-family-base: 'Pretendard', -apple-system, BlinkMacSystemFont, 
+    'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', 
+    'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
+}
+
+/* 전역 폰트 적용 */
+* {
+  font-family: var(--font-family-base);
+}
+
