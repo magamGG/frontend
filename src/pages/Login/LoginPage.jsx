@@ -125,7 +125,17 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
                       <InputField
                         type="email"
                         value={emailInput}
-                        onChange={(e) => setEmailInput(e.target.value)}
+                        onChange={(e) => {
+                          // 이메일은 띄어쓰기 제거
+                          const filtered = e.target.value.replace(/\s/g, '');
+                          setEmailInput(filtered);
+                        }}
+                        onKeyDown={(e) => {
+                          // 스페이스바 입력 자체를 막기
+                          if (e.key === ' ') {
+                            e.preventDefault();
+                          }
+                        }}
                         placeholder="kim.artist@example.com"
                         required
                         disabled={isLoading}
@@ -141,7 +151,11 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
                       <InputField
                         type="password"
                         value={passwordInput}
-                        onChange={(e) => setPasswordInput(e.target.value)}
+                        onChange={(e) => {
+                          // 비밀번호는 띄어쓰기 제거
+                          const filtered = e.target.value.replace(/\s/g, '');
+                          setPasswordInput(filtered);
+                        }}
                         placeholder="••••••••"
                         required
                         disabled={isLoading}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Card } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
@@ -8,6 +8,8 @@ import { Badge } from '@/app/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/app/components/ui/dialog';
 import { Building2, User, Mail, Phone, Key, Send, ArrowLeft, CheckCircle2, Edit, Building } from 'lucide-react';
 import { toast } from 'sonner';
+import { agencyService } from '@/api';
+import useAuthStore from '@/store/authStore';
 
 
 
@@ -18,6 +20,7 @@ import { toast } from 'sonner';
  */
 export function JoinAgencyRequestPage({ onBack, onSuccess }) {
   const [step, setStep] = useState('form');
+  const { user } = useAuthStore();
   
   // Mock user data from signup (실제로는 회원가입 시 저장된 정보)
   const [userData, setUserData] = useState({
@@ -29,9 +32,44 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editFormData, setEditFormData] = useState({ ...userData });
   const [agencyCode, setAgencyCode] = useState('');
+  const [agencyName, setAgencyName] = useState('');
+
+  // 대기 중인 가입 요청 확인
+  useEffect(() => {
+    const checkPendingRequest = async () => {
+      if (!user?.memberNo) return;
+
+      try {
+        const myRequest = await agencyService.getMyPendingJoinRequest();
+        
+        // 대기 중인 요청이 있으면 success 화면으로 전환
+        if (myRequest && myRequest.newRequestStatus === '대기') {
+          setStep('success');
+          setAgencyName(myRequest.agencyName || '');
+        }
+      } catch (error) {
+        // 204 No Content는 정상 (대기 중인 요청 없음)
+        if (error?.response?.status !== 204) {
+          console.error('가입 요청 상태 확인 실패:', error);
+        }
+      }
+    };
+
+    checkPendingRequest();
+  }, [user?.memberNo]);
 
   const handleEditInputChange = (field, value) => {
-    setEditFormData(prev => ({ ...prev, [field]: value }));
+    if (field === 'name') {
+      // 이름은 한글, 영문만 허용 (공백 제외)
+      const filtered = value.replace(/[^가-힣a-zA-Z]/g, '');
+      setEditFormData(prev => ({ ...prev, [field]: filtered }));
+    } else if (field === 'email') {
+      // 이메일은 띄어쓰기 제거
+      const filtered = value.replace(/\s/g, '');
+      setEditFormData(prev => ({ ...prev, [field]: filtered }));
+    } else {
+      setEditFormData(prev => ({ ...prev, [field]: value }));
+    }
   };
 
   const handleSaveProfile = () => {
@@ -98,10 +136,10 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
             </motion.div>
 
             <h2 className="text-2xl font-bold text-foreground mb-3">
-              요청이 전송되었습니다!
+              {agencyName ? `${agencyName}에 요청이 전송되었습니다!` : '요청이 전송되었습니다!'}
             </h2>
             <p className="text-muted-foreground mb-6">
-              에이전시 담당자가 검토 후 승인하면<br />
+              에이전시 관리자가 검토 후 승인하면<br />
               알림을 받으실 수 있습니다.
             </p>
 
@@ -118,10 +156,6 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">연락처</span>
                   <span className="font-medium text-foreground">{userData.phone}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">회사 코드</span>
-                  <span className="font-medium text-foreground">{agencyCode}</span>
                 </div>
               </div>
             </div>
@@ -245,15 +279,23 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
                     <Input
                       id="agencyCode"
                       type="text"
-                      placeholder="예: AGENCY-2026-001"
+                      inputMode="numeric"
+                      placeholder="예: 12345678901"
                       value={agencyCode}
-                      onChange={(e) => setAgencyCode(e.target.value)}
+                      onChange={(e) => {
+                        // 숫자만 허용
+                        const numbers = e.target.value.replace(/[^\d]/g, '');
+                        // 11자리 제한
+                        const limitedValue = numbers.slice(0, 11);
+                        setAgencyCode(limitedValue);
+                      }}
+                      maxLength={11}
                       required
                       className="pl-11 h-12 font-mono tracking-wider"
                     />
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    에이전시 담당자에게 전용 코드를 문의하세요
+                    에이전시 관리자에게 전용 코드를 문의하세요
                   </p>
                 </div>
               </div>
@@ -269,7 +311,7 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
           {/* Info Box */}
           <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="text-sm text-blue-800">
-              <strong>💡 안내:</strong> 가입 요청 후 에이전시 담당자의 승인이 필요합니다. 
+              <strong>💡 안내:</strong> 가입 요청 후 에이전시 관리자의 승인이 필요합니다. 
               승인 완료 시 등록하신 이메일로 알림이 전송됩니다.
             </p>
           </div>
@@ -292,6 +334,7 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
                 id="edit-name"
                 value={editFormData.name}
                 onChange={(e) => handleEditInputChange('name', e.target.value)}
+                maxLength={20}
                 className="bg-white border-[#DADDE1] text-[#1F2328]"
               />
             </div>
@@ -302,6 +345,13 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
                 type="email"
                 value={editFormData.email}
                 onChange={(e) => handleEditInputChange('email', e.target.value)}
+                onKeyDown={(e) => {
+                  // 스페이스바 입력 자체를 막기
+                  if (e.key === ' ') {
+                    e.preventDefault();
+                  }
+                }}
+                maxLength={50}
                 className="bg-white border-[#DADDE1] text-[#1F2328]"
               />
             </div>

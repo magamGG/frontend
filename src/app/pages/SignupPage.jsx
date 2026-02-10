@@ -93,10 +93,28 @@ export function SignupPage({ onSignup, onBackToLogin }) {
   });
 
   const handleInputChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+    
+    // 비밀번호는 띄어쓰기 제거
+    if (name === 'password' || name === 'confirmPassword') {
+      const filtered = value.replace(/\s/g, '');
+      setFormData({
+        ...formData,
+        [name]: filtered,
+      });
+    } else if (name === 'email') {
+      // 이메일은 띄어쓰기 제거
+      const filtered = value.replace(/\s/g, '');
+      setFormData({
+        ...formData,
+        [name]: filtered,
+      });
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value,
+      });
+    }
   };
 
   const handleRoleChange = (role) => {
@@ -366,6 +384,12 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                     name="email"
                     value={formData.email}
                     onChange={handleInputChange}
+                    onKeyDown={(e) => {
+                      // 스페이스바 입력 자체를 막기
+                      if (e.key === ' ') {
+                        e.preventDefault();
+                      }
+                    }}
                     placeholder="example@email.com"
                     className="w-full pl-10 pr-3 py-2 text-sm bg-muted/30 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground placeholder:text-muted-foreground"
                     required
