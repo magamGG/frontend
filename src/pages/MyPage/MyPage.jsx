@@ -9,6 +9,7 @@ import { motion } from 'motion/react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { memberService, attendanceService } from '@/api/services';
 import { API_BASE_URL } from '@/api/config';
+import { formatPhoneNumber } from '@/utils/phoneFormatter';
 import useAuthStore from '@/store/authStore';
 import {
   MyPageOverlay,
@@ -566,7 +567,12 @@ export function MyPage({ onClose, onLogout }) {
               <Input
                 id="edit-phone"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => {
+                  // 연락처는 자동 하이픈 포맷팅
+                  const formatted = formatPhoneNumber(e.target.value);
+                  setPhone(formatted);
+                }}
+                maxLength={13}
                 className="bg-white border-[#DADDE1] text-[#1F2328]"
               />
             </div>
