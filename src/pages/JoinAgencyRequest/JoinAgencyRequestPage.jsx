@@ -54,6 +54,7 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editFormData, setEditFormData] = useState({ ...userData });
   const [agencyCodeInput, setAgencyCodeInput] = useState('');
+  const [agencyName, setAgencyName] = useState('');
   
   // 사용자 정보 초기화 - DB에서 가져오기
   useEffect(() => {
@@ -101,22 +102,39 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
       try {
         const myRequest = await agencyService.getMyPendingJoinRequest();
         
+        console.log('🔍 [대기 중인 요청 확인] 전체 응답:', myRequest);
+        console.log('🔍 [대기 중인 요청 확인] 응답 타입:', typeof myRequest);
+        console.log('🔍 [대기 중인 요청 확인] agencyName:', myRequest?.agencyName);
+        console.log('🔍 [대기 중인 요청 확인] newRequestStatus:', myRequest?.newRequestStatus);
+        
         // 대기 중인 요청이 있으면 success 화면으로 전환
         if (myRequest && myRequest.newRequestStatus === '대기') {
           setStep('success');
-          // 에이전시 코드는 요청 정보에 포함되지 않으므로, 필요시 별도 조회
-          // 또는 agencyCodeInput은 빈 상태로 유지
+          setAgencyName(myRequest.agencyName || '');
+          console.log('✅ [대기 중인 요청 확인] 에이전시명 설정됨:', myRequest.agencyName);
         }
       } catch (error) {
         // 204 No Content는 정상 (대기 중인 요청 없음)
-        if (error?.response?.status !== 204) {
-          console.error('가입 요청 상태 확인 실패:', error);
+        console.log('⚠️ [대기 중인 요청 확인] 에러 발생:', error);
+        console.log('⚠️ [대기 중인 요청 확인] 에러 status:', error?.status);
+        console.log('⚠️ [대기 중인 요청 확인] 에러 response.status:', error?.response?.status);
+        if (error?.status !== 204 && error?.response?.status !== 204) {
+          console.error('❌ [대기 중인 요청 확인] 가입 요청 상태 확인 실패:', error);
         }
       }
     };
 
     checkPendingRequest();
   }, [user?.memberNo]);
+
+  // 성공 화면 렌더링 시 agencyName 상태 확인
+  useEffect(() => {
+    if (step === 'success') {
+      console.log('🔍 [성공 화면] step이 success로 변경됨');
+      console.log('🔍 [성공 화면] 현재 agencyName 상태:', agencyName);
+      console.log('🔍 [성공 화면] 표시될 텍스트:', agencyName ? `${agencyName}에 요청이 전송되었습니다!` : '요청이 전송되었습니다!');
+    }
+  }, [step, agencyName]);
 
   const handleEditInputChange = (field, value) => {
     setEditFormData(prev => ({ ...prev, [field]: value }));
@@ -174,10 +192,25 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
         memberPhone: userData.phone,
       };
 
-      await agencyService.requestJoinAgency(requestData);
+      const response = await agencyService.requestJoinAgency(requestData);
+      
+      console.log('🔍 [가입 요청 전송] 전체 응답:', response);
+      console.log('🔍 [가입 요청 전송] 응답 타입:', typeof response);
+      console.log('🔍 [가입 요청 전송] response?.agencyName:', response?.agencyName);
+      console.log('🔍 [가입 요청 전송] response 구조:', JSON.stringify(response, null, 2));
+      
+      // 응답에서 에이전시명 가져오기
+      if (response?.agencyName) {
+        setAgencyName(response.agencyName);
+        console.log('✅ [가입 요청 전송] 에이전시명 설정됨:', response.agencyName);
+      } else {
+        console.warn('⚠️ [가입 요청 전송] 응답에 agencyName이 없습니다. 응답:', response);
+      }
+      
       toast.success('에이전시 가입 요청이 전송되었습니다!');
       // 요청 완료 화면으로 전환. 대시보드 이동은 "완료" 버튼 클릭 시에만 handleComplete → onSuccess 로 처리.
       setStep('success');
+      console.log('✅ [가입 요청 전송] success 화면으로 전환, agencyName 상태:', agencyName);
     } catch (error) {
       const errorMessage = error?.message || '에이전시 가입 요청 전송에 실패했습니다. 다시 시도해주세요.';
       toast.error(errorMessage);
@@ -230,7 +263,9 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
                   </SuccessIconWrapper>
                 </motion.div>
 
-                <SuccessTitle>요청이 전송되었습니다!</SuccessTitle>
+                <SuccessTitle>
+                  {agencyName ? `${agencyName}에 요청이 전송되었습니다!` : '요청이 전송되었습니다!'}
+                </SuccessTitle>
                 <SuccessDescription>
                   에이전시 담당자가 검토 후 승인하면 알림을 받으실 수 있습니다.
                   <br />

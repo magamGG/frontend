@@ -32,6 +32,7 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editFormData, setEditFormData] = useState({ ...userData });
   const [agencyCode, setAgencyCode] = useState('');
+  const [agencyName, setAgencyName] = useState('');
 
   // 대기 중인 가입 요청 확인
   useEffect(() => {
@@ -44,8 +45,7 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
         // 대기 중인 요청이 있으면 success 화면으로 전환
         if (myRequest && myRequest.newRequestStatus === '대기') {
           setStep('success');
-          // 에이전시 코드는 요청 정보에 포함되지 않으므로, 필요시 별도 조회
-          // 또는 agencyCode는 빈 상태로 유지
+          setAgencyName(myRequest.agencyName || '');
         }
       } catch (error) {
         // 204 No Content는 정상 (대기 중인 요청 없음)
@@ -126,7 +126,7 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
             </motion.div>
 
             <h2 className="text-2xl font-bold text-foreground mb-3">
-              요청이 전송되었습니다!
+              {agencyName ? `${agencyName}에 요청이 전송되었습니다!` : '요청이 전송되었습니다!'}
             </h2>
             <p className="text-muted-foreground mb-6">
               에이전시 담당자가 검토 후 승인하면<br />
