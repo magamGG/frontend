@@ -446,6 +446,12 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                         name="email"
                         value={signupFormData.email}
                         onChange={handleInputChange}
+                        onKeyDown={(e) => {
+                          // 스페이스바 입력 자체를 막기
+                          if (e.key === ' ') {
+                            e.preventDefault();
+                          }
+                        }}
                         placeholder="example@email.com"
                         maxLength={50}
                         required
