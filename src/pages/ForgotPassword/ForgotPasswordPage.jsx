@@ -220,6 +220,7 @@ export function ForgotPasswordPage({ onBackToLogin }) {
                           onChange={(e) => setEmailInput(e.target.value)}
                           disabled={isLoading}
                           placeholder="kim.artist@example.com"
+                          hasIcon
                           required
                         />
                       </InputWrapper>
@@ -280,6 +281,7 @@ export function ForgotPasswordPage({ onBackToLogin }) {
                           onChange={(e) => setNewPasswordInput(e.target.value)}
                           disabled={isLoading}
                           placeholder="••••••••"
+                          hasIcon
                           required
                         />
                       </InputWrapper>
@@ -295,6 +297,7 @@ export function ForgotPasswordPage({ onBackToLogin }) {
                           onChange={(e) => setConfirmPasswordInput(e.target.value)}
                           disabled={isLoading}
                           placeholder="••••••••"
+                          hasIcon
                           required
                         />
                       </InputWrapper>
