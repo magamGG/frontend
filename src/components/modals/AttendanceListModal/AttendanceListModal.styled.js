@@ -3,6 +3,8 @@ import styled from 'styled-components';
 export const SearchContainer = styled.div`
   position: relative;
   flex-shrink: 0;
+  width: 98%;
+  margin: 0 auto;
 `;
 
 export const SearchIcon = styled.div`
