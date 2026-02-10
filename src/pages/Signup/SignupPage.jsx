@@ -378,6 +378,7 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                           value={signupFormData.name}
                           onChange={handleInputChange}
                           placeholder="홍길동"
+                          maxLength={20}
                           required
                         />
                       </InputWrapper>
@@ -410,6 +411,7 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                         value={signupFormData.address}
                         onChange={handleInputChange}
                         placeholder="주소를 입력하세요 (예: 서울시 강남구 역삼동 123-45)"
+                        maxLength={100}
                       />
                     </InputWrapper>
                   </InputGroup>
@@ -424,6 +426,7 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                         value={signupFormData.email}
                         onChange={handleInputChange}
                         placeholder="example@email.com"
+                        maxLength={50}
                         required
                       />
                     </InputWrapper>
@@ -440,6 +443,7 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                           value={signupFormData.organization}
                           onChange={handleInputChange}
                           placeholder="스튜디오 마감지기"
+                          maxLength={30}
                         />
                       </InputWrapper>
                     </InputGroup>
@@ -456,6 +460,7 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                           value={signupFormData.password}
                           onChange={handleInputChange}
                           placeholder="••••••••"
+                          maxLength={100}
                           required
                         />
                       </InputWrapper>
@@ -471,6 +476,7 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                           value={signupFormData.confirmPassword}
                           onChange={handleInputChange}
                           placeholder="••••••••"
+                          maxLength={100}
                           required
                         />
                       </InputWrapper>
