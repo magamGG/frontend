@@ -76,7 +76,7 @@ const mentalHealthMessages = {
       '규칙적인 생활과 정기 검진을 유지하세요.'
     ]
   },
-  주의: {
+  주의: { 
     color: '#ea580c',
     text: '주의',
     iconColor: 'text-orange-600',
