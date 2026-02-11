@@ -309,7 +309,16 @@ export function SignupPage({ onSignup, onBackToLogin }) {
           >
             <Card>
               <SignupCard>
-                <FormSection onSubmit={handleSubmit}>
+                <FormSection 
+                  onSubmit={(e) => {
+                    // 로딩 중이면 제출 방지
+                    if (isLoading) {
+                      e.preventDefault();
+                      return;
+                    }
+                    handleSubmit(e);
+                  }}
+                >
                   {/* Role Selection */}
                   <InputGroup>
                     <InputLabel>역할 선택 *</InputLabel>
@@ -620,8 +629,12 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                     </span>
                   </div>
 
-                  <Button type="submit" style={{ width: '100%', padding: '16px', fontSize: '14px', fontWeight: 600 }}>
-                    회원가입
+                  <Button 
+                    type="submit" 
+                    disabled={isLoading}
+                    style={{ width: '100%', padding: '16px', fontSize: '14px', fontWeight: 600 }}
+                  >
+                    {isLoading ? '회원가입 중...' : '회원가입'}
                   </Button>
                 </FormSection>
               </SignupCard>

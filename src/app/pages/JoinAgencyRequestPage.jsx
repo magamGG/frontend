@@ -68,7 +68,7 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
       const filtered = value.replace(/\s/g, '');
       setEditFormData(prev => ({ ...prev, [field]: filtered }));
     } else {
-      setEditFormData(prev => ({ ...prev, [field]: value }));
+    setEditFormData(prev => ({ ...prev, [field]: value }));
     }
   };
 
