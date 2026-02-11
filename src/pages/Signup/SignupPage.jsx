@@ -66,7 +66,7 @@ const artistSpecializationList = [
   { value: 'webtoon-writer', label: '웹툰 작가', icon: Pen },
   { value: 'webnovel-writer', label: '웹소설 작가', icon: BookOpen },
   { value: 'assistant-coloring', label: '어시스트 - 채색', icon: Palette },
-  { value: 'assistant-background', label: '어시스트 - 배경', icon: Paintbrush },
+  { value: 'assistant-lineart', label: '어시스트 - 선화', icon: Paintbrush },
   { value: 'assistant-other', label: '어시스트 - 기타', icon: Paintbrush },
 ];
 
@@ -76,7 +76,7 @@ export function SignupPage({ onSignup, onBackToLogin }) {
   const [customSpecializationInput, setCustomSpecializationInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSelectOpen, setIsSelectOpen] = useState(false);
-  const [isComposing, setIsComposing] = useState({ name: false, phone: false }); // IME 조합 상태 추적
+  const [isComposing, setIsComposing] = useState({ name: false, phone: false, specialization: false }); // IME 조합 상태 추적
   const [signupFormData, setSignupFormData] = useState({
     name: '',
     email: '',
@@ -158,7 +158,13 @@ export function SignupPage({ onSignup, onBackToLogin }) {
     const name = e.target.name;
     setIsComposing(prev => ({ ...prev, [name]: false }));
     // 조합 종료 후 필터링 적용
-    handleInputChange(e);
+    if (name === 'specialization') {
+      // 기타 직무 입력: 숫자, 특수문자 제거 (공백은 허용)
+      const filtered = e.target.value.replace(/[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z\s]/g, '');
+      setCustomSpecializationInput(filtered);
+    } else {
+      handleInputChange(e);
+    }
   };
 
   // 초성이 포함되어 있는지 검증 (한글 자모가 포함되어 있으면 true)
@@ -185,6 +191,18 @@ export function SignupPage({ onSignup, onBackToLogin }) {
       toast.error('세부 직무를 선택해주세요.');
       return;
     }
+    // 기타 직무 선택 시 입력값 검증
+    if (selectedRole === USER_ROLES.ARTIST && artistSpecialization === 'assistant-other') {
+      if (!customSpecializationInput || !customSpecializationInput.trim()) {
+        toast.error('기타 직무를 입력해주세요.');
+        return;
+      }
+      // 기타 직무 입력에 초성이 포함되어 있는지 검증
+      if (hasHangulJamo(customSpecializationInput)) {
+        toast.error('직무를 완성해주세요. 초성을 포함할 수 없습니다.');
+        return;
+      }
+    }
     // 이름에 초성이 포함되어 있는지 검증
     if (hasHangulJamo(signupFormData.name)) {
       toast.error('이름을 완성해주세요. 초성을 포함할 수 없습니다.');
@@ -208,8 +226,8 @@ export function SignupPage({ onSignup, onBackToLogin }) {
           ? (artistSpecialization === 'webtoon-writer' ? '웹툰 작가'
             : artistSpecialization === 'webnovel-writer' ? '웹소설 작가'
             : artistSpecialization === 'assistant-coloring' ? '어시스트 - 채색'
-            : artistSpecialization === 'assistant-background' ? '어시스트 - 배경'
-            : artistSpecialization === 'assistant-other' ? '어시스트- 기타'
+            : artistSpecialization === 'assistant-lineart' ? '어시스트 - 선화'
+            : artistSpecialization === 'assistant-other' ? `어시스트 - ${customSpecializationInput.trim()}`
             : '웹툰 작가')
           : selectedRole === USER_ROLES.MANAGER ? '담당자'
           : selectedRole === USER_ROLES.AGENCY ? '에이전시 관리자'
@@ -291,7 +309,16 @@ export function SignupPage({ onSignup, onBackToLogin }) {
           >
             <Card>
               <SignupCard>
-                <FormSection onSubmit={handleSubmit}>
+                <FormSection 
+                  onSubmit={(e) => {
+                    // 로딩 중이면 제출 방지
+                    if (isLoading) {
+                      e.preventDefault();
+                      return;
+                    }
+                    handleSubmit(e);
+                  }}
+                >
                   {/* Role Selection */}
                   <InputGroup>
                     <InputLabel>역할 선택 *</InputLabel>
@@ -416,8 +443,20 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                                 <Edit className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--muted-foreground)' }} />
                                 <InputField
                                   type="text"
+                                  name="specialization"
                                   value={customSpecializationInput}
-                                  onChange={(e) => setCustomSpecializationInput(e.target.value)}
+                                  onChange={(e) => {
+                                    // IME 조합 중일 때는 필터링하지 않음
+                                    if (isComposing.specialization) {
+                                      setCustomSpecializationInput(e.target.value);
+                                      return;
+                                    }
+                                    // 기타 직무 입력: 숫자, 특수문자 제거 (공백은 허용)
+                                    const filtered = e.target.value.replace(/[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z\s]/g, '');
+                                    setCustomSpecializationInput(filtered);
+                                  }}
+                                  onCompositionStart={handleCompositionStart}
+                                  onCompositionEnd={handleCompositionEnd}
                                   placeholder="예: 스토리 작가, 3D 배경 등"
                                   required
                                 />
@@ -590,8 +629,12 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                     </span>
                   </div>
 
-                  <Button type="submit" style={{ width: '100%', padding: '16px', fontSize: '14px', fontWeight: 600 }}>
-                    회원가입
+                  <Button 
+                    type="submit" 
+                    disabled={isLoading}
+                    style={{ width: '100%', padding: '16px', fontSize: '14px', fontWeight: 600 }}
+                  >
+                    {isLoading ? '회원가입 중...' : '회원가입'}
                   </Button>
                 </FormSection>
               </SignupCard>
