@@ -1,7 +1,37 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { CalendarComponent } from '@/components/common/Calendar';
-import { leaveService, projectService } from '@/api/services';
+import { leaveService, projectService, memoService } from '@/api/services';
 import useAuthStore from '@/store/authStore';
+
+/** 캘린더 메모 API 목록 → 해당 연월의 dayNotes { date, year, month, dateStr, note, memoNo } */
+function mapCalendarMemosToDayNotes(memos, viewYear, viewMonth) {
+  if (!Array.isArray(memos)) return [];
+  return memos
+    .filter((m) => {
+      const d = m.calendarMemoDate ? String(m.calendarMemoDate).slice(0, 10) : '';
+      if (!d) return false;
+      const parts = d.split('-').map(Number);
+      if (parts.length < 3) return false;
+      const [y, mo] = parts;
+      return y === viewYear && mo === viewMonth;
+    })
+    .map((m) => {
+      const d = String(m.calendarMemoDate || '').slice(0, 10);
+      const parts = d ? d.split('-').map(Number) : [0, 0, 0];
+      const y = parts[0] || viewYear;
+      const mo = parts[1] || viewMonth;
+      const day = parts[2] || 0;
+      const dateStr = `${y}-${String(mo).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      return {
+        date: day,
+        year: y,
+        month: mo,
+        dateStr,
+        note: m.memoText || '',
+        memoNo: m.memoNo,
+      };
+    });
+}
 
 /** 담당 작가 근태 API → 캘린더 근태 데이터 */
 function mapManagerRequestsToCalendar(list) {
@@ -35,10 +65,14 @@ export function AdminCalendarPage() {
   const { user } = useAuthStore();
   const [myRequests, setMyRequests] = useState([]); // 본인 근태
   const [kanbanCards, setKanbanCards] = useState([]);
+  const [prevKanbanCards, setPrevKanbanCards] = useState([]);
+  const [nextKanbanCards, setNextKanbanCards] = useState([]);
   const [selectedArtist, setSelectedArtist] = useState('all');
   const [projects, setProjects] = useState([]);
   const [selectedProjectFilter, setSelectedProjectFilter] = useState('all');
-  const [adminNotes, setAdminNotes] = useState({});
+  const [calendarMemos, setCalendarMemos] = useState([]);
+  const [viewYear, setViewYear] = useState(() => new Date().getFullYear());
+  const [viewMonth, setViewMonth] = useState(() => new Date().getMonth() + 1);
 
   /** 담당 작가 목록 */
   const artists = useMemo(() => {
@@ -92,18 +126,40 @@ export function AdminCalendarPage() {
     return map;
   }, [currentAttendanceData]);
 
-  /** 칸반 카드 조회 */
+  /** 칸반 카드 조회 (현재 월 + 이전/다음 달) */
   const fetchKanbanCards = useCallback(async (year, month) => {
     try {
-      const res = await projectService.getMyProjectsCalendarCards(year, month);
-      const list = Array.isArray(res) ? res : res?.data ?? res?.content ?? [];
-      setKanbanCards(list);
+      const prevY = month === 1 ? year - 1 : year;
+      const prevM = month === 1 ? 12 : month - 1;
+      const nextY = month === 12 ? year + 1 : year;
+      const nextM = month === 12 ? 1 : month + 1;
+
+      const [res, prevRes, nextRes] = await Promise.all([
+        projectService.getMyProjectsCalendarCards(year, month),
+        projectService.getMyProjectsCalendarCards(prevY, prevM),
+        projectService.getMyProjectsCalendarCards(nextY, nextM),
+      ]);
+
+      setKanbanCards(Array.isArray(res) ? res : res?.data ?? res?.content ?? []);
+      setPrevKanbanCards(Array.isArray(prevRes) ? prevRes : prevRes?.data ?? prevRes?.content ?? []);
+      setNextKanbanCards(Array.isArray(nextRes) ? nextRes : nextRes?.data ?? nextRes?.content ?? []);
     } catch (err) {
       console.error('칸반 카드 조회 실패:', err);
     }
   }, []);
 
+  const refreshCalendarMemos = useCallback(async () => {
+    try {
+      const list = await memoService.getCalendarList();
+      setCalendarMemos(Array.isArray(list) ? list : list?.data ?? list?.content ?? []);
+    } catch (err) {
+      console.error('캘린더 메모 조회 실패:', err);
+    }
+  }, []);
+
   const handleViewMonthChange = useCallback((year, month) => {
+    setViewYear(year);
+    setViewMonth(month);
     fetchKanbanCards(year, month);
   }, [fetchKanbanCards]);
 
@@ -111,13 +167,14 @@ export function AdminCalendarPage() {
   useEffect(() => {
     const fetch = async () => {
       try {
-        // 본인 근태 및 프로젝트 정보 로드
-        const [myList, projRes] = await Promise.all([
+        const [myList, projRes, memoList] = await Promise.all([
           leaveService.getMyRequests(),
-          projectService.getProjects()
+          projectService.getProjects(),
+          memoService.getCalendarList(),
         ]);
 
         setMyRequests(Array.isArray(myList) ? myList : myList?.data ?? myList?.content ?? []);
+        setCalendarMemos(Array.isArray(memoList) ? memoList : memoList?.data ?? memoList?.content ?? []);
 
         const projectList = Array.isArray(projRes) ? projRes : [];
         setProjects(projectList.map(p => ({ projectNo: p.projectNo, projectName: p.projectName })));
@@ -150,27 +207,96 @@ export function AdminCalendarPage() {
     return kanbanEvents;
   }, [kanbanCards, selectedArtist]);
 
-  const handleNoteSave = (date, note) => {
-    const existingIndex = adminNotes[selectedArtist]?.findIndex(n => n.date === date) ?? -1;
-    const updated = [...(adminNotes[selectedArtist] || [])];
-    if (existingIndex >= 0) updated[existingIndex] = { date, note };
-    else updated.push({ date, note });
-    setAdminNotes({ ...adminNotes, [selectedArtist]: updated });
-  };
+  const dayNotes = useMemo(
+    () => mapCalendarMemosToDayNotes(calendarMemos, viewYear, viewMonth),
+    [calendarMemos, viewYear, viewMonth]
+  );
 
-  const handleNoteDelete = (date) => {
-    const notes = adminNotes[selectedArtist] || [];
-    const updated = notes.filter((n) => n.date !== date);
-    setAdminNotes({ ...adminNotes, [selectedArtist]: updated });
-  };
+  const prevMonthDayNotes = useMemo(() => {
+    const pm = viewMonth === 1 ? 12 : viewMonth - 1;
+    const py = viewMonth === 1 ? viewYear - 1 : viewYear;
+    return mapCalendarMemosToDayNotes(calendarMemos, py, pm);
+  }, [calendarMemos, viewYear, viewMonth]);
 
-  const currentDayNotes = adminNotes[selectedArtist] || [];
+  const nextMonthDayNotes = useMemo(() => {
+    const nm = viewMonth === 12 ? 1 : viewMonth + 1;
+    const ny = viewMonth === 12 ? viewYear + 1 : viewYear;
+    return mapCalendarMemosToDayNotes(calendarMemos, ny, nm);
+  }, [calendarMemos, viewYear, viewMonth]);
+
+  const handleNoteSave = useCallback(async (dateStr, note) => {
+    const existing = dayNotes.find((n) => n.dateStr === dateStr && n.memoNo != null);
+    try {
+      if (existing?.memoNo) {
+        await memoService.update(existing.memoNo, { memoText: note });
+      } else {
+        await memoService.create({
+          memoType: '캘린더',
+          calendarMemoDate: dateStr,
+          memoText: note || '',
+        });
+      }
+      await refreshCalendarMemos();
+    } catch (err) {
+      console.error('캘린더 메모 저장 실패:', err);
+      throw err;
+    }
+  }, [dayNotes, refreshCalendarMemos]);
+
+  const handleNoteDelete = useCallback(async (dateStr) => {
+    const existing = dayNotes.find((n) => n.dateStr === dateStr && n.memoNo != null);
+    if (!existing?.memoNo) return;
+    try {
+      await memoService.delete(existing.memoNo);
+      await refreshCalendarMemos();
+    } catch (err) {
+      console.error('캘린더 메모 삭제 실패:', err);
+      throw err;
+    }
+  }, [dayNotes, refreshCalendarMemos]);
+
+  /** 이전/다음 달 이벤트 (흐린 영역 표시용) */
+  const prevMonthEvents = useMemo(() => {
+    let list = prevKanbanCards;
+    if (selectedArtist !== 'all') list = list.filter(p => String(p.assigneeNo) === String(selectedArtist));
+    return list.map(c => ({
+      id: c.id,
+      title: `${c.assigneeName ? `(${c.assigneeName}) ` : ''}${c.title}`,
+      date: c.endDate ? parseInt(c.endDate.split('-')[2], 10) : undefined,
+      startDate: c.startDate ? parseInt(c.startDate.split('-')[2], 10) : undefined,
+      endDate: c.endDate ? parseInt(c.endDate.split('-')[2], 10) : undefined,
+      projectNo: c.projectNo,
+      project: c.projectName,
+      color: c.projectColor || '#6E8FB3',
+      category: 'work',
+      assigneeName: c.assigneeName,
+      projectStatus: c.projectStatus
+    }));
+  }, [prevKanbanCards, selectedArtist]);
+
+  const nextMonthEvents = useMemo(() => {
+    let list = nextKanbanCards;
+    if (selectedArtist !== 'all') list = list.filter(p => String(p.assigneeNo) === String(selectedArtist));
+    return list.map(c => ({
+      id: c.id,
+      title: `${c.assigneeName ? `(${c.assigneeName}) ` : ''}${c.title}`,
+      date: c.endDate ? parseInt(c.endDate.split('-')[2], 10) : undefined,
+      startDate: c.startDate ? parseInt(c.startDate.split('-')[2], 10) : undefined,
+      endDate: c.endDate ? parseInt(c.endDate.split('-')[2], 10) : undefined,
+      projectNo: c.projectNo,
+      project: c.projectName,
+      color: c.projectColor || '#6E8FB3',
+      category: 'work',
+      assigneeName: c.assigneeName,
+      projectStatus: c.projectStatus
+    }));
+  }, [nextKanbanCards, selectedArtist]);
 
   return (
     <CalendarComponent
       events={filteredSchedule}
       attendanceData={currentAttendanceData} // 근태 데이터 복구
-      dayNotes={currentDayNotes}
+      dayNotes={dayNotes}
       showArtistFilter={false}
       artists={artists}
       selectedArtist={selectedArtist}
@@ -188,6 +314,10 @@ export function AdminCalendarPage() {
       onEventDelete={() => { }}
       onNoteSave={handleNoteSave}
       onNoteDelete={handleNoteDelete}
+      prevMonthEvents={prevMonthEvents}
+      nextMonthEvents={nextMonthEvents}
+      prevMonthDayNotes={prevMonthDayNotes}
+      nextMonthDayNotes={nextMonthDayNotes}
     />
   );
 }

@@ -183,29 +183,31 @@ export const DateCell = styled.div`
   min-height: 7.5rem;
   height: auto;
   padding: 0.5rem;
+  // 오늘 날짜: 파란 테두리 (배경색은 휴가/워케이션 구분 유지)
+  border: 2px solid ${props => (props.$isToday ? '#3b82f6' : 'transparent')};
+  box-sizing: border-box;
   // 날짜 배경색
-background-color: ${props => {
+  background-color: ${props => {
     if (props.$isOtherMonth) return 'rgba(249, 249, 249, 0.8)';         // 다른 달 날짜: 밝은 회색 80%
     if (props.$attendanceType === 'workation') return 'rgba(139, 92, 246, 0.7)'; // 워케이션: 진한 보라 70%
     if (props.$attendanceType === 'remote') return 'rgba(251, 146, 60, 0.7)';    // 재택근무: 주황 70%
     if (props.$attendanceType === 'break') return 'rgba(156, 163, 175, 0.6)';    // 휴가: 회색 60%
-    if (props.$isToday) return 'rgba(255, 85, 85, 0.5)';                         // 오늘 날짜: 빨강 50%
     return 'rgba(255, 255, 255, 0.9)';                                           // 기본 날짜: 흰색 90%
   }};
 
   position: relative;
   overflow: visible;
-// hover 시 배경색
-&:hover {
-  background-color: ${props => {
-    if (props.$isOtherMonth) return 'rgba(229, 229, 229, 0.8)';
-    if (props.$attendanceType === 'workation') return 'rgba(124, 58, 237, 0.8)';
-    if (props.$attendanceType === 'remote') return 'rgba(249, 115, 22, 0.8)';
-    if (props.$attendanceType === 'break') return 'rgba(107, 114, 128, 0.7)';
-    if (props.$isToday) return 'rgba(255, 51, 51, 0.7)';
-    return 'rgba(243, 243, 243, 0.8)';
-  }};
-}`
+  // hover 시 배경색
+  &:hover {
+    background-color: ${props => {
+      if (props.$isOtherMonth) return 'rgba(229, 229, 229, 0.8)';
+      if (props.$attendanceType === 'workation') return 'rgba(124, 58, 237, 0.8)';
+      if (props.$attendanceType === 'remote') return 'rgba(249, 115, 22, 0.8)';
+      if (props.$attendanceType === 'break') return 'rgba(107, 114, 128, 0.7)';
+      return 'rgba(243, 243, 243, 0.8)';
+    }};
+  }
+`
 
 
 export const DateNumberWrapper = styled.div`
@@ -284,20 +286,15 @@ export const AttendanceBadge = styled.span`
   flex-shrink: 0;
 `;
 
-// 일정 표시 영역
+// 일정 표시 영역 — absolute 배치 바의 컨테이너 (min-height 인라인으로 동적 설정)
 export const DateEventsArea = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
   margin-top: 0.25rem;
-  min-height: 0;
   overflow: visible;
   width: 100%;
   position: relative;
-  margin-bottom: 1.75rem;
 `;
 
-// 일정 바 (여러 날짜에 걸친 작업)
+// 일정 바 (여러 날짜에 걸친 작업) — absolute 배치로 행(row) 위치 반영
 export const EventBar = styled.div`
   font-size: 0.75rem;
   padding: 0.25rem 0.5rem;
@@ -309,12 +306,15 @@ export const EventBar = styled.div`
   text-overflow: ellipsis;
   background-color: ${props => props.$color || 'var(--accent)'};
   width: ${props => props.$width || '100%'};
-  position: relative;
+  position: absolute;
+  top: ${props => (props.$topOffset ?? 0) * 1.75}rem;
+  left: 0;
   z-index: 1;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-  flex-shrink: 0;
   height: 1.5rem;
   cursor: ${props => (props.$isGrouped ? 'pointer' : 'default')};
+  transition: ${props => props.$isGrouped ? 'all 0.2s' : 'none'};
+  opacity: ${props => props.$isOtherMonth ? 0.45 : 1};
   
   &:hover {
     ${props => props.$isGrouped && `

@@ -95,20 +95,33 @@ function mapDeadlineCardsToSidebar(list) {
   });
 }
 
-/** 캘린더 메모 API 목록 → 해당 연월의 dayNotes { date, note } (날짜는 일(day)만) */
+/** 캘린더 메모 API 목록 → 해당 연월의 dayNotes { date, year, month, dateStr, note, memoNo } */
 function mapCalendarMemosToDayNotes(memos, viewYear, viewMonth) {
   if (!Array.isArray(memos)) return [];
   return memos
     .filter((m) => {
       const d = m.calendarMemoDate ? String(m.calendarMemoDate).slice(0, 10) : '';
       if (!d) return false;
-      const [y, mo] = d.split('-').map(Number);
+      const parts = d.split('-').map(Number);
+      if (parts.length < 3) return false;
+      const [y, mo] = parts;
       return y === viewYear && mo === viewMonth;
     })
     .map((m) => {
       const d = String(m.calendarMemoDate || '').slice(0, 10);
-      const day = d ? parseInt(d.slice(8, 10), 10) : 0;
-      return { date: day, note: m.memoText || '', memoNo: m.memoNo };
+      const parts = d ? d.split('-').map(Number) : [0, 0, 0];
+      const y = parts[0] || viewYear;
+      const mo = parts[1] || viewMonth;
+      const day = parts[2] || 0;
+      const dateStr = `${y}-${String(mo).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      return {
+        date: day,
+        year: y,
+        month: mo,
+        dateStr,
+        note: m.memoText || '',
+        memoNo: m.memoNo,
+      };
     });
 }
 
@@ -122,6 +135,8 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
   const [viewMonth, setViewMonth] = useState(today.getMonth() + 1);
   const [attendanceData, setAttendanceData] = useState([]);
   const [allEvents, setAllEvents] = useState([]);
+  const [prevMonthEvents, setPrevMonthEvents] = useState([]);
+  const [nextMonthEvents, setNextMonthEvents] = useState([]);
   const [deadlineEvents, setDeadlineEvents] = useState([]);
   const [projectsData, setProjectsData] = useState([]);
 
@@ -129,6 +144,19 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
     () => mapCalendarMemosToDayNotes(calendarMemos, viewYear, viewMonth),
     [calendarMemos, viewYear, viewMonth]
   );
+
+  // 이전/다음 달 메모 (calendarMemos에서 필터링 — 추가 API 호출 불필요)
+  const prevMonthDayNotes = useMemo(() => {
+    const pm = viewMonth === 1 ? 12 : viewMonth - 1;
+    const py = viewMonth === 1 ? viewYear - 1 : viewYear;
+    return mapCalendarMemosToDayNotes(calendarMemos, py, pm);
+  }, [calendarMemos, viewYear, viewMonth]);
+
+  const nextMonthDayNotes = useMemo(() => {
+    const nm = viewMonth === 12 ? 1 : viewMonth + 1;
+    const ny = viewMonth === 12 ? viewYear + 1 : viewYear;
+    return mapCalendarMemosToDayNotes(calendarMemos, ny, nm);
+  }, [calendarMemos, viewYear, viewMonth]);
 
   // 프로젝트 목록 조회 (필터 펼치면 프로젝트 목록에 사용)
   useEffect(() => {
@@ -230,22 +258,37 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
     }
   }, []);
 
-  // KANBAN_CARD 담당자 배정 업무: 보기 월 변경 시 해당 월 칸반 카드 로드 (PROJECT_COLOR, STARTED_AT, ENDED_AT)
+  // KANBAN_CARD 담당자 배정 업무: 보기 월 변경 시 해당 월 + 이전/다음 달 칸반 카드 로드
   const handleViewMonthChange = useCallback(async (y, m) => {
     setViewYear(y);
     setViewMonth(m);
     const memberNo = useAuthStore.getState().user?.memberNo;
     if (!memberNo) {
       setAllEvents([]);
+      setPrevMonthEvents([]);
+      setNextMonthEvents([]);
       return;
     }
     try {
-      const list = await projectService.getMyCalendarCards(y, m);
-      const events = mapCalendarCardsToEvents(list, y, m);
-      setAllEvents(events);
+      const prevY = m === 1 ? y - 1 : y;
+      const prevM = m === 1 ? 12 : m - 1;
+      const nextY = m === 12 ? y + 1 : y;
+      const nextM = m === 12 ? 1 : m + 1;
+
+      const [list, prevList, nextList] = await Promise.all([
+        projectService.getMyCalendarCards(y, m),
+        projectService.getMyCalendarCards(prevY, prevM),
+        projectService.getMyCalendarCards(nextY, nextM),
+      ]);
+
+      setAllEvents(mapCalendarCardsToEvents(list, y, m));
+      setPrevMonthEvents(mapCalendarCardsToEvents(prevList, prevY, prevM));
+      setNextMonthEvents(mapCalendarCardsToEvents(nextList, nextY, nextM));
     } catch (err) {
       console.error('캘린더 칸반 카드 조회 실패:', err);
       setAllEvents([]);
+      setPrevMonthEvents([]);
+      setNextMonthEvents([]);
     }
   }, []);
 
@@ -257,9 +300,8 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
     setAllEvents(allEvents.filter((e) => e.id !== eventId));
   };
 
-  const handleNoteSave = useCallback(async (date, note) => {
-    const dateStr = `${viewYear}-${String(viewMonth).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
-    const existing = dayNotes.find((n) => n.date === date && n.memoNo != null);
+  const handleNoteSave = useCallback(async (dateStr, note) => {
+    const existing = dayNotes.find((n) => n.dateStr === dateStr && n.memoNo != null);
     try {
       if (existing?.memoNo) {
         await memoService.update(existing.memoNo, { memoText: note });
@@ -273,17 +315,19 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
       await refreshCalendarMemos();
     } catch (err) {
       console.error('캘린더 메모 저장 실패:', err);
+      throw err;
     }
-  }, [viewYear, viewMonth, dayNotes, refreshCalendarMemos]);
+  }, [dayNotes, refreshCalendarMemos]);
 
-  const handleNoteDelete = useCallback(async (date) => {
-    const existing = dayNotes.find((n) => n.date === date && n.memoNo != null);
+  const handleNoteDelete = useCallback(async (dateStr) => {
+    const existing = dayNotes.find((n) => n.dateStr === dateStr && n.memoNo != null);
     if (!existing?.memoNo) return;
     try {
       await memoService.delete(existing.memoNo);
       await refreshCalendarMemos();
     } catch (err) {
       console.error('캘린더 메모 삭제 실패:', err);
+      throw err;
     }
   }, [dayNotes, refreshCalendarMemos]);
 
@@ -309,6 +353,10 @@ export function ArtistCalendarPage({ openAttendanceModal, onCloseAttendanceModal
       onViewMonthChange={handleViewMonthChange}
       deadlineEvents={deadlineEvents}
       useDeadlineSection={true}
+      prevMonthEvents={prevMonthEvents}
+      nextMonthEvents={nextMonthEvents}
+      prevMonthDayNotes={prevMonthDayNotes}
+      nextMonthDayNotes={nextMonthDayNotes}
     />
   );
 }

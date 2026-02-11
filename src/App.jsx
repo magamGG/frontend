@@ -25,7 +25,6 @@ const AdminCalendarPage = lazy(() => import('@/pages/admin/AdminCalendar').then(
 const AdminTeamPage = lazy(() => import('@/pages/admin/AdminTeam').then(m => ({ default: m.AdminTeamPage })));
 const AdminHealthPage = lazy(() => import('@/pages/admin/AdminHealth').then(m => ({ default: m.AdminHealthPage })));
 const AdminPersonalHealthPage = lazy(() => import('@/pages/admin/AdminPersonalHealth').then(m => ({ default: m.AdminPersonalHealthPage })));
-const AdminAbsenteePage = lazy(() => import('@/pages/admin/AdminAbsentee').then(m => ({ default: m.AdminAbsenteePage })));
 const AdminMyPage = lazy(() => import('@/pages/admin/AdminMyPage').then(m => ({ default: m.AdminMyPage })));
 const AdminWorkcationPage = lazy(() => import('@/pages/admin/AdminWorkcation').then(m => ({ default: m.AdminWorkcationPage })));
 

@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from "motion/react";
 import { Bell, Plus, User, X, ChevronRight } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import useNotificationSource from "@/hooks/useNotificationSource";
 import { Badge } from "@/app/components/ui/badge";
 import { memberService } from '@/api/services';
 import { getMemberProfileUrl } from '@/api/config';
@@ -44,6 +45,45 @@ import {
   ProfileRole,
   ProfileChevron,
 } from './Header.styled';
+
+// 알림 타입 → UI 타입 (컴포넌트 외부: SSE 콜백에서 사용)
+const getNotificationType = (type) => {
+  switch (type) {
+    case 'JOIN_REQ': return 'info';
+    case 'LEAVE_REQ': return 'warning';
+    case 'LEAVE_APP':
+    case 'APPROVED': return 'success';
+    case 'LEAVE_REJ':
+    case 'REJECTED': return 'error';
+    case 'ASSIGNMENT': return 'info';
+    case 'HEALTH_WARN':
+    case 'HEALTH_REM': return 'warning';
+    case 'PROJ_HIATUS':
+    case 'PROJ_ADD':
+    case 'PROJ_REM': return 'info';
+    case 'LEAVE_ADJ': return 'success';
+    default: return 'info';
+  }
+};
+
+const getLinkedPage = (type) => {
+  switch (type) {
+    case 'JOIN_REQ': return 'approvals';
+    case 'LEAVE_REQ': return 'approvals';
+    case 'APPROVED':
+    case 'REJECTED':
+    case 'LEAVE_APP':
+    case 'LEAVE_REJ': return 'dashboard';
+    case 'ASSIGNMENT': return 'assignment';
+    case 'HEALTH_WARN':
+    case 'HEALTH_REM': return 'health';
+    case 'PROJ_HIATUS':
+    case 'PROJ_ADD':
+    case 'PROJ_REM': return 'projects';
+    case 'LEAVE_ADJ': return 'dashboard';
+    default: return 'dashboard';
+  }
+};
 
 /**
  * @typedef {Object} Section
@@ -187,40 +227,23 @@ export function Header({
     return date.toLocaleDateString();
   };
 
-  // 알림 타입에 따른 UI 타입 반환
-  const getNotificationType = (type) => {
-    switch (type) {
-      case 'JOIN_REQ':
-        return 'info';
-      case 'LEAVE_REQ':
-        return 'warning';
-      case 'APPROVED':
-        return 'success';
-      case 'REJECTED':
-        return 'error';
-      case 'ASSIGNMENT':
-        return 'info';
-      default:
-        return 'info';
-    }
-  };
+  // SSE 실시간 알림 수신 콜백
+  const onNewNotification = useCallback((data) => {
+    const formatted = {
+      id: data.notificationNo,
+      title: data.notificationName || '알림',
+      message: data.notificationText || '',
+      time: '방금 전',
+      isRead: data.notificationStatus === 'N',
+      type: getNotificationType(data.notificationType),
+      linkedPage: getLinkedPage(data.notificationType),
+    };
+    setNotifications((prev) => [formatted, ...prev]);
+    toast.success(formatted.title);
+  }, []);
 
-  // 알림 타입에 따른 연결 페이지 반환
-  const getLinkedPage = (type) => {
-    switch (type) {
-      case 'JOIN_REQ':
-        return 'approvals';
-      case 'LEAVE_REQ':
-        return 'approvals';
-      case 'APPROVED':
-      case 'REJECTED':
-        return 'dashboard';
-      case 'ASSIGNMENT':
-        return 'assignment';
-      default:
-        return 'dashboard';
-    }
-  };
+  // SSE 구독 (로그인 시 자동 연결)
+  useNotificationSource(onNewNotification);
 
   // 컴포넌트 마운트 시 알림 목록 조회
   useEffect(() => {

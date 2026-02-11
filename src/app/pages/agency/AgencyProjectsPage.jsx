@@ -9,7 +9,8 @@ import {
   BookOpen,
   AlertCircle,
   Plus,
-  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
   Calendar
 } from 'lucide-react';
 import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
@@ -387,14 +388,7 @@ export function AgencyProjectsPage() {
                         className="flex items-center gap-1"
                       >
                         가나다순
-                        {sortType === 'name' && (
-                          <ArrowUpDown className="w-3 h-3" />
-                        )}
-                        {sortType === 'name' && (
-                          <span className="text-xs ml-1">
-                            {sortOrder === 'asc' ? '↑' : '↓'}
-                          </span>
-                        )}
+                        {sortType === 'name' && (sortOrder === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
                       </Button>
                       <Button
                         variant={sortType === 'deadline' ? 'default' : 'outline'}
@@ -403,14 +397,7 @@ export function AgencyProjectsPage() {
                         className="flex items-center gap-1"
                       >
                         마감일순
-                        {sortType === 'deadline' && (
-                          <ArrowUpDown className="w-3 h-3" />
-                        )}
-                        {sortType === 'deadline' && (
-                          <span className="text-xs ml-1">
-                            {sortOrder === 'asc' ? '↑' : '↓'}
-                          </span>
-                        )}
+                        {sortType === 'deadline' && (sortOrder === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
                       </Button>
                     </div>
                   </div>
