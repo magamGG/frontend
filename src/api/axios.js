@@ -60,19 +60,50 @@ api.interceptors.response.use(
     }
     return response.data;
   },
-  (error) => {
+  async (error) => {
     // 에러 응답 처리
     if (error.response) {
       const { status, data } = error.response;
+      const originalRequest = error.config;
 
-      // 401 에러 (인증 실패) - 로그인 API가 아닌 경우에만 자동 로그아웃
-      if (status === 401 && !error.config.url.includes('/login')) {
+      // 401 에러 (인증 실패) - 토큰 갱신 시도
+      if (status === 401 && !originalRequest._retry) {
+        // 로그인/갱신 API는 제외
+        if (originalRequest.url.includes('/login') || originalRequest.url.includes('/refresh')) {
+          // 로그인 실패 또는 Refresh Token도 만료된 경우
+          try {
+            useAuthStore.getState().logout();
+            alert('인증이 만료되었습니다. 다시 로그인해주세요.');
+            window.location.href = '/login';
+          } catch (e) {
+            console.error('Logout error:', e);
+          }
+          return Promise.reject(error);
+        }
+
+        // 재시도 플래그 설정 (무한 루프 방지)
+        originalRequest._retry = true;
+
         try {
-          useAuthStore.getState().logout();
-          alert('인증이 만료되었습니다. 다시 로그인해주세요.');
-          window.location.href = '/login';
-        } catch (e) {
-          console.error('Logout error:', e);
+          // Access Token 갱신 시도
+          const newAccessToken = await useAuthStore.getState().refreshAccessToken();
+
+          if (newAccessToken) {
+            // 새 Access Token으로 원래 요청 재시도
+            originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+            return api(originalRequest);
+          }
+        } catch (refreshError) {
+          // Refresh Token도 만료된 경우 로그아웃
+          console.error('토큰 갱신 실패:', refreshError);
+          try {
+            useAuthStore.getState().logout();
+            alert('인증이 만료되었습니다. 다시 로그인해주세요.');
+            window.location.href = '/login';
+          } catch (e) {
+            console.error('Logout error:', e);
+          }
+          return Promise.reject(refreshError);
         }
       }
 

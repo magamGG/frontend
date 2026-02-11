@@ -53,6 +53,8 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
       // 가이드 문서에 따른 응답 데이터 구조
       login({
         token: response.token || response.accessToken,
+        accessToken: response.accessToken || response.token,
+        refreshToken: response.refreshToken,
         memberNo: response.memberNo,
         memberName: response.memberName || emailInput,
         memberRole: response.memberRole,

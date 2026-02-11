@@ -37,6 +37,8 @@ export const API_ENDPOINTS = {
   // 인증 API
   AUTH: {
     LOGIN: `/api/auth/login`,
+    REFRESH: `/api/auth/refresh`,
+    LOGOUT: `/api/auth/logout`,
   },
 
   // 회원 API

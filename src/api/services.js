@@ -7,6 +7,16 @@ export const authService = {
   login: (credentials) => {
     return api.post(API_ENDPOINTS.AUTH.LOGIN, credentials);
   },
+  
+  // 토큰 갱신
+  refresh: (refreshToken) => {
+    return api.post(API_ENDPOINTS.AUTH.REFRESH, { refreshToken });
+  },
+  
+  // 로그아웃
+  logout: (refreshToken) => {
+    return api.post(API_ENDPOINTS.AUTH.LOGOUT, { refreshToken });
+  },
 };
 
 // 회원 서비스
