@@ -56,6 +56,7 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
   const [editFormData, setEditFormData] = useState({ ...userData });
   const [agencyCodeInput, setAgencyCodeInput] = useState('');
   const [agencyName, setAgencyName] = useState('');
+  const [isComposing, setIsComposing] = useState({ name: false, phone: false }); // IME 조합 상태 추적
   
   // 사용자 정보 초기화 - DB에서 가져오기
   useEffect(() => {
@@ -137,14 +138,51 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
     }
   }, [step, agencyName]);
 
+  // IME 조합 시작
+  const handleCompositionStart = (e) => {
+    const field = e.target.id === 'edit-name' ? 'name' : e.target.id === 'edit-phone' ? 'phone' : null;
+    if (field) {
+      setIsComposing(prev => ({ ...prev, [field]: true }));
+    }
+  };
+
+  // IME 조합 종료
+  const handleCompositionEnd = (e) => {
+    const field = e.target.id === 'edit-name' ? 'name' : e.target.id === 'edit-phone' ? 'phone' : null;
+    if (field) {
+      setIsComposing(prev => ({ ...prev, [field]: false }));
+      // 조합 종료 후 필터링 적용
+      handleEditInputChange(field, e.target.value);
+    }
+  };
+
+  // 초성이 포함되어 있는지 검증
+  const hasHangulJamo = (text) => {
+    if (!text) return false;
+    return /[ㄱ-ㅎㅏ-ㅣ]/.test(text);
+  };
+
   const handleEditInputChange = (field, value) => {
+    // IME 조합 중일 때는 필터링하지 않음
+    if (field === 'name' && isComposing.name) {
+      setEditFormData(prev => ({ ...prev, [field]: value }));
+      return;
+    }
+    
+    if (field === 'phone' && isComposing.phone) {
+      setEditFormData(prev => ({ ...prev, [field]: value }));
+      return;
+    }
+    
     // 연락처 입력 시 자동 포맷팅
     if (field === 'phone') {
-      const formatted = formatPhoneNumber(value);
+      // 숫자만 허용
+      const numericOnly = value.replace(/[^0-9]/g, '');
+      const formatted = formatPhoneNumber(numericOnly);
       setEditFormData(prev => ({ ...prev, [field]: formatted }));
     } else if (field === 'name') {
-      // 이름은 한글, 영문만 허용 (공백 제외)
-      const filtered = value.replace(/[^가-힣a-zA-Z]/g, '');
+      // 이름은 한글(완성형 + 자모), 영문만 허용 (공백 제외)
+      const filtered = value.replace(/[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z]/g, '');
       setEditFormData(prev => ({ ...prev, [field]: filtered }));
     } else if (field === 'email') {
       // 이메일은 띄어쓰기 제거
@@ -158,6 +196,12 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
   const handleSaveProfile = async () => {
     if (!editFormData.name || !editFormData.email || !editFormData.phone) {
       toast.error('필수 항목을 모두 입력해주세요.');
+      return;
+    }
+
+    // 이름에 초성이 포함되어 있는지 검증
+    if (hasHangulJamo(editFormData.name)) {
+      toast.error('이름을 완성해주세요. 초성을 포함할 수 없습니다.');
       return;
     }
 
@@ -452,6 +496,14 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
                 id="edit-name"
                 value={editFormData.name}
                 onChange={(e) => handleEditInputChange('name', e.target.value)}
+                onCompositionStart={handleCompositionStart}
+                onCompositionEnd={handleCompositionEnd}
+                onKeyDown={(e) => {
+                  // 스페이스바 입력 차단
+                  if (e.key === ' ' || e.key === 'Space') {
+                    e.preventDefault();
+                  }
+                }}
                 maxLength={20}
                 style={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
               />
@@ -480,6 +532,16 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
                 type="tel"
                 value={editFormData.phone}
                 onChange={(e) => handleEditInputChange('phone', e.target.value)}
+                onCompositionStart={handleCompositionStart}
+                onCompositionEnd={handleCompositionEnd}
+                onKeyDown={(e) => {
+                  // 숫자, 백스페이스, Delete, 화살표 키만 허용
+                  if (!/[0-9]/.test(e.key) && 
+                      !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Tab', 'Home', 'End'].includes(e.key) &&
+                      !(e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                  }
+                }}
                 placeholder="010-1234-5678"
                 maxLength={13}
                 style={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
