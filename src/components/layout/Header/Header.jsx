@@ -1,13 +1,19 @@
 import { motion, AnimatePresence } from "motion/react";
+<<<<<<< HEAD
 import { Bell, Plus, User, X, ChevronRight } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import useNotificationSource from "@/hooks/useNotificationSource";
+=======
+import { Bell, Plus, User, X, ChevronRight, MessageSquare } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+>>>>>>> d7666b9 (feat:chat front 1 => 슬라이드형 채팅 모달 생성과 클릭 시 해당 채팅방으로 이동하는 기능 front만 구동)
 import { Badge } from "@/app/components/ui/badge";
 import { memberService } from '@/api/services';
 import { getMemberProfileUrl } from '@/api/config';
 import useAuthStore from '@/store/authStore';
 import { notificationService } from "@/api/services";
 import { toast } from "sonner";
+import useChatStore from '@/store/chatStore';
 import {
   HeaderContainer,
   HeaderContent,
@@ -126,9 +132,23 @@ export function Header({
 }) {
   const { user } = useAuthStore();
   const memberNo = user?.memberNo;
+  const openChat = useChatStore((state) => state.openChat);
+  const { openChatList, openChatDetail } = useChatStore();
 
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef(null);
+  const [showMessenger, setShowMessenger] = useState(false);
+  const messengerRef = useRef(null);
+  const [messages, setMessages] = useState([
+  {
+    id: 1,
+    sender: "김철수 편집자",
+    content: "작가님, 에피소드 42 콘티 확인 부탁드립니다!",
+    time: "10분 전",
+    isRead: false,
+    avatar: null // 이미지가 없을 경우 기본 아이콘 표시
+  }
+]);
 
   // 사용자 정보 state
   const [memberName, setMemberName] = useState('');
@@ -183,6 +203,8 @@ export function Header({
     },
   ]);
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
+
+  
 
   // 알림 목록 조회
   const fetchNotifications = async () => {
@@ -272,6 +294,18 @@ export function Header({
   useEffect(() => {
     loadUserInfo();
   }, [memberNo, user]);
+  const handleMessageClick = (msg) => {
+  // 1. 'chat' 또는 'messenger'라는 ID를 가진 섹션의 인덱스를 찾습니다.
+  const chatSectionIndex = sections.findIndex(s => s.id === 'chat' || s.id === 'messenger');
+  
+  if (chatSectionIndex !== -1) {
+    onNavigateToSection(chatSectionIndex); // 해당 페이지로 이동
+    setShowMessenger(false);               // 드롭다운 닫기
+  } else {
+    // 만약 섹션이 없다면 토스트 알림이라도 띄워줍니다.
+    toast.info(`${msg.sender}님과의 채팅 페이지를 준비 중입니다.`);
+  }
+};
 
   // 마이페이지에서 프로필 사진 업로드 후 헤더 갱신
   useEffect(() => {
@@ -282,29 +316,22 @@ export function Header({
 
   // Close notification panel when clicking outside
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (
-        notificationRef.current &&
-        !notificationRef.current.contains(event.target)
-      ) {
-        setShowNotifications(false);
-      }
-    };
-
-    if (showNotifications) {
-      document.addEventListener(
-        "mousedown",
-        handleClickOutside,
-      );
+  const handleClickOutside = (event) => {
+    // 알림창 닫기 로직
+    if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+      setShowNotifications(false);
     }
+    // 메신저창 닫기 로직 추가
+    if (messengerRef.current && !messengerRef.current.contains(event.target)) {
+      setShowMessenger(false);
+    }
+  };
 
-    return () => {
-      document.removeEventListener(
-        "mousedown",
-        handleClickOutside,
-      );
-    };
-  }, [showNotifications]);
+  if (showNotifications || showMessenger) {
+    document.addEventListener("mousedown", handleClickOutside);
+  }
+  return () => document.removeEventListener("mousedown", handleClickOutside);
+}, [showNotifications, showMessenger]);
 
   const handleNotificationClick = async (notification) => {
     // 읽지 않은 알림인 경우에만 API 호출
@@ -392,6 +419,7 @@ export function Header({
           </LogoIcon>
           <LogoDomain>magam.gg</LogoDomain>
         </LogoSection>
+        
 
         {/* Center - Current Page */}
         <motion.div
@@ -416,6 +444,84 @@ export function Header({
               <span style={{ fontSize: '14px', fontWeight: '500' }}>근태신청</span>
             </AttendanceButton>
           )}
+
+              <div style={{ position: 'relative' }} ref={messengerRef}>
+            <NotificationButton
+  onClick={() => {
+    openChatList(); // 직접 호출 (getState 빼기)
+    if (showNotifications) setShowNotifications(false);
+  }}
+>
+  <MessageSquare style={{ width: '24px', height: '24px' }} />
+</NotificationButton>
+
+            <AnimatePresence>
+              {showMessenger && (
+                <NotificationPanel
+                  as={motion.div}
+                  initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <NotificationArrow />
+                  <NotificationHeader>
+                    <NotificationHeaderTitle>메시지</NotificationHeaderTitle>
+                  </NotificationHeader>
+                  <NotificationList>
+                    <NotificationList>
+  {messages.length === 0 ? (
+    <EmptyNotification>새로운 메시지가 없습니다</EmptyNotification>
+  ) : (
+    messages.map((msg) => (
+    <NotificationItem
+  key={msg.id}
+  $isUnread={!msg.isRead}
+  onClick={() => {
+    openChatDetail(msg); // 직접 호출
+    setShowMessenger(false);
+  }}
+>
+        <NotificationItemContent>
+          {/* 발신자 프로필 이미지 (없으면 기본 아이콘) */}
+          <div style={{ 
+            width: '32px', 
+            height: '32px', 
+            borderRadius: '50%', 
+            background: 'var(--secondary)', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            marginRight: '12px',
+            flexShrink: 0
+          }}>
+            <User style={{ width: '16px', height: '16px', color: 'var(--muted-foreground)' }} />
+          </div>
+
+          <NotificationItemMain>
+            <NotificationItemHeader>
+              <NotificationItemTitle style={{ fontWeight: 700 }}>
+                {msg.sender}
+              </NotificationItemTitle>
+              {!msg.isRead && <UnreadDot />}
+            </NotificationItemHeader>
+            <NotificationItemMessage>
+              {msg.content}
+            </NotificationItemMessage>
+            <NotificationItemFooter>
+              <NotificationItemTime>{msg.time}</NotificationItemTime>
+            </NotificationItemFooter>
+          </NotificationItemMain>
+        </NotificationItemContent>
+      </NotificationItem>
+    ))
+  )}
+</NotificationList>
+                  </NotificationList>
+                </NotificationPanel>
+              )}
+            </AnimatePresence>
+          </div>
 
           {/* Notifications - 프로필 왼쪽에 배치 */}
           <div style={{ position: 'relative' }} ref={notificationRef}>

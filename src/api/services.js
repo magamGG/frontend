@@ -589,6 +589,25 @@ export const managerService = {
   getHealthMonitoringDetail: (type) => api.get(API_ENDPOINTS.MANAGER.HEALTH_MONITORING_DETAIL(type || 'mental')),
 };
 
+
+export const chatService = {
+  // 1. 나의 채팅방 목록 가져오기
+  getChatList: () => {
+    return api.get(API_ENDPOINTS.CHAT.ROOM_LIST);
+  },
+  
+  // 2. 특정 채팅방의 과거 메시지 내역 조회
+  getMessages: (roomId) => {
+    return api.get(API_ENDPOINTS.CHAT.MESSAGES(roomId));
+  },
+  
+  // 3. 새 메시지 전송
+  sendMessage: (roomId, content) => {
+    // 백엔드 요구 규격에 따라 { content } 혹은 { messageText } 등으로 맞춤
+    return api.post(API_ENDPOINTS.CHAT.SEND(roomId), { message: content });
+  }
+};
+
 export default {
   authService,
   memberService,
@@ -600,4 +619,5 @@ export default {
   healthService,
   agencyService,
   managerService,
+  chatService,
 };

@@ -368,3 +368,11 @@ export const ProfileChevron = styled.div`
     color: var(--primary); /* group-hover:text-primary */
   }
 `;
+
+// Header.styled.js 에 추가하거나, 기존 NotificationButton 스타일을 복사하세요.
+export const MessengerButton = styled(NotificationButton)`
+  /* 알림 버튼과 동일한 스타일, 필요 시 hover 색상만 변경 */
+  &:hover {
+    color: var(--primary); /* 예시: 메시지는 포인트 컬러로 강조 */
+  }
+`;
