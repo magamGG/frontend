@@ -284,20 +284,15 @@ export const AttendanceBadge = styled.span`
   flex-shrink: 0;
 `;
 
-// 일정 표시 영역
+// 일정 표시 영역 — absolute 배치 바의 컨테이너 (min-height 인라인으로 동적 설정)
 export const DateEventsArea = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
   margin-top: 0.25rem;
-  min-height: 0;
   overflow: visible;
   width: 100%;
   position: relative;
-  margin-bottom: 1.75rem;
 `;
 
-// 일정 바 (여러 날짜에 걸친 작업)
+// 일정 바 (여러 날짜에 걸친 작업) — absolute 배치로 행(row) 위치 반영
 export const EventBar = styled.div`
   font-size: 0.75rem;
   padding: 0.25rem 0.5rem;
@@ -309,12 +304,15 @@ export const EventBar = styled.div`
   text-overflow: ellipsis;
   background-color: ${props => props.$color || 'var(--accent)'};
   width: ${props => props.$width || '100%'};
-  position: relative;
+  position: absolute;
+  top: ${props => (props.$topOffset ?? 0) * 1.75}rem;
+  left: 0;
   z-index: 1;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-  flex-shrink: 0;
   height: 1.5rem;
   cursor: ${props => (props.$isGrouped ? 'pointer' : 'default')};
+  transition: ${props => props.$isGrouped ? 'all 0.2s' : 'none'};
+  opacity: ${props => props.$isOtherMonth ? 0.45 : 1};
   
   &:hover {
     ${props => props.$isGrouped && `
