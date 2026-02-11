@@ -1,7 +1,7 @@
 // API 기본 설정
 // 개발 환경에서는 프록시를 사용하므로 빈 문자열 (상대 경로)
 // 프로덕션 환경에서는 전체 URL 사용
-export const API_BASE_URL = import.meta.env.PROD 
+export const API_BASE_URL = import.meta.env.PROD
   ? 'http://localhost:8888'  // 프로덕션 환경 URL (실제 배포 시 변경 필요)
   : '';  // 개발 환경에서는 프록시 사용 (상대 경로)
 export const API_TIMEOUT = 10000;
@@ -38,7 +38,7 @@ export const API_ENDPOINTS = {
   AUTH: {
     LOGIN: `/api/auth/login`,
   },
-  
+
   // 회원 API
   MEMBERS: {
     BASE: `/api/members`, // POST: 회원가입
@@ -48,9 +48,9 @@ export const API_ENDPOINTS = {
     DETAILS: (memberNo) => `/api/members/${memberNo}/details`,
     MANAGERS: (agencyNo) => `/api/members/agency/${agencyNo}/managers`,
     ARTISTS: (agencyNo) => `/api/members/agency/${agencyNo}/artists`,
-    ARTISTS_BY_MANAGER: (managerNo) => `/api/members/manager/${managerNo}/artists`,
+    ARTISTS_BY_MANAGER: (managerNo) => `/api/managers/${managerNo}/artists`,
     ARTISTS_BY_MANAGER_MEMBER: (memberNo) => `/api/members/manager/by-member/${memberNo}/artists`,
-    WORKING_ARTISTS: (managerNo) => `/api/members/manager/${managerNo}/working-artists`,
+    WORKING_ARTISTS: (managerNo) => `/api/managers/${managerNo}/working-artists`,
     ASSIGN: (artistNo, managerNo) => `/api/members/${artistNo}/assign/${managerNo}`,
     UNASSIGN: (artistNo) => `/api/members/${artistNo}/assign`,
     DELETE: (memberNo) => `/api/members/${memberNo}`,
@@ -68,10 +68,12 @@ export const API_ENDPOINTS = {
     START: `/api/attendance/start`, // POST: 출근 시작 (건강 체크 + 출근 기록)
     END: `/api/attendance/end`, // POST: 출근 종료 (퇴근 기록)
     TODAY_STATUS: `/api/attendance/today-status`, // GET: 오늘 출근 상태 조회
-    HISTORY: (memberNo, startDate, endDate) => 
+    HISTORY: (memberNo, startDate, endDate) =>
       `/api/attendance/history?memberNo=${memberNo}&startDate=${startDate}&endDate=${endDate}`, // GET: 출석 이력 조회
-    STATISTICS: (memberNo, year, month) => 
+    STATISTICS: (memberNo, year, month) =>
       `/api/attendance/statistics/${memberNo}?year=${year}&month=${month}`, // GET: 근태 통계 조회
+    ADMIN_CALENDAR: (agencyNo, year, month) =>
+      `/api/attendance/admin-calendar/${agencyNo}?year=${year}&month=${month}`, // GET: 관리자 캘린더 조회
   },
 
   // 연차/휴가 API
@@ -106,6 +108,8 @@ export const API_ENDPOINTS = {
     DELETE: (projectNo) => `/api/projects/${projectNo}`, // DELETE: 프로젝트 삭제
     MEMBERS: (projectNo) => `/api/projects/${projectNo}/members`, // GET: 프로젝트 멤버 목록, POST: 팀원 추가
     MEMBER_DELETE: (projectNo, projectMemberNo) => `/api/projects/${projectNo}/members/remove/${projectMemberNo}`, // DELETE: 프로젝트 팀원 삭제
+    ASSIGNABLE_MANAGERS: (projectNo) => `/api/projects/${projectNo}/assignable-managers`, // GET: 담당자 배치 가능 담당자 목록 (ARTIST_ASSIGNMENT 기준)
+    ASSIGN_MANAGER: (projectNo) => `/api/projects/${projectNo}/assign-manager`, // PUT: 담당자 배치
     ADDABLE_MEMBERS: (projectNo) => `/api/projects/${projectNo}/addable-members`, // GET: 추가 가능 팀원 (담당자/작가 제외, 미소속)
     KANBAN: (projectNo) => `/api/projects/${projectNo}/kanban`, // GET: 칸반 보드 조회
     MANAGED: `/api/projects/managed`, // GET: 담당자 대시보드 담당 프로젝트 현황
@@ -117,6 +121,7 @@ export const API_ENDPOINTS = {
     FEEDBACK: (limit = 50) => `/api/projects/feedback?limit=${limit}`, // GET: 작가 대시보드 피드백(프로젝트 코멘트 목록)
     TODAY_TASKS: `/api/projects/my-today-tasks`, // GET: 아티스트 대시보드 오늘 할 일 (담당+마감일 오늘+미완료 칸반 카드)
     MY_CALENDAR_CARDS: (year, month) => `/api/projects/my-calendar-cards?year=${year}&month=${month}`, // GET: 아티스트 캘린더 담당 칸반 카드 (월별)
+    MY_PROJECTS_CALENDAR_CARDS: (year, month) => `/api/projects/my-projects-calendar-cards?year=${year}&month=${month}`, // GET: 담당자/에이전시 캘린더 소속 프로젝트 모든 칸반 카드 (월별)
     MY_DEADLINE_CARDS: `/api/projects/my-deadline-cards`, // GET: 마감임박 업무 (ENDED_AT >= 오늘, 이전 제외)
     KANBAN_STATS: (memberNo) => `/api/projects/member/${memberNo}/kanban-stats`, // GET: 회원별 칸반 카드 통계 (진행중/완료 개수)
     NEXT_SERIAL: (limit = 10) => `/api/projects/next-serial?limit=${limit}`, // GET: 아티스트 대시보드 다음 연재 프로젝트 (PROJECT_MEMBER+PROJECT_STARTED_AT/CYCLE)
@@ -162,6 +167,7 @@ export const API_ENDPOINTS = {
     GET: (agencyNo) => `/api/agency/${agencyNo}`, // GET: 에이전시 상세 (agencyLeave 등)
     LEAVE: (agencyNo) => `/api/agency/${agencyNo}/leave`, // PUT: 기본 연차(agency_leave) 수정
     JOIN_REQUEST: `/api/agency/join-request`, // POST: 에이전시 가입 요청
+    MY_JOIN_REQUEST: `/api/agency/my-join-request`, // GET: 회원의 대기 중인 가입 요청 조회
     JOIN_REQUESTS: (agencyNo) => `/api/agency/${agencyNo}/join-requests`, // GET: 에이전시 가입 요청 목록 조회
     APPROVE_JOIN_REQUEST: (newRequestNo) => `/api/agency/join-requests/${newRequestNo}/approve`, // POST: 가입 요청 승인
     REJECT_JOIN_REQUEST: (newRequestNo) => `/api/agency/join-requests/${newRequestNo}/reject`, // POST: 가입 요청 거절

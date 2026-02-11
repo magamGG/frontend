@@ -23,14 +23,14 @@ api.interceptors.request.use(
       const state = useAuthStore.getState();
       const token = state.token;
       const memberNo = state.user?.memberNo;
-      
+
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
         console.log('토큰 첨부:', token.substring(0, 20) + '...');
       } else {
         console.log('토큰 없음');
       }
-      
+
       // 회원번호가 있으면 헤더에 추가
       if (memberNo) {
         config.headers['X-Member-No'] = memberNo.toString();
@@ -52,7 +52,7 @@ api.interceptors.response.use(
     if (response.config.responseType === 'blob') {
       return response;
     }
-    
+
     // 성공 응답 처리
     // API 문서에 따라 success 필드가 있는 경우 data 추출
     if (response.data && response.data.success !== undefined) {
@@ -64,7 +64,7 @@ api.interceptors.response.use(
     // 에러 응답 처리
     if (error.response) {
       const { status, data } = error.response;
-      
+
       // 401 에러 (인증 실패) - 로그인 API가 아닌 경우에만 자동 로그아웃
       if (status === 401 && !error.config.url.includes('/login')) {
         try {
@@ -75,30 +75,30 @@ api.interceptors.response.use(
           console.error('Logout error:', e);
         }
       }
-      
+
       // 403 에러 (권한 없음)
       if (status === 403) {
         const errorMessage = data?.message || '접근 권한이 없습니다.';
         alert(errorMessage);
         console.error('❌ 403 Forbidden:', errorMessage);
-        
+
         return Promise.reject({
           status,
           message: errorMessage,
           data,
         });
       }
-      
+
       // 에러 메시지 표준화
       const errorMessage = data?.message || '오류가 발생했습니다.';
-      
+
       return Promise.reject({
         status,
         message: errorMessage,
         data,
       });
     }
-    
+
     // 네트워크 에러 등
     if (error.request) {
       return Promise.reject({
@@ -106,12 +106,13 @@ api.interceptors.response.use(
         error,
       });
     }
-    
+
     return Promise.reject({
       message: '요청 중 오류가 발생했습니다.',
       error,
     });
   }
 );
+
 
 export default api;

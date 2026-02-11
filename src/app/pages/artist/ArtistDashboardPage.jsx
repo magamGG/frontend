@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import useAuthStore from '@/store/authStore';
-import { projectService } from '@/api/services';
+import { projectService, memberService } from '@/api/services';
 
 
 
@@ -61,6 +61,7 @@ export function ArtistDashboardPage() {
     5: 'in-progress',
   });
   const [currentAttendanceType, setCurrentAttendanceType] = useState('워케이션');
+  const [agencyName, setAgencyName] = useState('');
   
   // 근태 상태별 색상 반환
   const getStatusColor = (status) => {
@@ -128,6 +129,25 @@ export function ArtistDashboardPage() {
     if (storedMemos) {
       setMemos(JSON.parse(storedMemos));
     }
+  }, []);
+
+  // 소속 에이전시 이름 조회 (마이페이지 정보 재사용)
+  useEffect(() => {
+    const fetchAgencyName = async () => {
+      try {
+        const user = useAuthStore.getState().user;
+        const memberNo = user?.memberNo;
+        if (!memberNo) return;
+
+        const myPageData = await memberService.getMyPageInfo(memberNo);
+        setAgencyName(myPageData.agencyName || '');
+      } catch (error) {
+        console.error('에이전시명 조회 실패:', error);
+        setAgencyName('');
+      }
+    };
+
+    fetchAgencyName();
   }, []);
 
   // 메모 저장 시 localStorage에도 저장
@@ -426,8 +446,12 @@ export function ArtistDashboardPage() {
                           <Building2 className="w-6 h-6 text-[#00ACC1]" />
                         </div>
                         <div>
-                          <h3 className="text-xl font-semibold text-[#1F2328] mb-1">출근 중</h3>
-                          <p className="text-sm text-[#1F2328]/60">사무실에서 작업 중입니다</p>
+                          <h3 className="text-xl font-semibold text-[#1F2328] mb-1">
+                            {agencyName || '소속 에이전시'}
+                          </h3>
+                          <p className="text-sm text-[#1F2328]/60">
+                            {agencyName ? `${agencyName}에서 작업 중입니다` : '사무실에서 작업 중입니다'}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -511,9 +535,9 @@ export function ArtistDashboardPage() {
               <div className="grid grid-cols-3 gap-4">
                 {/* Feedback */}
                 <Card className="p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <MessageSquare className="w-4 h-4 text-primary" />
-                    <h4 className="font-semibold text-foreground">피드백</h4>
+                  <div className="flex items-center gap-2 mb-3 min-h-[32px]">
+                    <MessageSquare className="w-5 h-5 text-primary" />
+                    <h4 className="font-semibold text-foreground leading-none">피드백</h4>
                   </div>
                   <div className="space-y-2">
                     {feedbacks.slice(0, 2).map((feedback) => (
@@ -542,9 +566,9 @@ export function ArtistDashboardPage() {
 
                 {/* Today's Deadline */}
                 <Card className="p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Clock className="w-4 h-4 text-primary" />
-                    <h4 className="font-semibold text-foreground">오늘 마감 작품</h4>
+                  <div className="flex items-center gap-2 mb-3 min-h-[32px]">
+                    <Clock className="w-5 h-5 text-primary" />
+                    <h4 className="font-semibold text-foreground leading-none">오늘 마감 작품</h4>
                   </div>
                   <div className="space-y-2">
                     {deadlineProjects.map((project) => (
@@ -566,9 +590,9 @@ export function ArtistDashboardPage() {
 
                 {/* Attendance Request Status */}
                 <Card className="p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <FileText className="w-4 h-4 text-primary" />
-                    <h4 className="font-semibold text-foreground">신청 현황</h4>
+                  <div className="flex items-center gap-2 mb-3 min-h-[32px]">
+                    <FileText className="w-5 h-5 text-primary" />
+                    <h4 className="font-semibold text-foreground leading-none">신청 현황</h4>
                   </div>
                   <div className="space-y-2">
                     {attendanceRequests.map((request) => (
@@ -763,9 +787,16 @@ export function ArtistDashboardPage() {
             </label>
             <input
               type="text"
-              placeholder="예: 7시간"
+              inputMode="numeric"
+              placeholder="예: 7"
               value={healthSurvey.sleepHours}
-              onChange={(e) => setHealthSurvey({ ...healthSurvey, sleepHours: e.target.value })}
+              onChange={(e) => {
+                // 숫자만 허용, 공백 및 기타 문자 제거, 최대 2자리
+                const numbers = e.target.value.replace(/[^\d]/g, '');
+                const limited = numbers.slice(0, 2);
+                setHealthSurvey({ ...healthSurvey, sleepHours: limited });
+              }}
+              maxLength={2}
               className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring outline-none text-sm bg-background text-foreground"
             />
           </div>

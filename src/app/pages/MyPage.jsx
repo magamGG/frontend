@@ -371,7 +371,12 @@ export function MyPage({ onClose, onLogout }) {
                 <Input
                   id="edit-name"
                   value={userName}
-                  onChange={(e) => setUserName(e.target.value)}
+                  onChange={(e) => {
+                    // 이름은 한글, 영문만 허용 (공백 제외)
+                    const filtered = e.target.value.replace(/[^가-힣a-zA-Z]/g, '');
+                    setUserName(filtered);
+                  }}
+                  maxLength={20}
                   className="bg-white border-[#DADDE1] text-[#1F2328]"
                 />
               </div>
@@ -381,7 +386,11 @@ export function MyPage({ onClose, onLogout }) {
                   id="edit-email"
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    // 이메일은 띄어쓰기 제거
+                    const filtered = e.target.value.replace(/\s/g, '');
+                    setEmail(filtered);
+                  }}
                   className="bg-white border-[#DADDE1] text-[#1F2328]"
                 />
               </div>
@@ -390,7 +399,19 @@ export function MyPage({ onClose, onLogout }) {
                 <Input
                   id="edit-phone"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => {
+                  // 연락처는 자동 하이픈 포맷팅 (010-1234-5678)
+                  const numbers = e.target.value.replace(/[^\d]/g, '');
+                  const limited = numbers.slice(0, 11);
+                  let formatted = limited;
+                  if (limited.length > 3 && limited.length <= 7) {
+                    formatted = `${limited.slice(0, 3)}-${limited.slice(3)}`;
+                  } else if (limited.length > 7) {
+                    formatted = `${limited.slice(0, 3)}-${limited.slice(3, 7)}-${limited.slice(7)}`;
+                  }
+                  setPhone(formatted);
+                }}
+                maxLength={13}
                   className="bg-white border-[#DADDE1] text-[#1F2328]"
                 />
               </div>

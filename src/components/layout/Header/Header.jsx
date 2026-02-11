@@ -151,18 +151,18 @@ export function Header({
     try {
       setIsLoadingNotifications(true);
       const response = await notificationService.getNotifications();
-      
+
       // DB notificationStatus: Y = 안 읽음(false), N = 읽음(true)
       const formattedNotifications = response.map((n) => ({
-          id: n.notificationNo,
-          title: n.notificationName || '알림',
-          message: n.notificationText || '',
-          time: formatTimeAgo(n.notificationCreatedAt),
-          isRead: n.notificationStatus === 'N',
-          type: getNotificationType(n.notificationType),
-          linkedPage: getLinkedPage(n.notificationType),
-        }));
-      
+        id: n.notificationNo,
+        title: n.notificationName || '알림',
+        message: n.notificationText || '',
+        time: formatTimeAgo(n.notificationCreatedAt),
+        isRead: n.notificationStatus === 'N',
+        type: getNotificationType(n.notificationType),
+        linkedPage: getLinkedPage(n.notificationType),
+      }));
+
       setNotifications(formattedNotifications);
     } catch (error) {
       console.error('알림 목록 조회 실패:', error);
@@ -511,13 +511,13 @@ export function Header({
                                   }}
                                 >
                                   {notification.type ===
-                                  "warning"
+                                    "warning"
                                     ? "경고"
                                     : notification.type ===
-                                        "success"
+                                      "success"
                                       ? "성공"
                                       : notification.type ===
-                                          "error"
+                                        "error"
                                         ? "오류"
                                         : "정보"}
                                 </span>
@@ -549,12 +549,12 @@ export function Header({
           >
             <ProfileAvatar>
               {profileImage ? (
-                <img 
-                  src={profileImage} 
-                  alt="Profile" 
-                  style={{ 
-                    width: '100%', 
-                    height: '100%', 
+                <img
+                  src={profileImage}
+                  alt="Profile"
+                  style={{
+                    width: '100%',
+                    height: '100%',
                     objectFit: 'cover',
                     borderRadius: '50%'
                   }}
@@ -564,9 +564,9 @@ export function Header({
                   }}
                 />
               ) : null}
-              <User style={{ 
-                width: '16px', 
-                height: '16px', 
+              <User style={{
+                width: '16px',
+                height: '16px',
                 color: 'var(--primary-foreground)',
                 display: profileImage ? 'none' : 'block'
               }} />

@@ -139,8 +139,8 @@ export function AdminProjectsPage() {
   const mapApiProjectToFrontend = (p) => {
     const startDateStr = p.projectStartedAt
       ? (typeof p.projectStartedAt === 'string'
-          ? p.projectStartedAt.slice(0, 10)
-          : null)
+        ? p.projectStartedAt.slice(0, 10)
+        : null)
       : null;
     const nextDate = calculateNextScheduleDate(startDateStr, p.projectCycle);
     const deadlineDn = nextDate ? getDeadlineDn(nextDate) : '미정';
@@ -415,9 +415,9 @@ export function AdminProjectsPage() {
   };
 
   const stats = {
-    totalArtists: new Set(projects.map((p) => p.artistId)).size,
     totalProjects: myProjectCount ?? projects.length,
-    todayDeadlines: projects.filter((p) => p.deadline && (p.deadline === 'D-DAY' || p.deadline.includes('D-0') || p.deadline.includes('D-1') || p.deadline.includes('D-2'))).slice(0, 3).length,
+    ongoingProjects: projects.filter((p) => p.serialStatus === '연재').length,
+    todayDeadlines: projects.filter((p) => p.deadline === 'D-DAY' && p.serialStatus !== '휴재').length,
   };
 
 
@@ -482,21 +482,21 @@ export function AdminProjectsPage() {
           <AdminProjectsStatCard>
             <AdminProjectsStatHeader>
               <Users className="w-4 h-4 text-muted-foreground" />
-              <AdminProjectsStatLabel>팀당 작가 수</AdminProjectsStatLabel>
-            </AdminProjectsStatHeader>
-            <AdminProjectsStatValue>{stats.totalArtists}명</AdminProjectsStatValue>
-          </AdminProjectsStatCard>
-          <AdminProjectsStatCard>
-            <AdminProjectsStatHeader>
-              <BookOpen className="w-4 h-4 text-muted-foreground" />
-              <AdminProjectsStatLabel>담당 프로젝트 수</AdminProjectsStatLabel>
+              <AdminProjectsStatLabel>전체 프로젝트 수</AdminProjectsStatLabel>
             </AdminProjectsStatHeader>
             <AdminProjectsStatValue>{stats.totalProjects}개</AdminProjectsStatValue>
           </AdminProjectsStatCard>
           <AdminProjectsStatCard>
             <AdminProjectsStatHeader>
+              <BookOpen className="w-4 h-4 text-muted-foreground" />
+              <AdminProjectsStatLabel>연재중인 프로젝트 수</AdminProjectsStatLabel>
+            </AdminProjectsStatHeader>
+            <AdminProjectsStatValue>{stats.ongoingProjects}개</AdminProjectsStatValue>
+          </AdminProjectsStatCard>
+          <AdminProjectsStatCard>
+            <AdminProjectsStatHeader>
               <AlertCircle className="w-4 h-4 text-muted-foreground" />
-              <AdminProjectsStatLabel>오늘 마감 작품</AdminProjectsStatLabel>
+              <AdminProjectsStatLabel>오늘 마감 프로젝트 수</AdminProjectsStatLabel>
             </AdminProjectsStatHeader>
             <AdminProjectsStatValue>{stats.todayDeadlines}개</AdminProjectsStatValue>
           </AdminProjectsStatCard>
@@ -557,55 +557,55 @@ export function AdminProjectsPage() {
               <AdminProjectsEmptyText>프로젝트 목록을 불러오는 중...</AdminProjectsEmptyText>
             </AdminProjectsEmpty>
           ) : (
-          <>
-          {filteredProjects.map((project) => (
-            <AdminProjectCard key={project.id} onClick={() => handleProjectClick(project)}>
-              <AdminProjectCardContent>
-                <AdminProjectThumbnail>
-                  <ThumbnailImage
-                    src={getProjectThumbnailUrl(project.thumbnail) || PROJECT_THUMBNAIL_PLACEHOLDER}
-                    alt={project.title}
-                  />
-                </AdminProjectThumbnail>
-                <AdminProjectInfo>
-                  <AdminProjectInfoHeader>
-                    <AdminProjectTitle>{project.title}</AdminProjectTitle>
-                    <ArtistBadge variant="outline">
-                      {project.artistName}
-                    </ArtistBadge>
-                  </AdminProjectInfoHeader>
-                  <AdminProjectGenre>{project.genre}</AdminProjectGenre>
-                  <AdminProjectMeta>
-                    <AdminProjectMetaItem>
-                      <BookOpen className="w-3 h-3" />
-                      {project.platform}
-                    </AdminProjectMetaItem>
-                    <AdminProjectMetaGroup>
-                      <AdminProjectMetaDivider>•</AdminProjectMetaDivider>
-                      <AdminProjectMetaItem>
-                        <Calendar className="w-3 h-3" />
-                        {project.schedule && !isNaN(project.schedule) ? `${project.schedule}일` : project.schedule || '미정'}
-                      </AdminProjectMetaItem>
-                    </AdminProjectMetaGroup>
-                  </AdminProjectMeta>
-                </AdminProjectInfo>
-                <AdminProjectStatus>
-                  <StatusBadge status={project.serialStatus}>{project.serialStatus}</StatusBadge>
-                  <AdminProjectStatusText>마감: {project.deadline}</AdminProjectStatusText>
-                </AdminProjectStatus>
-              </AdminProjectCardContent>
-            </AdminProjectCard>
-          ))}
+            <>
+              {filteredProjects.map((project) => (
+                <AdminProjectCard key={project.id} onClick={() => handleProjectClick(project)}>
+                  <AdminProjectCardContent>
+                    <AdminProjectThumbnail>
+                      <ThumbnailImage
+                        src={getProjectThumbnailUrl(project.thumbnail) || PROJECT_THUMBNAIL_PLACEHOLDER}
+                        alt={project.title}
+                      />
+                    </AdminProjectThumbnail>
+                    <AdminProjectInfo>
+                      <AdminProjectInfoHeader>
+                        <AdminProjectTitle>{project.title}</AdminProjectTitle>
+                        <ArtistBadge variant="outline">
+                          {project.artistName}
+                        </ArtistBadge>
+                      </AdminProjectInfoHeader>
+                      <AdminProjectGenre>{project.genre}</AdminProjectGenre>
+                      <AdminProjectMeta>
+                        <AdminProjectMetaItem>
+                          <BookOpen className="w-3 h-3" />
+                          {project.platform}
+                        </AdminProjectMetaItem>
+                        <AdminProjectMetaGroup>
+                          <AdminProjectMetaDivider>•</AdminProjectMetaDivider>
+                          <AdminProjectMetaItem>
+                            <Calendar className="w-3 h-3" />
+                            {project.schedule && !isNaN(project.schedule) ? `${project.schedule}일` : project.schedule || '미정'}
+                          </AdminProjectMetaItem>
+                        </AdminProjectMetaGroup>
+                      </AdminProjectMeta>
+                    </AdminProjectInfo>
+                    <AdminProjectStatus>
+                      <StatusBadge status={project.serialStatus}>{project.serialStatus}</StatusBadge>
+                      <AdminProjectStatusText>마감: {project.deadline}</AdminProjectStatusText>
+                    </AdminProjectStatus>
+                  </AdminProjectCardContent>
+                </AdminProjectCard>
+              ))}
 
-          {filteredProjects.length === 0 && (
-            <AdminProjectsEmpty>
-              <AdminProjectsEmptyIcon>
-                <AlertCircle />
-              </AdminProjectsEmptyIcon>
-              <AdminProjectsEmptyText>해당 조건의 작품이 없습니다</AdminProjectsEmptyText>
-            </AdminProjectsEmpty>
-          )}
-          </>
+              {filteredProjects.length === 0 && (
+                <AdminProjectsEmpty>
+                  <AdminProjectsEmptyIcon>
+                    <AlertCircle />
+                  </AdminProjectsEmptyIcon>
+                  <AdminProjectsEmptyText>해당 조건의 작품이 없습니다</AdminProjectsEmptyText>
+                </AdminProjectsEmpty>
+              )}
+            </>
           )}
         </AdminProjectsList>
       </AdminProjectsBody>
@@ -680,12 +680,12 @@ export function AdminProjectsPage() {
           {/* 연재 주기 */}
           <AdminProjectModalField>
             <AdminProjectModalLabel>연재 주기</AdminProjectModalLabel>
-            <AdminProjectModalInput 
-              type="number" 
+            <AdminProjectModalInput
+              type="number"
               min="1"
-              value={newProjectForm.schedule} 
-              onChange={(e) => setNewProjectForm({ ...newProjectForm, schedule: e.target.value })} 
-              placeholder="예: 7 (일 단위)" 
+              value={newProjectForm.schedule}
+              onChange={(e) => setNewProjectForm({ ...newProjectForm, schedule: e.target.value })}
+              placeholder="예: 7 (일 단위)"
             />
             <AdminProjectModalHelperText>연재 주기를 일 단위로 입력하세요 (예: 7일, 14일 등)</AdminProjectModalHelperText>
           </AdminProjectModalField>
@@ -693,10 +693,10 @@ export function AdminProjectsPage() {
           {/* 연재 시작일 */}
           <AdminProjectModalField>
             <AdminProjectModalLabel>연재 시작일</AdminProjectModalLabel>
-            <AdminProjectModalInput 
-              type="date" 
-              value={newProjectForm.startDate} 
-              onChange={(e) => setNewProjectForm({ ...newProjectForm, startDate: e.target.value })} 
+            <AdminProjectModalInput
+              type="date"
+              value={newProjectForm.startDate}
+              onChange={(e) => setNewProjectForm({ ...newProjectForm, startDate: e.target.value })}
             />
             <AdminProjectModalHelperText>연재 시작일을 선택하면 다음 연재 일정이 자동으로 계산됩니다</AdminProjectModalHelperText>
             {newProjectForm.startDate && newProjectForm.schedule && !isNaN(newProjectForm.schedule) && (

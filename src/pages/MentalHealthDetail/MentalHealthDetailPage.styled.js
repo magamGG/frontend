@@ -27,15 +27,12 @@ export const HeaderSection = styled.div`
 
 export const BackButton = styled.button`
   padding: 8px;
-  border-radius: 8px;
-  transition: background-color 0.2s;
-  background-color: transparent;
+  background: none;
   border: none;
   cursor: pointer;
-
-  &:hover {
-    background-color: white;
-  }
+  display: flex;
+  align-items: center;
+  justify-content: center;
 `;
 
 export const HeaderTitle = styled.h1`

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { 
-  Users, 
-  Mail, 
-  Phone, 
+import {
+  Users,
+  Mail,
+  Phone,
   Briefcase,
   Activity,
   Search,
@@ -204,11 +204,11 @@ export function AdminTeamPage() {
       try {
         // 1. 현재 사용자의 managerNo 조회 (담당자 목록에서 찾기)
         const managersResponse = await memberService.getManagersByAgency(user.agencyNo);
-        const managersList = Array.isArray(managersResponse) 
-          ? managersResponse 
+        const managersList = Array.isArray(managersResponse)
+          ? managersResponse
           : managersResponse?.data || [];
-        
-        const currentManager = managersList.find(m => m.memberNo === user.memberNo);
+
+        const currentManager = managersList.find(m => Number(m.memberNo) === Number(user.memberNo));
         if (!currentManager || !currentManager.managerNo) {
           toast.error('담당자 정보를 찾을 수 없습니다.');
           setIsLoading(false);
@@ -227,6 +227,7 @@ export function AdminTeamPage() {
         const imageBaseUrl = API_BASE_URL || 'http://localhost:8888';
         const mappedEmployees = artistsList.map((artist) => {
           let profileImageUrl = null;
+          // DTO에 프로필 이미지가 없으므로 여기서는 null 처리하고 fetchEmployeeDetails에서 채움
           if (artist.memberProfileImage) {
             if (artist.memberProfileImage.startsWith('http://') || artist.memberProfileImage.startsWith('https://')) {
               profileImageUrl = artist.memberProfileImage;
@@ -237,16 +238,17 @@ export function AdminTeamPage() {
             }
           }
           return {
-            id: artist.memberNo,
-            name: artist.memberName,
-            email: artist.memberEmail,
+            id: artist.artistNo || artist.memberNo, // DTO 필드명 대응
+            name: artist.artistName || artist.memberName,
+            email: artist.email || artist.memberEmail,
             phone: artist.memberPhone || '',
-            role: artist.memberRole,
+            role: artist.memberRole || 'ARTIST', // 기본값 설정
             originalRole: artist.memberRole,
-            status: artist.memberStatus === 'ACTIVE' ? '근무중'
-              : artist.memberStatus === 'ON_LEAVE' ? '휴가'
-              : artist.memberStatus === 'SICK_LEAVE' ? '병가'
-              : '근무중',
+            status: (artist.memberStatus === 'WORKCATION' || artist.memberStatus === '워케이션') ? '워케이션'
+              : (artist.memberStatus === 'REMOTE_WORK' || artist.memberStatus === '재택근무') ? '재택근무'
+                : artist.memberStatus === 'ON_LEAVE' ? '휴가'
+                  : artist.memberStatus === 'SICK_LEAVE' ? '병가'
+                    : '근무중',
             projectCount: 0,
             profileImage: profileImageUrl,
           };
@@ -379,10 +381,25 @@ export function AdminTeamPage() {
         }
       }
 
-      // employees 상태도 업데이트
-      setEmployees(prev => prev.map(emp => 
-        emp.id === employeeId 
-          ? { ...emp, projectCount, profileImage: profileImageUrl || emp.profileImage }
+      // employees 상태도 업데이트 (상세 정보 반영)
+      setEmployees(prev => prev.map(emp =>
+        emp.id === employeeId
+          ? {
+            ...emp,
+            projectCount,
+            profileImage: profileImageUrl || emp.profileImage,
+            // 상세 정보에서 누락된 필드 업데이트
+            name: data.memberName || emp.name,
+            email: data.memberEmail || emp.email,
+            phone: data.memberPhone || emp.phone,
+            role: data.memberRole || emp.role,
+            originalRole: data.memberRole || emp.originalRole,
+            status: (data.memberStatus === 'WORKCATION' || data.memberStatus === '워케이션') ? '워케이션'
+              : (data.memberStatus === 'REMOTE_WORK' || data.memberStatus === '재택근무') ? '재택근무'
+                : data.memberStatus === 'ON_LEAVE' ? '휴가'
+                  : data.memberStatus === 'SICK_LEAVE' ? '병가'
+                    : '근무중',
+          }
           : emp
       ));
     } catch (error) {
@@ -453,7 +470,7 @@ export function AdminTeamPage() {
                 <StatCardValue>{totalArtists}명</StatCardValue>
               </StatCardContent>
             </StatCard>
-            
+
             <StatCard>
               <StatCardIcon $bgColor="rgba(59, 130, 246, 0.1)" $iconColor="#3B82F6">
                 <Briefcase className="w-6 h-6" />
@@ -463,7 +480,7 @@ export function AdminTeamPage() {
                 <StatCardValue>{myProjectCount ?? 0}개</StatCardValue>
               </StatCardContent>
             </StatCard>
-            
+
             <StatCard>
               <StatCardIcon $bgColor="rgba(34, 197, 94, 0.1)" $iconColor="#22C55E">
                 <Activity className="w-6 h-6" />
@@ -495,8 +512,8 @@ export function AdminTeamPage() {
               <EmployeeDetailHeader>
                 <EmployeeDetailAvatar>
                   {selectedEmployee.profileImage ? (
-                    <img 
-                      src={selectedEmployee.profileImage} 
+                    <img
+                      src={selectedEmployee.profileImage}
                       alt={selectedEmployee.name}
                       style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
                       onError={(e) => {
@@ -568,7 +585,7 @@ export function AdminTeamPage() {
               <StatCardValue>{totalArtists}명</StatCardValue>
             </StatCardContent>
           </StatCard>
-          
+
           <StatCard>
             <StatCardIcon $bgColor="rgba(59, 130, 246, 0.1)" $iconColor="#3B82F6">
               <Briefcase className="w-6 h-6" />
@@ -578,7 +595,7 @@ export function AdminTeamPage() {
               <StatCardValue>{myProjectCount ?? 0}개</StatCardValue>
             </StatCardContent>
           </StatCard>
-          
+
           <StatCard>
             <StatCardIcon $bgColor="rgba(34, 197, 94, 0.1)" $iconColor="#22C55E">
               <Activity className="w-6 h-6" />
@@ -595,15 +612,15 @@ export function AdminTeamPage() {
           <SearchIcon>
             <Search className="w-5 h-5" />
           </SearchIcon>
-            <SearchInput
-              type="text"
-              placeholder="이름 또는 이메일로 검색..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+          <SearchInput
+            type="text"
+            placeholder="이름 또는 이메일로 검색..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </SearchContainer>
 
-          {/* 직원 목록 */}
+        {/* 직원 목록 */}
         {isLoading ? (
           <div style={{ textAlign: 'center', padding: '2rem' }}>
             <p>작가 목록을 불러오는 중...</p>
@@ -620,12 +637,12 @@ export function AdminTeamPage() {
               const hc = details?.healthCheck;
               return (
                 <div key={employee.id}>
-                  <EmployeeCard onClick={() => handleEmployeeClick(employee)}>
+                  <EmployeeCard onClick={() => handleEmployeeClick(employee)} $status={employee.status}>
                     <EmployeeLeft>
                       <EmployeeAvatar>
                         {employee.profileImage ? (
-                          <img 
-                            src={employee.profileImage} 
+                          <img
+                            src={employee.profileImage}
                             alt={employee.name}
                             style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
                             onError={(e) => {
@@ -753,8 +770,8 @@ export function AdminTeamPage() {
                               <div className="p-4 border border-border rounded-lg flex-1 flex flex-col min-h-[220px]">
                                 {details?.attendanceStats?.data?.length > 0 ? (
                                   <div className="flex items-center gap-4 flex-1 min-h-[180px]">
-<div className="w-[140px] h-[140px] flex-shrink-0">
-                                        <ResponsiveContainer width="100%" height="100%">
+                                    <div className="w-[140px] h-[140px] flex-shrink-0">
+                                      <ResponsiveContainer width="100%" height="100%">
                                         <PieChart>
                                           <Pie
                                             data={details.attendanceStats.data}

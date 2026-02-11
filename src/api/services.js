@@ -15,7 +15,7 @@ export const memberService = {
   register: (memberData) => {
     return api.post(API_ENDPOINTS.MEMBERS.BASE, memberData);
   },
-  
+
   // 현재 로그인한 회원 정보 조회
   getCurrentMember: () => {
     return api.get(API_ENDPOINTS.MEMBERS.CURRENT);
@@ -123,10 +123,15 @@ export const attendanceService = {
   getHistory: (memberNo, startDate, endDate) => {
     return api.get(API_ENDPOINTS.ATTENDANCE.HISTORY(memberNo, startDate, endDate));
   },
-  
+
   // 근태 통계 조회
   getStatistics: (memberNo, year, month) => {
     return api.get(API_ENDPOINTS.ATTENDANCE.STATISTICS(memberNo, year, month));
+  },
+
+  // 관리자 캘린더 조회
+  getAdminCalendar: (agencyNo, year, month) => {
+    return api.get(API_ENDPOINTS.ATTENDANCE.ADMIN_CALENDAR(agencyNo, year, month));
   },
 };
 
@@ -150,17 +155,17 @@ export const leaveService = {
   requestLeave: (leaveRequestData) => {
     return api.post(API_ENDPOINTS.LEAVE.REQUEST, leaveRequestData);
   },
-  
+
   // 연차 목록 조회
   getLeaveList: (memberNo, year) => {
     return api.get(API_ENDPOINTS.LEAVE.LIST(memberNo, year));
   },
-  
+
   // 연차 잔액 조회
   getLeaveBalance: (memberNo) => {
     return api.get(API_ENDPOINTS.LEAVE.BALANCE(memberNo));
   },
-  
+
   // 내 근태 신청 목록 조회
   getMyRequests: () => {
     return api.get(API_ENDPOINTS.LEAVE.MY_REQUESTS);
@@ -170,12 +175,12 @@ export const leaveService = {
   getManagerRequests: () => {
     return api.get(API_ENDPOINTS.LEAVE.MANAGER_REQUESTS);
   },
-  
+
   // 에이전시 소속 근태 신청 목록 조회
   getAgencyRequests: (agencyNo) => {
     return api.get(API_ENDPOINTS.LEAVE.AGENCY_REQUESTS(agencyNo));
   },
-  
+
   // 에이전시 소속 대기 중인 근태 신청 목록 조회
   getAgencyPendingRequests: (agencyNo) => {
     return api.get(API_ENDPOINTS.LEAVE.AGENCY_PENDING(agencyNo));
@@ -277,7 +282,17 @@ export const projectService = {
   getAddableMembers: (projectNo) => {
     return api.get(API_ENDPOINTS.PROJECTS.ADDABLE_MEMBERS(projectNo));
   },
-  
+
+  // 담당자 배치 가능 담당자 목록 (프로젝트 작가들이 ARTIST_ASSIGNMENT로 연결된 담당자만)
+  getAssignableManagers: (projectNo) => {
+    return api.get(API_ENDPOINTS.PROJECTS.ASSIGNABLE_MANAGERS(projectNo));
+  },
+
+  // 담당자 배치 (PROJECT_MEMBER role 담당자 및 KANBAN_CARD 담당자 업데이트)
+  assignManagerToProject: (projectNo, managerNo) => {
+    return api.put(API_ENDPOINTS.PROJECTS.ASSIGN_MANAGER(projectNo), { managerNo });
+  },
+
   // 프로젝트 목록 조회 (로그인 회원 소속 프로젝트)
   getProjects: (page = 0, size = 10) => {
     return api.get(API_ENDPOINTS.PROJECTS.LIST(page, size));
@@ -286,7 +301,7 @@ export const projectService = {
   getProjectsByAgency: (agencyNo) => {
     return api.get(API_ENDPOINTS.PROJECTS.LIST_BY_AGENCY(agencyNo));
   },
-  
+
   // 칸반 보드 조회
   getKanbanBoard: (projectNo) => {
     return api.get(API_ENDPOINTS.PROJECTS.KANBAN(projectNo));
@@ -335,6 +350,11 @@ export const projectService = {
   // 아티스트 캘린더: 담당자 배정 칸반 카드 월별 (KANBAN_CARD_STARTED_AT/ENDED_AT, PROJECT_COLOR)
   getMyCalendarCards: (year, month) => {
     return api.get(API_ENDPOINTS.PROJECTS.MY_CALENDAR_CARDS(year, month));
+  },
+
+  // 담당자/에이전시 캘린더: 소속 프로젝트 모든 칸반 카드 월별
+  getMyProjectsCalendarCards: (year, month) => {
+    return api.get(API_ENDPOINTS.PROJECTS.MY_PROJECTS_CALENDAR_CARDS(year, month));
   },
 
   // 마감임박 업무: KANBAN_CARD_ENDED_AT >= 오늘, 이전 날짜 제외
@@ -407,17 +427,17 @@ export const notificationService = {
   getNotifications: () => {
     return api.get(API_ENDPOINTS.NOTIFICATION.LIST);
   },
-  
+
   // 알림 읽음 처리
   markAsRead: (notificationNo) => {
     return api.put(API_ENDPOINTS.NOTIFICATION.READ(notificationNo));
   },
-  
+
   // 모든 알림 읽음 처리
   markAllAsRead: () => {
     return api.put(API_ENDPOINTS.NOTIFICATION.READ_ALL);
   },
-  
+
   // 알림 삭제
   deleteNotification: (notificationNo) => {
     return api.delete(API_ENDPOINTS.NOTIFICATION.DELETE(notificationNo));
@@ -430,7 +450,7 @@ export const healthService = {
   createSurvey: (surveyData) => {
     return api.post(API_ENDPOINTS.HEALTH.SURVEY, surveyData);
   },
-  
+
   // 일일 건강 체크 등록
   createDailyCheck: (dailyCheckData) => {
     return api.post(API_ENDPOINTS.HEALTH.DAILY_CHECK, dailyCheckData);
@@ -443,17 +463,23 @@ export const agencyService = {
   requestJoinAgency: (requestData) => {
     return api.post(API_ENDPOINTS.AGENCY.JOIN_REQUEST, requestData);
   },
+
+  
+  // 회원의 대기 중인 가입 요청 조회
+  getMyPendingJoinRequest: () => {
+    return api.get(API_ENDPOINTS.AGENCY.MY_JOIN_REQUEST);
+  },
   
   // 에이전시 가입 요청 목록 조회
   getJoinRequests: (agencyNo) => {
     return api.get(API_ENDPOINTS.AGENCY.JOIN_REQUESTS(agencyNo));
   },
-  
+
   // 에이전시 가입 요청 승인
   approveJoinRequest: (newRequestNo) => {
     return api.post(API_ENDPOINTS.AGENCY.APPROVE_JOIN_REQUEST(newRequestNo));
   },
-  
+
   // 에이전시 가입 요청 거절
   rejectJoinRequest: (newRequestNo, rejectionReason) => {
     return api.post(API_ENDPOINTS.AGENCY.REJECT_JOIN_REQUEST(newRequestNo), { rejectionReason });

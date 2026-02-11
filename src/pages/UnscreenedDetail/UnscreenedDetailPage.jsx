@@ -38,7 +38,7 @@ import {
   EmptyState,
 } from './UnscreenedDetailPage.styled';
 
-const FILTER_TYPES = ['전체', '정신', '신체', '둘 다'];
+const FILTER_TYPES = ['전체', '정신', '신체', '정신·신체'];
 
 function getStatusLabel(status) {
   if (status === 'BOTH') return '전체';
@@ -124,7 +124,7 @@ export function UnscreenedDetailPage({ onBack, managerMode = false }) {
       let matchesType = true;
       if (filterType === '정신') matchesType = person.status === 'MENTAL_ONLY';
       else if (filterType === '신체') matchesType = person.status === 'PHYSICAL_ONLY';
-      else if (filterType === '둘 다') matchesType = person.status === 'BOTH';
+      else if (filterType === '정신·신체') matchesType = person.status === 'BOTH';
       return matchesSearch && matchesType;
     })
     .sort((a, b) => (getDaysOverdue(b) ?? 0) - (getDaysOverdue(a) ?? 0));
@@ -173,11 +173,7 @@ export function UnscreenedDetailPage({ onBack, managerMode = false }) {
         {/* 헤더 */}
         <HeaderSection>
           <div className="flex items-center gap-3">
-            <BackButton
-              variant="ghost"
-              size="sm"
-              onClick={onBack}
-            >
+            <BackButton onClick={onBack}>
               <ArrowLeft className="w-4 h-4" />
             </BackButton>
             <HeaderTitle>미검진 인원</HeaderTitle>
@@ -216,8 +212,7 @@ export function UnscreenedDetailPage({ onBack, managerMode = false }) {
                 placeholder="이름으로 검색..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 h-9 text-sm"
-                style={{ backgroundColor: '#e8eaed' }}
+                className="pl-10 h-9 text-sm border border-[#e2e8f0] bg-white"
               />
             </FilterSearchContainer>
             <FilterButtonGroup>
@@ -225,7 +220,6 @@ export function UnscreenedDetailPage({ onBack, managerMode = false }) {
                 <FilterButton
                   key={type}
                   $variant={filterType === type ? 'default' : 'outline'}
-                  size="sm"
                   onClick={() => setFilterType(type)}
                 >
                   {type}
@@ -239,7 +233,7 @@ export function UnscreenedDetailPage({ onBack, managerMode = false }) {
         <DataTableCard>
           {loading ? (
             <EmptyState>
-              <p className="text-sm" style={{ color: 'var(--accent)' }}>불러오는 중...</p>
+              <p className="text-sm" style={{ color: '#6E8FB3' }}>불러오는 중...</p>
             </EmptyState>
           ) : (
             <>
@@ -285,8 +279,6 @@ export function UnscreenedDetailPage({ onBack, managerMode = false }) {
                           </TableCell>
                           <TableCell $align="right">
                             <AlarmButton
-                              variant="ghost"
-                              size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleSendAlarm(person);
@@ -305,7 +297,7 @@ export function UnscreenedDetailPage({ onBack, managerMode = false }) {
 
               {filteredData.length === 0 && (
                 <EmptyState>
-                  <p className="text-sm" style={{ color: 'var(--accent)' }}>검색 결과가 없습니다.</p>
+                  <p className="text-sm" style={{ color: '#6E8FB3' }}>검색 결과가 없습니다.</p>
                 </EmptyState>
               )}
             </>

@@ -352,7 +352,7 @@ export function AgencyDashboardPage() {
                     <MetricLabel>{metric.label}</MetricLabel>
                     <MetricValue>{metric.value}</MetricValue>
                     <MetricChange $color={metric.changeColor ?? metric.color}>
-                      {metric.change !== '-' && metric.change != null ? metric.change : '전월 대비 0%'}
+                      {metric.change !== '-' && metric.change != null ? metric.change : '-'}
                     </MetricChange>
                   </div>
                   <MetricIcon $bgColor={metric.iconBgColor} $color={metric.color}>
