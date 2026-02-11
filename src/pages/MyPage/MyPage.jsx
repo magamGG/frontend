@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, Mail, Phone, MapPin, Briefcase, Edit, ArrowLeft, Camera } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Briefcase, Edit, ArrowLeft, Camera, MessageCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/app/components/ui/dialog';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
@@ -11,6 +11,7 @@ import { memberService, attendanceService } from '@/api/services';
 import { API_BASE_URL } from '@/api/config';
 import { formatPhoneNumber } from '@/utils/phoneFormatter';
 import useAuthStore from '@/store/authStore';
+import { InquiryModal } from '@/components/modals/InquiryModal';
 import {
   MyPageOverlay,
   MyPageContainer,
@@ -101,6 +102,7 @@ export function MyPage({ onClose, onLogout }) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isImageSelectModalOpen, setIsImageSelectModalOpen] = useState(false);
+  const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [userName, setUserName] = useState('');
   const [email, setEmail] = useState('');
@@ -424,6 +426,10 @@ export function MyPage({ onClose, onLogout }) {
                   <ActionButton $variant="primary" onClick={() => setIsEditModalOpen(true)}>
                     <Edit className="w-4 h-4" />
                     프로필 수정
+                  </ActionButton>
+                  <ActionButton onClick={() => setIsInquiryModalOpen(true)}>
+                    <MessageCircle className="w-4 h-4" />
+                    문의하기
                   </ActionButton>
                   <ActionButton onClick={handleLogout}>로그아웃</ActionButton>
                   <ActionButton $variant="danger" onClick={() => setIsDeleteModalOpen(true)}>
@@ -763,6 +769,12 @@ export function MyPage({ onClose, onLogout }) {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Inquiry Modal */}
+      <InquiryModal 
+        open={isInquiryModalOpen} 
+        onOpenChange={setIsInquiryModalOpen} 
+      />
     </MyPageOverlay>
   );
 }
