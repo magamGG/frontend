@@ -3,7 +3,7 @@ import { Card } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
 import { Modal } from '@/app/components/Modal';
-import { BookOpen, Users, Calendar, AlertCircle, Plus, Search, ArrowUpDown } from 'lucide-react';
+import { BookOpen, Users, Calendar, AlertCircle, Plus, Search, ArrowUp, ArrowDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
 import { ProjectDetailPage } from '@/app/pages/artist/ProjectDetailPage';
@@ -358,14 +358,7 @@ export function AdminProjectsPage() {
                         className="flex items-center gap-1"
                       >
                         가나다순
-                        {sortType === 'name' && (
-                          <ArrowUpDown className="w-3 h-3" />
-                        )}
-                        {sortType === 'name' && (
-                          <span className="text-xs ml-1">
-                            {sortOrder === 'asc' ? '↑' : '↓'}
-                          </span>
-                        )}
+                        {sortType === 'name' && (sortOrder === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
                       </Button>
                       <Button
                         variant={sortType === 'deadline' ? 'default' : 'outline'}
@@ -374,14 +367,7 @@ export function AdminProjectsPage() {
                         className="flex items-center gap-1"
                       >
                         마감일순
-                        {sortType === 'deadline' && (
-                          <ArrowUpDown className="w-3 h-3" />
-                        )}
-                        {sortType === 'deadline' && (
-                          <span className="text-xs ml-1">
-                            {sortOrder === 'asc' ? '↑' : '↓'}
-                          </span>
-                        )}
+                        {sortType === 'deadline' && (sortOrder === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
                       </Button>
                     </div>
                   </div>
