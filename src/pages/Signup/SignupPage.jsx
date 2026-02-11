@@ -66,9 +66,7 @@ const artistSpecializationList = [
   { value: 'webtoon-writer', label: '웹툰 작가', icon: Pen },
   { value: 'webnovel-writer', label: '웹소설 작가', icon: BookOpen },
   { value: 'assistant-coloring', label: '어시스트 - 채색', icon: Palette },
-  { value: 'assistant-lighting', label: '어시스트 - 조명', icon: Paintbrush },
   { value: 'assistant-background', label: '어시스트 - 배경', icon: Paintbrush },
-  { value: 'assistant-lineart', label: '어시스트 - 선화', icon: Paintbrush },
   { value: 'assistant-other', label: '어시스트 - 기타', icon: Paintbrush },
 ];
 
@@ -78,6 +76,7 @@ export function SignupPage({ onSignup, onBackToLogin }) {
   const [customSpecializationInput, setCustomSpecializationInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSelectOpen, setIsSelectOpen] = useState(false);
+  const [isComposing, setIsComposing] = useState({ name: false, phone: false }); // IME 조합 상태 추적
   const [signupFormData, setSignupFormData] = useState({
     name: '',
     email: '',
@@ -91,16 +90,37 @@ export function SignupPage({ onSignup, onBackToLogin }) {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     
+    // IME 조합 중일 때는 필터링하지 않음
+    if (name === 'name' && isComposing.name) {
+      setSignupFormData({
+        ...signupFormData,
+        [name]: value,
+      });
+      return;
+    }
+    
+    if (name === 'phone' && isComposing.phone) {
+      setSignupFormData({
+        ...signupFormData,
+        [name]: value,
+      });
+      return;
+    }
+    
     // 연락처 입력 시 자동 포맷팅
     if (name === 'phone') {
-      const formatted = formatPhoneNumber(value);
+      // 숫자만 허용
+      const numericOnly = value.replace(/[^0-9]/g, '');
+      const formatted = formatPhoneNumber(numericOnly);
       setSignupFormData({
         ...signupFormData,
         [name]: formatted,
       });
     } else if (name === 'name') {
-      // 이름은 한글, 영문만 허용 (공백 제외)
-      const filtered = value.replace(/[^가-힣a-zA-Z]/g, '');
+      // 이름은 한글(완성형 + 자모), 영문만 허용 (공백 제외)
+      // 한글 자모 범위: 초성(ㄱ~ㅎ: U+1100~U+1112), 중성(ㅏ~ㅣ: U+1161~U+1175), 종성(ㄱ~ㅎ: U+11A8~U+11C2)
+      // 완성형 한글: 가~힣 (U+AC00~U+D7A3)
+      const filtered = value.replace(/[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z]/g, '');
       setSignupFormData({
         ...signupFormData,
         [name]: filtered,
@@ -127,6 +147,27 @@ export function SignupPage({ onSignup, onBackToLogin }) {
     }
   };
 
+  // IME 조합 시작
+  const handleCompositionStart = (e) => {
+    const name = e.target.name;
+    setIsComposing(prev => ({ ...prev, [name]: true }));
+  };
+
+  // IME 조합 종료
+  const handleCompositionEnd = (e) => {
+    const name = e.target.name;
+    setIsComposing(prev => ({ ...prev, [name]: false }));
+    // 조합 종료 후 필터링 적용
+    handleInputChange(e);
+  };
+
+  // 초성이 포함되어 있는지 검증 (한글 자모가 포함되어 있으면 true)
+  const hasHangulJamo = (text) => {
+    if (!text) return false;
+    // 한글 자모가 있는지 확인 (ㄱ~ㅎ, ㅏ~ㅣ)
+    return /[ㄱ-ㅎㅏ-ㅣ]/.test(text);
+  };
+
   const handleRoleChange = (role) => {
     setSelectedRole(role);
     if (role !== USER_ROLES.ARTIST) {
@@ -142,6 +183,11 @@ export function SignupPage({ onSignup, onBackToLogin }) {
     }
     if (selectedRole === USER_ROLES.ARTIST && !artistSpecialization) {
       toast.error('세부 직무를 선택해주세요.');
+      return;
+    }
+    // 이름에 초성이 포함되어 있는지 검증
+    if (hasHangulJamo(signupFormData.name)) {
+      toast.error('이름을 완성해주세요. 초성을 포함할 수 없습니다.');
       return;
     }
     if (signupFormData.password !== signupFormData.confirmPassword) {
@@ -162,9 +208,7 @@ export function SignupPage({ onSignup, onBackToLogin }) {
           ? (artistSpecialization === 'webtoon-writer' ? '웹툰 작가'
             : artistSpecialization === 'webnovel-writer' ? '웹소설 작가'
             : artistSpecialization === 'assistant-coloring' ? '어시스트 - 채색'
-            : artistSpecialization === 'assistant-lighting' ? '어시스트 - 조명'
             : artistSpecialization === 'assistant-background' ? '어시스트 - 배경'
-            : artistSpecialization === 'assistant-lineart' ? '어시스트 - 선화'
             : artistSpecialization === 'assistant-other' ? '어시스트- 기타'
             : '웹툰 작가')
           : selectedRole === USER_ROLES.MANAGER ? '담당자'
@@ -398,6 +442,14 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                           name="name"
                           value={signupFormData.name}
                           onChange={handleInputChange}
+                          onCompositionStart={handleCompositionStart}
+                          onCompositionEnd={handleCompositionEnd}
+                          onKeyDown={(e) => {
+                            // 스페이스바 입력 차단
+                            if (e.key === ' ' || e.key === 'Space') {
+                              e.preventDefault();
+                            }
+                          }}
                           placeholder="홍길동"
                           maxLength={20}
                           required
@@ -414,6 +466,16 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                           name="phone"
                           value={signupFormData.phone}
                           onChange={handleInputChange}
+                          onCompositionStart={handleCompositionStart}
+                          onCompositionEnd={handleCompositionEnd}
+                          onKeyDown={(e) => {
+                            // 숫자, 백스페이스, Delete, 화살표 키만 허용
+                            if (!/[0-9]/.test(e.key) && 
+                                !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Tab', 'Home', 'End'].includes(e.key) &&
+                                !(e.ctrlKey || e.metaKey)) {
+                              e.preventDefault();
+                            }
+                          }}
                           placeholder="010-1234-5678"
                           maxLength={13}
                           required
