@@ -44,6 +44,8 @@ export default defineConfig({
         target: 'http://localhost:8888',
         changeOrigin: true,
         secure: false,
+        timeout: 120000, // AI 응답 대기를 위한 타임아웃 (120초)
+        proxyTimeout: 120000,
         // CORS 헤더 유지
         configure: (proxy, _options) => {
           proxy.on('error', (err, _req, _res) => {

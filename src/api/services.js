@@ -564,6 +564,19 @@ export const managerService = {
   getHealthMonitoringDetail: (type) => api.get(API_ENDPOINTS.MANAGER.HEALTH_MONITORING_DETAIL(type || 'mental')),
 };
 
+// AI 채팅 서비스 (Ollama 연동)
+export const chatService = {
+  // AI 채팅 메시지 전송 (AI 응답은 시간이 오래 걸릴 수 있으므로 타임아웃 120초)
+  sendMessage: (message, userRole, history = []) => {
+    return api.post('/api/chat', { message, userRole, history }, { timeout: 120000 });
+  },
+
+  // AI 서비스 상태 확인
+  getStatus: () => {
+    return api.get('/api/chat/status');
+  },
+};
+
 export default {
   authService,
   memberService,
@@ -575,4 +588,5 @@ export default {
   healthService,
   agencyService,
   managerService,
+  chatService,
 };

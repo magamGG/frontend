@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Home, Briefcase, Calendar, Users, Palmtree, Heart, Plane, Bell, User, ClipboardCheck, Activity, UserCog, HeartPulse } from 'lucide-react';
 import { Header } from '../Header';
+import { Chatbot } from '@/components/Chatbot';
 import { MyPage } from '@/pages/MyPage';
 import { AdminMyPage } from '@/pages/admin/AdminMyPage';
 import { AgencyMyPage } from '@/pages/agency/AgencyMyPage';
@@ -244,6 +245,14 @@ export function FullPageLayout({ sections, onLogout, userRole }) {
       <LeaveRequestModal 
         open={isAttendanceModalOpen} 
         onOpenChange={setIsAttendanceModalOpen} 
+      />
+
+      {/* Chatbot - 오른쪽 하단 */}
+      <Chatbot 
+        sections={sections} 
+        onNavigateToSection={navigateToSection} 
+        onOpenAttendanceModal={() => setIsAttendanceModalOpen(true)}
+        userRole={userRole}
       />
     </LayoutContainer>
   );
