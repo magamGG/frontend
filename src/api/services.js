@@ -7,6 +7,21 @@ export const authService = {
   login: (credentials) => {
     return api.post(API_ENDPOINTS.AUTH.LOGIN, credentials);
   },
+  
+  // 비밀번호 찾기 (인증 코드 전송)
+  forgotPassword: (email) => {
+    return api.post(API_ENDPOINTS.AUTH.FORGOT_PASSWORD, { email });
+  },
+  
+  // 인증 코드 검증
+  verifyCode: (email, code) => {
+    return api.post(API_ENDPOINTS.AUTH.VERIFY_RESET_CODE, { email, code });
+  },
+  
+  // 비밀번호 재설정
+  resetPassword: (email, code, newPassword) => {
+    return api.post(API_ENDPOINTS.AUTH.RESET_PASSWORD, { email, code, newPassword });
+  },
 };
 
 // 회원 서비스

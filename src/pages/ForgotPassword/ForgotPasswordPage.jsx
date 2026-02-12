@@ -44,6 +44,7 @@ export function ForgotPasswordPage({ onBackToLogin }) {
   const [newPasswordInput, setNewPasswordInput] = useState('');
   const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isComposing, setIsComposing] = useState({ verificationCode: false }); // IME 조합 상태 추적
 
   const handleSendEmail = async (e) => {
     e.preventDefault();
@@ -68,18 +69,24 @@ export function ForgotPasswordPage({ onBackToLogin }) {
 
   const handleVerifyCode = async (e) => {
     e.preventDefault();
-    if (!verificationCodeInput) {
-      toast.error('인증 코드를 입력해주세요.');
+    if (!verificationCodeInput || verificationCodeInput.length !== 6) {
+      toast.error('6자리 인증 코드를 입력해주세요.');
       return;
     }
 
     setIsLoading(true);
     try {
-      await authService.verifyCode(emailInput, verificationCodeInput);
-      toast.success('인증 코드가 확인되었습니다.');
-      setStep(PASSWORD_RESET_STEPS.RESET);
+      const response = await authService.verifyCode(emailInput, verificationCodeInput);
+      
+      // axios interceptor가 response.data를 직접 반환하므로 response 자체가 data입니다
+      if (response.verified) {
+        toast.success('인증 코드가 확인되었습니다.');
+        setStep(PASSWORD_RESET_STEPS.RESET);
+      } else {
+        toast.error(response.message || '인증 코드가 올바르지 않습니다.');
+      }
     } catch (error) {
-      const errorMessage = error?.message || '인증 코드 확인에 실패했습니다. 다시 시도해주세요.';
+      const errorMessage = error?.response?.data?.message || error?.message || '인증 코드 확인에 실패했습니다. 다시 시도해주세요.';
       toast.error(errorMessage);
       console.error('Verify code error:', error);
     } finally {
@@ -91,10 +98,6 @@ export function ForgotPasswordPage({ onBackToLogin }) {
     e.preventDefault();
     if (newPasswordInput !== confirmPasswordInput) {
       toast.error('비밀번호가 일치하지 않습니다.');
-      return;
-    }
-    if (!newPasswordInput || newPasswordInput.length < 8) {
-      toast.error('비밀번호는 8자 이상이어야 합니다.');
       return;
     }
 
@@ -243,7 +246,25 @@ export function ForgotPasswordPage({ onBackToLogin }) {
                       <VerificationCodeInput
                         type="text"
                         value={verificationCodeInput}
-                        onChange={(e) => setVerificationCodeInput(e.target.value)}
+                        onChange={(e) => {
+                          // IME 조합 중일 때는 필터링하지 않음
+                          if (isComposing.verificationCode) {
+                            setVerificationCodeInput(e.target.value);
+                            return;
+                          }
+                          // 숫자만 입력 가능
+                          const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
+                          setVerificationCodeInput(value);
+                        }}
+                        onCompositionStart={() => {
+                          setIsComposing(prev => ({ ...prev, verificationCode: true }));
+                        }}
+                        onCompositionEnd={(e) => {
+                          setIsComposing(prev => ({ ...prev, verificationCode: false }));
+                          // 조합 종료 후 숫자만 남기기
+                          const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
+                          setVerificationCodeInput(value);
+                        }}
                         disabled={isLoading}
                         placeholder="6자리 인증 코드"
                         maxLength={6}
