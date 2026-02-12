@@ -4,6 +4,7 @@ import { Card } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
 import { Mail, Lock, User, Phone, Building, Briefcase, Edit, Check, Palette, Pen, BookOpen, Paintbrush, ArrowLeft, MapPin } from 'lucide-react';
+import { MapPickerModal } from '@/components/modals/MapPickerModal';
 import { toast } from 'sonner';
 import { memberService } from '@/api';
 import { formatPhoneNumber, normalizePhoneNumber } from '@/utils/phoneFormatter';
@@ -88,6 +89,7 @@ export function SignupPage({ onSignup, onBackToLogin }) {
     organization: '',
   });
   
+  const [showMapPicker, setShowMapPicker] = useState(false);
   // 이메일 인증 관련 상태
   const [emailVerificationCode, setEmailVerificationCode] = useState('');
   const [isEmailVerified, setIsEmailVerified] = useState(false);
@@ -617,17 +619,34 @@ export function SignupPage({ onSignup, onBackToLogin }) {
 
                   <InputGroup>
                     <InputLabel>주소</InputLabel>
-                    <InputWrapper>
-                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--muted-foreground)' }} />
-                      <InputField
-                        type="text"
-                        name="address"
-                        value={signupFormData.address}
-                        onChange={handleInputChange}
-                        placeholder="주소를 입력하세요 (예: 서울시 강남구 역삼동 123-45)"
-                        maxLength={100}
-                      />
-                    </InputWrapper>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <InputWrapper style={{ flex: 1 }}>
+                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--muted-foreground)' }} />
+                        <InputField
+                          type="text"
+                          name="address"
+                          value={signupFormData.address}
+                          onChange={handleInputChange}
+                          placeholder="주소를 입력하거나 지도에서 선택하세요"
+                          maxLength={100}
+                        />
+                      </InputWrapper>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowMapPicker(true)}
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}
+                      >
+                        <MapPin size={16} />
+                        지도에서 선택
+                      </Button>
+                    </div>
+                    <MapPickerModal
+                      open={showMapPicker}
+                      onOpenChange={setShowMapPicker}
+                      onSelect={(addr) => setSignupFormData(prev => ({ ...prev, address: addr }))}
+                    />
                   </InputGroup>
 
                   <InputGroup>
