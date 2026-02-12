@@ -102,7 +102,7 @@ export function AgencyJoinRequestsPage() {
   };
 
   const getUserTypeBadge = (userType) => {
-    return userType === 'individual' 
+    return userType === 'artist' 
       ? <Badge className="bg-purple-100 text-purple-700 border-purple-200">작가</Badge>
       : <Badge className="bg-blue-100 text-blue-700 border-blue-200">담당자</Badge>;
   };
@@ -364,7 +364,7 @@ export function AgencyJoinRequestsPage() {
                   </div>
                   <div className="flex justify-between p-3 bg-muted/30 rounded-lg">
                     <span className="text-muted-foreground">
-                      {selectedRequest.userType === 'individual' ? '작가명' : '직책'}
+                      {selectedRequest.userType === 'artist' ? '작가명' : '직책'}
                     </span>
                     <span className="font-medium text-foreground">{selectedRequest.position || '미입력'}</span>
                   </div>

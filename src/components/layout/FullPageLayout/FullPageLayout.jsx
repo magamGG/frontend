@@ -33,7 +33,7 @@ import {
  * @typedef {Object} FullPageLayoutProps
  * @property {Section[]} sections
  * @property {() => void} onLogout
- * @property {'individual' | 'manager' | 'agency' | null} [userRole]
+ * @property {'artist' | 'manager' | 'agency' | null} [userRole]
  */
 
 // 페이지별 아이콘 매핑
@@ -58,9 +58,9 @@ const getIconForSection = (sectionId, index) => {
   if (sectionId === 'manager-team') return Users;
   
   // 작가 페이지 아이콘 매핑
-  if (sectionId === 'individual-dashboard') return Home;
-  if (sectionId === 'individual-projects') return Briefcase;
-  if (sectionId === 'individual-calendar') return Calendar;
+  if (sectionId === 'artist-dashboard') return Home;
+  if (sectionId === 'artist-projects') return Briefcase;
+  if (sectionId === 'artist-calendar') return Calendar;
   if (sectionId.includes('vacation')) return Plane;
   
   // 기본 아이콘 (이전 방식)
@@ -236,7 +236,7 @@ export function FullPageLayout({ sections, onLogout, userRole }) {
         {showMyPage && userRole === 'agency' && (
           <AgencyMyPage onClose={handleCloseMyPage} onLogout={onLogout} />
         )}
-        {showMyPage && (userRole === 'individual' || !userRole) && (
+        {showMyPage && (userRole === 'artist' || !userRole) && (
           <MyPage onClose={handleCloseMyPage} onLogout={onLogout} />
         )}
       </AnimatePresence>

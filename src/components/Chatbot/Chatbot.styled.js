@@ -13,7 +13,7 @@ export const ChatbotWrapper = styled.div`
 `;
 
 export const ChatWindow = styled(motion.div)`
-  width: 380px;
+  width: 460px;
   max-width: calc(100vw - 48px);
   height: 480px;
   max-height: calc(100vh - 140px);
@@ -94,7 +94,7 @@ export const MessageGroup = styled.div`
   display: flex;
   flex-direction: column;
   align-items: ${({ $isUser }) => ($isUser ? 'flex-end' : 'flex-start')};
-  align-self: ${({ $isUser }) => ($isUser ? 'flex-end' : 'flex-start')};
+  align-self: ${({ $isUser }) => ($isUser ? 'flex-end' : 'stretch')};
   max-width: 100%;
 `;
 
@@ -303,6 +303,8 @@ export const FaqCategoryButton = styled.button`
 
 /* FAQ 카테고리 목록 */
 export const FaqCategoryList = styled.div`
+  width: 100%;
+  align-self: stretch;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -349,6 +351,8 @@ export const FaqCategoryTitle = styled.span`
 
 /* 질문 목록 (카테고리 내) */
 export const FaqQuestionList = styled.div`
+  width: 100%;
+  align-self: stretch;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -388,7 +392,7 @@ export const FaqFooter = styled.div`
   flex-shrink: 0;
 `;
 
-/* 기타 문의 버튼 - AI 모드 전환 */
+/* 기타 문의 버튼 - AI 채팅 모드 전환 */
 export const OtherInquiryButton = styled.button`
   width: 100%;
   padding: 14px 16px;
@@ -417,18 +421,6 @@ export const OtherInquiryButton = styled.button`
   }
 `;
 
-/* AI 모드 안내 메시지 */
-export const AIModeNotice = styled.div`
-  padding: 12px 16px;
-  margin-bottom: 8px;
-  font-size: 13px;
-  text-align: center;
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--primary) 10%, transparent);
-  color: var(--primary);
-  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
-`;
-
 /* AI 모드 종료 버튼 */
 export const ExitAIModeButton = styled.button`
   padding: 6px 12px;
@@ -446,3 +438,4 @@ export const ExitAIModeButton = styled.button`
     border-color: var(--destructive);
   }
 `;
+

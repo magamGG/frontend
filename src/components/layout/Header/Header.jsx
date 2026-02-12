@@ -112,7 +112,7 @@ const getLinkedPage = (type) => {
  * @property {(index: number) => void} onNavigateToSection
  * @property {Section[]} sections
  * @property {() => void} [onAttendanceClick]
- * @property {'individual' | 'manager' | 'agency' | null} [userRole]
+ * @property {'artist' | 'manager' | 'agency' | null} [userRole]
  */
 
 /**
@@ -435,8 +435,8 @@ export function Header({
 
         {/* Right - User Profile & Actions */}
         <ActionsSection>
-          {/* Attendance Button - For Individual/Artist and Manager */}
-          {(userRole === "individual" || userRole === "manager") && onAttendanceClick && (
+          {/* Attendance Button - For ARTIST(작가) and MANAGER(담당자) */}
+          {(userRole === "artist" || userRole === "manager") && onAttendanceClick && (
             <AttendanceButton
               onClick={onAttendanceClick}
             >

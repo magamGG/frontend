@@ -17,8 +17,8 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     // Mock login - in real app, validate credentials
-    // Default to individual role for manual login
-    onLogin('individual');
+    // Default to artist role for manual login
+    onLogin('artist');
   };
 
   return (
@@ -188,7 +188,7 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
                 type="button"
                 variant="outline"
                 className="w-full py-3 border-purple-200 hover:bg-purple-50 hover:border-purple-300 transition-all"
-                onClick={() => onLogin('individual')}
+                onClick={() => onLogin('artist')}
               >
                 <Edit className="w-4 h-4 mr-2" />
                 <span className="flex-1 text-left">개인(작가) 계정으로 체험</span>
@@ -233,7 +233,7 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
               type="button"
               variant="outline"
               className="w-full py-4 border-orange-200 hover:bg-orange-50 hover:border-orange-300 transition-all font-medium"
-              onClick={() => onLogin('individual', false)}
+              onClick={() => onLogin('artist', null)}
             >
               <UserPlus className="w-5 h-5 mr-2" />
               소속 없는 계정으로 시작하기

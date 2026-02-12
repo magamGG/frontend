@@ -51,7 +51,7 @@ const PageLoadingFallback = () => (
 
 /**
  * @typedef {'login' | 'signup' | 'forgot-password' | 'dashboard' | 'join-request'} AuthView
- * @typedef {'individual' | 'manager' | 'agency' | 'all' | null} UserRole
+ * @typedef {'artist' | 'manager' | 'agency' | 'all' | null} UserRole
  */
 
 export default function App() {
@@ -92,7 +92,7 @@ export default function App() {
       return;
     }
 
-    // 아티스트/담당자 역할 목록
+    // ARTIST/담당자 역할 목록 (memberRole 또는 roleType)
     const artistAndManagerRoles = [
       '웹툰 작가',
       '웹소설 작가',
@@ -101,7 +101,8 @@ export default function App() {
       '어시스트 - 배경',
       '어시스트 - 선화',
       '어시스트- 기타',
-      '담당자'
+      '담당자',
+      'artist'  // 데모/테스트용
     ];
 
     // 프론트엔드에서 사용할 역할 타입 매핑
@@ -116,16 +117,16 @@ export default function App() {
       // 아티스트/담당자 역할인 경우
       if (!hasAgency) {
         // AGENCY_NO가 NULL인 경우 비소속 에이전시 가입 요청 페이지로 이동
-        roleType = memberRole === '담당자' ? 'manager' : 'individual';
+        roleType = memberRole === '담당자' ? 'manager' : 'artist';
         setAuthView('join-request');
       } else {
         // AGENCY_NO가 NULL이 아닌 경우 담당자/아티스트 대시보드로 이동
-        roleType = memberRole === '담당자' ? 'manager' : 'individual';
+        roleType = memberRole === '담당자' ? 'manager' : 'artist';
         setAuthView('dashboard');
       }
     } else {
       // 알 수 없는 역할인 경우 기본값으로 처리
-      roleType = 'individual';
+      roleType = 'artist';
       setAuthView('dashboard');
     }
 
@@ -167,9 +168,9 @@ export default function App() {
   };
 
   // Define sections based on user role
-  const sections = userRole === 'individual'
+  const sections = userRole === 'artist'
     ? [
-      // Individual (Artist) focused pages
+      // ARTIST (작가) focused pages
       {
         id: 'dashboard',
         title: '대시보드',
@@ -193,7 +194,7 @@ export default function App() {
     ]
     : userRole === 'manager'
       ? [
-        // Manager (Admin) focused pages
+        // MANAGER (담당자) focused pages
         {
           id: 'dashboard',
           title: '대시보드',
@@ -232,7 +233,7 @@ export default function App() {
       ]
       : userRole === 'agency'
         ? [
-          // Agency focused pages
+          // AGENCY (에이전시) focused pages
           {
             id: 'dashboard',
             title: '대시보드',
@@ -276,17 +277,17 @@ export default function App() {
         : [
           // All pages - for development/preview
           {
-            id: 'individual-dashboard',
+            id: 'artist-dashboard',
             title: '개인 대시보드',
             content: <ArtistDashboardPage />,
           },
           {
-            id: 'individual-projects',
+            id: 'artist-projects',
             title: '내 작품',
             content: <ArtistProjectsPage />,
           },
           {
-            id: 'individual-calendar',
+            id: 'artist-calendar',
             title: '작가 캘린더',
             content: (props) => <ArtistCalendarPage {...props} />,
           },

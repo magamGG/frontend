@@ -73,7 +73,7 @@ const initialRequests = [
     email: 'kim.artist@example.com',
     phone: '010-1234-5678',
     position: '웹툰 작가',
-    userType: 'individual',
+    userType: 'artist',
     agencyCode: 'AGENCY-2026-001',
     message: '안녕하세요. 웹툰 작가 김작가입니다. 귀사와 함께 작업하고 싶습니다.',
     requestDate: '2026-01-17',
@@ -97,7 +97,7 @@ const initialRequests = [
     email: 'park.newbie@example.com',
     phone: '010-5555-7777',
     position: '어시스턴트',
-    userType: 'individual',
+    userType: 'artist',
     agencyCode: 'AGENCY-2026-001',
     message: '',
     requestDate: '2026-01-15',
@@ -156,7 +156,7 @@ export function AgencyJoinRequestsPage() {
   };
 
   const getUserTypeBadge = (userType) => {
-    return userType === 'individual' 
+    return userType === 'artist' 
       ? <Badge className="bg-purple-100 text-purple-700 border-purple-200">작가</Badge>
       : <Badge className="bg-blue-100 text-blue-700 border-blue-200">담당자</Badge>;
   };
@@ -416,7 +416,7 @@ export function AgencyJoinRequestsPage() {
                   </InfoItem>
                   <InfoItem>
                     <InfoLabel>
-                      {selectedRequest.userType === 'individual' ? '작가명' : '직책'}
+                      {selectedRequest.userType === 'artist' ? '작가명' : '직책'}
                     </InfoLabel>
                     <InfoValue>{selectedRequest.position || '미입력'}</InfoValue>
                   </InfoItem>

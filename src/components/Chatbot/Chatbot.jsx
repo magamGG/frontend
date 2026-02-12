@@ -1,12 +1,22 @@
 import { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, Bot, ExternalLink, Sparkles, ChevronRight, ArrowLeft } from 'lucide-react';
+import { X, ExternalLink, ChevronRight, ArrowLeft } from 'lucide-react';
 import { AnimatePresence } from 'motion/react';
 import useAuthStore from '@/store/authStore';
+import { TbMessageChatbot } from "react-icons/tb";
+import {
+  MdOutlineInfo,
+  MdOutlineSettings,
+  MdOutlineEvent,
+  MdOutlineAssignment,
+  MdOutlineFavorite,
+  MdOutlineCheckCircle,
+  MdOutlineBarChart,
+} from "react-icons/md";
 import {
   projectService,
   leaveService,
   notificationService,
-  chatService,
+  agencyService,
 } from '@/api';
 import {
   ChatbotWrapper,
@@ -18,18 +28,11 @@ import {
   MessageList,
   MessageGroup,
   MessageBubble,
-  InputArea,
-  ChatInput,
-  SendButton,
   FloatingButton,
   FaqBlocksGrid,
-  FaqFooter,
   ActionButtonsRow,
   BackToTopButton,
   NavigateButton,
-  OtherInquiryButton,
-  AIModeNotice,
-  ExitAIModeButton,
   FaqCategoryButton,
   FaqCategoryList,
   FaqCategoryHeader,
@@ -43,12 +46,12 @@ const GREETING_LINES = ['안녕하세요. 챗봇 지지 입니다.', '무엇을 
 
 /* ===== 역할별 카테고리 기반 FAQ ===== */
 
-// 작가(individual) FAQ 카테고리
-const FAQ_CATEGORIES_INDIVIDUAL = [
+// ARTIST(작가) FAQ 카테고리
+const FAQ_CATEGORIES_ARTIST = [
   {
     id: 'about',
     label: '서비스 안내',
-    icon: '📌',
+    icon: MdOutlineInfo,
     questions: [
       'MagamGG가 무엇인가요?',
       'MagamGG에서 어떤 일을 할 수 있나요?',
@@ -58,7 +61,7 @@ const FAQ_CATEGORIES_INDIVIDUAL = [
   {
     id: 'feature',
     label: '기능 관련 질문',
-    icon: '⚙️',
+    icon: MdOutlineSettings,
     questions: [
       '프로젝트 어디서 확인하나요?',
       '칸반 보드는 어떻게 사용하나요?',
@@ -70,7 +73,7 @@ const FAQ_CATEGORIES_INDIVIDUAL = [
   {
     id: 'attendance',
     label: '근태/휴가 관련',
-    icon: '📅',
+    icon: MdOutlineEvent,
     questions: [
       '휴가 신청 어디서 하나요?',
       '휴가 잔여 며칠인가요?',
@@ -82,7 +85,7 @@ const FAQ_CATEGORIES_INDIVIDUAL = [
   {
     id: 'work',
     label: '업무 관련',
-    icon: '📋',
+    icon: MdOutlineAssignment,
     questions: [
       '오늘 할 일이 몇 개인가요?',
       '마감 임박한 업무가 있나요?',
@@ -93,7 +96,7 @@ const FAQ_CATEGORIES_INDIVIDUAL = [
   {
     id: 'health',
     label: '건강 관리',
-    icon: '💚',
+    icon: MdOutlineFavorite,
     questions: [
       '건강 검진은 어디서 하나요?',
       '건강 설문은 어떻게 제출하나요?',
@@ -107,7 +110,7 @@ const FAQ_CATEGORIES_MANAGER = [
   {
     id: 'about',
     label: '서비스 안내',
-    icon: '📌',
+    icon: MdOutlineInfo,
     questions: [
       'MagamGG가 무엇인가요?',
       'MagamGG에서 담당자는 뭘 할 수 있나요?',
@@ -117,7 +120,7 @@ const FAQ_CATEGORIES_MANAGER = [
   {
     id: 'feature',
     label: '기능 관련 질문',
-    icon: '⚙️',
+    icon: MdOutlineSettings,
     questions: [
       '프로젝트 어디서 확인하나요?',
       '칸반 보드에서 업무 배정은 어떻게 하나요?',
@@ -130,7 +133,7 @@ const FAQ_CATEGORIES_MANAGER = [
   {
     id: 'attendance',
     label: '근태/휴가 관련',
-    icon: '📅',
+    icon: MdOutlineEvent,
     questions: [
       '근태 신청 어디서 하나요?',
       '휴가 잔여 며칠인가요?',
@@ -142,7 +145,7 @@ const FAQ_CATEGORIES_MANAGER = [
   {
     id: 'work',
     label: '업무 관리',
-    icon: '📋',
+    icon: MdOutlineAssignment,
     questions: [
       '오늘 할 일이 몇 개인가요?',
       '담당 작가들 마감 현황은 어디서 보나요?',
@@ -153,7 +156,7 @@ const FAQ_CATEGORIES_MANAGER = [
   {
     id: 'health',
     label: '건강 관리',
-    icon: '💚',
+    icon: MdOutlineFavorite,
     questions: [
       '작가 건강 현황은 어디서 보나요?',
       '건강 검진 일정은 어디서 확인하나요?',
@@ -167,7 +170,7 @@ const FAQ_CATEGORIES_AGENCY = [
   {
     id: 'about',
     label: '서비스 안내',
-    icon: '📌',
+    icon: MdOutlineInfo,
     questions: [
       'MagamGG가 무엇인가요?',
       '에이전시 관리자는 뭘 할 수 있나요?',
@@ -177,7 +180,7 @@ const FAQ_CATEGORIES_AGENCY = [
   {
     id: 'feature',
     label: '기능 관련 질문',
-    icon: '⚙️',
+    icon: MdOutlineSettings,
     questions: [
       '전체 프로젝트 현황은 어디서 보나요?',
       '전체 직원 현황은 어디서 보나요?',
@@ -190,7 +193,7 @@ const FAQ_CATEGORIES_AGENCY = [
   {
     id: 'approval',
     label: '결재/승인 관련',
-    icon: '✅',
+    icon: MdOutlineCheckCircle,
     questions: [
       '결재 대기 몇 건인가요?',
       '근태 신청 승인은 어디서 하나요?',
@@ -201,7 +204,7 @@ const FAQ_CATEGORIES_AGENCY = [
   {
     id: 'stats',
     label: '통계/현황',
-    icon: '📊',
+    icon: MdOutlineBarChart,
     questions: [
       '전체 마감 현황은 어디서 보나요?',
       '출석 현황은 어디서 확인하나요?',
@@ -212,7 +215,7 @@ const FAQ_CATEGORIES_AGENCY = [
   {
     id: 'health',
     label: '건강 관리',
-    icon: '💚',
+    icon: MdOutlineFavorite,
     questions: [
       '전체 직원 건강 현황은 어디서 보나요?',
       '건강 검진 설정은 어디서 하나요?',
@@ -221,73 +224,201 @@ const FAQ_CATEGORIES_AGENCY = [
   },
 ];
 
-/* ===== 역할별 메뉴 가이드 ===== */
-// 작가(individual): 대시보드, 프로젝트 관리, 캘린더, 건강관리 (원격관리 없음)
-const MENU_GUIDE_INDIVIDUAL = {
-  '휴가': { text: '상단 헤더바의 근태 신청 버튼을 클릭해서 신청하시면 돼요!', actionType: 'attendance', actionLabel: '근태 신청 열기' },
-  '연차': { text: '상단 헤더바의 근태 신청 버튼을 클릭해서 신청하시면 돼요!', actionType: 'attendance', actionLabel: '근태 신청 열기' },
-  '근태': { text: '상단 헤더바의 근태 신청 버튼을 클릭해서 신청하시면 돼요!', actionType: 'attendance', actionLabel: '근태 신청 열기' },
-  '대시보드': { text: '대시보드 페이지에서 확인할 수 있어요.', actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' },
-  '할 일': { text: '대시보드 페이지에서 확인할 수 있어요.', actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' },
-  '프로젝트': { text: '프로젝트 관리 페이지에서 작업할 수 있어요.', actionType: 'section', actionLabel: '프로젝트 이동', sectionKeyword: '프로젝트' },
-  '캘린더': { text: '캘린더 페이지에서 일정을 확인할 수 있어요.', actionType: 'section', actionLabel: '캘린더 이동', sectionKeyword: '캘린더' },
-  '일정': { text: '캘린더 페이지에서 일정을 확인할 수 있어요.', actionType: 'section', actionLabel: '캘린더 이동', sectionKeyword: '캘린더' },
-  '건강': { text: '건강관리 페이지에서 확인할 수 있어요.', actionType: 'section', actionLabel: '건강관리 이동', sectionKeyword: '건강' },
-  '검진': { text: '건강관리 페이지에서 확인할 수 있어요.', actionType: 'section', actionLabel: '건강관리 이동', sectionKeyword: '건강' },
+/* ===== 역할별 메뉴 가이드 (사용자 친화적 상세 설명) ===== */
+// ARTIST(작가): 대시보드, 프로젝트 관리, 캘린더, 건강관리 (원격관리 없음)
+const MENU_GUIDE_ARTIST = {
+  '휴가': {
+    text: '상단 헤더의 근태 신청 버튼을 누르세요. 연차, 병가, 워케이션, 재택, 휴재, 반차, 반반차 중에서 고를 수 있어요. 시작일과 종료일, 사유를 적고 제출하면 담당자 승인을 기다리게 돼요.',
+    actionType: 'attendance',
+    actionLabel: '근태 신청 열기',
+  },
+  '연차': {
+    text: '상단 헤더의 근태 신청 버튼을 눌러서 신청하세요. 남은 연차 일수 안에서 연차·대체휴무·특별휴가를 선택해 신청할 수 있어요.',
+    actionType: 'attendance',
+    actionLabel: '근태 신청 열기',
+  },
+  '근태': {
+    text: '상단 헤더의 근태 신청 버튼을 클릭하세요. 연차, 병가, 워케이션, 재택, 휴재, 반차, 반반차 중 선택할 수 있어요. 병가는 의료 증명서 첨부가 필요해요. 제출 후 담당자가 승인하면 적용돼요.',
+    actionType: 'attendance',
+    actionLabel: '근태 신청 열기',
+  },
+  '병가': {
+    text: '근태 신청에서 "병가"를 선택하세요. 의료 증명서를 첨부해야 해요. 시작일, 종료일, 사유를 입력하고 제출하면 담당자 승인을 기다리면 돼요.',
+    actionType: 'attendance',
+    actionLabel: '근태 신청 열기',
+  },
+  '취소': {
+    text: '휴가 신청은 아직 승인 대기 중일 때만 취소할 수 있어요. 근태 신청 화면에서 내 신청 목록을 열고, 대기 중인 건을 골라 취소하시면 돼요. 이미 승인되거나 반려된 건은 취소할 수 없어요.',
+    actionType: 'attendance',
+    actionLabel: '근태 신청 열기',
+  },
+  '출퇴근': {
+    text: '대시보드에서 오늘 출근·퇴근 기록을 확인할 수 있어요. 출근할 때 건강 체크를 하신 뒤 기록이 남아요.',
+    actionType: 'section',
+    actionLabel: '대시보드 이동',
+    sectionKeyword: '대시보드',
+  },
+  '출근': {
+    text: '대시보드에서 오늘의 출근·퇴근 상태를 확인할 수 있어요.',
+    actionType: 'section',
+    actionLabel: '대시보드 이동',
+    sectionKeyword: '대시보드',
+  },
+  '대시보드': {
+    text: '대시보드에서 볼 수 있는 것:\n• 오늘 할 일: 마감일이 오늘인 미완료 작업 목록\n• 연차 잔여: 남은 연차 일수\n• 다음 연재: 다음 연재 예정일\n• 피드백: 담당자가 남긴 코멘트',
+    actionType: 'section',
+    actionLabel: '대시보드 이동',
+    sectionKeyword: '대시보드',
+  },
+  '할 일': {
+    text: '오늘 할 일은 제가 담당한 작업 중 마감일이 오늘이고 아직 안 끝난 것들이에요. 대시보드에서 목록을 확인할 수 있어요.',
+    actionType: 'section',
+    actionLabel: '대시보드 이동',
+    sectionKeyword: '대시보드',
+  },
+  '프로젝트': {
+    text: '프로젝트 관리에서 내가 참여 중인 프로젝트 목록을 볼 수 있어요. 리더, 메인작가, 어시스트 등 역할에 따라 보이는 내용이 달라요. 프로젝트를 선택하면 칸반 보드로 작업을 관리할 수 있어요.',
+    actionType: 'section',
+    actionLabel: '프로젝트 이동',
+    sectionKeyword: '프로젝트',
+  },
+  '칸반': {
+    text: '칸반 보드 사용 방법:\n1. 프로젝트 관리에서 프로젝트를 선택하세요\n2. 보드별로 작업 카드가 보여요\n3. 카드를 드래그해서 미완료→완료로 바꿀 수 있어요\n4. 각 카드에 마감일이 표시돼요\n5. 담당자 피드백도 카드에서 확인할 수 있어요',
+    actionType: 'section',
+    actionLabel: '프로젝트 이동',
+    sectionKeyword: '프로젝트',
+  },
+  '보드': {
+    text: '칸반 보드는 프로젝트별 작업을 정리하는 곳이에요. 작업 카드에 이름, 설명, 시작일, 마감일이 있고, 드래그로 완료 처리할 수 있어요.',
+    actionType: 'section',
+    actionLabel: '프로젝트 이동',
+    sectionKeyword: '프로젝트',
+  },
+  '캘린더': {
+    text: '캘린더에서는 담당한 작업의 기간이 색깔별로 표시돼요. 캘린더 메모도 일정에 함께 보여요.',
+    actionType: 'section',
+    actionLabel: '캘린더 이동',
+    sectionKeyword: '캘린더',
+  },
+  '일정': {
+    text: '캘린더 페이지에서 작업 마감일과 캘린더 메모를 확인할 수 있어요.',
+    actionType: 'section',
+    actionLabel: '캘린더 이동',
+    sectionKeyword: '캘린더',
+  },
+  '마감': {
+    text: '마감일이 오늘인 미완료 작업은 대시보드에서, 전체 일정은 캘린더에서 확인할 수 있어요.',
+    actionType: 'section',
+    actionLabel: '대시보드 이동',
+    sectionKeyword: '대시보드',
+  },
+  '알림': {
+    text: '헤더의 알림 아이콘을 누르면 마감 알림, 피드백 알림 등을 확인할 수 있어요. 읽지 않은 알림이 있을 때 표시돼요.',
+    actionType: 'section',
+    actionLabel: '대시보드 이동',
+    sectionKeyword: '대시보드',
+  },
+  '피드백': {
+    text: '담당자가 남긴 피드백은 대시보드와 프로젝트 칸반 카드에서 볼 수 있어요. 작업 카드에 달린 코멘트 형태로 보여요.',
+    actionType: 'section',
+    actionLabel: '대시보드 이동',
+    sectionKeyword: '대시보드',
+  },
+  '진행률': {
+    text: '프로젝트 칸반 보드에서 작업 카드별로 미완료/완료 상태를 확인할 수 있어요. 카드를 드래그해서 완료로 바꾸시면 돼요.',
+    actionType: 'section',
+    actionLabel: '프로젝트 이동',
+    sectionKeyword: '프로젝트',
+  },
+  '건강': {
+    text: '건강관리 페이지에서 건강 설문을 제출하고, 수면시간·불편도 같은 일일 건강 체크도 할 수 있어요. 정신/신체 검진 점수와 상태를 확인할 수 있어요.',
+    actionType: 'section',
+    actionLabel: '건강관리 이동',
+    sectionKeyword: '건강',
+  },
+  '검진': {
+    text: '건강 검진은 에이전시에서 정한 주기에 따라 진행돼요. 건강관리 페이지에서 설문에 답하고, 점수로 결과를 확인할 수 있어요.',
+    actionType: 'section',
+    actionLabel: '건강관리 이동',
+    sectionKeyword: '건강',
+  },
+  '설문': {
+    text: '건강 설문은 건강관리 페이지에서 제출할 수 있어요. 질문에 답하시면 검진 결과로 반영돼요.',
+    actionType: 'section',
+    actionLabel: '건강관리 이동',
+    sectionKeyword: '건강',
+  },
 };
 
 // 담당자(manager): 대시보드, 프로젝트 관리, 캘린더, 직원 관리, 원격 관리, 건강 검사, 작가 건강관리
 const MENU_GUIDE_MANAGER = {
-  '휴가': { text: '상단 헤더바의 근태 신청 버튼을 클릭해서 신청하시면 돼요!', actionType: 'attendance', actionLabel: '근태 신청 열기' },
-  '연차': { text: '상단 헤더바의 근태 신청 버튼을 클릭해서 신청하시면 돼요!', actionType: 'attendance', actionLabel: '근태 신청 열기' },
-  '근태': { text: '상단 헤더바의 근태 신청 버튼을 클릭해서 신청하시면 돼요!', actionType: 'attendance', actionLabel: '근태 신청 열기' },
-  '워케이션': { text: '원격 관리 페이지에서 확인할 수 있어요.', actionType: 'section', actionLabel: '원격 관리 이동', sectionKeyword: '원격' },
-  '원격': { text: '원격 관리 페이지에서 확인할 수 있어요.', actionType: 'section', actionLabel: '원격 관리 이동', sectionKeyword: '원격' },
-  '대시보드': { text: '대시보드 페이지에서 확인할 수 있어요.', actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' },
-  '할 일': { text: '대시보드 페이지에서 확인할 수 있어요.', actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' },
-  '프로젝트': { text: '프로젝트 관리 페이지에서 작업할 수 있어요.', actionType: 'section', actionLabel: '프로젝트 이동', sectionKeyword: '프로젝트' },
-  '캘린더': { text: '캘린더 페이지에서 일정을 확인할 수 있어요.', actionType: 'section', actionLabel: '캘린더 이동', sectionKeyword: '캘린더' },
-  '일정': { text: '캘린더 페이지에서 일정을 확인할 수 있어요.', actionType: 'section', actionLabel: '캘린더 이동', sectionKeyword: '캘린더' },
-  '직원': { text: '직원 관리 페이지에서 확인할 수 있어요.', actionType: 'section', actionLabel: '직원 관리 이동', sectionKeyword: '직원' },
-  '건강': { text: '작가 건강관리 페이지에서 확인할 수 있어요.', actionType: 'section', actionLabel: '건강관리 이동', sectionKeyword: '건강' },
-  '검진': { text: '건강 검사 페이지에서 내 검진 내역을 확인할 수 있어요.', actionType: 'section', actionLabel: '건강 검사 이동', sectionKeyword: '건강 검사' },
+  '휴가': { text: '상단 헤더의 근태 신청 버튼으로 연차, 병가, 워케이션, 재택, 휴재, 반차, 반반차 중 선택해 신청하세요.', actionType: 'attendance', actionLabel: '근태 신청 열기' },
+  '연차': { text: '근태 신청에서 연차를 선택하세요. 남은 연차 일수 범위 안에서 신청할 수 있어요.', actionType: 'attendance', actionLabel: '근태 신청 열기' },
+  '근태': { text: '본인 근태 신청은 헤더 버튼으로 하시고, 담당 작가들의 근태 신청 현황은 대시보드에서 확인하세요. 승인 대기 중인 건을 승인하거나 반려할 수 있어요.', actionType: 'attendance', actionLabel: '근태 신청 열기' },
+  '워케이션': { text: '원격 관리에서는 담당 작가들이 지금 재택근무인지, 워케이션인지, 휴가 중인지 확인할 수 있어요. 기간별로 잘 보여줘요.', actionType: 'section', actionLabel: '원격 관리 이동', sectionKeyword: '원격' },
+  '원격': { text: '원격 관리에서 담당 작가들이 재택근무인지, 워케이션 상태인지 확인할 수 있어요. 각 신청의 시작일~종료일과 승인 여부를 볼 수 있어요.', actionType: 'section', actionLabel: '원격 관리 이동', sectionKeyword: '원격' },
+  '대시보드': { text: '대시보드에서 볼 수 있는 것: 담당 프로젝트 현황, 담당 작가들의 근태 신청 중 승인 대기 건수, 마감 임박한 작업, 출퇴근 현황이에요.', actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' },
+  '할 일': { text: '담당 작가들에게 배정한 작업 중 마감일이 오늘인 미완료 건을 대시보드에서 확인할 수 있어요.', actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' },
+  '프로젝트': { text: '프로젝트 관리에서 담당 작가들이 참여한 프로젝트를 보고, 칸반 보드로 업무를 배정할 수 있어요. 작업 카드에 담당 작가나 어시스트를 지정하시면 돼요.', actionType: 'section', actionLabel: '프로젝트 이동', sectionKeyword: '프로젝트' },
+  '칸반': { text: '칸반 보드에서 작업 카드를 추가·수정하고, 담당자를 배정할 수 있어요. 마감일을 정하고, 카드에 코멘트로 피드백을 남길 수 있어요.', actionType: 'section', actionLabel: '프로젝트 이동', sectionKeyword: '프로젝트' },
+  '배정': { text: '칸반 카드를 만들거나 수정할 때 담당 작가나 어시스트를 골라 배정할 수 있어요. 프로젝트에 참여한 멤버 중에서 선택하시면 돼요.', actionType: 'section', actionLabel: '프로젝트 이동', sectionKeyword: '프로젝트' },
+  '캘린더': { text: '캘린더에서 담당 프로젝트의 모든 작업 일정을 팀 단위로 확인할 수 있어요.', actionType: 'section', actionLabel: '캘린더 이동', sectionKeyword: '캘린더' },
+  '일정': { text: '담당 프로젝트의 작업 일정을 캘린더에서 확인할 수 있어요.', actionType: 'section', actionLabel: '캘린더 이동', sectionKeyword: '캘린더' },
+  '마감': { text: '대시보드와 캘린더에서 마감 임박한 작업 현황을 확인할 수 있어요. 다음 연재일도 같이 표시돼요.', actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' },
+  '직원': { text: '직원 관리에서 내가 담당하는 작가 목록을 확인할 수 있어요. 웹툰 작가, 웹소설 작가, 어시스트 등 역할별로 볼 수 있어요.', actionType: 'section', actionLabel: '직원 관리 이동', sectionKeyword: '직원' },
+  '승인': { text: '대시보드에서 담당 작가들이 신청한 근태 중 승인 대기 건을 골라 승인하거나 반려할 수 있어요.', actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' },
+  '출퇴근': { text: '담당 작가들의 출근·퇴근 기록을 대시보드에서 확인할 수 있어요.', actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' },
+  '피드백': { text: '프로젝트 칸반 보드의 작업 카드에 코멘트로 피드백을 남길 수 있어요.', actionType: 'section', actionLabel: '프로젝트 이동', sectionKeyword: '프로젝트' },
+  '진행률': { text: '프로젝트와 대시보드에서 작업 카드별 완료 여부를 확인할 수 있어요. 마감 기한 대비 정상/주의 상태도 볼 수 있어요.', actionType: 'section', actionLabel: '프로젝트 이동', sectionKeyword: '프로젝트' },
+  '건강': { text: '작가 건강관리에서 담당 작가들의 건강 검진 현황을 확인할 수 있어요.', actionType: 'section', actionLabel: '건강관리 이동', sectionKeyword: '건강' },
+  '검진': { text: '건강 검사에서는 내 검진 내역을, 작가 건강관리에서는 담당 작가들의 검진 결과와 미검진 목록을 확인할 수 있어요.', actionType: 'section', actionLabel: '건강 검사 이동', sectionKeyword: '건강 검사' },
+  '미검진': { text: '작가 건강관리에서 아직 검진을 안 한 담당 작가 목록을 보고, 검진 알림을 보낼 수 있어요.', actionType: 'section', actionLabel: '건강관리 이동', sectionKeyword: '건강' },
 };
 
 // 에이전시(agency): 대시보드, 전체 프로젝트, 전체 직원, 요청 관리, 건강관리, 원격 관리, 할당 관리, 연차 설정
 const MENU_GUIDE_AGENCY = {
-  '결재': { text: '요청 관리 페이지에서 처리할 수 있어요.', actionType: 'section', actionLabel: '요청 관리 이동', sectionKeyword: '요청' },
-  '승인': { text: '요청 관리 페이지에서 처리할 수 있어요.', actionType: 'section', actionLabel: '요청 관리 이동', sectionKeyword: '요청' },
-  '요청': { text: '요청 관리 페이지에서 확인할 수 있어요.', actionType: 'section', actionLabel: '요청 관리 이동', sectionKeyword: '요청' },
-  '워케이션': { text: '원격 관리 페이지에서 확인할 수 있어요.', actionType: 'section', actionLabel: '원격 관리 이동', sectionKeyword: '원격' },
-  '원격': { text: '원격 관리 페이지에서 확인할 수 있어요.', actionType: 'section', actionLabel: '원격 관리 이동', sectionKeyword: '원격' },
-  '대시보드': { text: '대시보드 페이지에서 확인할 수 있어요.', actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' },
-  '프로젝트': { text: '전체 프로젝트 페이지에서 확인할 수 있어요.', actionType: 'section', actionLabel: '프로젝트 이동', sectionKeyword: '프로젝트' },
-  '직원': { text: '전체 직원 페이지에서 확인할 수 있어요.', actionType: 'section', actionLabel: '전체 직원 이동', sectionKeyword: '직원' },
-  '건강': { text: '건강관리 페이지에서 확인할 수 있어요.', actionType: 'section', actionLabel: '건강관리 이동', sectionKeyword: '건강' },
-  '할당': { text: '할당 관리 페이지에서 설정할 수 있어요.', actionType: 'section', actionLabel: '할당 관리 이동', sectionKeyword: '할당' },
-  '연차': { text: '연차 설정 페이지에서 관리할 수 있어요.', actionType: 'section', actionLabel: '연차 설정 이동', sectionKeyword: '연차' },
+  '결재': { text: '요청 관리에서 처리할 수 있어요. ① 근태 신청 중 승인 대기 건을 승인하거나 반려하고, ② 에이전시 가입 요청 중 대기 건을 승인하거나 거절할 수 있어요. 반려할 때는 사유를 적어 주세요.', actionType: 'section', actionLabel: '요청 관리 이동', sectionKeyword: '요청' },
+  '승인': { text: '요청 관리에서 근태 신청이나 가입 요청을 승인할 수 있어요. 가입 요청을 승인하면 해당 회원이 에이전시 소속으로 들어와요.', actionType: 'section', actionLabel: '요청 관리 이동', sectionKeyword: '요청' },
+  '요청': { text: '요청 관리에서 우리 에이전시로 들어온 근태 신청과 가입 요청을 한 번에 확인하고 처리할 수 있어요.', actionType: 'section', actionLabel: '요청 관리 이동', sectionKeyword: '요청' },
+  '가입': { text: '에이전시로 가입 요청한 건이 요청 관리에 쌓여요. 대기 중인 건을 골라 승인하거나 거절하시면 돼요.', actionType: 'section', actionLabel: '요청 관리 이동', sectionKeyword: '요청' },
+  '반려': { text: '근태 신청이나 가입 요청을 반려할 때는 사유를 적어 주세요. 요청 관리에서 해당 건을 선택한 뒤 반려 사유를 입력하시면 돼요.', actionType: 'section', actionLabel: '요청 관리 이동', sectionKeyword: '요청' },
+  '워케이션': { text: '원격 관리에서 직원들이 워케이션·재택·휴가 중인지 기간별로 확인할 수 있어요. 워케이션 장소도 볼 수 있어요.', actionType: 'section', actionLabel: '원격 관리 이동', sectionKeyword: '원격' },
+  '원격': { text: '원격 관리에서는 직원들이 지금 재택근무인지, 워케이션 중인지, 휴가 중인지 한눈에 확인할 수 있어요.', actionType: 'section', actionLabel: '원격 관리 이동', sectionKeyword: '원격' },
+  '대시보드': { text: '대시보드에서 볼 수 있는 것: 활동 작가 수, 진행 중인 프로젝트 수, 마감 준수율, 결재 대기 건수(근태·가입), 출석 분포, 건강 검진 분포예요.', actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' },
+  '프로젝트': { text: '전체 프로젝트에서 에이전시 소속 모든 프로젝트를 볼 수 있어요. 연재/휴재/완결 상태, 연재 주기, 플랫폼 등 정보가 표시돼요.', actionType: 'section', actionLabel: '프로젝트 이동', sectionKeyword: '프로젝트' },
+  '직원': { text: '전체 직원에서 에이전시 소속 회원 목록을 확인할 수 있어요. 웹툰 작가, 담당자, 에이전시 관리자 등 역할별로, 활성/휴면 상태별로 볼 수 있어요.', actionType: 'section', actionLabel: '전체 직원 이동', sectionKeyword: '직원' },
+  '건강': { text: '건강관리에서 직원들의 정신·신체 검진 현황을 확인하고, 검진 주기 설정, 미검진 인원 목록, 검진 알림 보내기를 할 수 있어요.', actionType: 'section', actionLabel: '건강관리 이동', sectionKeyword: '건강' },
+  '할당': { text: '할당 관리에서 담당자와 작가를 연결해 배정할 수 있어요. 누가 누구를 담당하는지 설정하는 곳이에요.', actionType: 'section', actionLabel: '할당 관리 이동', sectionKeyword: '할당' },
+  '연차': { text: '연차 설정에서 기본 연차 일수를 정하고, 직원별 연차 잔액을 조정할 수 있어요. 경력 인정, 징계, 포상으로 연차를 더하거나 뺄 수 있어요.', actionType: 'section', actionLabel: '연차 설정 이동', sectionKeyword: '연차' },
+  '마감': { text: '대시보드에서 오늘부터 4일 후까지 마감 예정인 작업 현황을 확인할 수 있어요.', actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' },
+  '출석': { text: '대시보드에서 오늘 출근한 사람, 재택·휴가·미출석 인원 분포를 확인할 수 있어요.', actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' },
+  '분포': { text: '대시보드에서 프로젝트별로 참여한 작가·어시스트 수를 확인할 수 있어요.', actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' },
+  '준수율': { text: '마감 준수율은 마감일 안에 완료한 비율이에요. 대시보드에서 월별로 어떻게 변하는지 볼 수 있어요.', actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' },
+  '미검진': { text: '건강관리에서 아직 검진을 안 한 직원 목록을 보고, 검진 알림을 한 번에 보낼 수 있어요.', actionType: 'section', actionLabel: '건강관리 이동', sectionKeyword: '건강' },
+  '현황': { text: '대시보드에서 활동 작가, 진행 프로젝트, 마감 준수율, 결재 대기, 출석·건강 분포 등 전체 현황을 한눈에 볼 수 있어요.', actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' },
 };
 
 /* 역할에 따른 가이드 선택 함수 */
 const getMenuGuideForRole = (role) => {
-  if (role === 'individual' || role === '작가') return MENU_GUIDE_INDIVIDUAL;
+  if (role === 'artist' || role === '작가') return MENU_GUIDE_ARTIST;
   if (role === 'manager' || role === '담당자') return MENU_GUIDE_MANAGER;
   if (role === 'agency' || role === '에이전시 관리자') return MENU_GUIDE_AGENCY;
-  return MENU_GUIDE_INDIVIDUAL; // 기본값
+  return MENU_GUIDE_ARTIST; // 기본값
 };
 
 const getFaqCategoriesForRole = (role) => {
-  if (role === 'individual' || role === '작가') return FAQ_CATEGORIES_INDIVIDUAL;
+  if (role === 'artist' || role === '작가') return FAQ_CATEGORIES_ARTIST;
   if (role === 'manager' || role === '담당자') return FAQ_CATEGORIES_MANAGER;
   if (role === 'agency' || role === '에이전시 관리자') return FAQ_CATEGORIES_AGENCY;
-  return FAQ_CATEGORIES_INDIVIDUAL; // 기본값
+  return FAQ_CATEGORIES_ARTIST; // 기본값
 };
 
 const getMenuGuideResult = (text, role) => {
   const menuGuide = getMenuGuideForRole(role);
-  const lower = text.replace(/\?|요|이요|에서|할|은|는|어디|봐/g, '').trim();
+  const lower = text.replace(/\?|요|이요|에서|할|은|는|어디|봐|하나|확인|어떻게|몇|개|건/g, '').trim().toLowerCase();
+  const raw = text.toLowerCase();
   for (const [key, guide] of Object.entries(menuGuide)) {
-    if (lower.includes(key)) {
+    if (lower.includes(key) || raw.includes(key)) {
       return { answer: guide.text, action: guide };
     }
   }
@@ -300,16 +431,13 @@ const getNextId = () => `msg-${Date.now()}-${++messageIdCounter}`;
 export function Chatbot({ sections = [], onNavigateToSection, onOpenAttendanceModal, userRole }) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isAIMode, setIsAIMode] = useState(false);  // AI 모드 상태
-  const [aiHistory, setAiHistory] = useState([]);   // AI 대화 히스토리
-  const [selectedCategory, setSelectedCategory] = useState(null); // 선택된 FAQ 카테고리
+  const [selectedCategory, setSelectedCategory] = useState(null);
   const listRef = useRef(null);
   const user = useAuthStore((state) => state.user);
 
   // 역할 결정: props로 받은 userRole 또는 user.memberRole 사용
-  const effectiveRole = userRole || user?.memberRole || 'individual';
+  const effectiveRole = userRole || user?.memberRole || 'artist';
   const faqCategories = getFaqCategoriesForRole(effectiveRole);
 
   /* 섹션 키워드로 해당 섹션 인덱스 찾기 */
@@ -365,31 +493,117 @@ export function Chatbot({ sections = [], onNavigateToSection, onOpenAttendanceMo
     const memberRole = user?.memberRole || '';
 
     try {
-      // MagamGG 소개/사용법 (역할별 정적 답변)
-      if (
-        q.includes('magamgg') ||
-        (q.includes('사용법') && (q.includes('알려') || q.includes('어떻게') || q.includes('뭐')))
-      ) {
-        let intro = 'MagamGG는 웹툰 작가·담당자·에이전시를 위한 작가 관리 시스템이에요. ';
-        if (effectiveRole === 'individual' || effectiveRole === '작가') {
-          intro += '대시보드에서 오늘 할 일을 확인하고, 프로젝트 관리 페이지에서 칸반 보드로 작업을 관리할 수 있어요. 휴가·연차 신청은 상단 헤더의 근태 신청 버튼을 눌러주세요!';
-        } else if (effectiveRole === 'manager' || effectiveRole === '담당자') {
-          intro += '대시보드에서 할 일과 근태 현황을 확인하고, 프로젝트 관리 페이지에서 칸반 보드로 작업을 관리할 수 있어요. 작가들의 근태 현황은 원격 관리 페이지에서 확인해 주세요!';
-        } else {
-          intro += '대시보드에서 전체 현황을 확인하고, 요청 관리 페이지에서 결재를 처리할 수 있어요. 직원 할당은 할당 관리 페이지에서 설정해 주세요!';
-        }
-        addMessage(intro, false);
+      // 서비스 안내 - 질문별 개별 답변
+
+      // 1. MagamGG가 무엇인가요? (공통 기본 소개)
+      if (q.includes('magamgg') && (q.includes('무엇') || q.includes('뭐야') || q.includes('뭔가'))) {
+        addMessage(
+          'MagamGG는 웹툰 작가·담당자·에이전시를 위한 작가 관리 시스템이에요. 프로젝트 관리, 근태·휴가, 건강 관리, 마감 알림 등을 한곳에서 처리할 수 있어요.',
+          false
+        );
+        return true;
+      }
+
+      // 2. ARTIST(작가): 어떤 일을 할 수 있나요?
+      if ((effectiveRole === 'artist' || effectiveRole === '작가') &&
+          (q.includes('어떤 일') || q.includes('뭘 할 수') || q.includes('뭘 할수'))) {
+        addMessage(
+          '작가로서 할 수 있는 일: 대시보드에서 오늘 할 일 확인, 프로젝트 칸반 보드로 작업 관리, 휴가·연차 신청, 건강 설문 제출, 캘린더로 일정 확인이에요. 마감일 알림도 받을 수 있어요!',
+          false,
+          { actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' }
+        );
+        return true;
+      }
+
+      // 2. 담당자: 담당자는 뭘 할 수 있나요?
+      if ((effectiveRole === 'manager' || effectiveRole === '담당자') &&
+          (q.includes('담당자') && (q.includes('뭘') || q.includes('할 수')))) {
+        addMessage(
+          '담당자로서 할 수 있는 일: 담당 작가의 업무·근태 관리, 칸반 보드에서 작업 배정·피드백, 근태 신청 승인, 원격 관리로 재택·워케이션 확인, 작가 건강 현황 확인 등이에요.',
+          false,
+          { actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' }
+        );
+        return true;
+      }
+
+      // 2. 에이전시: 에이전시 관리자는 뭘 할 수 있나요?
+      if ((effectiveRole === 'agency' || effectiveRole === '에이전시 관리자') &&
+          (q.includes('에이전시') && (q.includes('뭘') || q.includes('할 수')))) {
+        addMessage(
+          '에이전시 관리자로서 할 수 있는 일: 전체 프로젝트·직원 현황 확인, 근태·가입 요청 결재, 담당자-작가 할당, 연차 설정, 건강 검진 관리, 원격 관리로 전체 직원 상태 확인 등이에요.',
+          false,
+          { actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' }
+        );
+        return true;
+      }
+
+      // 3. ARTIST(작가): 처음 사용할 때 뭐부터 해야 하나요?
+      if ((effectiveRole === 'artist' || effectiveRole === '작가') &&
+          (q.includes('처음') || q.includes('뭐부터') || q.includes('해야'))) {
+        addMessage(
+          '처음 사용 시 순서: ① 대시보드에서 오늘 할 일 확인 ② 프로젝트 관리에서 내 프로젝트 선택 ③ 칸반 보드에서 작업 상태 확인 ④ 필요하면 상단 근태 신청으로 휴가 신청하세요!',
+          false,
+          { actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' }
+        );
+        return true;
+      }
+
+      // 3. 담당자: 작가 관리는 어떻게 시작하나요?
+      if ((effectiveRole === 'manager' || effectiveRole === '담당자') &&
+          (q.includes('작가') && (q.includes('관리') || q.includes('시작')))) {
+        addMessage(
+          '작가 관리 시작 순서: ① 직원 관리에서 담당 작가 목록 확인 ② 프로젝트 관리에서 칸반 보드로 작업 배정 ③ 대시보드에서 근태 승인 대기 건 확인 ④ 원격 관리에서 재택·워케이션 현황 파악하세요!',
+          false,
+          { actionType: 'section', actionLabel: '직원 관리 이동', sectionKeyword: '직원' }
+        );
+        return true;
+      }
+
+      // 3. 에이전시: 전체 현황은 어디서 확인하나요?
+      if ((effectiveRole === 'agency' || effectiveRole === '에이전시 관리자') &&
+          (q.includes('전체') && (q.includes('현황') || q.includes('확인')))) {
+        addMessage(
+          '대시보드에서 활동 작가 수, 진행 프로젝트, 마감 준수율, 결재 대기, 출석·건강 분포 등 전체 현황을 한눈에 확인할 수 있어요.',
+          false,
+          { actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' }
+        );
         return true;
       }
 
       // 오늘 할 일 몇 개?
-      if (q.includes('할 일') || q.includes('할일') || q.includes('오늘') && (q.includes('몇') || q.includes('개'))) {
+      if (q.includes('할 일') || q.includes('할일') || (q.includes('오늘') && (q.includes('몇') || q.includes('개')))) {
         const tasks = await projectService.getMyTodayTasks();
         const count = Array.isArray(tasks) ? tasks.length : 0;
         addMessage(
           `오늘 할 일 ${count}건이에요. 자세한 내용은 대시보드 페이지에서 확인해 주세요.`,
           false,
           { actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' }
+        );
+        return true;
+      }
+
+      // 마감 임박한 업무 (DB 조회)
+      if (q.includes('마감') && (q.includes('임박') || q.includes('있') || q.includes('몇'))) {
+        const cards = await projectService.getMyDeadlineCards();
+        const count = Array.isArray(cards) ? cards.length : 0;
+        addMessage(
+          count > 0
+            ? `마감 임박한 업무 ${count}건이에요. 대시보드나 캘린더에서 자세히 확인해 주세요.`
+            : '마감 임박한 업무는 없어요. 대시보드에서 전체 현황을 확인해 주세요.',
+          false,
+          { actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' }
+        );
+        return true;
+      }
+
+      // 내 프로젝트 몇 개? (작가/담당자)
+      if (q.includes('프로젝트') && (q.includes('몇') || q.includes('개'))) {
+        const res = await projectService.getMyProjectCount();
+        const count = res?.count ?? res ?? 0;
+        addMessage(
+          `참여 중인 프로젝트 ${count}개예요. 프로젝트 관리 페이지에서 확인해 주세요.`,
+          false,
+          { actionType: 'section', actionLabel: '프로젝트 이동', sectionKeyword: '프로젝트' }
         );
         return true;
       }
@@ -405,7 +619,7 @@ export function Chatbot({ sections = [], onNavigateToSection, onOpenAttendanceMo
         const year = balance?.leaveBalanceYear || String(new Date().getFullYear());
         
         // 작가는 원격관리 페이지가 없으므로 다른 안내
-        if (effectiveRole === 'individual' || effectiveRole === '작가') {
+        if (effectiveRole === 'artist' || effectiveRole === '작가') {
           addMessage(
             `${year}년 연차 잔여 ${remain}일이에요. 휴가 신청은 상단 헤더의 근태 신청 버튼을 눌러주세요!`,
             false,
@@ -421,7 +635,7 @@ export function Chatbot({ sections = [], onNavigateToSection, onOpenAttendanceMo
         return true;
       }
 
-      // 결재 대기 (에이전시)
+      // 결재/승인 대기 (에이전시) - 근태 + 가입 요청
       if ((q.includes('결재') || q.includes('승인') || q.includes('대기')) && (q.includes('몇') || q.includes('건'))) {
         if (!agencyNo) {
           addMessage(
@@ -431,10 +645,20 @@ export function Chatbot({ sections = [], onNavigateToSection, onOpenAttendanceMo
           );
           return true;
         }
-        const pending = await leaveService.getAgencyPendingRequests(agencyNo);
-        const count = Array.isArray(pending) ? pending.length : 0;
+        const [pendingLeave, joinReqs] = await Promise.all([
+          leaveService.getAgencyPendingRequests(agencyNo),
+          agencyService.getJoinRequests(agencyNo),
+        ]);
+        const leaveCount = Array.isArray(pendingLeave) ? pendingLeave.length : 0;
+        const joinCount = Array.isArray(joinReqs) ? joinReqs.length : 0;
+        const total = leaveCount + joinCount;
+        const parts = [];
+        if (leaveCount > 0) parts.push(`근태 신청 ${leaveCount}건`);
+        if (joinCount > 0) parts.push(`가입 요청 ${joinCount}건`);
         addMessage(
-          `승인 대기 ${count}건이에요. 처리는 요청 관리 페이지에서 해 주세요.`,
+          parts.length > 0
+            ? `승인 대기 ${total}건이에요. (${parts.join(', ')}) 요청 관리 페이지에서 처리해 주세요.`
+            : '승인 대기 건수는 없어요.',
           false,
           { actionType: 'section', actionLabel: '요청 관리 이동', sectionKeyword: '요청' }
         );
@@ -457,9 +681,9 @@ export function Chatbot({ sections = [], onNavigateToSection, onOpenAttendanceMo
         const list = await leaveService.getManagerRequests();
         const pending = Array.isArray(list) ? list.filter((r) => r.attendanceRequestStatus === 'PENDING').length : 0;
         addMessage(
-          `대기 중인 근태 신청 ${pending}건이에요. 대시보드 또는 원격 관리 페이지에서 확인해 주세요.`,
+          `대기 중인 근태 신청 ${pending}건이에요. 대시보드에서 확인해 주세요.`,
           false,
-          { actionType: 'section', actionLabel: '원격 관리 이동', sectionKeyword: '원격' }
+          { actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' }
         );
         return true;
       }
@@ -478,99 +702,8 @@ export function Chatbot({ sections = [], onNavigateToSection, onOpenAttendanceMo
     }
   };
 
-  const handleSubmit = async (e) => {
-    e?.preventDefault();
-    const trimmed = input.trim();
-    if (!trimmed || isLoading) return;
-
-    addMessage(trimmed, true);
-    setInput('');
-    setIsLoading(true);
-
-    // AI 모드일 경우 Ollama API 호출
-    if (isAIMode) {
-      await handleAIResponse(trimmed);
-    } else {
-      const handled = await handleApiResponse(trimmed);
-      if (!handled) {
-        addMessage(
-          '무엇을 도와드릴까요? "오늘 할 일 몇 개야?", "휴가 잔여 며칠이야?", "그거 어디서 해요?" 같이 물어보세요.',
-          false
-        );
-      }
-    }
-    setIsLoading(false);
-  };
-
-  /* AI 모드에서 Ollama API 호출 */
-  const handleAIResponse = async (message) => {
-    try {
-      // 히스토리에 사용자 메시지 추가
-      const newHistory = [...aiHistory, { role: 'user', content: message }];
-      
-      // axios 인터셉터가 response.data를 직접 반환하므로 data가 바로 응답 객체
-      const data = await chatService.sendMessage(message, effectiveRole, aiHistory);
-
-      // AI 응답을 히스토리에 추가
-      setAiHistory([...newHistory, { role: 'assistant', content: data.message }]);
-
-      // 액션이 있으면 포함해서 메시지 추가
-      if (data.action) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: getNextId(),
-            text: data.message,
-            isUser: false,
-            action: data.action,
-            isAIResponse: true,
-          },
-        ]);
-      } else {
-        setMessages((prev) => [
-          ...prev,
-          { id: getNextId(), text: data.message, isUser: false, isAIResponse: true },
-        ]);
-      }
-    } catch (error) {
-      console.error('AI 응답 오류:', error);
-      console.error('에러 상세:', JSON.stringify(error, null, 2));
-      
-      // 에러 메시지 구성
-      let errorMsg = 'AI 서비스 오류가 발생했어요.\n\n';
-      if (error?.message) {
-        errorMsg += `오류: ${error.message}\n\n`;
-      }
-      if (error?.status) {
-        errorMsg += `상태 코드: ${error.status}\n\n`;
-      }
-      errorMsg += '"처음으로" 버튼을 눌러 FAQ를 이용해주세요.';
-      
-      addMessage(errorMsg, false);
-    }
-  };
-
-  /* 기타 문의 클릭 - AI 모드 시작 */
-  const handleOtherInquiry = () => {
-    setIsAIMode(true);
-    setAiHistory([]);
-    addMessage(
-      '기타 문의 모드입니다. 자유롭게 질문해주세요!\n(AI가 답변하므로 응답이 조금 느릴 수 있어요)',
-      false
-    );
-  };
-
-  /* AI 모드 종료 */
-  const exitAIMode = () => {
-    setIsAIMode(false);
-    setAiHistory([]);
-    goToStart();
-  };
-
   const goToStart = () => {
-    setIsAIMode(false);
-    setAiHistory([]);
-    setSelectedCategory(null); // 카테고리 선택 초기화
+    setSelectedCategory(null);
     setMessages([
       {
         id: getNextId(),
@@ -588,10 +721,10 @@ export function Chatbot({ sections = [], onNavigateToSection, onOpenAttendanceMo
 
     const handled = await handleApiResponse(question);
     if (!handled) {
-      addMessage(
-        '아직 그 질문에는 답할 수 없어요. "오늘 할 일 몇 개야?", "휴가 신청 어디서 해요?" 같이 물어보세요.',
-        false
-      );
+        addMessage(
+          '아직 그 질문에는 답할 수 없어요. 다른 질문을 선택해 보세요.',
+          false
+        );
     }
     setIsLoading(false);
   };
@@ -608,19 +741,14 @@ export function Chatbot({ sections = [], onNavigateToSection, onOpenAttendanceMo
           >
             <ChatHeader>
               <ChatHeaderTitle>
-                {isAIMode ? <Sparkles size={22} /> : <MessageCircle size={22} />}
+                <TbMessageChatbot size={22} />
                 <div>
-                  <div>챗봇 지지 {isAIMode && '(AI)'}</div>
+                  <div>챗봇 지지</div>
                   <ChatHeaderSubtitle>
-                    {isAIMode ? 'AI 대화 모드' : '가벼운 확인 · 메뉴 안내'}
+                    가벼운 확인 · 메뉴 안내
                   </ChatHeaderSubtitle>
                 </div>
               </ChatHeaderTitle>
-              {isAIMode && (
-                <ExitAIModeButton onClick={exitAIMode} aria-label="AI 모드 종료">
-                  종료
-                </ExitAIModeButton>
-              )}
               <CloseButton onClick={() => setIsOpen(false)} aria-label="닫기">
                 <X size={20} />
               </CloseButton>
@@ -658,7 +786,7 @@ export function Chatbot({ sections = [], onNavigateToSection, onOpenAttendanceMo
                       )}
                     </ActionButtonsRow>
                   )}
-                  {msg.isGreeting && messages.length === 1 && !isAIMode && (
+                  {msg.isGreeting && messages.length === 1 && (
                     <>
                       {!selectedCategory ? (
                         /* 카테고리 목록 */
@@ -670,7 +798,7 @@ export function Chatbot({ sections = [], onNavigateToSection, onOpenAttendanceMo
                               onClick={() => setSelectedCategory(category)}
                               disabled={isLoading}
                             >
-                              <span>{category.icon} {category.label}</span>
+                              <span>{category.icon && <category.icon size={16} style={{ marginRight: 6, flexShrink: 0 }} />}{category.label}</span>
                               <ChevronRight size={16} />
                             </FaqCategoryButton>
                           ))}
@@ -687,7 +815,7 @@ export function Chatbot({ sections = [], onNavigateToSection, onOpenAttendanceMo
                               뒤로
                             </FaqBackButton>
                             <FaqCategoryTitle>
-                              {selectedCategory.icon} {selectedCategory.label}
+                              {selectedCategory.icon && <selectedCategory.icon size={16} style={{ marginRight: 6, flexShrink: 0 }} />}{selectedCategory.label}
                             </FaqCategoryTitle>
                           </FaqCategoryHeader>
                           <FaqQuestionList>
@@ -704,36 +832,11 @@ export function Chatbot({ sections = [], onNavigateToSection, onOpenAttendanceMo
                           </FaqQuestionList>
                         </>
                       )}
-                      <OtherInquiryButton
-                        type="button"
-                        onClick={handleOtherInquiry}
-                        disabled={isLoading}
-                      >
-                        <Sparkles size={16} />
-                        기타 문의 (AI 상담)
-                      </OtherInquiryButton>
-                      <FaqFooter>
-                        <Bot size={14} style={{ opacity: 0.7 }} />
-                        AI Assistant · 방금 전
-                      </FaqFooter>
                     </>
                   )}
                 </MessageGroup>
               ))}
             </MessageList>
-
-            <InputArea onSubmit={handleSubmit}>
-              <ChatInput
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder={isAIMode ? "AI에게 자유롭게 질문하세요..." : "질문을 입력하세요..."}
-                disabled={isLoading}
-                maxLength={500}
-              />
-              <SendButton type="submit" disabled={isLoading || !input.trim()}>
-                <Send size={20} />
-              </SendButton>
-            </InputArea>
           </ChatWindow>
         )}
       </AnimatePresence>
@@ -744,7 +847,7 @@ export function Chatbot({ sections = [], onNavigateToSection, onOpenAttendanceMo
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
       >
-        <MessageCircle size={28} />
+        <TbMessageChatbot size={28} />
       </FloatingButton>
     </ChatbotWrapper>
   );
