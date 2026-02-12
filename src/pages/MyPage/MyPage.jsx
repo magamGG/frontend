@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, Mail, Phone, MapPin, Briefcase, Edit, ArrowLeft, Camera } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Briefcase, Edit, ArrowLeft, Camera, MessageCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/app/components/ui/dialog';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
@@ -11,6 +11,7 @@ import { memberService, attendanceService } from '@/api/services';
 import { API_BASE_URL } from '@/api/config';
 import { formatPhoneNumber } from '@/utils/phoneFormatter';
 import useAuthStore from '@/store/authStore';
+import { InquiryModal } from '@/components/modals/InquiryModal';
 import {
   MyPageOverlay,
   MyPageContainer,
@@ -101,6 +102,7 @@ export function MyPage({ onClose, onLogout }) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isImageSelectModalOpen, setIsImageSelectModalOpen] = useState(false);
+  const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [userName, setUserName] = useState('');
   const [email, setEmail] = useState('');
@@ -116,6 +118,7 @@ export function MyPage({ onClose, onLogout }) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteError, setDeleteError] = useState('');
+  const [isComposing, setIsComposing] = useState({ name: false, phone: false }); // IME 조합 상태 추적
   
   const currentMonth = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' });
 
@@ -201,9 +204,46 @@ export function MyPage({ onClose, onLogout }) {
     loadMyPageData();
   }, [memberNo]);
 
+  // IME 조합 시작
+  const handleCompositionStart = (e) => {
+    const field = e.target.id === 'edit-name' ? 'name' : e.target.id === 'edit-phone' ? 'phone' : null;
+    if (field) {
+      setIsComposing(prev => ({ ...prev, [field]: true }));
+    }
+  };
+
+  // IME 조합 종료
+  const handleCompositionEnd = (e) => {
+    const field = e.target.id === 'edit-name' ? 'name' : e.target.id === 'edit-phone' ? 'phone' : null;
+    if (field) {
+      setIsComposing(prev => ({ ...prev, [field]: false }));
+      // 조합 종료 후 필터링 적용
+      if (field === 'name') {
+        const filtered = e.target.value.replace(/[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z]/g, '');
+        setUserName(filtered);
+      } else if (field === 'phone') {
+        const numericOnly = e.target.value.replace(/[^0-9]/g, '');
+        const formatted = formatPhoneNumber(numericOnly);
+        setPhone(formatted);
+      }
+    }
+  };
+
+  // 초성이 포함되어 있는지 검증
+  const hasHangulJamo = (text) => {
+    if (!text) return false;
+    return /[ㄱ-ㅎㅏ-ㅣ]/.test(text);
+  };
+
   const handleSaveProfile = async () => {
     if (!memberNo) {
       console.error('❌ memberNo가 없습니다.');
+      return;
+    }
+    
+    // 이름에 초성이 포함되어 있는지 검증
+    if (hasHangulJamo(userName)) {
+      toast.error('이름을 완성해주세요. 초성을 포함할 수 없습니다.');
       return;
     }
     
@@ -387,6 +427,10 @@ export function MyPage({ onClose, onLogout }) {
                     <Edit className="w-4 h-4" />
                     프로필 수정
                   </ActionButton>
+                  <ActionButton onClick={() => setIsInquiryModalOpen(true)}>
+                    <MessageCircle className="w-4 h-4" />
+                    문의하기
+                  </ActionButton>
                   <ActionButton onClick={handleLogout}>로그아웃</ActionButton>
                   <ActionButton $variant="danger" onClick={() => setIsDeleteModalOpen(true)}>
                     회원탈퇴
@@ -518,9 +562,22 @@ export function MyPage({ onClose, onLogout }) {
                 id="edit-name"
                 value={userName}
                 onChange={(e) => {
-                  // 이름은 한글, 영문만 허용 (공백 제외)
-                  const filtered = e.target.value.replace(/[^가-힣a-zA-Z]/g, '');
+                  // IME 조합 중일 때는 필터링하지 않음
+                  if (isComposing.name) {
+                    setUserName(e.target.value);
+                    return;
+                  }
+                  // 이름은 한글(완성형 + 자모), 영문만 허용 (공백 제외)
+                  const filtered = e.target.value.replace(/[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z]/g, '');
                   setUserName(filtered);
+                }}
+                onCompositionStart={handleCompositionStart}
+                onCompositionEnd={handleCompositionEnd}
+                onKeyDown={(e) => {
+                  // 스페이스바 입력 차단
+                  if (e.key === ' ' || e.key === 'Space') {
+                    e.preventDefault();
+                  }
                 }}
                 maxLength={20}
                 className="bg-white border-[#DADDE1] text-[#1F2328]"
@@ -568,9 +625,25 @@ export function MyPage({ onClose, onLogout }) {
                 id="edit-phone"
                 value={phone}
                 onChange={(e) => {
-                  // 연락처는 자동 하이픈 포맷팅
-                  const formatted = formatPhoneNumber(e.target.value);
+                  // IME 조합 중일 때는 필터링하지 않음
+                  if (isComposing.phone) {
+                    setPhone(e.target.value);
+                    return;
+                  }
+                  // 숫자만 허용
+                  const numericOnly = e.target.value.replace(/[^0-9]/g, '');
+                  const formatted = formatPhoneNumber(numericOnly);
                   setPhone(formatted);
+                }}
+                onCompositionStart={handleCompositionStart}
+                onCompositionEnd={handleCompositionEnd}
+                onKeyDown={(e) => {
+                  // 숫자, 백스페이스, Delete, 화살표 키만 허용
+                  if (!/[0-9]/.test(e.key) && 
+                      !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Tab', 'Home', 'End'].includes(e.key) &&
+                      !(e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                  }
                 }}
                 maxLength={13}
                 className="bg-white border-[#DADDE1] text-[#1F2328]"
@@ -696,6 +769,12 @@ export function MyPage({ onClose, onLogout }) {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Inquiry Modal */}
+      <InquiryModal 
+        open={isInquiryModalOpen} 
+        onOpenChange={setIsInquiryModalOpen} 
+      />
     </MyPageOverlay>
   );
 }

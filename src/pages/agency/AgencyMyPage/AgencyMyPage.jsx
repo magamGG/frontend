@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, Mail, Phone, MapPin, Briefcase, Edit, KeyRound, Camera, ArrowLeft } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Briefcase, Edit, KeyRound, Camera, ArrowLeft, MessageCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/app/components/ui/dialog';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
@@ -10,6 +10,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { memberService } from '@/api/services';
 import { API_BASE_URL } from '@/api/config';
 import useAuthStore from '@/store/authStore';
+import { InquiryModal } from '@/components/modals/InquiryModal';
 
 
 
@@ -30,6 +31,7 @@ export function AgencyMyPage({ onClose, onLogout }) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isImageSelectModalOpen, setIsImageSelectModalOpen] = useState(false);
+  const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [userName, setUserName] = useState('');
   const [email, setEmail] = useState('');
@@ -331,6 +333,13 @@ export function AgencyMyPage({ onClose, onLogout }) {
                 >
                   <Edit className="w-4 h-4" />
                   프로필 수정
+                </button>
+                <button
+                  onClick={() => setIsInquiryModalOpen(true)}
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 border border-[#DADDE1] text-[#1F2328] rounded-lg hover:bg-gray-50 transition-all text-sm font-medium"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  문의하기
                 </button>
                 <button
                   onClick={handleLogout}
@@ -716,6 +725,12 @@ export function AgencyMyPage({ onClose, onLogout }) {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Inquiry Modal */}
+        <InquiryModal 
+          open={isInquiryModalOpen} 
+          onOpenChange={setIsInquiryModalOpen} 
+        />
       </motion.div>
     </div>
   );

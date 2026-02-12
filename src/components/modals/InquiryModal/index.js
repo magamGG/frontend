@@ -1,0 +1,2 @@
+export { InquiryModal } from './InquiryModal';
+
