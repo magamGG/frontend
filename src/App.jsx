@@ -61,25 +61,56 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true); // 로딩 상태 (새로고침 시 깜빡임 방지)
 
   // Zustand store에서 저장된 인증 정보 가져오기
-  const { user, token, isAuthenticated, logout: storeLogout } = useAuthStore();
+  const { user, token, isAuthenticated, logout: storeLogout, initializeAuth } = useAuthStore();
 
-  // 새로고침 시 로그인 화면으로 이동
+  // 페이지 로드 시 인증 상태 복원
   useEffect(() => {
-    const restoreSession = () => {
-      // 새로고침 시 항상 로그인 화면으로 이동
-      // localStorage에 저장된 인증 정보 초기화
-      if (token || isAuthenticated || user) {
-        storeLogout();
+    const restoreSession = async () => {
+      try {
+        // Refresh Token으로 Access Token 복원 시도
+        const restored = await initializeAuth();
+        
+        if (restored && user) {
+          // 인증 상태 복원 성공 → 대시보드로 이동
+          const memberRole = user.memberRole;
+          const agencyNo = user.agencyNo;
+          
+          // 역할에 따라 화면 설정
+          if (memberRole === '에이전시 관리자') {
+            setUserRole('agency');
+            setAuthView('dashboard');
+          } else if (['웹툰 작가', '웹소설 작가', '담당자'].includes(memberRole)) {
+            if (!agencyNo) {
+              setUserRole(memberRole === '담당자' ? 'manager' : 'individual');
+              setAuthView('join-request');
+            } else {
+              setUserRole(memberRole === '담당자' ? 'manager' : 'individual');
+              setAuthView('dashboard');
+            }
+          } else {
+            setUserRole('individual');
+            setAuthView('dashboard');
+          }
+          
+          setHasAgency(agencyNo !== null && agencyNo !== undefined);
+        } else {
+          // 복원 실패 → 로그인 화면
+          setAuthView('login');
+          setUserRole(null);
+          setHasAgency(false);
+        }
+      } catch (error) {
+        console.error('세션 복원 실패:', error);
+        setAuthView('login');
+        setUserRole(null);
+        setHasAgency(false);
+      } finally {
+        setIsLoading(false);
       }
-
-      setAuthView('login');
-      setUserRole(null);
-      setHasAgency(false);
-      setIsLoading(false);
     };
 
     restoreSession();
-  }, []);
+  }, []); // 빈 배열로 마운트 시 한 번만 실행
 
   /**
    * @param {string} memberRole - 백엔드에서 받은 실제 MEMBER_ROLE 값 (예: "웹툰 작가", "담당자", "에이전시 관리자")

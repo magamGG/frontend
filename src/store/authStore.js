@@ -55,19 +55,35 @@ const useAuthStore = create(
         
         // 이미 갱신 중이면 대기
         if (isRefreshing) {
-          return null;
+          console.log('⏳ [authStore] 이미 갱신 중입니다. 대기...');
+          // Promise가 완료될 때까지 대기 (최대 5초)
+          const startTime = Date.now();
+          while (get().isRefreshing && Date.now() - startTime < 5000) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+          // 대기 후에도 갱신 중이면 null 반환
+          if (get().isRefreshing) {
+            return null;
+          }
+          // 갱신 완료 후 새 토큰 반환
+          return get().token;
         }
         
         // Refresh Token이 없으면 갱신 불가
         if (!refreshToken) {
+          console.error('❌ [authStore] Refresh Token이 없습니다.');
           throw new Error('Refresh Token이 없습니다.');
         }
         
+        console.log('🔄 [authStore] refreshAccessToken() 호출 시작');
         set({ isRefreshing: true });
         
         try {
+          console.log('📡 [authStore] 서버에 refresh 요청 전송...');
           const response = await authService.refresh(refreshToken);
           const { accessToken, refreshToken: newRefreshToken } = response;
+          
+          console.log('✅ [authStore] refresh 성공, 새 토큰 저장');
           
           // 새 토큰 저장
           set({
@@ -79,6 +95,7 @@ const useAuthStore = create(
           return accessToken;
         } catch (error) {
           // Refresh Token도 만료된 경우 로그아웃
+          console.error('❌ [authStore] refresh 실패:', error);
           set({
             isRefreshing: false,
             user: null,
@@ -115,6 +132,30 @@ const useAuthStore = create(
       getMemberName: () => {
         const { user } = get();
         return user?.memberName || null;
+      },
+      
+      // 초기화 함수 (페이지 로드 시 호출)
+      initializeAuth: async () => {
+        const { refreshToken, user, isAuthenticated } = get();
+        
+        // Refresh Token과 사용자 정보가 있으면 Access Token 복원 시도
+        if (refreshToken && user && isAuthenticated) {
+          try {
+            const newAccessToken = await get().refreshAccessToken();
+            if (newAccessToken) {
+              set({ isAuthenticated: true });
+              return true;
+            }
+          } catch (error) {
+            // Refresh Token도 만료된 경우 로그아웃
+            console.error('토큰 복원 실패:', error);
+            get().logout();
+            return false;
+          }
+        }
+        
+        // Refresh Token이 없거나 사용자 정보가 없으면 false
+        return false;
       },
     }),
     {
