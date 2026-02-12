@@ -7,6 +7,7 @@ import { Mail, Lock, User, Phone, Building, Briefcase, Edit, Check, Palette, Pen
 import { toast } from 'sonner';
 import { memberService } from '@/api';
 import { formatPhoneNumber, normalizePhoneNumber } from '@/utils/phoneFormatter';
+import api from '@/api/axios';
 import {
   SignupRoot,
   BackgroundPattern,
@@ -76,7 +77,7 @@ export function SignupPage({ onSignup, onBackToLogin }) {
   const [customSpecializationInput, setCustomSpecializationInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSelectOpen, setIsSelectOpen] = useState(false);
-  const [isComposing, setIsComposing] = useState({ name: false, phone: false, specialization: false }); // IME 조합 상태 추적
+  const [isComposing, setIsComposing] = useState({ name: false, phone: false, specialization: false, verificationCode: false }); // IME 조합 상태 추적
   const [signupFormData, setSignupFormData] = useState({
     name: '',
     email: '',
@@ -86,7 +87,92 @@ export function SignupPage({ onSignup, onBackToLogin }) {
     address: '',
     organization: '',
   });
+  
+  // 이메일 인증 관련 상태
+  const [emailVerificationCode, setEmailVerificationCode] = useState('');
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
+  const [isSendingCode, setIsSendingCode] = useState(false);
+  const [isVerifyingCode, setIsVerifyingCode] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0); // 재전송 타이머 (초)
 
+  // 이메일 변경 시 인증 상태 초기화
+  useEffect(() => {
+    if (signupFormData.email) {
+      setIsEmailVerified(false);
+      setEmailVerificationCode('');
+    }
+  }, [signupFormData.email]);
+  
+  // 재전송 타이머
+  useEffect(() => {
+    if (resendTimer > 0) {
+      const timer = setTimeout(() => {
+        setResendTimer(resendTimer - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendTimer]);
+  
+  // 인증 코드 전송
+  const handleSendVerificationCode = async () => {
+    if (!signupFormData.email) {
+      toast.error('이메일을 입력해주세요.');
+      return;
+    }
+    
+    // 이메일 형식 검증
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(signupFormData.email)) {
+      toast.error('올바른 이메일 형식을 입력해주세요.');
+      return;
+    }
+    
+    setIsSendingCode(true);
+    try {
+      await api.post('/api/auth/email/send-code', {
+        email: signupFormData.email,
+      });
+      toast.success('인증 코드가 전송되었습니다.');
+      setResendTimer(60); // 1분 타이머 시작
+    } catch (error) {
+      const errorMessage = error?.response?.data?.message || '인증 코드 전송에 실패했습니다.';
+      toast.error(errorMessage);
+      console.error('Send verification code error:', error);
+    } finally {
+      setIsSendingCode(false);
+    }
+  };
+  
+  // 인증 코드 검증
+  const handleVerifyCode = async () => {
+    if (!emailVerificationCode || emailVerificationCode.length !== 6) {
+      toast.error('6자리 인증 코드를 입력해주세요.');
+      return;
+    }
+    
+    setIsVerifyingCode(true);
+    try {
+      const response = await api.post('/api/auth/email/verify-code', {
+        email: signupFormData.email,
+        code: emailVerificationCode,
+      });
+      
+      // axios interceptor가 response.data를 직접 반환하므로 response 자체가 data입니다
+      if (response.verified) {
+        setIsEmailVerified(true);
+        toast.success('이메일 인증이 완료되었습니다.');
+      } else {
+        toast.error(response.message || '인증 코드가 올바르지 않습니다.');
+      }
+    } catch (error) {
+      const errorMessage = error?.response?.data?.message || '인증 코드 검증에 실패했습니다.';
+      toast.error(errorMessage);
+      console.error('Verify code error:', error);
+    } finally {
+      setIsVerifyingCode(false);
+    }
+  };
+  
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     
@@ -210,6 +296,12 @@ export function SignupPage({ onSignup, onBackToLogin }) {
     }
     if (signupFormData.password !== signupFormData.confirmPassword) {
       toast.error('비밀번호가 일치하지 않습니다.');
+      return;
+    }
+    
+    // 이메일 인증 확인
+    if (!isEmailVerified) {
+      toast.error('이메일 인증을 완료해주세요.');
       return;
     }
 
@@ -540,24 +632,95 @@ export function SignupPage({ onSignup, onBackToLogin }) {
 
                   <InputGroup>
                     <InputLabel>이메일 *</InputLabel>
-                    <InputWrapper>
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--muted-foreground)' }} />
-                      <InputField
-                        type="email"
-                        name="email"
-                        value={signupFormData.email}
-                        onChange={handleInputChange}
-                        onKeyDown={(e) => {
-                          // 스페이스바 입력 자체를 막기
-                          if (e.key === ' ') {
-                            e.preventDefault();
-                          }
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                      <InputWrapper style={{ flex: 1 }}>
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--muted-foreground)' }} />
+                        <InputField
+                          type="email"
+                          name="email"
+                          value={signupFormData.email}
+                          onChange={handleInputChange}
+                          onKeyDown={(e) => {
+                            // 스페이스바 입력 자체를 막기
+                            if (e.key === ' ') {
+                              e.preventDefault();
+                            }
+                          }}
+                          placeholder="example@email.com"
+                          maxLength={50}
+                          required
+                          disabled={isEmailVerified}
+                          style={{
+                            backgroundColor: isEmailVerified ? 'var(--muted)' : undefined,
+                          }}
+                        />
+                      </InputWrapper>
+                      <Button
+                        type="button"
+                        onClick={handleSendVerificationCode}
+                        disabled={isSendingCode || resendTimer > 0 || isEmailVerified || !signupFormData.email}
+                        style={{
+                          minWidth: '120px',
+                          whiteSpace: 'nowrap',
                         }}
-                        placeholder="example@email.com"
-                        maxLength={50}
-                        required
-                      />
-                    </InputWrapper>
+                      >
+                        {resendTimer > 0 ? `${resendTimer}초` : isSendingCode ? '전송 중...' : '인증 코드 전송'}
+                      </Button>
+                    </div>
+                    {!isEmailVerified && (
+                      <div style={{ marginTop: '8px' }}>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                          <InputWrapper style={{ flex: 1 }}>
+                            <InputField
+                              type="text"
+                              value={emailVerificationCode}
+                              onChange={(e) => {
+                                // IME 조합 중일 때는 필터링하지 않음
+                                if (isComposing.verificationCode) {
+                                  setEmailVerificationCode(e.target.value);
+                                  return;
+                                }
+                                // 숫자만 입력 가능
+                                const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
+                                setEmailVerificationCode(value);
+                              }}
+                              onCompositionStart={() => {
+                                setIsComposing(prev => ({ ...prev, verificationCode: true }));
+                              }}
+                              onCompositionEnd={(e) => {
+                                setIsComposing(prev => ({ ...prev, verificationCode: false }));
+                                // 조합 종료 후 숫자만 남기기
+                                const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
+                                setEmailVerificationCode(value);
+                              }}
+                              placeholder="인증 코드 6자리"
+                              maxLength={6}
+                              style={{
+                                fontFamily: 'monospace',
+                                fontSize: '16px',
+                                letterSpacing: '2px',
+                                textAlign: 'center',
+                              }}
+                            />
+                          </InputWrapper>
+                          <Button
+                            type="button"
+                            onClick={handleVerifyCode}
+                            disabled={isVerifyingCode || emailVerificationCode.length !== 6}
+                            style={{
+                              minWidth: '100px',
+                            }}
+                          >
+                            {isVerifyingCode ? '확인 중...' : '인증 확인'}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    {isEmailVerified && (
+                      <p style={{ marginTop: '8px', fontSize: '12px', color: 'var(--primary)', fontWeight: 500 }}>
+                        ✓ 이메일 인증이 완료되었습니다.
+                      </p>
+                    )}
                   </InputGroup>
 
                   {selectedRole === USER_ROLES.AGENCY && (
