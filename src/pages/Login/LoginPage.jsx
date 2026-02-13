@@ -32,6 +32,7 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false); // 기본값 false (로그인 상태 유지)
   const login = useAuthStore((state) => state.login);
 
   const handleSubmit = async (e) => {
@@ -53,6 +54,8 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
       // 가이드 문서에 따른 응답 데이터 구조
       login({
         token: response.token || response.accessToken,
+        accessToken: response.accessToken || response.token,
+        refreshToken: response.refreshToken,
         memberNo: response.memberNo,
         memberName: response.memberName || emailInput,
         memberRole: response.memberRole,
@@ -168,6 +171,8 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
                     <CheckboxLabel>
                       <input
                         type="checkbox"
+                        checked={rememberMe}
+                        onChange={(e) => setRememberMe(e.target.checked)}
                         style={{
                           width: '16px',
                           height: '16px',

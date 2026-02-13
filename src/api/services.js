@@ -22,6 +22,16 @@ export const authService = {
   resetPassword: (email, code, newPassword) => {
     return api.post(API_ENDPOINTS.AUTH.RESET_PASSWORD, { email, code, newPassword });
   },
+  
+  // 토큰 갱신
+  refresh: (refreshToken) => {
+    return api.post(API_ENDPOINTS.AUTH.REFRESH, { refreshToken });
+  },
+  
+  // 로그아웃
+  logout: (refreshToken) => {
+    return api.post(API_ENDPOINTS.AUTH.LOGOUT, { refreshToken });
+  },
 };
 
 // 회원 서비스
