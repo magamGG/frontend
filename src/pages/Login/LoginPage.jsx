@@ -32,7 +32,7 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [rememberMe, setRememberMe] = useState(true); // 기본값 true (로그인 상태 유지)
+  const [rememberMe, setRememberMe] = useState(false); // 기본값 false (로그인 상태 유지)
   const login = useAuthStore((state) => state.login);
 
   const handleSubmit = async (e) => {
