@@ -40,6 +40,8 @@ export const API_ENDPOINTS = {
     FORGOT_PASSWORD: `/api/auth/forgot-password`,
     VERIFY_RESET_CODE: `/api/auth/verify-reset-code`,
     RESET_PASSWORD: `/api/auth/reset-password`,
+    REFRESH: `/api/auth/refresh`,
+    LOGOUT: `/api/auth/logout`,
   },
 
   // 회원 API

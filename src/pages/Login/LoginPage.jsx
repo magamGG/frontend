@@ -32,6 +32,7 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false); // 기본값 false (로그인 상태 유지)
   const login = useAuthStore((state) => state.login);
 
   const handleSubmit = async (e) => {
@@ -53,6 +54,8 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
       // 가이드 문서에 따른 응답 데이터 구조
       login({
         token: response.token || response.accessToken,
+        accessToken: response.accessToken || response.token,
+        refreshToken: response.refreshToken,
         memberNo: response.memberNo,
         memberName: response.memberName || emailInput,
         memberRole: response.memberRole,
@@ -65,9 +68,20 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
       // onLogin에 실제 memberRole과 agencyNo를 전달
       onLogin(response.memberRole, response.agencyNo);
     } catch (error) {
-      const errorMessage = error?.message || '로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.';
+      const status = error?.response?.status;
+      const isServerError = status >= 500;
+      const isTimeout = error?.code === 'ECONNABORTED' || error?.message?.includes('timeout');
+      const isNetworkError = error?.message === 'Network Error' || !error?.response;
+      let errorMessage = '로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.';
+      if (isServerError || isTimeout || isNetworkError) {
+        errorMessage = '서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.';
+      } else if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error?.message && !isTimeout && !isNetworkError) {
+        errorMessage = error.message;
+      }
       toast.error(errorMessage);
-      console.error('Login error:', error);
+      console.error('Login error:', error?.response?.data ?? error?.message ?? error);
     } finally {
       setIsLoading(false);
     }
@@ -168,6 +182,8 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
                     <CheckboxLabel>
                       <input
                         type="checkbox"
+                        checked={rememberMe}
+                        onChange={(e) => setRememberMe(e.target.checked)}
                         style={{
                           width: '16px',
                           height: '16px',

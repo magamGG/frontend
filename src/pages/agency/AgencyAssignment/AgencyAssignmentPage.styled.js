@@ -7,7 +7,6 @@ export const AgencyAssignmentRoot = styled.div`
   display: flex;
   justify-content: center;
   background-color: var(--background);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 `;
 
 // 중앙 정렬 및 최대 폭 설정 (데스크탑 레이아웃 기준)

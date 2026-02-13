@@ -61,51 +61,72 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true); // 로딩 상태 (새로고침 시 깜빡임 방지)
 
   // Zustand store에서 저장된 인증 정보 가져오기
-  const { user, token, isAuthenticated, logout: storeLogout } = useAuthStore();
+  const { user, token, isAuthenticated, logout: storeLogout, initializeAuth } = useAuthStore();
 
   // 세션 복구 (JWT refresh 토큰 연동: 토큰 있으면 세션 유지, 비소속이면 join-request로)
+  // 페이지 로드 시 인증 상태 복원
   useEffect(() => {
-    const restoreSession = () => {
-      if (token && user && isAuthenticated) {
-        const memberRole = user.memberRole;
-        const agencyNo = user.agencyNo;
-        const hasAgencyVal = agencyNo != null && agencyNo !== '' && agencyNo !== 0;
+    const restoreSession = async () => {
+      try {
+        // 1. 먼저 Refresh Token으로 Access Token 복원 시도
+        const restored = await initializeAuth();
+        
+        // 2. 복원 성공 후 또는 이미 token이 있는 경우 사용자 정보 확인
+        const currentUser = useAuthStore.getState().user;
+        const currentToken = useAuthStore.getState().token;
+        const currentIsAuthenticated = useAuthStore.getState().isAuthenticated;
+        
+        if ((restored || (currentToken && currentUser && currentIsAuthenticated)) && currentUser) {
+          // 인증 상태 복원 성공 → 역할에 따라 화면 설정
+          const memberRole = currentUser.memberRole;
+          const agencyNo = currentUser.agencyNo;
+          const hasAgencyVal = agencyNo != null && agencyNo !== '' && agencyNo !== 0;
 
-        const artistAndManagerRoles = [
-          '웹툰 작가',
-          '웹소설 작가',
-          '어시스트 - 채색',
-          '어시스트 - 조명',
-          '어시스트 - 배경',
-          '어시스트 - 선화',
-          '어시스트 - 기타',
-          '담당자',
-        ];
-        const isArtistOrManager = artistAndManagerRoles.includes(memberRole) || (memberRole?.startsWith?.('어시스트'));
+          // 어시스트 역할 포함한 상세한 역할 분류
+          const artistAndManagerRoles = [
+            '웹툰 작가',
+            '웹소설 작가',
+            '어시스트 - 채색',
+            '어시스트 - 조명',
+            '어시스트 - 배경',
+            '어시스트 - 선화',
+            '어시스트 - 기타',
+            '담당자',
+          ];
+          const isArtistOrManager = artistAndManagerRoles.includes(memberRole) || (memberRole?.startsWith?.('어시스트'));
 
-        let roleType = null;
-        if (memberRole === '에이전시 관리자') {
-          roleType = 'agency';
-          setAuthView('dashboard');
-        } else if (isArtistOrManager) {
-          roleType = memberRole === '담당자' ? 'manager' : 'artist';
-          setAuthView(hasAgencyVal ? 'dashboard' : 'join-request');
+          let roleType = null;
+          if (memberRole === '에이전시 관리자') {
+            roleType = 'agency';
+            setAuthView('dashboard');
+          } else if (isArtistOrManager) {
+            roleType = memberRole === '담당자' ? 'manager' : 'artist';
+            setAuthView(hasAgencyVal ? 'dashboard' : 'join-request');
+          } else {
+            roleType = 'artist';
+            setAuthView('dashboard');
+          }
+
+          setUserRole(roleType);
+          setHasAgency(hasAgencyVal);
         } else {
-          roleType = 'artist';
-          setAuthView('dashboard');
+          // 복원 실패 또는 토큰 없음 → 로그인 화면
+          setAuthView('login');
+          setUserRole(null);
+          setHasAgency(false);
         }
-        setUserRole(roleType);
-        setHasAgency(hasAgencyVal);
-      } else {
+      } catch (error) {
+        console.error('세션 복원 실패:', error);
         setAuthView('login');
         setUserRole(null);
         setHasAgency(false);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
 
     restoreSession();
-  }, [token, user, isAuthenticated]);
+  }, [initializeAuth]);
 
   /**
    * @param {string} memberRole - 백엔드에서 받은 실제 MEMBER_ROLE 값 (예: "웹툰 작가", "담당자", "에이전시 관리자")

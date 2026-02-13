@@ -81,17 +81,19 @@ const ATTENDANCE_TYPE_COLORS = {
   '휴재': '#6B7280',
 };
 
-// API typeCounts에서 반차/반반차 제외, 연차·병가 → '휴가'로 합쳐 표시
+// API typeCounts에서 반차/반반차 제외, 연차·병가·VACATION → '휴가'로 합쳐 표시
 function formatAttendanceTypeCounts(typeCounts) {
   if (!Array.isArray(typeCounts)) return [];
   const filtered = typeCounts.filter(
     (item) => item.type !== '반차' && item.type !== '반반차' && item.type !== '휴재'
   );
   const leaveLabel = '휴가';
-  const leaveTypes = ['연차', '병가'];
+  const leaveTypes = ['연차', '병가', 'VACATION'];
   const byDisplayName = {};
   filtered.forEach((item) => {
-    const displayName = leaveTypes.includes(item.type) ? leaveLabel : item.type;
+    const rawType = (item.type && String(item.type).trim()) || '';
+    const displayName = leaveTypes.includes(rawType) ? leaveLabel : rawType || item.type;
+    if (!displayName) return;
     if (!byDisplayName[displayName]) {
       byDisplayName[displayName] = {
         count: 0,

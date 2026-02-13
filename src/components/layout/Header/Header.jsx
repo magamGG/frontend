@@ -13,9 +13,7 @@ import {
   HeaderContent,
   LogoSection,
   LogoIcon,
-  LogoText,
-  LogoTitle,
-  LogoSubtitle,
+  LogoDomain,
   CurrentPageTitle,
   ActionsSection,
   AttendanceButton,
@@ -252,9 +250,8 @@ export function Header({
     fetchNotifications();
   }, []);
 
-  const unreadCount = notifications.filter(
-    (n) => !n.isRead,
-  ).length;
+  const unreadNotifications = notifications.filter((n) => !n.isRead);
+  const unreadCount = unreadNotifications.length;
 
   // 사용자 정보 로드
   const loadUserInfo = async () => {
@@ -309,15 +306,12 @@ export function Header({
   }, [showNotifications]);
 
   const handleNotificationClick = async (notification) => {
-    // 읽지 않은 알림인 경우에만 API 호출
+    // 읽지 않은 알림인 경우 API 호출 후 목록에서 제거(읽은 알림은 창에 안 보이게)
     if (!notification.isRead) {
       try {
         await notificationService.markAsRead(notification.id);
-        // 로컬 상태 업데이트
-        setNotifications(
-          notifications.map((n) =>
-            n.id === notification.id ? { ...n, isRead: true } : n,
-          ),
+        setNotifications((prev) =>
+          prev.filter((n) => n.id !== notification.id),
         );
       } catch (error) {
         console.error('알림 읽음 처리 실패:', error);
@@ -330,17 +324,15 @@ export function Header({
     );
     if (sectionIndex !== -1) {
       onNavigateToSection(sectionIndex);
-      setShowNotifications(false);
     }
+    setShowNotifications(false);
   };
 
   const markAllAsRead = async () => {
     try {
       await notificationService.markAllAsRead();
-      // 로컬 상태 업데이트
-      setNotifications(
-        notifications.map((n) => ({ ...n, isRead: true })),
-      );
+      // 읽은 알림은 창에 더 이상 안 보이게 목록에서 제거
+      setNotifications((prev) => prev.filter((n) => n.isRead));
     } catch (error) {
       console.error('모든 알림 읽음 처리 실패:', error);
       toast.error('알림 읽음 처리에 실패했습니다.');
@@ -351,8 +343,7 @@ export function Header({
     event.stopPropagation();
     try {
       await notificationService.deleteNotification(id);
-      // 로컬 상태에서 삭제
-      setNotifications(notifications.filter((n) => n.id !== id));
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
     } catch (error) {
       console.error('알림 삭제 실패:', error);
       toast.error('알림 삭제에 실패했습니다.');
@@ -386,38 +377,13 @@ export function Header({
         {/* Left - Logo */}
         <LogoSection>
           <LogoIcon>
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <circle
-                cx="12"
-                cy="8"
-                r="3"
-                fill="currentColor"
-                style={{ color: 'white' }}
-              />
-              <path
-                d="M12 12C8 12 6 14 6 14V18C6 18 8 20 12 20C16 20 18 18 18 18V14C18 14 16 12 12 12Z"
-                fill="currentColor"
-                style={{ color: 'white' }}
-              />
-              <path
-                d="M8 6C8 6 9 4 12 4C15 4 16 6 16 6"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                style={{ color: 'white' }}
-              />
-            </svg>
+            <img 
+              src="/images/hourglass.png" 
+              alt="마감지기 로고" 
+              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+            />
           </LogoIcon>
-          <LogoText>
-            <LogoTitle>마감지기</LogoTitle>
-            <LogoSubtitle>Webtoon Dashboard</LogoSubtitle>
-          </LogoText>
+          <LogoDomain>magam.gg</LogoDomain>
         </LogoSection>
 
         {/* Center - Current Page */}
@@ -489,14 +455,14 @@ export function Header({
                     )}
                   </NotificationHeader>
 
-                  {/* Notification List */}
+                  {/* Notification List - 읽지 않은 알림만 표시 */}
                   <NotificationList>
-                    {notifications.length === 0 ? (
+                    {unreadNotifications.length === 0 ? (
                       <EmptyNotification>
                         알림이 없습니다
                       </EmptyNotification>
                     ) : (
-                      notifications.map((notification) => (
+                      unreadNotifications.map((notification) => (
                         <NotificationItem
                           key={notification.id}
                           $isUnread={!notification.isRead}

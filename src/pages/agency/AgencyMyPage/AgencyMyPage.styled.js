@@ -11,7 +11,6 @@ export const AgencyMyPageOverlay = styled.div`
   justify-content: center;
   padding: 32px;
   overflow: auto;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 `;
 
 // 메인 컨테이너 (데스크탑 레이아웃 기준)

@@ -10,7 +10,6 @@ export const LeaveManagementBody = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${theme.spacing[4]};
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 `;
 
 // 페이지 헤더
