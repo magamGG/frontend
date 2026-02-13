@@ -301,11 +301,13 @@ export function SignupPage({ onSignup, onBackToLogin }) {
       return;
     }
     
-    // 이메일 인증 확인
+    // 이메일 인증 확인 - 테스트를 위해 주석처리
+    /*
     if (!isEmailVerified) {
       toast.error('이메일 인증을 완료해주세요.');
       return;
     }
+    */
 
     setIsLoading(true);
     try {

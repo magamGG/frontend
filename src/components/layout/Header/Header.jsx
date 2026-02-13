@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "motion/react";
-import { Bell, Plus, User, X, ChevronRight } from "lucide-react";
+import { Bell, Plus, User, X, ChevronRight, MessageSquare } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import useNotificationSource from "@/hooks/useNotificationSource";
 import { Badge } from "@/app/components/ui/badge";
@@ -8,6 +8,7 @@ import { getMemberProfileUrl } from '@/api/config';
 import useAuthStore from '@/store/authStore';
 import { notificationService } from "@/api/services";
 import { toast } from "sonner";
+import useChatStore from '@/store/chatStore';
 import {
   HeaderContainer,
   HeaderContent,
@@ -126,9 +127,34 @@ export function Header({
 }) {
   const { user } = useAuthStore();
   const memberNo = user?.memberNo;
+  const { openChatList, openChatDetail, getTotalUnreadCount, chatRooms } = useChatStore();
+
+  // chatStore 상태 변경을 강제로 감지하기 위한 추가 구독
+  const [forceUpdate, setForceUpdate] = useState(0);
+  
+  useEffect(() => {
+    // chatStore 변경사항을 감지하기 위한 interval (임시 해결책)
+    const interval = setInterval(() => {
+      setForceUpdate(prev => prev + 1);
+    }, 1000); // 1초마다 체크
+    
+    return () => clearInterval(interval);
+  }, []);
 
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef(null);
+  const [showMessenger, setShowMessenger] = useState(false);
+  const messengerRef = useRef(null);
+  const [messages, setMessages] = useState([
+    {
+      id: 1,
+      sender: "김철수 편집자",
+      content: "작가님, 에피소드 42 콘티 확인 부탁드립니다!",
+      time: "10분 전",
+      isRead: false,
+      avatar: null // 이미지가 없을 경우 기본 아이콘 표시
+    }
+  ]);
 
   // 사용자 정보 state
   const [memberName, setMemberName] = useState('');
@@ -253,6 +279,21 @@ export function Header({
   const unreadNotifications = notifications.filter((n) => !n.isRead);
   const unreadCount = unreadNotifications.length;
 
+  // 채팅 읽지 않은 메시지 개수
+  const chatUnreadCount = getTotalUnreadCount();
+
+  // 디버깅: chatUnreadCount 값 확인 (한 번만 로그)
+  useEffect(() => {
+    console.log('🔍 [헤더] chatUnreadCount 업데이트:', chatUnreadCount);
+    if (chatRooms.length > 0) {
+      console.log('🔍 [헤더] chatRooms 개별 unreadCount:', chatRooms.map(room => ({ 
+        chatRoomNo: room.chatRoomNo, 
+        chatRoomName: room.chatRoomName, 
+        unreadCount: room.unreadCount 
+      })));
+    }
+  }, [chatUnreadCount]); // chatUnreadCount가 실제로 변경될 때만 로그
+
   // 사용자 정보 로드
   const loadUserInfo = async () => {
     if (!memberNo) return;
@@ -282,28 +323,21 @@ export function Header({
   // Close notification panel when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (
-        notificationRef.current &&
-        !notificationRef.current.contains(event.target)
-      ) {
+      // 알림창 닫기 로직
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
         setShowNotifications(false);
+      }
+      // 메신저창 닫기 로직 추가
+      if (messengerRef.current && !messengerRef.current.contains(event.target)) {
+        setShowMessenger(false);
       }
     };
 
-    if (showNotifications) {
-      document.addEventListener(
-        "mousedown",
-        handleClickOutside,
-      );
+    if (showNotifications || showMessenger) {
+      document.addEventListener("mousedown", handleClickOutside);
     }
-
-    return () => {
-      document.removeEventListener(
-        "mousedown",
-        handleClickOutside,
-      );
-    };
-  }, [showNotifications]);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showNotifications, showMessenger]);
 
   const handleNotificationClick = async (notification) => {
     // 읽지 않은 알림인 경우 API 호출 후 목록에서 제거(읽은 알림은 창에 안 보이게)
@@ -326,6 +360,19 @@ export function Header({
       onNavigateToSection(sectionIndex);
     }
     setShowNotifications(false);
+  };
+
+  const handleMessageClick = (msg) => {
+    // 1. 'chat' 또는 'messenger'라는 ID를 가진 섹션의 인덱스를 찾습니다.
+    const chatSectionIndex = sections.findIndex(s => s.id === 'chat' || s.id === 'messenger');
+
+    if (chatSectionIndex !== -1) {
+      onNavigateToSection(chatSectionIndex); // 해당 페이지로 이동
+      setShowMessenger(false);               // 드롭다운 닫기
+    } else {
+      // 만약 섹션이 없다면 토스트 알림이라도 띄워줍니다.
+      toast.info(`${msg.sender}님과의 채팅 페이지를 준비 중입니다.`);
+    }
   };
 
   const markAllAsRead = async () => {
@@ -409,6 +456,84 @@ export function Header({
               <span style={{ fontSize: '14px', fontWeight: '500' }}>근태신청</span>
             </AttendanceButton>
           )}
+
+          {/* Messenger Button */}
+          <div style={{ position: 'relative' }} ref={messengerRef}>
+            <NotificationButton
+              onClick={() => {
+                openChatList(); // 직접 호출 (getState 빼기)
+                if (showNotifications) setShowNotifications(false);
+              }}
+            >
+              <MessageSquare style={{ width: '24px', height: '24px' }} />
+              {chatUnreadCount > 0 && <NotificationBadge />}
+            </NotificationButton>
+
+            <AnimatePresence>
+              {showMessenger && (
+                <NotificationPanel
+                  as={motion.div}
+                  initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <NotificationArrow />
+                  <NotificationHeader>
+                    <NotificationHeaderTitle>메시지</NotificationHeaderTitle>
+                  </NotificationHeader>
+                  <NotificationList>
+                    {messages.length === 0 ? (
+                      <EmptyNotification>새로운 메시지가 없습니다</EmptyNotification>
+                    ) : (
+                      messages.map((msg) => (
+                        <NotificationItem
+                          key={msg.id}
+                          $isUnread={!msg.isRead}
+                          onClick={() => {
+                            openChatDetail(msg); // 직접 호출
+                            setShowMessenger(false);
+                          }}
+                        >
+                          <NotificationItemContent>
+                            {/* 발신자 프로필 이미지 (없으면 기본 아이콘) */}
+                            <div style={{
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '50%',
+                              background: 'var(--secondary)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              marginRight: '12px',
+                              flexShrink: 0
+                            }}>
+                              <User style={{ width: '16px', height: '16px', color: 'var(--muted-foreground)' }} />
+                            </div>
+
+                            <NotificationItemMain>
+                              <NotificationItemHeader>
+                                <NotificationItemTitle style={{ fontWeight: 700 }}>
+                                  {msg.sender}
+                                </NotificationItemTitle>
+                                {!msg.isRead && <UnreadDot />}
+                              </NotificationItemHeader>
+                              <NotificationItemMessage>
+                                {msg.content}
+                              </NotificationItemMessage>
+                              <NotificationItemFooter>
+                                <NotificationItemTime>{msg.time}</NotificationItemTime>
+                              </NotificationItemFooter>
+                            </NotificationItemMain>
+                          </NotificationItemContent>
+                        </NotificationItem>
+                      ))
+                    )}
+                  </NotificationList>
+                </NotificationPanel>
+              )}
+            </AnimatePresence>
+          </div>
 
           {/* Notifications - 프로필 왼쪽에 배치 */}
           <div style={{ position: 'relative' }} ref={notificationRef}>

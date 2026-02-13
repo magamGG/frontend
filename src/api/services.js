@@ -589,6 +589,55 @@ export const managerService = {
   getHealthMonitoringDetail: (type) => api.get(API_ENDPOINTS.MANAGER.HEALTH_MONITORING_DETAIL(type || 'mental')),
 };
 
+// 채팅 서비스
+export const chatService = {
+  // 내 채팅방 목록 조회
+  getChatRooms: (memberNo) => {
+    console.log('🔵 [API] getChatRooms 호출:', { memberNo });
+    return api.get(API_ENDPOINTS.CHAT.ROOMS(memberNo));
+  },
+
+  // 에이전시별 채팅방 목록 조회
+  getChatRoomsByAgency: (agencyNo, type = 'all') => {
+    console.log('🔵 [API] getChatRoomsByAgency 호출:', { agencyNo, type });
+    const url = API_ENDPOINTS.CHAT.ROOMS_BY_AGENCY(agencyNo, type);
+    console.log('🔵 [API] 요청 URL:', url);
+    return api.get(url).then(response => {
+      console.log('🔵 [API] getChatRoomsByAgency 응답:', response.data);
+      // unreadCount 로그 추가
+      if (Array.isArray(response.data)) {
+        response.data.forEach(room => {
+          console.log(`🔍 [DEBUG] 채팅방 ${room.chatRoomNo} unreadCount:`, room.unreadCount);
+        });
+      }
+      return response;
+    });
+  },
+
+  // 채팅방 입장 (멤버 등록)
+  joinChatRoom: (chatRoomNo) => {
+    console.log('🔵 [API] joinChatRoom 호출:', { chatRoomNo });
+    return api.post(API_ENDPOINTS.CHAT.JOIN_ROOM(chatRoomNo));
+  },
+
+  // 특정 채팅방의 메시지 목록 조회
+  getChatMessages: (chatRoomNo, page = 0, size = 20) => {
+    return api.get(`${API_ENDPOINTS.CHAT.MESSAGES(chatRoomNo)}?page=${page}&size=${size}`);
+  },
+
+  // 마지막으로 읽은 메시지 업데이트
+  updateLastReadMessage: (chatRoomNo, lastChatNo) => {
+    console.log('🔵 [API] updateLastReadMessage 호출:', { chatRoomNo, lastChatNo });
+    return api.put(`/api/chat/rooms/${chatRoomNo}/read?lastChatNo=${lastChatNo}`);
+  },
+
+  // 특정 채팅방의 읽지 않은 메시지 개수 조회
+  getUnreadCount: (chatRoomNo) => {
+    console.log('🔵 [API] getUnreadCount 호출:', { chatRoomNo });
+    return api.get(`/api/chat/rooms/${chatRoomNo}/unread-count`);
+  },
+};
+
 export default {
   authService,
   memberService,
@@ -600,4 +649,5 @@ export default {
   healthService,
   agencyService,
   managerService,
+  chatService,
 };
