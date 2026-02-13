@@ -68,9 +68,20 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
       // onLogin에 실제 memberRole과 agencyNo를 전달
       onLogin(response.memberRole, response.agencyNo);
     } catch (error) {
-      const errorMessage = error?.message || '로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.';
+      const status = error?.response?.status;
+      const isServerError = status >= 500;
+      const isTimeout = error?.code === 'ECONNABORTED' || error?.message?.includes('timeout');
+      const isNetworkError = error?.message === 'Network Error' || !error?.response;
+      let errorMessage = '로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.';
+      if (isServerError || isTimeout || isNetworkError) {
+        errorMessage = '서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.';
+      } else if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error?.message && !isTimeout && !isNetworkError) {
+        errorMessage = error.message;
+      }
       toast.error(errorMessage);
-      console.error('Login error:', error);
+      console.error('Login error:', error?.response?.data ?? error?.message ?? error);
     } finally {
       setIsLoading(false);
     }

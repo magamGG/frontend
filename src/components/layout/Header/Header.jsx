@@ -250,9 +250,8 @@ export function Header({
     fetchNotifications();
   }, []);
 
-  const unreadCount = notifications.filter(
-    (n) => !n.isRead,
-  ).length;
+  const unreadNotifications = notifications.filter((n) => !n.isRead);
+  const unreadCount = unreadNotifications.length;
 
   // 사용자 정보 로드
   const loadUserInfo = async () => {
@@ -307,15 +306,12 @@ export function Header({
   }, [showNotifications]);
 
   const handleNotificationClick = async (notification) => {
-    // 읽지 않은 알림인 경우에만 API 호출
+    // 읽지 않은 알림인 경우 API 호출 후 목록에서 제거(읽은 알림은 창에 안 보이게)
     if (!notification.isRead) {
       try {
         await notificationService.markAsRead(notification.id);
-        // 로컬 상태 업데이트
-        setNotifications(
-          notifications.map((n) =>
-            n.id === notification.id ? { ...n, isRead: true } : n,
-          ),
+        setNotifications((prev) =>
+          prev.filter((n) => n.id !== notification.id),
         );
       } catch (error) {
         console.error('알림 읽음 처리 실패:', error);
@@ -328,17 +324,15 @@ export function Header({
     );
     if (sectionIndex !== -1) {
       onNavigateToSection(sectionIndex);
-      setShowNotifications(false);
     }
+    setShowNotifications(false);
   };
 
   const markAllAsRead = async () => {
     try {
       await notificationService.markAllAsRead();
-      // 로컬 상태 업데이트
-      setNotifications(
-        notifications.map((n) => ({ ...n, isRead: true })),
-      );
+      // 읽은 알림은 창에 더 이상 안 보이게 목록에서 제거
+      setNotifications((prev) => prev.filter((n) => n.isRead));
     } catch (error) {
       console.error('모든 알림 읽음 처리 실패:', error);
       toast.error('알림 읽음 처리에 실패했습니다.');
@@ -349,8 +343,7 @@ export function Header({
     event.stopPropagation();
     try {
       await notificationService.deleteNotification(id);
-      // 로컬 상태에서 삭제
-      setNotifications(notifications.filter((n) => n.id !== id));
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
     } catch (error) {
       console.error('알림 삭제 실패:', error);
       toast.error('알림 삭제에 실패했습니다.');
@@ -462,14 +455,14 @@ export function Header({
                     )}
                   </NotificationHeader>
 
-                  {/* Notification List */}
+                  {/* Notification List - 읽지 않은 알림만 표시 */}
                   <NotificationList>
-                    {notifications.length === 0 ? (
+                    {unreadNotifications.length === 0 ? (
                       <EmptyNotification>
                         알림이 없습니다
                       </EmptyNotification>
                     ) : (
-                      notifications.map((notification) => (
+                      unreadNotifications.map((notification) => (
                         <NotificationItem
                           key={notification.id}
                           $isUnread={!notification.isRead}
