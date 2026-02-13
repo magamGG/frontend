@@ -37,6 +37,9 @@ export const API_ENDPOINTS = {
   // 인증 API
   AUTH: {
     LOGIN: `/api/auth/login`,
+    FORGOT_PASSWORD: `/api/auth/forgot-password`,
+    VERIFY_RESET_CODE: `/api/auth/verify-reset-code`,
+    RESET_PASSWORD: `/api/auth/reset-password`,
     REFRESH: `/api/auth/refresh`,
     LOGOUT: `/api/auth/logout`,
   },

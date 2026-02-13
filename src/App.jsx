@@ -63,38 +63,54 @@ export default function App() {
   // Zustand store에서 저장된 인증 정보 가져오기
   const { user, token, isAuthenticated, logout: storeLogout, initializeAuth } = useAuthStore();
 
+  // 세션 복구 (JWT refresh 토큰 연동: 토큰 있으면 세션 유지, 비소속이면 join-request로)
   // 페이지 로드 시 인증 상태 복원
   useEffect(() => {
     const restoreSession = async () => {
       try {
-        // Refresh Token으로 Access Token 복원 시도
+        // 1. 먼저 Refresh Token으로 Access Token 복원 시도
         const restored = await initializeAuth();
         
-        if (restored && user) {
-          // 인증 상태 복원 성공 → 대시보드로 이동
-          const memberRole = user.memberRole;
-          const agencyNo = user.agencyNo;
-          
-          // 역할에 따라 화면 설정
+        // 2. 복원 성공 후 또는 이미 token이 있는 경우 사용자 정보 확인
+        const currentUser = useAuthStore.getState().user;
+        const currentToken = useAuthStore.getState().token;
+        const currentIsAuthenticated = useAuthStore.getState().isAuthenticated;
+        
+        if ((restored || (currentToken && currentUser && currentIsAuthenticated)) && currentUser) {
+          // 인증 상태 복원 성공 → 역할에 따라 화면 설정
+          const memberRole = currentUser.memberRole;
+          const agencyNo = currentUser.agencyNo;
+          const hasAgencyVal = agencyNo != null && agencyNo !== '' && agencyNo !== 0;
+
+          // 어시스트 역할 포함한 상세한 역할 분류
+          const artistAndManagerRoles = [
+            '웹툰 작가',
+            '웹소설 작가',
+            '어시스트 - 채색',
+            '어시스트 - 조명',
+            '어시스트 - 배경',
+            '어시스트 - 선화',
+            '어시스트 - 기타',
+            '담당자',
+          ];
+          const isArtistOrManager = artistAndManagerRoles.includes(memberRole) || (memberRole?.startsWith?.('어시스트'));
+
+          let roleType = null;
           if (memberRole === '에이전시 관리자') {
-            setUserRole('agency');
+            roleType = 'agency';
             setAuthView('dashboard');
-          } else if (['웹툰 작가', '웹소설 작가', '담당자'].includes(memberRole)) {
-            if (!agencyNo) {
-              setUserRole(memberRole === '담당자' ? 'manager' : 'individual');
-              setAuthView('join-request');
-            } else {
-              setUserRole(memberRole === '담당자' ? 'manager' : 'individual');
-              setAuthView('dashboard');
-            }
+          } else if (isArtistOrManager) {
+            roleType = memberRole === '담당자' ? 'manager' : 'individual';
+            setAuthView(hasAgencyVal ? 'dashboard' : 'join-request');
           } else {
-            setUserRole('individual');
+            roleType = 'individual';
             setAuthView('dashboard');
           }
           
-          setHasAgency(agencyNo !== null && agencyNo !== undefined);
+          setUserRole(roleType);
+          setHasAgency(hasAgencyVal);
         } else {
-          // 복원 실패 → 로그인 화면
+          // 복원 실패 또는 토큰 없음 → 로그인 화면
           setAuthView('login');
           setUserRole(null);
           setHasAgency(false);
@@ -110,20 +126,18 @@ export default function App() {
     };
 
     restoreSession();
-  }, []); // 빈 배열로 마운트 시 한 번만 실행
+  }, [initializeAuth]);
 
   /**
    * @param {string} memberRole - 백엔드에서 받은 실제 MEMBER_ROLE 값 (예: "웹툰 작가", "담당자", "에이전시 관리자")
-   * @param {number|null} agencyNo - AGENCY_NO 값 (null일 수 있음)
+   * @param {number|null|undefined} agencyNo - AGENCY_NO 값 (null/undefined/0이면 비소속)
    */
   const handleLogin = (memberRole, agencyNo) => {
-    // memberRole이 없으면 기본값 처리
     if (!memberRole) {
       console.error('memberRole이 없습니다.');
       return;
     }
 
-    // 아티스트/담당자 역할 목록
     const artistAndManagerRoles = [
       '웹툰 작가',
       '웹소설 작가',
@@ -131,37 +145,27 @@ export default function App() {
       '어시스트 - 조명',
       '어시스트 - 배경',
       '어시스트 - 선화',
-      '어시스트- 기타',
-      '담당자'
+      '어시스트 - 기타',
+      '담당자',
     ];
+    const isArtistOrManager = artistAndManagerRoles.includes(memberRole) || (memberRole?.startsWith?.('어시스트'));
 
-    // 프론트엔드에서 사용할 역할 타입 매핑
+    const hasAgencyVal = agencyNo != null && agencyNo !== '' && agencyNo !== 0;
+
     let roleType = null;
-    let hasAgency = agencyNo !== null && agencyNo !== undefined;
-
     if (memberRole === '에이전시 관리자') {
-      // 에이전시 관리자는 항상 대시보드로 이동
       roleType = 'agency';
       setAuthView('dashboard');
-    } else if (artistAndManagerRoles.includes(memberRole)) {
-      // 아티스트/담당자 역할인 경우
-      if (!hasAgency) {
-        // AGENCY_NO가 NULL인 경우 비소속 에이전시 가입 요청 페이지로 이동
-        roleType = memberRole === '담당자' ? 'manager' : 'individual';
-        setAuthView('join-request');
-      } else {
-        // AGENCY_NO가 NULL이 아닌 경우 담당자/아티스트 대시보드로 이동
-        roleType = memberRole === '담당자' ? 'manager' : 'individual';
-        setAuthView('dashboard');
-      }
+    } else if (isArtistOrManager) {
+      roleType = memberRole === '담당자' ? 'manager' : 'individual';
+      setAuthView(hasAgencyVal ? 'dashboard' : 'join-request');
     } else {
-      // 알 수 없는 역할인 경우 기본값으로 처리
       roleType = 'individual';
       setAuthView('dashboard');
     }
 
     setUserRole(roleType);
-    setHasAgency(hasAgency);
+    setHasAgency(hasAgencyVal);
   };
 
   const handleSignup = () => {

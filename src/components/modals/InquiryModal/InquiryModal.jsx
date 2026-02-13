@@ -7,6 +7,8 @@ import { Textarea } from '@/app/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
 import { toast } from 'sonner';
 import { X, Paperclip } from 'lucide-react';
+import api from '@/api/axios';
+import useAuthStore from '@/store/authStore';
 
 const INQUIRY_TYPES = [
   { value: 'bug', label: '버그 신고' },
@@ -26,6 +28,10 @@ export function InquiryModal({ open, onOpenChange }) {
   const [content, setContent] = useState('');
   const [files, setFiles] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // useAuthStore에서 memberNo 확인
+  const { user } = useAuthStore();
+  const memberNo = user?.memberNo;
 
   const handleFileSelect = (e) => {
     const selectedFiles = Array.from(e.target.files || []);
@@ -76,17 +82,32 @@ export function InquiryModal({ open, onOpenChange }) {
       return;
     }
 
+    // memberNo 확인
+    if (!memberNo) {
+      toast.error('로그인이 필요합니다.');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      // TODO: API 호출 구현
-      // const formData = new FormData();
-      // formData.append('inquiryType', inquiryType);
-      // formData.append('title', title);
-      // formData.append('content', content);
-      // files.forEach((file) => {
-      //   formData.append('files', file);
-      // });
-      // await inquiryService.createInquiry(formData);
+      const formData = new FormData();
+      
+      // JSON 데이터 추가
+      const data = {
+        inquiryType: inquiryType,
+        title: title.trim(),
+        content: content.trim(),
+        developerEmail: 'magamgglocalservice@gmail.com' // 개발자 이메일 고정
+      };
+      formData.append('data', new Blob([JSON.stringify(data)], { type: 'application/json' }));
+      
+      // 파일 추가
+      files.forEach((file) => {
+        formData.append('files', file);
+      });
+      
+      // axios 사용 (인터셉터가 자동으로 토큰과 X-Member-No 추가)
+      await api.post('/api/inquiries', formData);
       
       toast.success('문의가 성공적으로 전송되었습니다.');
       
@@ -98,7 +119,7 @@ export function InquiryModal({ open, onOpenChange }) {
       onOpenChange(false);
     } catch (error) {
       console.error('문의 전송 실패:', error);
-      toast.error('문의 전송에 실패했습니다.');
+      toast.error(error.message || '문의 전송에 실패했습니다.');
     } finally {
       setIsLoading(false);
     }
