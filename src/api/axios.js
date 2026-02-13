@@ -11,6 +11,18 @@ const api = axios.create({
   },
 });
 
+/** 인증 없이 접근 가능한 경로 (토큰/회원번호 헤더 미첨부) - SecurityConfig permitAll과 동일 */
+function isPublicRequest(config) {
+  const url = config?.url || '';
+  const method = (config?.method || '').toLowerCase();
+  if (!url) return false;
+  const publicAuthPaths = ['/api/auth/login', '/api/auth/refresh', '/api/auth/forgot-password',
+    '/api/auth/verify-reset-code', '/api/auth/reset-password', '/api/auth/email/'];
+  if (publicAuthPaths.some((p) => url.includes(p))) return true;
+  if ((url === '/api/members' || url.endsWith('/api/members')) && method === 'post') return true; // 회원가입만
+  return false;
+}
+
 // Request 인터셉터 - 토큰 및 회원번호 자동 첨부
 api.interceptors.request.use(
   (config) => {
@@ -18,6 +30,9 @@ api.interceptors.request.use(
       // FormData 전송 시 Content-Type 제거 → multipart/form-data + boundary 자동 설정
       if (config.data instanceof FormData) {
         delete config.headers['Content-Type'];
+      }
+      if (isPublicRequest(config)) {
+        return config; // 로그인/회원가입 등에는 토큰·회원번호 미첨부 (403 방지)
       }
       // Zustand store에서 직접 state 가져오기
       const state = useAuthStore.getState();

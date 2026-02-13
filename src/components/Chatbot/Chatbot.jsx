@@ -1,23 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, ExternalLink, ChevronRight, ArrowLeft } from 'lucide-react';
+import { X, ExternalLink, ChevronRight, ArrowLeft, BarChart3, AlertTriangle, Flame, AlertCircle, TrendingDown, Circle, ArrowDown, FolderOpen, Run } from 'lucide-react';
 import { AnimatePresence } from 'motion/react';
 import useAuthStore from '@/store/authStore';
 import { TbMessageChatbot } from "react-icons/tb";
-import {
-  MdOutlineInfo,
-  MdOutlineSettings,
-  MdOutlineEvent,
-  MdOutlineAssignment,
-  MdOutlineFavorite,
-  MdOutlineCheckCircle,
-  MdOutlineBarChart,
-} from "react-icons/md";
-import {
-  projectService,
-  leaveService,
-  notificationService,
-  agencyService,
-} from '@/api';
+import { MdOutlineInfo } from "react-icons/md";
+import { chatService } from '@/api';
 import {
   ChatbotWrapper,
   ChatWindow,
@@ -44,10 +31,100 @@ import {
 
 const GREETING_LINES = ['안녕하세요. 챗봇 지지 입니다.', '무엇을 도와드릴까요?'];
 
+/** 메시지/버튼 텍스트 내 유니코드 이모지 → Lucide React 아이콘 (윈도우 이모지 대신 일관된 표시) */
+const EMOJI_TO_ICON = {
+  '📉': TrendingDown,
+  '🔴': Circle,
+  '🟡': Circle,
+  '👇': ArrowDown,
+  '🔥': Flame,
+  '😱': AlertTriangle,
+  '⚠️': AlertTriangle,
+  '📂': FolderOpen,
+  '📊': BarChart3,
+  '🏃‍♂️': Run,
+  '🏃': Run,
+};
+
+const EMOJI_REGEX = /(📉|🔴|🟡|👇|🔥|😱|⚠️|📂|📊|🏃‍♂️|🏃)/gu;
+
+/** 문자열을 이모지 구간별로 쪼개서 React 노드 배열로 반환 (텍스트 + 아이콘) */
+function renderWithIcons(str, iconSize = 14) {
+  if (!str || typeof str !== 'string') return str;
+  const parts = [];
+  let lastIndex = 0;
+  let key = 0;
+  let match;
+  EMOJI_REGEX.lastIndex = 0;
+  while ((match = EMOJI_REGEX.exec(str)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(<span key={key++}>{str.slice(lastIndex, match.index)}</span>);
+    }
+    const Icon = EMOJI_TO_ICON[match[0]];
+    if (Icon) {
+      const isRed = match[0] === '🔴';
+      const isYellow = match[0] === '🟡';
+      parts.push(
+        <Icon
+          key={key++}
+          size={iconSize}
+          style={{
+            display: 'inline-block',
+            verticalAlign: 'middle',
+            marginLeft: 2,
+            marginRight: 2,
+            ...(isRed && { color: 'var(--red-500, #ef4444)', fill: 'var(--red-500, #ef4444)' }),
+            ...(isYellow && { color: 'var(--amber-500, #f59e0b)', fill: 'var(--amber-500, #f59e0b)' }),
+          }}
+        />
+      );
+    }
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < str.length) {
+    parts.push(<span key={key++}>{str.slice(lastIndex)}</span>);
+  }
+  return parts.length > 0 ? parts : str;
+}
+
+/* ===== 퀵 리포트 버튼 (역할별) ===== */
+const QUICK_REPORT_ARTIST = [
+  { type: 'leave_balance', label: '잔여 연차 확인' },
+  { type: 'today_deadline', label: '오늘 마감 작업' },
+  { type: 'leave_summary', label: '내 휴재/휴가 기록' },
+  { type: 'latest_health', label: '최근 건강 상태' },
+];
+const QUICK_REPORT_MANAGER = [
+  { type: 'compliance_top3', label: '준수율 하위 TOP 3', icon: AlertTriangle },
+  { type: 'deadline_urgent', label: '마감 임박/지연', icon: Flame },
+  { type: 'attendance_status', label: '실시간 출근 현황' },
+  { type: 'top3_leave_artists', label: '휴재 잦은 작가 TOP 3' },
+  { type: 'pending_approvals', label: '결재 대기 목록' },
+];
+const QUICK_REPORT_AGENCY = [
+  { type: 'compliance_top3', label: '준수율 하위 TOP 3', icon: AlertTriangle },
+  { type: 'company_compliance', label: '전사 마감 준수율 현황' },
+  { type: 'at_risk_projects', label: '운영 주의 프로젝트', icon: AlertCircle },
+  { type: 'join_approval_requests', label: '신규 가입/승인 요청' },
+  { type: 'health_distribution', label: '직원 건강 분포도' },
+];
+
+function getQuickReportItems(role) {
+  if (role === 'manager' || role === '담당자') return QUICK_REPORT_MANAGER;
+  if (role === 'agency' || role === '에이전시 관리자') return QUICK_REPORT_AGENCY;
+  return QUICK_REPORT_ARTIST;
+}
+
 /* ===== 역할별 카테고리 기반 FAQ ===== */
 
-// ARTIST(작가) FAQ 카테고리
+// ARTIST(작가) FAQ 카테고리 - 모두 서비스 안내로 통합
 const FAQ_CATEGORIES_ARTIST = [
+  {
+    id: 'quick_report',
+    label: '내 현황 퀵 리포트',
+    icon: BarChart3,
+    quickReport: true,
+  },
   {
     id: 'about',
     label: '서비스 안내',
@@ -56,57 +133,32 @@ const FAQ_CATEGORIES_ARTIST = [
       'MagamGG가 무엇인가요?',
       'MagamGG에서 어떤 일을 할 수 있나요?',
       '처음 사용할 때 뭐부터 해야 하나요?',
-    ],
-  },
-  {
-    id: 'feature',
-    label: '기능 관련 질문',
-    icon: MdOutlineSettings,
-    questions: [
       '프로젝트 어디서 확인하나요?',
       '칸반 보드는 어떻게 사용하나요?',
       '캘린더에서 일정 확인은 어떻게 하나요?',
       '마감일 알림은 어디서 확인하나요?',
       '대시보드에서 뭘 볼 수 있나요?',
-    ],
-  },
-  {
-    id: 'attendance',
-    label: '근태/휴가 관련',
-    icon: MdOutlineEvent,
-    questions: [
-      '휴가 신청 어디서 하나요?',
-      '휴가 잔여 며칠인가요?',
-      '휴가 신청 취소는 어떻게 하나요?',
-      '병가 신청은 어떻게 하나요?',
-      '출퇴근 기록은 어디서 보나요?',
-    ],
-  },
-  {
-    id: 'work',
-    label: '업무 관련',
-    icon: MdOutlineAssignment,
-    questions: [
-      '오늘 할 일이 몇 개인가요?',
-      '마감 임박한 업무가 있나요?',
-      '피드백은 어디서 확인하나요?',
-      '작업 진행률 어디서 보나요?',
-    ],
-  },
-  {
-    id: 'health',
-    label: '건강 관리',
-    icon: MdOutlineFavorite,
-    questions: [
       '건강 검진은 어디서 하나요?',
       '건강 설문은 어떻게 제출하나요?',
       '내 건강 상태는 어디서 확인하나요?',
+      '휴가 신청 어디서 하나요?',
+      '휴가 신청 취소는 어떻게 하나요?',
+      '병가 신청은 어떻게 하나요?',
+      '출퇴근 기록은 어디서 보나요?',
+      '피드백은 어디서 확인하나요?',
+      '작업 진행률 어디서 보나요?',
     ],
   },
 ];
 
 // 담당자(manager) FAQ 카테고리
 const FAQ_CATEGORIES_MANAGER = [
+  {
+    id: 'quick_report',
+    label: '담당 작가 리스크 관리',
+    icon: BarChart3,
+    quickReport: true,
+  },
   {
     id: 'about',
     label: '서비스 안내',
@@ -115,58 +167,34 @@ const FAQ_CATEGORIES_MANAGER = [
       'MagamGG가 무엇인가요?',
       'MagamGG에서 담당자는 뭘 할 수 있나요?',
       '작가 관리는 어떻게 시작하나요?',
-    ],
-  },
-  {
-    id: 'feature',
-    label: '기능 관련 질문',
-    icon: MdOutlineSettings,
-    questions: [
       '프로젝트 어디서 확인하나요?',
       '칸반 보드에서 업무 배정은 어떻게 하나요?',
       '캘린더에서 팀 일정 확인은 어떻게 하나요?',
       '마감 현황은 어디서 보나요?',
       '직원 관리 어디서 하나요?',
       '원격 관리 페이지는 어디인가요?',
-    ],
-  },
-  {
-    id: 'attendance',
-    label: '근태/휴가 관련',
-    icon: MdOutlineEvent,
-    questions: [
-      '근태 신청 어디서 하나요?',
-      '휴가 잔여 며칠인가요?',
-      '작가 근태 현황은 어디서 보나요?',
-      '휴가 신청 승인은 어떻게 하나요?',
-      '작가 출퇴근 현황은 어디서 보나요?',
-    ],
-  },
-  {
-    id: 'work',
-    label: '업무 관리',
-    icon: MdOutlineAssignment,
-    questions: [
-      '오늘 할 일이 몇 개인가요?',
-      '담당 작가들 마감 현황은 어디서 보나요?',
-      '프로젝트 진행률 어디서 확인하나요?',
-      '피드백은 어떻게 남기나요?',
-    ],
-  },
-  {
-    id: 'health',
-    label: '건강 관리',
-    icon: MdOutlineFavorite,
-    questions: [
       '작가 건강 현황은 어디서 보나요?',
       '건강 검진 일정은 어디서 확인하나요?',
       '미검진 작가 알림은 어떻게 보내나요?',
+      '근태 신청 어디서 하나요?',
+      '작가 근태 현황은 어디서 보나요?',
+      '휴가 신청 승인은 어떻게 하나요?',
+      '작가 출퇴근 현황은 어디서 보나요?',
+      '담당 작가들 마감 현황은 어디서 보나요?',
+      '프로젝트 진행률 어디서 확인하나요?',
+      '피드백은 어떻게 남기나요?',
     ],
   },
 ];
 
 // 에이전시 관리자(agency) FAQ 카테고리
 const FAQ_CATEGORIES_AGENCY = [
+  {
+    id: 'quick_report',
+    label: '전사 운영 인사이트',
+    icon: BarChart3,
+    quickReport: true,
+  },
   {
     id: 'about',
     label: '서비스 안내',
@@ -175,48 +203,19 @@ const FAQ_CATEGORIES_AGENCY = [
       'MagamGG가 무엇인가요?',
       '에이전시 관리자는 뭘 할 수 있나요?',
       '전체 현황은 어디서 확인하나요?',
-    ],
-  },
-  {
-    id: 'feature',
-    label: '기능 관련 질문',
-    icon: MdOutlineSettings,
-    questions: [
       '전체 프로젝트 현황은 어디서 보나요?',
       '전체 직원 현황은 어디서 보나요?',
       '요청 관리 어디서 하나요?',
       '할당 관리 어디서 하나요?',
       '원격 관리 페이지는 어디인가요?',
       '연차 설정 어디서 하나요?',
-    ],
-  },
-  {
-    id: 'approval',
-    label: '결재/승인 관련',
-    icon: MdOutlineCheckCircle,
-    questions: [
-      '결재 대기 몇 건인가요?',
       '근태 신청 승인은 어디서 하나요?',
       '가입 요청 승인은 어디서 하나요?',
       '신청 반려는 어떻게 하나요?',
-    ],
-  },
-  {
-    id: 'stats',
-    label: '통계/현황',
-    icon: MdOutlineBarChart,
-    questions: [
       '전체 마감 현황은 어디서 보나요?',
       '출석 현황은 어디서 확인하나요?',
       '프로젝트별 작가 분포는 어디서 보나요?',
       '마감 준수율 추이는 어디서 확인하나요?',
-    ],
-  },
-  {
-    id: 'health',
-    label: '건강 관리',
-    icon: MdOutlineFavorite,
-    questions: [
       '전체 직원 건강 현황은 어디서 보나요?',
       '건강 검진 설정은 어디서 하나요?',
       '미검진 인원 일괄 알림은 어떻게 보내나요?',
@@ -431,8 +430,8 @@ const getNextId = () => `msg-${Date.now()}-${++messageIdCounter}`;
 export function Chatbot({ sections = [], onNavigateToSection, onOpenAttendanceModal, userRole }) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [quickReportLoading, setQuickReportLoading] = useState(false);
   const listRef = useRef(null);
   const user = useAuthStore((state) => state.user);
 
@@ -486,220 +485,163 @@ export function Chatbot({ sections = [], onNavigateToSection, onOpenAttendanceMo
     ]);
   };
 
-  const handleApiResponse = async (query) => {
+  const handleApiResponse = (query) => {
     const q = query.trim().toLowerCase();
-    const memberNo = user?.memberNo;
-    const agencyNo = user?.agencyNo;
-    const memberRole = user?.memberRole || '';
 
-    try {
-      // 서비스 안내 - 질문별 개별 답변
+    // 서비스 안내 - 질문별 고정 답변만 (API 조회 없음)
 
-      // 1. MagamGG가 무엇인가요? (공통 기본 소개)
-      if (q.includes('magamgg') && (q.includes('무엇') || q.includes('뭐야') || q.includes('뭔가'))) {
-        addMessage(
-          'MagamGG는 웹툰 작가·담당자·에이전시를 위한 작가 관리 시스템이에요. 프로젝트 관리, 근태·휴가, 건강 관리, 마감 알림 등을 한곳에서 처리할 수 있어요.',
-          false
-        );
-        return true;
-      }
-
-      // 2. ARTIST(작가): 어떤 일을 할 수 있나요?
-      if ((effectiveRole === 'artist' || effectiveRole === '작가') &&
-          (q.includes('어떤 일') || q.includes('뭘 할 수') || q.includes('뭘 할수'))) {
-        addMessage(
-          '작가로서 할 수 있는 일: 대시보드에서 오늘 할 일 확인, 프로젝트 칸반 보드로 작업 관리, 휴가·연차 신청, 건강 설문 제출, 캘린더로 일정 확인이에요. 마감일 알림도 받을 수 있어요!',
-          false,
-          { actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' }
-        );
-        return true;
-      }
-
-      // 2. 담당자: 담당자는 뭘 할 수 있나요?
-      if ((effectiveRole === 'manager' || effectiveRole === '담당자') &&
-          (q.includes('담당자') && (q.includes('뭘') || q.includes('할 수')))) {
-        addMessage(
-          '담당자로서 할 수 있는 일: 담당 작가의 업무·근태 관리, 칸반 보드에서 작업 배정·피드백, 근태 신청 승인, 원격 관리로 재택·워케이션 확인, 작가 건강 현황 확인 등이에요.',
-          false,
-          { actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' }
-        );
-        return true;
-      }
-
-      // 2. 에이전시: 에이전시 관리자는 뭘 할 수 있나요?
-      if ((effectiveRole === 'agency' || effectiveRole === '에이전시 관리자') &&
-          (q.includes('에이전시') && (q.includes('뭘') || q.includes('할 수')))) {
-        addMessage(
-          '에이전시 관리자로서 할 수 있는 일: 전체 프로젝트·직원 현황 확인, 근태·가입 요청 결재, 담당자-작가 할당, 연차 설정, 건강 검진 관리, 원격 관리로 전체 직원 상태 확인 등이에요.',
-          false,
-          { actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' }
-        );
-        return true;
-      }
-
-      // 3. ARTIST(작가): 처음 사용할 때 뭐부터 해야 하나요?
-      if ((effectiveRole === 'artist' || effectiveRole === '작가') &&
-          (q.includes('처음') || q.includes('뭐부터') || q.includes('해야'))) {
-        addMessage(
-          '처음 사용 시 순서: ① 대시보드에서 오늘 할 일 확인 ② 프로젝트 관리에서 내 프로젝트 선택 ③ 칸반 보드에서 작업 상태 확인 ④ 필요하면 상단 근태 신청으로 휴가 신청하세요!',
-          false,
-          { actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' }
-        );
-        return true;
-      }
-
-      // 3. 담당자: 작가 관리는 어떻게 시작하나요?
-      if ((effectiveRole === 'manager' || effectiveRole === '담당자') &&
-          (q.includes('작가') && (q.includes('관리') || q.includes('시작')))) {
-        addMessage(
-          '작가 관리 시작 순서: ① 직원 관리에서 담당 작가 목록 확인 ② 프로젝트 관리에서 칸반 보드로 작업 배정 ③ 대시보드에서 근태 승인 대기 건 확인 ④ 원격 관리에서 재택·워케이션 현황 파악하세요!',
-          false,
-          { actionType: 'section', actionLabel: '직원 관리 이동', sectionKeyword: '직원' }
-        );
-        return true;
-      }
-
-      // 3. 에이전시: 전체 현황은 어디서 확인하나요?
-      if ((effectiveRole === 'agency' || effectiveRole === '에이전시 관리자') &&
-          (q.includes('전체') && (q.includes('현황') || q.includes('확인')))) {
-        addMessage(
-          '대시보드에서 활동 작가 수, 진행 프로젝트, 마감 준수율, 결재 대기, 출석·건강 분포 등 전체 현황을 한눈에 확인할 수 있어요.',
-          false,
-          { actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' }
-        );
-        return true;
-      }
-
-      // 오늘 할 일 몇 개?
-      if (q.includes('할 일') || q.includes('할일') || (q.includes('오늘') && (q.includes('몇') || q.includes('개')))) {
-        const tasks = await projectService.getMyTodayTasks();
-        const count = Array.isArray(tasks) ? tasks.length : 0;
-        addMessage(
-          `오늘 할 일 ${count}건이에요. 자세한 내용은 대시보드 페이지에서 확인해 주세요.`,
-          false,
-          { actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' }
-        );
-        return true;
-      }
-
-      // 마감 임박한 업무 (DB 조회)
-      if (q.includes('마감') && (q.includes('임박') || q.includes('있') || q.includes('몇'))) {
-        const cards = await projectService.getMyDeadlineCards();
-        const count = Array.isArray(cards) ? cards.length : 0;
-        addMessage(
-          count > 0
-            ? `마감 임박한 업무 ${count}건이에요. 대시보드나 캘린더에서 자세히 확인해 주세요.`
-            : '마감 임박한 업무는 없어요. 대시보드에서 전체 현황을 확인해 주세요.',
-          false,
-          { actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' }
-        );
-        return true;
-      }
-
-      // 내 프로젝트 몇 개? (작가/담당자)
-      if (q.includes('프로젝트') && (q.includes('몇') || q.includes('개'))) {
-        const res = await projectService.getMyProjectCount();
-        const count = res?.count ?? res ?? 0;
-        addMessage(
-          `참여 중인 프로젝트 ${count}개예요. 프로젝트 관리 페이지에서 확인해 주세요.`,
-          false,
-          { actionType: 'section', actionLabel: '프로젝트 이동', sectionKeyword: '프로젝트' }
-        );
-        return true;
-      }
-
-      // 휴가/연차 잔여 (역할별 안내)
-      if ((q.includes('휴가') || q.includes('연차')) && (q.includes('잔여') || q.includes('며칠') || q.includes('몇'))) {
-        if (!memberNo) {
-          addMessage('로그인 후 조회할 수 있어요.', false);
-          return true;
-        }
-        const balance = await leaveService.getLeaveBalance(memberNo);
-        const remain = balance?.leaveBalanceRemainDays ?? 0;
-        const year = balance?.leaveBalanceYear || String(new Date().getFullYear());
-        
-        // 작가는 원격관리 페이지가 없으므로 다른 안내
-        if (effectiveRole === 'artist' || effectiveRole === '작가') {
-          addMessage(
-            `${year}년 연차 잔여 ${remain}일이에요. 휴가 신청은 상단 헤더의 근태 신청 버튼을 눌러주세요!`,
-            false,
-            { actionType: 'attendance', actionLabel: '근태 신청 열기' }
-          );
-        } else {
-          addMessage(
-            `${year}년 연차 잔여 ${remain}일이에요. 사용 내역은 원격 관리 페이지에서 확인할 수 있어요.`,
-            false,
-            { actionType: 'section', actionLabel: '원격 관리 이동', sectionKeyword: '원격' }
-          );
-        }
-        return true;
-      }
-
-      // 결재/승인 대기 (에이전시) - 근태 + 가입 요청
-      if ((q.includes('결재') || q.includes('승인') || q.includes('대기')) && (q.includes('몇') || q.includes('건'))) {
-        if (!agencyNo) {
-          addMessage(
-            '에이전시 관리자만 확인할 수 있어요. 담당자는 대시보드 페이지에서 근태 신청 현황을 확인해 주세요.',
-            false,
-            { actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' }
-          );
-          return true;
-        }
-        const [pendingLeave, joinReqs] = await Promise.all([
-          leaveService.getAgencyPendingRequests(agencyNo),
-          agencyService.getJoinRequests(agencyNo),
-        ]);
-        const leaveCount = Array.isArray(pendingLeave) ? pendingLeave.length : 0;
-        const joinCount = Array.isArray(joinReqs) ? joinReqs.length : 0;
-        const total = leaveCount + joinCount;
-        const parts = [];
-        if (leaveCount > 0) parts.push(`근태 신청 ${leaveCount}건`);
-        if (joinCount > 0) parts.push(`가입 요청 ${joinCount}건`);
-        addMessage(
-          parts.length > 0
-            ? `승인 대기 ${total}건이에요. (${parts.join(', ')}) 요청 관리 페이지에서 처리해 주세요.`
-            : '승인 대기 건수는 없어요.',
-          false,
-          { actionType: 'section', actionLabel: '요청 관리 이동', sectionKeyword: '요청' }
-        );
-        return true;
-      }
-
-      // 읽지 않은 알림
-      if (q.includes('알림') && (q.includes('몇') || q.includes('있어') || q.includes('개'))) {
-        const list = await notificationService.getNotifications();
-        const unread = Array.isArray(list) ? list.filter((n) => n.notificationStatus === 'Y').length : 0;
-        addMessage(
-          `읽지 않은 알림 ${unread}건이에요. 헤더의 알림 아이콘을 눌러 확인해 주세요.`,
-          false
-        );
-        return true;
-      }
-
-      // 담당자: 담당 작가 근태 신청
-      if (memberRole === '담당자' && (q.includes('근태') || q.includes('신청')) && (q.includes('몇') || q.includes('건'))) {
-        const list = await leaveService.getManagerRequests();
-        const pending = Array.isArray(list) ? list.filter((r) => r.attendanceRequestStatus === 'PENDING').length : 0;
-        addMessage(
-          `대기 중인 근태 신청 ${pending}건이에요. 대시보드에서 확인해 주세요.`,
-          false,
-          { actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' }
-        );
-        return true;
-      }
-
-      // 어디서 해요? (위치 안내) - 네비게이션 액션 포함
-      const guideResult = getMenuGuideResult(query, effectiveRole);
-      if (guideResult) {
-        addMessage(guideResult.answer, false, guideResult.action);
-        return true;
-      }
-
-      return false;
-    } catch (err) {
-      addMessage('조회 중 오류가 났어요. 잠시 후 다시 시도해 주세요.', false);
+    // 1. MagamGG가 무엇인가요? (공통 기본 소개)
+    if (q.includes('magamgg') && (q.includes('무엇') || q.includes('뭐야') || q.includes('뭔가'))) {
+      addMessage(
+        'MagamGG는 웹툰 작가·담당자·에이전시를 위한 작가 관리 시스템이에요. 프로젝트 관리, 근태·휴가, 건강 관리, 마감 알림 등을 한곳에서 처리할 수 있어요.',
+        false
+      );
       return true;
     }
+
+    // 2. ARTIST(작가): 어떤 일을 할 수 있나요?
+    if ((effectiveRole === 'artist' || effectiveRole === '작가') &&
+        (q.includes('어떤 일') || q.includes('뭘 할 수') || q.includes('뭘 할수'))) {
+      addMessage(
+        '작가로서 할 수 있는 일: 대시보드에서 오늘 할 일 확인, 프로젝트 칸반 보드로 작업 관리, 휴가·연차 신청, 건강 설문 제출, 캘린더로 일정 확인이에요. 마감일 알림도 받을 수 있어요!',
+        false,
+        { actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' }
+      );
+      return true;
+    }
+
+    // 2. 담당자: 담당자는 뭘 할 수 있나요?
+    if ((effectiveRole === 'manager' || effectiveRole === '담당자') &&
+        (q.includes('담당자') && (q.includes('뭘') || q.includes('할 수')))) {
+      addMessage(
+        '담당자로서 할 수 있는 일: 담당 작가의 업무·근태 관리, 칸반 보드에서 작업 배정·피드백, 근태 신청 승인, 원격 관리로 재택·워케이션 확인, 작가 건강 현황 확인 등이에요.',
+        false,
+        { actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' }
+      );
+      return true;
+    }
+
+    // 2. 에이전시: 에이전시 관리자는 뭘 할 수 있나요?
+    if ((effectiveRole === 'agency' || effectiveRole === '에이전시 관리자') &&
+        (q.includes('에이전시') && (q.includes('뭘') || q.includes('할 수')))) {
+      addMessage(
+        '에이전시 관리자로서 할 수 있는 일: 전체 프로젝트·직원 현황 확인, 근태·가입 요청 결재, 담당자-작가 할당, 연차 설정, 건강 검진 관리, 원격 관리로 전체 직원 상태 확인 등이에요.',
+        false,
+        { actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' }
+      );
+      return true;
+    }
+
+    // 3. ARTIST(작가): 처음 사용할 때 뭐부터 해야 하나요?
+    if ((effectiveRole === 'artist' || effectiveRole === '작가') &&
+        (q.includes('처음') || q.includes('뭐부터') || q.includes('해야'))) {
+      addMessage(
+        '처음 사용 시 순서: ① 대시보드에서 오늘 할 일 확인 ② 프로젝트 관리에서 내 프로젝트 선택 ③ 칸반 보드에서 작업 상태 확인 ④ 필요하면 상단 근태 신청으로 휴가 신청하세요!',
+        false,
+        { actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' }
+      );
+      return true;
+    }
+
+    // 3. 담당자: 작가 관리는 어떻게 시작하나요?
+    if ((effectiveRole === 'manager' || effectiveRole === '담당자') &&
+        (q.includes('작가') && (q.includes('관리') || q.includes('시작')))) {
+      addMessage(
+        '작가 관리 시작 순서: ① 직원 관리에서 담당 작가 목록 확인 ② 프로젝트 관리에서 칸반 보드로 작업 배정 ③ 대시보드에서 근태 승인 대기 건 확인 ④ 원격 관리에서 재택·워케이션 현황 파악하세요!',
+        false,
+        { actionType: 'section', actionLabel: '직원 관리 이동', sectionKeyword: '직원' }
+      );
+      return true;
+    }
+
+    // 3. 에이전시: 전체 현황은 어디서 확인하나요?
+    if ((effectiveRole === 'agency' || effectiveRole === '에이전시 관리자') &&
+        (q.includes('전체') && (q.includes('현황') || q.includes('확인')))) {
+      addMessage(
+        '대시보드에서 활동 작가 수, 진행 프로젝트, 마감 준수율, 결재 대기, 출석·건강 분포 등 전체 현황을 한눈에 확인할 수 있어요.',
+        false,
+        { actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' }
+      );
+      return true;
+    }
+
+    // 오늘 할 일 몇 개? → 안내만
+    if (q.includes('할 일') || q.includes('할일') || (q.includes('오늘') && (q.includes('몇') || q.includes('개')))) {
+      addMessage(
+        '오늘 할 일은 대시보드에서 확인할 수 있어요. 마감일이 오늘인 미완료 작업이 목록에 표시돼요.',
+        false,
+        { actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' }
+      );
+      return true;
+    }
+
+    // 마감 임박한 업무 → 안내만
+    if (q.includes('마감') && (q.includes('임박') || q.includes('있') || q.includes('몇'))) {
+      addMessage(
+        '마감 임박한 업무는 대시보드나 캘린더에서 확인할 수 있어요.',
+        false,
+        { actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' }
+      );
+      return true;
+    }
+
+    // 내 프로젝트 몇 개? → 안내만
+    if (q.includes('프로젝트') && (q.includes('몇') || q.includes('개'))) {
+      addMessage(
+        '참여 중인 프로젝트는 프로젝트 관리 페이지에서 확인해 주세요.',
+        false,
+        { actionType: 'section', actionLabel: '프로젝트 이동', sectionKeyword: '프로젝트' }
+      );
+      return true;
+    }
+
+    // 휴가/연차 잔여 → 안내만
+    if ((q.includes('휴가') || q.includes('연차')) && (q.includes('잔여') || q.includes('며칠') || q.includes('몇'))) {
+      addMessage(
+        '연차 잔여 일수는 대시보드나 근태 신청 화면에서 확인할 수 있어요. 휴가 신청은 상단 헤더의 근태 신청 버튼을 이용해 주세요.',
+        false,
+        { actionType: 'attendance', actionLabel: '근태 신청 열기' }
+      );
+      return true;
+    }
+
+    // 결재/승인 대기 → 안내만
+    if ((q.includes('결재') || q.includes('승인') || q.includes('대기')) && (q.includes('몇') || q.includes('건'))) {
+      addMessage(
+        '승인 대기 건수는 에이전시 관리자는 대시보드·요청 관리에서, 담당자는 대시보드에서 확인할 수 있어요.',
+        false,
+        { actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' }
+      );
+      return true;
+    }
+
+    // 읽지 않은 알림 → 안내만
+    if (q.includes('알림') && (q.includes('몇') || q.includes('있어') || q.includes('개'))) {
+      addMessage(
+        '읽지 않은 알림은 헤더의 알림 아이콘을 눌러 확인해 주세요.',
+        false
+      );
+      return true;
+    }
+
+    // 담당자: 담당 작가 근태 신청 → 안내만
+    if ((effectiveRole === 'manager' || effectiveRole === '담당자') && (q.includes('근태') || q.includes('신청')) && (q.includes('몇') || q.includes('건'))) {
+      addMessage(
+        '대기 중인 근태 신청은 대시보드에서 확인해 주세요.',
+        false,
+        { actionType: 'section', actionLabel: '대시보드 이동', sectionKeyword: '대시보드' }
+      );
+      return true;
+    }
+
+    // 어디서 해요? (위치 안내) - 네비게이션 액션 포함
+    const guideResult = getMenuGuideResult(query, effectiveRole);
+    if (guideResult) {
+      addMessage(guideResult.answer, false, guideResult.action);
+      return true;
+    }
+
+    return false;
   };
 
   const goToStart = () => {
@@ -715,18 +657,31 @@ export function Chatbot({ sections = [], onNavigateToSection, onOpenAttendanceMo
     setTimeout(() => listRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 0);
   };
 
-  const handleFaqClick = async (question) => {
+  const handleFaqClick = (question) => {
     addMessage(question, true);
-    setIsLoading(true);
-
-    const handled = await handleApiResponse(question);
+    const handled = handleApiResponse(question);
     if (!handled) {
-        addMessage(
-          '아직 그 질문에는 답할 수 없어요. 다른 질문을 선택해 보세요.',
-          false
-        );
+      addMessage(
+        '아직 그 질문에는 답할 수 없어요. 다른 질문을 선택해 보세요.',
+        false
+      );
     }
-    setIsLoading(false);
+  };
+
+  const handleQuickReportClick = async (item) => {
+    addMessage(item.label, true);
+    setQuickReportLoading(true);
+    try {
+      const res = await chatService.getQuickReport(item.type);
+      const text = res?.message ?? '조회 결과를 불러올 수 없습니다.';
+      const actions = res?.actions ?? [];
+      addMessage(text, false, actions.length > 0 ? { actionType: 'quickReportActions', actions } : null);
+    } catch (err) {
+      const msg = err?.message ?? '퀵 리포트를 불러오는 중 오류가 발생했습니다.';
+      addMessage(msg, false);
+    } finally {
+      setQuickReportLoading(false);
+    }
   };
 
   return (
@@ -760,7 +715,7 @@ export function Chatbot({ sections = [], onNavigateToSection, onOpenAttendanceMo
                   <MessageBubble $isUser={msg.isUser}>
                     {msg.text.split('\n').map((line, i) => (
                       <span key={i}>
-                        {line}
+                        {renderWithIcons(line)}
                         {i < msg.text.split('\n').length - 1 && <br />}
                       </span>
                     ))}
@@ -774,16 +729,28 @@ export function Chatbot({ sections = [], onNavigateToSection, onOpenAttendanceMo
                       >
                         처음으로
                       </BackToTopButton>
-                      {msg.action && (
-                        <NavigateButton
-                          type="button"
-                          onClick={() => handleNavigate(msg.action)}
-                          aria-label={msg.action.actionLabel}
-                        >
-                          {msg.action.actionLabel}
-                          <ExternalLink size={12} />
-                        </NavigateButton>
-                      )}
+                      {msg.action?.actionType === 'quickReportActions' && msg.action.actions?.length > 0
+                        ? msg.action.actions.map((a, idx) => (
+                            <NavigateButton
+                              key={idx}
+                              type="button"
+                              onClick={() => handleNavigate({ actionType: 'section', actionLabel: a.label, sectionKeyword: a.sectionKeyword })}
+                              aria-label={a.label}
+                            >
+                              {renderWithIcons(a.label, 12)}
+                              <ExternalLink size={12} />
+                            </NavigateButton>
+                          ))
+                        : msg.action && (
+                            <NavigateButton
+                              type="button"
+                              onClick={() => handleNavigate(msg.action)}
+                              aria-label={msg.action.actionLabel}
+                            >
+                              {msg.action.actionLabel}
+                              <ExternalLink size={12} />
+                            </NavigateButton>
+                          )}
                     </ActionButtonsRow>
                   )}
                   {msg.isGreeting && messages.length === 1 && (
@@ -796,13 +763,41 @@ export function Chatbot({ sections = [], onNavigateToSection, onOpenAttendanceMo
                               key={category.id}
                               type="button"
                               onClick={() => setSelectedCategory(category)}
-                              disabled={isLoading}
                             >
                               <span>{category.icon && <category.icon size={16} style={{ marginRight: 6, flexShrink: 0 }} />}{category.label}</span>
                               <ChevronRight size={16} />
                             </FaqCategoryButton>
                           ))}
                         </FaqCategoryList>
+                      ) : selectedCategory.quickReport ? (
+                        /* 퀵 리포트 버튼 목록 */
+                        <>
+                          <FaqCategoryHeader>
+                            <FaqBackButton
+                              type="button"
+                              onClick={() => setSelectedCategory(null)}
+                            >
+                              <ArrowLeft size={14} />
+                              뒤로
+                            </FaqBackButton>
+                            <FaqCategoryTitle>
+                              {selectedCategory.icon && <selectedCategory.icon size={16} style={{ marginRight: 6, flexShrink: 0 }} />}{selectedCategory.label}
+                            </FaqCategoryTitle>
+                          </FaqCategoryHeader>
+                          <FaqQuestionList>
+                            {getQuickReportItems(effectiveRole).map((item) => (
+                              <FaqQuestionButton
+                                key={item.type}
+                                type="button"
+                                onClick={() => handleQuickReportClick(item)}
+                                disabled={quickReportLoading}
+                              >
+                                {item.icon && <item.icon size={14} style={{ marginRight: 6, flexShrink: 0 }} />}
+                                {item.label}
+                              </FaqQuestionButton>
+                            ))}
+                          </FaqQuestionList>
+                        </>
                       ) : (
                         /* 선택된 카테고리의 질문 목록 */
                         <>
@@ -819,12 +814,11 @@ export function Chatbot({ sections = [], onNavigateToSection, onOpenAttendanceMo
                             </FaqCategoryTitle>
                           </FaqCategoryHeader>
                           <FaqQuestionList>
-                            {selectedCategory.questions.map((question) => (
+                            {selectedCategory.questions?.map((question) => (
                               <FaqQuestionButton
                                 key={question}
                                 type="button"
                                 onClick={() => handleFaqClick(question)}
-                                disabled={isLoading}
                               >
                                 {question}
                               </FaqQuestionButton>

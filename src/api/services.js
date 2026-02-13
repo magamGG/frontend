@@ -590,6 +590,11 @@ export const chatService = {
   getStatus: () => {
     return api.get('/api/chat/status');
   },
+
+  // 퀵 리포트 (역할별 버튼 클릭 시 메시지 반환)
+  getQuickReport: (type) => {
+    return api.get('/api/chat/quick-report', { params: { type } });
+  },
 };
 
 export default {
