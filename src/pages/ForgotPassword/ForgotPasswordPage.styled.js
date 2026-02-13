@@ -69,9 +69,8 @@ export const LogoIconWrapper = styled.div`
   justify-content: center;
   width: 80px;
   height: 80px;
-  background-color: var(--primary);
+  background-color: transparent;
   border-radius: 16px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   margin-bottom: 24px;
 `;
 
