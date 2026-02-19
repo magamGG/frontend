@@ -1,12 +1,7 @@
 import { motion, AnimatePresence } from "motion/react";
-<<<<<<< HEAD
-import { Bell, Plus, User, X, ChevronRight } from "lucide-react";
+import { Bell, Plus, User, X, ChevronRight, MessageSquare } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import useNotificationSource from "@/hooks/useNotificationSource";
-=======
-import { Bell, Plus, User, X, ChevronRight, MessageSquare } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
->>>>>>> d7666b9 (feat:chat front 1 => 슬라이드형 채팅 모달 생성과 클릭 시 해당 채팅방으로 이동하는 기능 front만 구동)
 import { Badge } from "@/app/components/ui/badge";
 import { memberService } from '@/api/services';
 import { getMemberProfileUrl } from '@/api/config';
