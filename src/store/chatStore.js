@@ -1,187 +1,237 @@
 import { create } from 'zustand';
+import { subscribeWithSelector } from 'zustand/middleware';
 import apiServices from '@/api/services';
 import useAuthStore from '@/store/authStore';
 import websocketService from '@/services/websocketService';
+import chatPerformanceMonitor from '@/utils/chatPerformanceMonitor';
 
 const { chatService } = apiServices;
 
-const useChatStore = create((set, get) => ({
-  isChatOpen: false,
-  viewMode: 'list', // 'list' | 'detail'
-  selectedChat: null,
-  chatRooms: [],    // DB에서 가져온 채팅방 목록
-  isLoading: false,
-  isLoadingChatList: false, // 채팅방 목록 로딩 상태 추가
-  globalMessageListener: null, // 전역 메시지 리스너 참조
+// 캐시 및 debounce 관리 (전역 레벨)
+const cache = new Map();
+const debounceTimers = new Map();
+const requestCache = new Map(); // API 요청 중복 방지용 캐시
 
-  // 전역 메시지 리스너 초기화
-  initializeGlobalMessageListener: () => {
-    const { globalMessageListener } = get();
+// 유틸리티 함수들
+const debounce = (key, fn, delay = 300) => {
+  if (debounceTimers.has(key)) {
+    clearTimeout(debounceTimers.get(key));
+  }
+  
+  const timer = setTimeout(() => {
+    fn();
+    debounceTimers.delete(key);
+  }, delay);
+  
+  debounceTimers.set(key, timer);
+};
+
+const getCacheKey = (agencyNo, type) => `chatRooms_${agencyNo}_${type}`;
+
+// API 요청 중복 방지 함수
+const withRequestDeduplication = async (key, apiCall) => {
+  // 이미 같은 요청이 진행 중이면 기다림
+  if (requestCache.has(key)) {
+    return requestCache.get(key);
+  }
+  
+  // 새 요청 시작
+  const promise = apiCall().finally(() => {
+    requestCache.delete(key);
+  });
+  
+  requestCache.set(key, promise);
+  return promise;
+};
+
+const useChatStore = create(
+  subscribeWithSelector((set, get) => ({
+    // 상태
+    isChatOpen: false,
+    viewMode: 'list', // 'list' | 'detail'
+    selectedChat: null,
+    chatRooms: [],    // DB에서 가져온 채팅방 목록
+    isLoading: false,
+    isLoadingChatList: false, // 채팅방 목록 로딩 상태
+    globalMessageListener: null, // 전역 메시지 리스너 참조
+    lastRefreshTime: null, // 마지막 새로고침 시간
     
-    // 이미 등록된 리스너가 있으면 제거
-    if (globalMessageListener) {
-      websocketService.removeGlobalMessageListener(globalMessageListener);
-    }
-    
-    // 새 리스너 생성 및 등록
-    const listener = async (messageData) => {
-      console.log('🔍 [전역리스너] 메시지 수신:', messageData);
+    // 성능 최적화를 위한 메모이제이션된 값들
+    _memoizedTotalUnreadCount: 0,
+    _lastChatRoomsHash: null,
+
+    // 채팅방 목록 해시 계산 (변경 감지용)
+    _calculateChatRoomsHash: (chatRooms) => {
+      return chatRooms.map(room => `${room.chatRoomNo}_${room.unreadCount || 0}`).join('|');
+    },
+
+    // 전역 메시지 리스너 초기화 (최적화된 버전)
+    initializeGlobalMessageListener: () => {
+      const { globalMessageListener } = get();
       
-      const { selectedChat, viewMode } = get();
-      const currentChatRoomNo = selectedChat?.chatRoomNo;
+      // 이미 등록된 리스너가 있으면 제거
+      if (globalMessageListener) {
+        websocketService.removeGlobalMessageListener(globalMessageListener);
+      }
       
-      // 현재 보고 있는 채팅방이 아닌 다른 채팅방에서 메시지가 온 경우
-      if (messageData.chatRoomNo !== currentChatRoomNo || viewMode !== 'detail') {
-        console.log('🔍 [전역리스너] 다른 채팅방 메시지, unread count 업데이트');
+      // 새 리스너 생성 및 등록 (debounce 적용)
+      const listener = (messageData) => {
+        const { selectedChat, viewMode } = get();
+        const currentChatRoomNo = selectedChat?.chatRoomNo;
         
-        try {
-          // 해당 채팅방의 정확한 unread count 조회
-          const response = await chatService.getUnreadCount(messageData.chatRoomNo);
-          const unreadCount = response.data || response;
-          
-          console.log('🔍 [전역리스너] 새로운 unread count:', unreadCount);
-          
-          // 해당 채팅방의 unread count 업데이트
-          set((state) => ({
-            chatRooms: state.chatRooms.map(room => 
-              room.chatRoomNo === messageData.chatRoomNo 
-                ? { ...room, unreadCount }
-                : room
-            )
-          }));
-        } catch (error) {
-          console.error('❌ [전역리스너] unread count 조회 실패:', error);
-          // 실패 시 전체 목록 새로고침
-          get().refreshChatRooms();
+        // 현재 보고 있는 채팅방이 아닌 다른 채팅방에서 메시지가 온 경우
+        if (messageData.chatRoomNo !== currentChatRoomNo || viewMode !== 'detail') {
+          // debounce를 적용하여 과도한 API 호출 방지
+          debounce('refreshChatRooms', () => {
+            get().refreshChatRooms();
+          }, 500);
         }
+      };
+      
+      websocketService.addGlobalMessageListener(listener);
+      set({ globalMessageListener: listener });
+    },
+
+    // 전역 메시지 리스너 정리 (안전한 버전)
+    cleanupGlobalMessageListener: () => {
+      const { globalMessageListener } = get();
+      if (globalMessageListener) {
+        websocketService.removeGlobalMessageListener(globalMessageListener);
+        set({ globalMessageListener: null });
       }
-    };
-    
-    websocketService.addGlobalMessageListener(listener);
-    set({ globalMessageListener: listener });
-    console.log('✅ [전역리스너] 전역 메시지 리스너 등록 완료');
-  },
-
-  // 전역 메시지 리스너 정리
-  cleanupGlobalMessageListener: () => {
-    const { globalMessageListener } = get();
-    if (globalMessageListener) {
-      websocketService.removeGlobalMessageListener(globalMessageListener);
-      set({ globalMessageListener: null });
-      console.log('✅ [전역리스너] 전역 메시지 리스너 정리 완료');
-    }
-  },
-
-  // [목록 열기] 헤더의 메시지 아이콘 클릭 시 호출
-  openChatList: async () => {
-    // 이미 로딩 중이면 중복 실행 방지
-    if (get().isLoadingChatList) {
-      console.log('🔵 [채팅] 이미 로딩 중이므로 중복 실행 방지');
-      return;
-    }
-
-    console.log('🔵 [채팅] openChatList 시작');
-    set({ isChatOpen: true, viewMode: 'list', isLoading: true, isLoadingChatList: true });
-    try {
-      const { user } = useAuthStore.getState();
-      console.log('🔵 [채팅] 현재 사용자 정보:', user);
       
-      // agencyNo는 user 객체에 직접 있음
-      const agencyNo = user?.agencyNo;
-      console.log('🔵 [채팅] 에이전시 번호:', agencyNo);
+      // 관련 debounce 타이머도 정리
+      if (debounceTimers.has('refreshChatRooms')) {
+        clearTimeout(debounceTimers.get('refreshChatRooms'));
+        debounceTimers.delete('refreshChatRooms');
+      }
+    },
+
+    // [목록 열기] 헤더의 메시지 아이콘 클릭 시 호출 (캐싱 비활성화)
+    openChatList: async () => {
+      const startTime = performance.now();
       
-      if (!agencyNo) {
-        console.error('❌ [채팅] 에이전시 정보가 없습니다.');
-        set({ chatRooms: [] });
+      // 이미 로딩 중이면 중복 실행 방지
+      if (get().isLoadingChatList) {
         return;
       }
 
-      console.log('🔵 [채팅] API 호출 시작 - getChatRoomsByAgency:', agencyNo, 'all');
-      // agencyNo로 채팅방 목록 조회 (type: 'all'이면 같은 에이전시의 모든 멤버가 참여 가능한 채팅방들)
-      const response = await chatService.getChatRoomsByAgency(agencyNo, 'all');
-      console.log('🔵 [채팅] API 응답 원본:', response);
+      const { user } = useAuthStore.getState();
+      const agencyNo = user?.agencyNo;
       
-      const data = response?.data || response;
-      console.log('🔵 [채팅] 처리된 데이터:', data);
-
-      // 배열인지 확인하고 설정
-      if (Array.isArray(data)) {
-        set({ chatRooms: data });
-        console.log(`✅ [채팅] 채팅방 ${data.length}개 로드 완료:`, data);
-        
-        // 전역 메시지 리스너 초기화 (채팅방 목록 로드 후)
-        get().initializeGlobalMessageListener();
-      } else {
-        console.warn('⚠️ [채팅] 채팅방 목록이 배열이 아닙니다:', data);
-        set({ chatRooms: [] });
+      if (!agencyNo) {
+        console.error('❌ [채팅] 에이전시 정보가 없습니다.');
+        set({ chatRooms: [], isChatOpen: true, viewMode: 'list' });
+        return;
       }
-    } catch (error) {
-      console.error("❌ [채팅] 채팅 목록 로드 실패:", error);
-      console.error("❌ [채팅] 에러 상세:", {
-        message: error.message,
-        status: error.status,
-        data: error.data,
-        stack: error.stack
+
+      set({ isChatOpen: true, viewMode: 'list', isLoading: true, isLoadingChatList: true });
+      
+      try {
+        // 채팅방 목록 조회 (백엔드에서 자동으로 누락된 채팅방 생성 처리)
+        const response = await chatService.getChatRoomsByAgency(agencyNo, 'all');
+        const data = response?.data || response;
+
+        // 배열인지 확인하고 설정
+        if (Array.isArray(data)) {
+          // 메모이제이션된 값들 계산
+          const currentHash = get()._calculateChatRoomsHash(data);
+          const totalUnreadCount = data.reduce((total, room) => total + (room.unreadCount || 0), 0);
+          
+          set({ 
+            chatRooms: data,
+            lastRefreshTime: Date.now(),
+            _memoizedTotalUnreadCount: totalUnreadCount,
+            _lastChatRoomsHash: currentHash
+          });
+          
+          // 전역 메시지 리스너 초기화 (채팅방 목록 로드 후)
+          get().initializeGlobalMessageListener();
+        } else {
+          console.warn('⚠️ [채팅] 채팅방 목록이 배열이 아닙니다:', data);
+          set({ chatRooms: [], _memoizedTotalUnreadCount: 0, _lastChatRoomsHash: null });
+        }
+      } catch (error) {
+        console.error("❌ [채팅] 채팅 목록 로드 실패:", error);
+        set({ chatRooms: [], _memoizedTotalUnreadCount: 0, _lastChatRoomsHash: null });
+      } finally {
+        set({ isLoading: false, isLoadingChatList: false });
+        
+        // 성능 기록
+        const duration = performance.now() - startTime;
+        chatPerformanceMonitor.recordRenderTime('openChatList_api', duration);
+      }
+    },
+
+    // [대화방 입장] 목록에서 특정 방 클릭 시 호출 (최적화된 버전)
+    openChatDetail: async (room) => {
+      // 룸 ID 추출 (chatRoomNo 필드명 사용)
+      const roomId = room.chatRoomNo || room.roomId || room.roomNo || room.id;
+
+      if (!roomId) {
+        console.error('❌ [채팅스토어] 유효하지 않은 방 ID');
+        return;
+      }
+
+      // 이미 같은 방을 보고 있다면 중복 처리 방지
+      const { selectedChat } = get();
+      if (selectedChat?.chatRoomNo === roomId) {
+        set({ viewMode: 'detail' });
+        return;
+      }
+
+      set({ isChatOpen: true, viewMode: 'detail', selectedChat: room, isLoading: true });
+
+      try {
+        // 메시지 로드는 ChatModal에서 처리하므로 여기서는 상태만 설정
+        // 필요시 미리 로드할 수도 있지만, 현재는 ChatModal에서 처리
+      } catch (error) {
+        console.error("❌ [채팅스토어] 채팅방 입장 실패:", error);
+      } finally {
+        set({ isLoading: false });
+      }
+    },
+
+    // [메시지 전송] (최적화된 버전)
+    sendNewMessage: async (text) => {
+      const { selectedChat } = get();
+      const roomId = selectedChat?.chatRoomNo || selectedChat?.roomId || selectedChat?.roomNo || selectedChat?.id;
+
+      if (!roomId || !text.trim()) return;
+
+      try {
+        // WebSocket을 통한 메시지 전송은 websocketService에서 처리
+        // 메시지 전송 후 채팅방 목록 새로고침 (debounce 적용)
+        debounce('refreshAfterSend', () => {
+          get().refreshChatRooms();
+        }, 1000);
+      } catch (error) {
+        console.error("❌ [채팅] 메시지 전송 실패:", error);
+      }
+    },
+
+    // 총 읽지 않은 메시지 개수 계산 (메모이제이션 강화)
+    getTotalUnreadCount: () => {
+      const { chatRooms, _memoizedTotalUnreadCount, _lastChatRoomsHash } = get();
+      
+      // 채팅방 목록이 변경되지 않았으면 캐시된 값 반환
+      const currentHash = get()._calculateChatRoomsHash(chatRooms);
+      if (currentHash === _lastChatRoomsHash && _memoizedTotalUnreadCount !== undefined) {
+        return _memoizedTotalUnreadCount;
+      }
+      
+      // 변경되었으면 다시 계산하고 캐시
+      const totalCount = chatRooms.reduce((total, room) => total + (room.unreadCount || 0), 0);
+      set({ 
+        _memoizedTotalUnreadCount: totalCount,
+        _lastChatRoomsHash: currentHash
       });
-      set({ chatRooms: [] });
-    } finally {
-      set({ isLoading: false, isLoadingChatList: false });
-      console.log('🔵 [채팅] openChatList 완료');
-    }
-  },
-
-  // [대화방 입장] 목록에서 특정 방 클릭 시 호출
-  openChatDetail: async (room) => {
-    console.log('🔵 [채팅스토어] openChatDetail 시작:', room);
-    
-    // 룸 ID 추출 (chatRoomNo 필드명 사용)
-    const roomId = room.chatRoomNo || room.roomId || room.roomNo || room.id;
-    console.log('🔵 [채팅스토어] roomId:', roomId);
-
-    set({ isChatOpen: true, viewMode: 'detail', selectedChat: room, isLoading: true });
-
-    try {
-      console.log('🔵 [채팅스토어] 메시지 로드 시작');
-      const response = await chatService.getChatMessages(roomId);
-      const data = response.data || response;
-      console.log('🔵 [채팅스토어] 메시지 응답:', data);
       
-      // 스토어의 messages는 사용하지 않음 (ChatModal에서 로컬 상태 사용)
-      // set({ messages: Array.isArray(data) ? data : [] });
-    } catch (error) {
-      console.error("❌ [채팅스토어] 메시지 로드 실패:", error);
-    } finally {
-      set({ isLoading: false });
-      console.log('🔵 [채팅스토어] openChatDetail 완료');
-    }
-  },
+      return totalCount;
+    },
 
-  // [메시지 전송]
-  sendNewMessage: async (text) => {
-    const { selectedChat, messages } = get();
-    const roomId = selectedChat?.chatRoomNo || selectedChat?.roomId || selectedChat?.roomNo || selectedChat?.id;
-
-    if (!roomId || !text.trim()) return;
-
-    try {
-      // WebSocket을 통한 메시지 전송은 websocketService에서 처리
-      console.log('메시지 전송:', text);
-    } catch (error) {
-      console.error("메시지 전송 실패:", error);
-    }
-  },
-
-  // 총 읽지 않은 메시지 개수 계산
-  getTotalUnreadCount: () => {
-    const { chatRooms } = get();
-    const totalCount = chatRooms.reduce((total, room) => total + (room.unreadCount || 0), 0);
-    return totalCount;
-  },
-
-  // 채팅방 목록 새로고침 (unread count 업데이트용)
-  refreshChatRooms: async () => {
-    console.log('🔵 [채팅] refreshChatRooms 시작');
-    try {
+    // 채팅방 목록 새로고침 (캐싱 비활성화)
+    refreshChatRooms: async (force = false) => {
       const { user } = useAuthStore.getState();
       const agencyNo = user?.agencyNo;
       
@@ -190,45 +240,101 @@ const useChatStore = create((set, get) => ({
         return;
       }
 
-      const response = await chatService.getChatRoomsByAgency(agencyNo, 'all');
-      const data = response?.data || response;
-
-      if (Array.isArray(data)) {
-        set({ chatRooms: data });
-        console.log(`✅ [채팅] 채팅방 목록 새로고침 완료: ${data.length}개`);
-        
-        // 전역 메시지 리스너 초기화 (새로고침 후에도)
-        get().initializeGlobalMessageListener();
+      // 강제 새로고침이 아니고 최근에 새로고침했다면 스킵 (1초 이내)
+      const { lastRefreshTime } = get();
+      const now = Date.now();
+      if (!force && lastRefreshTime && (now - lastRefreshTime) < 1000) {
+        return;
       }
-    } catch (error) {
-      console.error("❌ [채팅] 채팅방 목록 새로고침 실패:", error);
-    }
-  },
 
-  // 특정 채팅방의 unread count 업데이트
-  updateChatRoomUnreadCount: (chatRoomNo, unreadCount) => {
-    console.log('🔵 [채팅] updateChatRoomUnreadCount:', { chatRoomNo, unreadCount });
-    set((state) => ({
-      chatRooms: state.chatRooms.map(room => 
-        room.chatRoomNo === chatRoomNo 
-          ? { ...room, unreadCount } 
-          : room
-      )
-    }));
-  },
+      try {
+        // 캐시 사용하지 않고 항상 최신 데이터 조회
+        const response = await chatService.getChatRoomsByAgency(agencyNo, 'all');
+        const data = response?.data || response;
 
-  // 모달 닫기
-  closeChat: () => {
-    // 전역 메시지 리스너 정리
-    get().cleanupGlobalMessageListener();
-    set({ isChatOpen: false, viewMode: 'list', selectedChat: null });
-  },
+        if (Array.isArray(data)) {
+          // 메모이제이션된 값들 계산
+          const currentHash = get()._calculateChatRoomsHash(data);
+          const totalUnreadCount = data.reduce((total, room) => total + (room.unreadCount || 0), 0);
+          
+          set({ 
+            chatRooms: data,
+            lastRefreshTime: now,
+            _memoizedTotalUnreadCount: totalUnreadCount,
+            _lastChatRoomsHash: currentHash
+          });
+          
+          // 전역 메시지 리스너 초기화 (새로고침 후에도)
+          get().initializeGlobalMessageListener();
+        }
+      } catch (error) {
+        console.error("❌ [채팅] 채팅방 목록 새로고침 실패:", error);
+      }
+    },
 
-  // 상세에서 목록으로 돌아가기
-  backToList: () => {
-    set({ viewMode: 'list', selectedChat: null });
-    // 돌아갈 때는 목록을 다시 로드하지 않음 (이미 로드된 상태 유지)
-  },
-}));
+    // 특정 채팅방의 unread count 업데이트 (최적화된 버전)
+    updateChatRoomUnreadCount: (chatRoomNo, unreadCount) => {
+      set((state) => {
+        // 변경이 필요한지 먼저 확인
+        const targetRoom = state.chatRooms.find(room => room.chatRoomNo === chatRoomNo);
+        if (!targetRoom || targetRoom.unreadCount === unreadCount) {
+          return state; // 변경이 없으면 기존 상태 반환
+        }
+
+        // 변경이 필요한 경우에만 새 배열 생성
+        const newChatRooms = state.chatRooms.map(room => 
+          room.chatRoomNo === chatRoomNo 
+            ? { ...room, unreadCount } 
+            : room
+        );
+        
+        // 메모이제이션된 값들도 업데이트
+        const currentHash = state._calculateChatRoomsHash(newChatRooms);
+        const totalUnreadCount = newChatRooms.reduce((total, room) => total + (room.unreadCount || 0), 0);
+        
+        return {
+          chatRooms: newChatRooms,
+          _memoizedTotalUnreadCount: totalUnreadCount,
+          _lastChatRoomsHash: currentHash
+        };
+      });
+    },
+
+    // 모달 닫기 (리소스 정리 강화)
+    closeChat: () => {
+      // 전역 메시지 리스너 정리
+      get().cleanupGlobalMessageListener();
+      
+      // 모든 debounce 타이머 정리
+      debounceTimers.forEach((timer, key) => {
+        clearTimeout(timer);
+      });
+      debounceTimers.clear();
+      
+      // 진행 중인 API 요청 캐시 정리
+      requestCache.clear();
+      
+      set({ isChatOpen: false, viewMode: 'list', selectedChat: null });
+    },
+
+    // 상세에서 목록으로 돌아가기
+    backToList: () => {
+      set({ viewMode: 'list', selectedChat: null });
+      // 돌아갈 때는 목록을 다시 로드하지 않음 (이미 로드된 상태 유지)
+    },
+
+    // 캐시 정리 함수 (메모리 관리)
+    clearCache: () => {
+      cache.clear();
+      debounceTimers.forEach((timer) => clearTimeout(timer));
+      debounceTimers.clear();
+      requestCache.clear();
+      set({ 
+        _memoizedTotalUnreadCount: 0,
+        _lastChatRoomsHash: null
+      });
+    },
+  }))
+);
 
 export default useChatStore;

@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "motion/react";
 import { Bell, Plus, User, X, ChevronRight, MessageSquare } from "lucide-react";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import useNotificationSource from "@/hooks/useNotificationSource";
 import { Badge } from "@/app/components/ui/badge";
 import { memberService } from '@/api/services';
@@ -127,19 +127,7 @@ export function Header({
 }) {
   const { user } = useAuthStore();
   const memberNo = user?.memberNo;
-  const { openChatList, openChatDetail, getTotalUnreadCount, chatRooms } = useChatStore();
-
-  // chatStore 상태 변경을 강제로 감지하기 위한 추가 구독
-  const [forceUpdate, setForceUpdate] = useState(0);
-  
-  useEffect(() => {
-    // chatStore 변경사항을 감지하기 위한 interval (임시 해결책)
-    const interval = setInterval(() => {
-      setForceUpdate(prev => prev + 1);
-    }, 1000); // 1초마다 체크
-    
-    return () => clearInterval(interval);
-  }, []);
+  const { openChatList, openChatDetail, getTotalUnreadCount, chatRooms, refreshChatRooms } = useChatStore();
 
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef(null);
@@ -279,20 +267,25 @@ export function Header({
   const unreadNotifications = notifications.filter((n) => !n.isRead);
   const unreadCount = unreadNotifications.length;
 
-  // 채팅 읽지 않은 메시지 개수
-  const chatUnreadCount = getTotalUnreadCount();
-
-  // 디버깅: chatUnreadCount 값 확인 (한 번만 로그)
-  useEffect(() => {
-    console.log('🔍 [헤더] chatUnreadCount 업데이트:', chatUnreadCount);
-    if (chatRooms.length > 0) {
-      console.log('🔍 [헤더] chatRooms 개별 unreadCount:', chatRooms.map(room => ({ 
+  // 채팅 읽지 않은 메시지 개수 - chatRooms가 변경될 때마다 자동 재계산
+  const chatUnreadCount = useMemo(() => {
+    const total = chatRooms.reduce((total, room) => total + (room.unreadCount || 0), 0);
+    console.log('🔍 [헤더] chatUnreadCount 계산:', { 
+      chatRoomsLength: chatRooms.length, 
+      total,
+      chatRooms: chatRooms.map(room => ({ 
         chatRoomNo: room.chatRoomNo, 
-        chatRoomName: room.chatRoomName, 
+        name: room.chatRoomName, 
         unreadCount: room.unreadCount 
-      })));
-    }
-  }, [chatUnreadCount]); // chatUnreadCount가 실제로 변경될 때만 로그
+      }))
+    });
+    return total;
+  }, [chatRooms]);
+
+  // 헤더 렌더링 시 chatUnreadCount 확인
+  useEffect(() => {
+    console.log('🔍 [헤더] 렌더링 - chatUnreadCount:', chatUnreadCount, 'chatRooms 개수:', chatRooms.length);
+  }, [chatUnreadCount, chatRooms]);
 
   // 사용자 정보 로드
   const loadUserInfo = async () => {
@@ -312,6 +305,14 @@ export function Header({
   useEffect(() => {
     loadUserInfo();
   }, [memberNo, user]);
+
+  // 헤더 마운트 시 채팅방 목록 로드 (unreadCount 확인용)
+  useEffect(() => {
+    if (user?.agencyNo) {
+      console.log('🔍 [헤더] 채팅방 목록 새로고침 시작');
+      refreshChatRooms();
+    }
+  }, [user?.agencyNo, refreshChatRooms]);
 
   // 마이페이지에서 프로필 사진 업로드 후 헤더 갱신
   useEffect(() => {

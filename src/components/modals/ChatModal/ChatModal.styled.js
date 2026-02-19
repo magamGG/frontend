@@ -151,6 +151,44 @@ export const MessageItem = styled.div`
   align-self: ${props => (props.$isMe ? 'flex-end' : 'flex-start')};
 `;
 
+export const MessageContainer = styled.div`
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  flex-direction: ${props => (props.$isMe ? 'row-reverse' : 'row')};
+`;
+
+export const ProfileImage = styled.img`
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--border);
+  flex-shrink: 0;
+`;
+
+export const DefaultProfile = styled.div`
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  border: 2px solid var(--border);
+  flex-shrink: 0;
+`;
+
+export const MessageContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 280px;
+`;
+
 export const Bubble = styled.div`
   padding: 10px 14px;
   border-radius: 14px;
@@ -176,6 +214,67 @@ export const SenderName = styled.span`
   color: var(--muted-foreground);
   margin-bottom: 2px;
   margin-left: 4px;
+`;
+
+/* 채팅방 목록 아이템에도 프로필 추가 */
+export const ChatItemContainer = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  background-color: var(--card);
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background-color: var(--accent);
+  }
+`;
+
+export const ChatItemProfile = styled.img`
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--border);
+  flex-shrink: 0;
+`;
+
+export const ChatItemDefaultProfile = styled.div`
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  border: 2px solid var(--border);
+  flex-shrink: 0;
+`;
+
+export const ChatItemContent = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+export const ChatItemInfo = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+`;
+
+export const ChatItemMessage = styled.p`
+  font-size: 13px;
+  color: var(--muted-foreground);
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `;
 
 /* 하단 입력바 */
