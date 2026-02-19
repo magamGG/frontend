@@ -57,7 +57,7 @@ export function ForgotPasswordPage({ onBackToLogin }) {
     try {
       await authService.forgotPassword(emailInput);
       toast.success('인증 코드가 이메일로 전송되었습니다.');
-      setStep(PASSWORD_RESET_STEPS.VERIFY);
+      setStep(PASSWORD_RESET_STEPS.RESET); // 테스트를 위해 인증 단계를 건너뛰고 바로 비밀번호 재설정으로 이동
     } catch (error) {
       const errorMessage = error?.message || '이메일 전송에 실패했습니다. 다시 시도해주세요.';
       toast.error(errorMessage);

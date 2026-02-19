@@ -207,6 +207,14 @@ export const API_ENDPOINTS = {
     UNSCREENED_LIST: `/api/managers/unscreened-list`, // GET: 담당자 배정 작가 미검진 인원 목록
     HEALTH_MONITORING_DETAIL: (type) => `/api/managers/health-monitoring-detail?type=${type || 'mental'}`, // GET: 담당자 배정 작가 검진 모니터링 상세 (정신/신체)
   },
+
+  // 채팅 API
+  CHAT: {
+    ROOMS: (memberNo) => `/api/chat/rooms/${memberNo}`, // GET: 내 채팅방 목록 조회
+    ROOMS_BY_AGENCY: (agencyNo, type = 'all') => `/api/chat/rooms/agency/${agencyNo}?type=${type}`, // GET: 에이전시별 채팅방 목록 조회
+    JOIN_ROOM: (chatRoomNo) => `/api/chat/rooms/${chatRoomNo}/join`, // POST: 채팅방 입장 (멤버 등록)
+    MESSAGES: (chatRoomNo) => `/api/chat/rooms/${chatRoomNo}/messages`, // GET: 채팅방 메시지 목록 조회
+  },
 };
 
 export default {

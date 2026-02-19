@@ -9,6 +9,8 @@ import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { ProjectProvider } from '@/contexts/ProjectContext';
 import useAuthStore from '@/store/authStore';
+import { ChatModal } from '@/components/modals/ChatModal';
+import useChatStore from '@/store/chatStore';
 
 // Lazy load artist pages
 const ArtistDashboardPage = lazy(() => import('@/pages/artist/ArtistDashboard').then(m => ({ default: m.ArtistDashboardPage })));
@@ -55,6 +57,7 @@ const PageLoadingFallback = () => (
  */
 
 export default function App() {
+  const { isChatOpen, closeChat, selectedChat, refreshChatRooms } = useChatStore();
   // Notion OAuth 팝업 콜백 감지: 팝업으로 열렸고 code 파라미터가 있으면 부모에 전달 후 닫기
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -119,6 +122,13 @@ export default function App() {
           
           setUserRole(roleType);
           setHasAgency(hasAgencyVal);
+          
+          // 대시보드로 이동할 때 채팅방 목록 미리 로드 (백그라운드)
+          if (hasAgencyVal && currentUser.agencyNo) {
+            setTimeout(() => {
+              refreshChatRooms();
+            }, 1000); // 1초 후 백그라운드에서 로드
+          }
         } else {
           // 복원 실패 또는 토큰 없음 → 로그인 화면
           setAuthView('login');
@@ -176,6 +186,13 @@ export default function App() {
 
     setUserRole(roleType);
     setHasAgency(hasAgencyVal);
+    
+    // 대시보드로 이동할 때 채팅방 목록 미리 로드 (백그라운드)
+    if (hasAgencyVal && user?.agencyNo) {
+      setTimeout(() => {
+        refreshChatRooms();
+      }, 1000); // 1초 후 백그라운드에서 로드
+    }
   };
 
   const handleSignup = () => {
@@ -457,6 +474,11 @@ export default function App() {
             <FullPageLayout sections={sections} onLogout={handleLogout} userRole={userRole} />
           </Suspense>
         )}
+        <ChatModal
+          isOpen={isChatOpen}
+          onClose={closeChat}
+          chatPartner={selectedChat}
+          />
       </ProjectProvider>
     </DndProvider>
   );
