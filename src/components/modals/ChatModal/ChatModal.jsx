@@ -122,11 +122,18 @@ export function ChatModal() {
   // WebSocket 연결 관리 (useCallback으로 최적화)
   const connectWebSocket = useCallback(async () => {
     try {
+      console.log('🔌 [ChatModal] WebSocket 연결 시도 시작');
+      console.log('🔌 [ChatModal] 현재 연결 상태:', websocketService.getConnectionInfo());
+      
       if (!websocketService.isConnected() && !websocketService.isConnecting()) {
+        console.log('🔌 [ChatModal] WebSocket 연결 중...');
         await websocketService.connect();
+        console.log('✅ [ChatModal] WebSocket 연결 완료');
+      } else {
+        console.log('✅ [ChatModal] WebSocket 이미 연결됨 또는 연결 중');
       }
     } catch (error) {
-      console.error('❌ [WebSocket] 연결 실패:', error);
+      console.error('❌ [ChatModal] WebSocket 연결 실패:', error);
     }
   }, []);
 
@@ -296,9 +303,12 @@ export function ChatModal() {
 
     if (!websocketService.isConnected()) {
       console.error('❌ [메시지전송] WebSocket 연결되지 않음');
+      console.log('🔌 [메시지전송] 연결 상태:', websocketService.getConnectionInfo());
       
       try {
+        console.log('🔌 [메시지전송] 재연결 시도 중...');
         await websocketService.connect();
+        console.log('✅ [메시지전송] 재연결 성공');
       } catch (error) {
         console.error('❌ [메시지전송] 재연결 실패:', error);
         return;
