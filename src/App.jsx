@@ -55,6 +55,16 @@ const PageLoadingFallback = () => (
  */
 
 export default function App() {
+  // Notion OAuth 팝업 콜백 감지: 팝업으로 열렸고 code 파라미터가 있으면 부모에 전달 후 닫기
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    if (code && window.opener) {
+      window.opener.postMessage({ type: 'notion-callback', code, state: params.get('state') }, '*');
+      setTimeout(() => window.close(), 300);
+    }
+  }, []);
+
   const [authView, setAuthView] = useState('login');
   const [userRole, setUserRole] = useState(null);
   const [hasAgency, setHasAgency] = useState(true); // Track if user has agency affiliation

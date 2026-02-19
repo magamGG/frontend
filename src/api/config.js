@@ -136,6 +136,12 @@ export const API_ENDPOINTS = {
     KANBAN_CARD_UPDATE: (projectNo, cardId) => `/api/projects/${projectNo}/kanban-card/${cardId}`, // PUT: 칸반 카드 수정
     KANBAN_CARD_COMMENTS: (projectNo, cardId) => `/api/projects/${projectNo}/kanban-card/${cardId}/comments`, // GET: 목록, POST: 추가
     KANBAN_CARD_COMMENT_UPDATE: (projectNo, cardId, commentId) => `/api/projects/${projectNo}/kanban-card/${cardId}/comments/${commentId}`, // PUT: 코멘트 수정
+    NOTION_CONFIG: `/api/projects/notion/config`, // GET: Notion OAuth 설정 (clientId, redirectUri)
+    NOTION_CALLBACK: (projectNo) => `/api/projects/${projectNo}/notion/callback`, // POST: Notion OAuth code → token 교환
+    NOTION_STATUS: (projectNo) => `/api/projects/${projectNo}/notion/status`, // GET: Notion 연동 상태 조회
+    NOTION_DATABASE: (projectNo) => `/api/projects/${projectNo}/notion/database`, // PUT: Notion Database ID 저장
+    NOTION_DISCONNECT: (projectNo) => `/api/projects/${projectNo}/notion`, // DELETE: Notion 연동 해제
+    NOTION_SYNC: (projectNo) => `/api/projects/${projectNo}/notion/sync`, // POST: Notion 수동 동기화
   },
 
   // 캘린더 API
