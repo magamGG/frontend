@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, ExternalLink, ChevronRight, ArrowLeft, BarChart3, AlertTriangle, Flame, AlertCircle, TrendingDown, Circle, ArrowDown, FolderOpen, Run } from 'lucide-react';
+import { X, ExternalLink, ArrowLeft, BarChart3, AlertTriangle, Flame, AlertCircle, TrendingDown, Circle, ArrowDown, FolderOpen, PersonStanding, Calendar, ClipboardList, CalendarRange, Heart, UserCheck, Bell } from 'lucide-react';
 import { AnimatePresence } from 'motion/react';
 import useAuthStore from '@/store/authStore';
 import { TbMessageChatbot } from "react-icons/tb";
@@ -20,16 +20,24 @@ import {
   ActionButtonsRow,
   BackToTopButton,
   NavigateButton,
-  FaqCategoryButton,
-  FaqCategoryList,
   FaqCategoryHeader,
   FaqBackButton,
   FaqCategoryTitle,
   FaqQuestionList,
   FaqQuestionButton,
+  BottomActionSheet,
+  BottomActionSheetGrid,
+  BottomActionSheetButton,
+  BottomActionSheetServiceButton,
+  AnalysisResultTitle,
+  ServiceGuideBottomHeader,
+  ServiceGuideQuestionScroll,
+  ServiceGuideQuestionChip,
+  BackToAnalysisButton,
+  HealthStateBadge,
 } from './Chatbot.styled';
 
-const GREETING_LINES = ['안녕하세요. 챗봇 지지 입니다.', '무엇을 도와드릴까요?'];
+const GREETING_LINES = ['안녕하세요. 챗봇 지지입니다.', '아래 버튼을 눌러 원하는 분석을 확인해 보세요.'];
 
 /** 메시지/버튼 텍스트 내 유니코드 이모지 → Lucide React 아이콘 (윈도우 이모지 대신 일관된 표시) */
 const EMOJI_TO_ICON = {
@@ -42,11 +50,35 @@ const EMOJI_TO_ICON = {
   '⚠️': AlertTriangle,
   '📂': FolderOpen,
   '📊': BarChart3,
-  '🏃‍♂️': Run,
-  '🏃': Run,
+  '🏃‍♂️': PersonStanding,
+  '🏃': PersonStanding,
 };
 
 const EMOJI_REGEX = /(📉|🔴|🟡|👇|🔥|😱|⚠️|📂|📊|🏃‍♂️|🏃)/gu;
+
+/** 건강관리 분석용: "상태: 정상|주의|경고|위험" 구간을 색상 스팬으로 감싼 React 노드 반환 */
+const HEALTH_STATE_REGEX = /(상태: (정상|주의|경고|위험|확인 필요))/g;
+function renderHealthAnalysisLine(line, iconSize = 14) {
+  if (!line || typeof line !== 'string') return line;
+  const parts = [];
+  let lastIndex = 0;
+  let key = 0;
+  let match;
+  HEALTH_STATE_REGEX.lastIndex = 0;
+  while ((match = HEALTH_STATE_REGEX.exec(line)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(<span key={key++}>{renderWithIcons(line.slice(lastIndex, match.index), iconSize)}</span>);
+    }
+    const stateText = match[1];
+    const state = match[2] || '';
+    parts.push(<HealthStateBadge key={key++} $state={state}>{stateText}</HealthStateBadge>);
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < line.length) {
+    parts.push(<span key={key++}>{renderWithIcons(line.slice(lastIndex), iconSize)}</span>);
+  }
+  return parts.length > 0 ? parts : renderWithIcons(line, iconSize);
+}
 
 /** 문자열을 이모지 구간별로 쪼개서 React 노드 배열로 반환 (텍스트 + 아이콘) */
 function renderWithIcons(str, iconSize = 14) {
@@ -87,32 +119,52 @@ function renderWithIcons(str, iconSize = 14) {
   return parts.length > 0 ? parts : str;
 }
 
-/* ===== 퀵 리포트 버튼 (역할별) ===== */
+/* ===== 챗봇 분석 버튼 (역할별) ===== */
 const QUICK_REPORT_ARTIST = [
-  { type: 'leave_balance', label: '잔여 연차 확인' },
-  { type: 'today_deadline', label: '오늘 마감 작업' },
-  { type: 'leave_summary', label: '내 휴재/휴가 기록' },
-  { type: 'latest_health', label: '최근 건강 상태' },
+  { type: 'leave_balance', label: '연차 분석' },
+  { type: 'today_deadline', label: '오늘 마감 분석' },
+  { type: 'leave_summary', label: '휴가·휴재 분석' },
+  { type: 'latest_health', label: '건강관리 분석' },
 ];
 const QUICK_REPORT_MANAGER = [
-  { type: 'compliance_top3', label: '준수율 하위 TOP 3', icon: AlertTriangle },
-  { type: 'deadline_urgent', label: '마감 임박/지연', icon: Flame },
-  { type: 'attendance_status', label: '실시간 출근 현황' },
-  { type: 'top3_leave_artists', label: '휴재 잦은 작가 TOP 3' },
-  { type: 'pending_approvals', label: '결재 대기 목록' },
+  { type: 'compliance_top3', label: '준수율 분석', icon: AlertTriangle },
+  { type: 'deadline_urgent', label: '마감 임박 분석', icon: Flame },
+  { type: 'attendance_status', label: '출근 현황 분석' },
+  { type: 'top3_leave_artists', label: '휴재 작가 분석' },
+  { type: 'pending_approvals', label: '결재 대기 분석' },
 ];
 const QUICK_REPORT_AGENCY = [
-  { type: 'compliance_top3', label: '준수율 하위 TOP 3', icon: AlertTriangle },
-  { type: 'company_compliance', label: '전사 마감 준수율 현황' },
-  { type: 'at_risk_projects', label: '운영 주의 프로젝트', icon: AlertCircle },
-  { type: 'join_approval_requests', label: '신규 가입/승인 요청' },
-  { type: 'health_distribution', label: '직원 건강 분포도' },
+  { type: 'compliance_top3', label: '준수율 분석', icon: AlertTriangle },
+  { type: 'company_compliance', label: '전사 준수율 분석' },
+  { type: 'at_risk_projects', label: '주의 프로젝트 분석', icon: AlertCircle },
+  { type: 'join_approval_requests', label: '가입·승인 분석' },
+  { type: 'health_distribution', label: '건강 분포 분석' },
 ];
 
 function getQuickReportItems(role) {
   if (role === 'manager' || role === '담당자') return QUICK_REPORT_MANAGER;
   if (role === 'agency' || role === '에이전시 관리자') return QUICK_REPORT_AGENCY;
   return QUICK_REPORT_ARTIST;
+}
+
+/** 하단 버튼용 아이콘 (역할별 미지정 시 기본값) */
+const QUICK_REPORT_ICON_BY_TYPE = {
+  leave_balance: Calendar,
+  today_deadline: ClipboardList,
+  leave_summary: CalendarRange,
+  latest_health: Heart,
+  compliance_top3: AlertTriangle,
+  deadline_urgent: Flame,
+  attendance_status: UserCheck,
+  top3_leave_artists: PersonStanding,
+  pending_approvals: Bell,
+  company_compliance: BarChart3,
+  at_risk_projects: AlertCircle,
+  join_approval_requests: Bell,
+  health_distribution: Heart,
+};
+function getQuickReportIcon(item) {
+  return item.icon ?? QUICK_REPORT_ICON_BY_TYPE[item.type] ?? BarChart3;
 }
 
 /* ===== 역할별 카테고리 기반 FAQ ===== */
@@ -431,6 +483,7 @@ export function Chatbot({ sections = [], onNavigateToSection, onOpenAttendanceMo
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [bottomMode, setBottomMode] = useState('analysis'); // 'analysis' | 'serviceGuide'
   const [quickReportLoading, setQuickReportLoading] = useState(false);
   const listRef = useRef(null);
   const user = useAuthStore((state) => state.user);
@@ -438,6 +491,7 @@ export function Chatbot({ sections = [], onNavigateToSection, onOpenAttendanceMo
   // 역할 결정: props로 받은 userRole 또는 user.memberRole 사용
   const effectiveRole = userRole || user?.memberRole || 'artist';
   const faqCategories = getFaqCategoriesForRole(effectiveRole);
+  const serviceGuideQuestions = faqCategories.find((c) => c.id === 'about')?.questions ?? [];
 
   /* 섹션 키워드로 해당 섹션 인덱스 찾기 */
   const findSectionIndex = (keyword) => {
@@ -478,10 +532,10 @@ export function Chatbot({ sections = [], onNavigateToSection, onOpenAttendanceMo
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages]);
 
-  const addMessage = (text, isUser, action = null) => {
+  const addMessage = (text, isUser, action = null, analysisTitle = null) => {
     setMessages((prev) => [
       ...prev,
-      { id: getNextId(), text, isUser, action },
+      { id: getNextId(), text, isUser, action, analysisTitle },
     ]);
   };
 
@@ -675,10 +729,10 @@ export function Chatbot({ sections = [], onNavigateToSection, onOpenAttendanceMo
       const res = await chatService.getQuickReport(item.type);
       const text = res?.message ?? '조회 결과를 불러올 수 없습니다.';
       const actions = res?.actions ?? [];
-      addMessage(text, false, actions.length > 0 ? { actionType: 'quickReportActions', actions } : null);
+      addMessage(text, false, actions.length > 0 ? { actionType: 'quickReportActions', actions } : null, item.label);
     } catch (err) {
-      const msg = err?.message ?? '퀵 리포트를 불러오는 중 오류가 발생했습니다.';
-      addMessage(msg, false);
+      const msg = err?.message ?? '분석을 불러오는 중 오류가 발생했습니다.';
+      addMessage(msg, false, null, item.label);
     } finally {
       setQuickReportLoading(false);
     }
@@ -700,7 +754,7 @@ export function Chatbot({ sections = [], onNavigateToSection, onOpenAttendanceMo
                 <div>
                   <div>챗봇 지지</div>
                   <ChatHeaderSubtitle>
-                    가벼운 확인 · 메뉴 안내
+                    데이터 분석 · 메뉴 안내
                   </ChatHeaderSubtitle>
                 </div>
               </ChatHeaderTitle>
@@ -712,11 +766,19 @@ export function Chatbot({ sections = [], onNavigateToSection, onOpenAttendanceMo
             <MessageList ref={listRef}>
               {messages.map((msg) => (
                 <MessageGroup key={msg.id} $isUser={msg.isUser}>
-                  <MessageBubble $isUser={msg.isUser}>
-                    {msg.text.split('\n').map((line, i) => (
+                  {!msg.isUser && msg.analysisTitle && (
+                    <AnalysisResultTitle>
+                      <BarChart3 size={14} />
+                      <span>분석 결과: {msg.analysisTitle}</span>
+                    </AnalysisResultTitle>
+                  )}
+                  <MessageBubble $isUser={msg.isUser} $isAnalysis={!!msg.analysisTitle} $noWrap={msg.isUser && typeof msg.text === 'string' && !msg.text.includes('\n')}>
+                    {(typeof msg.text === 'string' ? msg.text.split(/\r?\n/) : [msg.text ?? '']).map((line, i, arr) => (
                       <span key={i}>
-                        {renderWithIcons(line)}
-                        {i < msg.text.split('\n').length - 1 && <br />}
+                        {msg.analysisTitle === '건강관리 분석'
+                          ? renderHealthAnalysisLine(line)
+                          : renderWithIcons(line)}
+                        {i < arr.length - 1 && <br />}
                       </span>
                     ))}
                   </MessageBubble>
@@ -753,84 +815,69 @@ export function Chatbot({ sections = [], onNavigateToSection, onOpenAttendanceMo
                           )}
                     </ActionButtonsRow>
                   )}
-                  {msg.isGreeting && messages.length === 1 && (
-                    <>
-                      {!selectedCategory ? (
-                        /* 카테고리 목록 */
-                        <FaqCategoryList>
-                          {faqCategories.map((category) => (
-                            <FaqCategoryButton
-                              key={category.id}
-                              type="button"
-                              onClick={() => setSelectedCategory(category)}
-                            >
-                              <span>{category.icon && <category.icon size={16} style={{ marginRight: 6, flexShrink: 0 }} />}{category.label}</span>
-                              <ChevronRight size={16} />
-                            </FaqCategoryButton>
-                          ))}
-                        </FaqCategoryList>
-                      ) : selectedCategory.quickReport ? (
-                        /* 퀵 리포트 버튼 목록 */
-                        <>
-                          <FaqCategoryHeader>
-                            <FaqBackButton
-                              type="button"
-                              onClick={() => setSelectedCategory(null)}
-                            >
-                              <ArrowLeft size={14} />
-                              뒤로
-                            </FaqBackButton>
-                            <FaqCategoryTitle>
-                              {selectedCategory.icon && <selectedCategory.icon size={16} style={{ marginRight: 6, flexShrink: 0 }} />}{selectedCategory.label}
-                            </FaqCategoryTitle>
-                          </FaqCategoryHeader>
-                          <FaqQuestionList>
-                            {getQuickReportItems(effectiveRole).map((item) => (
-                              <FaqQuestionButton
-                                key={item.type}
-                                type="button"
-                                onClick={() => handleQuickReportClick(item)}
-                                disabled={quickReportLoading}
-                              >
-                                {item.icon && <item.icon size={14} style={{ marginRight: 6, flexShrink: 0 }} />}
-                                {item.label}
-                              </FaqQuestionButton>
-                            ))}
-                          </FaqQuestionList>
-                        </>
-                      ) : (
-                        /* 선택된 카테고리의 질문 목록 */
-                        <>
-                          <FaqCategoryHeader>
-                            <FaqBackButton
-                              type="button"
-                              onClick={() => setSelectedCategory(null)}
-                            >
-                              <ArrowLeft size={14} />
-                              뒤로
-                            </FaqBackButton>
-                            <FaqCategoryTitle>
-                              {selectedCategory.icon && <selectedCategory.icon size={16} style={{ marginRight: 6, flexShrink: 0 }} />}{selectedCategory.label}
-                            </FaqCategoryTitle>
-                          </FaqCategoryHeader>
-                          <FaqQuestionList>
-                            {selectedCategory.questions?.map((question) => (
-                              <FaqQuestionButton
-                                key={question}
-                                type="button"
-                                onClick={() => handleFaqClick(question)}
-                              >
-                                {question}
-                              </FaqQuestionButton>
-                            ))}
-                          </FaqQuestionList>
-                        </>
-                      )}
-                    </>
-                  )}
                 </MessageGroup>
               ))}
             </MessageList>
+
+            {/* 하단: 분석 모드 vs 서비스 안내 모드 */}
+            <BottomActionSheet>
+              {bottomMode === 'serviceGuide' ? (
+                <>
+                  <ServiceGuideBottomHeader>
+                    <MdOutlineInfo size={18} />
+                    <span>서비스 안내</span>
+                    <BackToAnalysisButton
+                      type="button"
+                      onClick={() => setBottomMode('analysis')}
+                      aria-label="분석 보기"
+                    >
+                      <ArrowLeft size={14} />
+                      분석 보기
+                    </BackToAnalysisButton>
+                  </ServiceGuideBottomHeader>
+                  <ServiceGuideQuestionScroll>
+                    {serviceGuideQuestions.map((question) => (
+                      <ServiceGuideQuestionChip
+                        key={question}
+                        type="button"
+                        onClick={() => handleFaqClick(question)}
+                        aria-label={question}
+                      >
+                        {question}
+                      </ServiceGuideQuestionChip>
+                    ))}
+                  </ServiceGuideQuestionScroll>
+                </>
+              ) : (
+                <BottomActionSheetGrid>
+                  {getQuickReportItems(effectiveRole)
+                    .slice(0, 4)
+                    .map((item) => {
+                      const Icon = getQuickReportIcon(item);
+                      return (
+                        <BottomActionSheetButton
+                          key={item.type}
+                          type="button"
+                          onClick={() => handleQuickReportClick(item)}
+                          disabled={quickReportLoading}
+                          aria-label={item.label}
+                        >
+                          <Icon size={20} />
+                          <span>{item.label}</span>
+                        </BottomActionSheetButton>
+                      );
+                    })}
+                  <BottomActionSheetServiceButton
+                    type="button"
+                    onClick={() => setBottomMode('serviceGuide')}
+                    aria-label="서비스 안내"
+                  >
+                    <MdOutlineInfo size={20} />
+                    <span>서비스 안내</span>
+                  </BottomActionSheetServiceButton>
+                </BottomActionSheetGrid>
+              )}
+            </BottomActionSheet>
           </ChatWindow>
         )}
       </AnimatePresence>
