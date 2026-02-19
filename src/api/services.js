@@ -446,6 +446,15 @@ export const calendarService = {
   },
 };
 
+// 공휴일 서비스
+export const holidayService = {
+  getHolidaysByYear: async (year) => {
+    // axios interceptor가 이미 response.data를 반환하므로 그대로 사용
+    const response = await api.get(API_ENDPOINTS.HOLIDAYS.GET_BY_YEAR(year));
+    return response; // response.data가 아니라 response 자체 반환
+  },
+};
+
 // 알림 서비스
 export const notificationService = {
   // 알림 목록 조회
@@ -620,4 +629,5 @@ export default {
   agencyService,
   managerService,
   chatService,
+  holidayService,
 };
