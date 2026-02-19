@@ -609,9 +609,5 @@ export default {
   healthService,
   agencyService,
   managerService,
-<<<<<<< HEAD
-  chatService,
   holidayService,
-=======
->>>>>>> 69cabc7a98287fae81ad883afc60950a99ad0488
 };
