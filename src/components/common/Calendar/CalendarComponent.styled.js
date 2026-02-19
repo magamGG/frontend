@@ -223,13 +223,15 @@ export const DateNumberWrapper = styled.div`
 
 export const DateNumber = styled.div`
   font-size: 1rem;
-  font-weight: ${props => (props.$isToday ? '700' : 'var(--font-weight-medium)')};
+  font-weight: ${props => (props.$isToday ? '700' : (props.$isHoliday ? '600' : 'var(--font-weight-medium)'))};
   color: ${props => {
     // 다른 달 날짜는 흐릿하게 표시 (회색)
     if (props.$isOtherMonth) {
       if (props.$isSunday) return 'color-mix(in srgb, var(--destructive) 40%, transparent)';
       return 'color-mix(in srgb, var(--muted-foreground) 40%, transparent)';
     }
+    // 공휴일은 빨간색 (일요일 제외)
+    if (props.$isHoliday && !props.$isSunday) return '#ef4444';
     if (props.$isSunday && !props.$isToday) return 'var(--destructive)';
     if (props.$isToday) return 'var(--primary)';
     return 'var(--foreground)';

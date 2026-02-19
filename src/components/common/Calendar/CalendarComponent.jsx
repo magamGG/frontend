@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
 import { Modal } from '@/components/common/Modal';
 import { ChevronLeft, ChevronRight, Plus, AlignLeft, Palette, Save, Trash2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { holidayService } from '@/api/services';
 import {
   CalendarRoot,
   CalendarBody,
@@ -261,6 +262,55 @@ export function CalendarComponent({
   useEffect(() => {
     onViewMonthChange?.(viewYear, viewMonth);
   }, [viewYear, viewMonth, onViewMonthChange]);
+
+  // 공휴일 캐시 (useRef로 관리하여 리렌더링 방지)
+  const holidayCacheRef = useRef({});
+  const [holidayCache, setHolidayCache] = useState({});
+
+  // 연도별 공휴일 조회
+  useEffect(() => {
+    // 이미 캐시에 있으면 조회하지 않음
+    if (holidayCacheRef.current[viewYear]) {
+      return;
+    }
+    
+    const fetchHolidays = async () => {
+      try {
+        const response = await holidayService.getHolidaysByYear(viewYear);
+        // response가 이미 HolidayResponse 형태 { year, holidays } 또는 직접 holidays 배열일 수 있음
+        const holidays = response?.holidays || (Array.isArray(response) ? response : []);
+        
+        // ref에 저장
+        holidayCacheRef.current[viewYear] = holidays;
+        
+        // state 업데이트 (리렌더링용)
+        setHolidayCache(prev => ({
+          ...prev,
+          [viewYear]: holidays
+        }));
+      } catch (error) {
+        console.error('공휴일 조회 실패:', error);
+        holidayCacheRef.current[viewYear] = [];
+        setHolidayCache(prev => ({
+          ...prev,
+          [viewYear]: []
+        }));
+      }
+    };
+    
+    fetchHolidays();
+  }, [viewYear]);
+
+  // 공휴일 여부 확인 (ref 사용)
+  const isHoliday = (year, month, day) => {
+    const yearHolidays = holidayCacheRef.current[year] || [];
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    return yearHolidays.some(h => 
+      h.date === dateStr && 
+      !h.isSaturday && 
+      !h.isSunday
+    );
+  };
 
   const today = new Date();
   const currentDay = today.getDate();
@@ -664,6 +714,7 @@ export function CalendarComponent({
                     const isSunday = dayOfWeek === 0;
                     const isToday = !isOtherMonth && viewYear === currentYear && viewMonth === currentMonthNum && cell.day === currentDay;
                     const attendanceType = getAttendanceForDate(cell.day, cellYear, cellMonth);
+                    const isHolidayDate = isHoliday(cellYear, cellMonth, cell.day);
                     const dayNote = cell.type === 'current'
                       ? dayNotes.find((n) =>
                           (n.year != null && n.month != null)
@@ -679,10 +730,11 @@ export function CalendarComponent({
                         $isToday={isToday}
                         $attendanceType={attendanceType}
                         $isSunday={isSunday}
+                        $isHoliday={isHolidayDate}
                         $isOtherMonth={isOtherMonth}
                       >
                         <DateNumberWrapper>
-                          <DateNumber $isToday={isToday} $isSunday={isSunday} $isOtherMonth={isOtherMonth}>{cell.day}</DateNumber>
+                          <DateNumber $isToday={isToday} $isSunday={isSunday} $isHoliday={isHolidayDate} $isOtherMonth={isOtherMonth}>{cell.day}</DateNumber>
                         </DateNumberWrapper>
 
                         {cell.type === 'current' && (() => {

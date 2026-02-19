@@ -150,6 +150,11 @@ export const API_ENDPOINTS = {
     DEADLINE_COUNTS_BY_AGENCY: (agencyNo) => `/api/calendar/deadline-counts/agency/${agencyNo}`, // GET: 에이전시 대시보드 마감 임박 현황
   },
 
+  // 공휴일 API
+  HOLIDAYS: {
+    GET_BY_YEAR: (year) => `/api/holidays/${year}`,
+  },
+
   // 알림 API
   NOTIFICATION: {
     LIST: `/api/notifications`, // GET: 알림 목록 조회
