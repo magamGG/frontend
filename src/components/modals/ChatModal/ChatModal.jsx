@@ -5,6 +5,7 @@ import * as S from './ChatModal.styled';
 import useChatStore from '@/store/chatStore';
 import useAuthStore from '@/store/authStore';
 import { chatService } from '@/api/services';
+import { getMemberProfileUrl } from '@/api/config';
 import websocketService from '@/services/websocketService';
 import chatPerformanceMonitor from '@/utils/chatPerformanceMonitor';
 
@@ -26,6 +27,7 @@ export function ChatModal() {
   // 로컬 상태
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
+  const [chatRoomMembers, setChatRoomMembers] = useState({}); // memberNo -> memberInfo 매핑
   
   // Refs
   const bottomRef = useRef(null);
@@ -95,6 +97,7 @@ export function ChatModal() {
   const cleanup = useCallback(() => {
     // 메시지 상태 초기화
     setMessages([]);
+    setChatRoomMembers({});
     
     // 읽음 처리 타이머 정리
     if (debounceTimerRef.current) {
@@ -219,7 +222,20 @@ export function ChatModal() {
         // 1. 채팅방 입장 (멤버 등록)
         await chatService.joinChatRoom(currentChatRoomNo);
 
-        // 2. 메시지 목록 조회
+        // 2. 채팅방 참여자 목록 조회
+        const membersRes = await chatService.getChatRoomMembers(currentChatRoomNo);
+        const membersData = membersRes.data || membersRes;
+        
+        // 참여자 정보를 memberNo를 키로 하는 객체로 변환
+        const membersMap = {};
+        if (Array.isArray(membersData)) {
+          membersData.forEach(member => {
+            membersMap[member.memberNo] = member;
+          });
+        }
+        setChatRoomMembers(membersMap);
+
+        // 3. 메시지 목록 조회
         const res = await chatService.getChatMessages(currentChatRoomNo);
         const messageData = res.data || res;
         
@@ -518,15 +534,30 @@ export function ChatModal() {
                       {/* 상대방 메시지일 때만 이름과 프로필 표시 */}
                       {msg.memberNo !== user?.memberNo && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                          {/* 프로필 이미지 */}
-                          {msg.senderProfile ? (
-                            <S.ProfileImage 
-                              src={msg.senderProfile} 
-                              alt={msg.senderName || '프로필'}
-                            />
-                          ) : null}
+                          {/* 프로필 이미지 - chatRoomMembers에서 조회 */}
+                          {(() => {
+                            const memberInfo = chatRoomMembers[msg.memberNo];
+                            const profileImage = memberInfo?.profileImage || msg.senderProfile;
+                            
+                            if (profileImage) {
+                              return (
+                                <S.ProfileImage 
+                                  src={getMemberProfileUrl(profileImage)} 
+                                  alt={msg.senderName || '프로필'}
+                                  onError={(e) => {
+                                    e.target.style.display = 'none';
+                                    e.target.nextSibling.style.display = 'flex';
+                                  }}
+                                />
+                              );
+                            }
+                            return null;
+                          })()}
+                          
                           <S.DefaultProfile 
-                            style={{ display: msg.senderProfile ? 'none' : 'flex' }}
+                            style={{ 
+                              display: (chatRoomMembers[msg.memberNo]?.profileImage || msg.senderProfile) ? 'none' : 'flex' 
+                            }}
                           >
                             {(msg.senderName || '?')[0]?.toUpperCase()}
                           </S.DefaultProfile>

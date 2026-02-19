@@ -107,7 +107,7 @@ const useChatStore = create(
       }
     },
 
-    // [목록 열기] 헤더의 메시지 아이콘 클릭 시 호출 (캐싱 비활성화)
+    // [목록 열기] 헤더의 메시지 아이콘 클릭 시 호출 (성능 최적화)
     openChatList: async () => {
       const startTime = performance.now();
       
@@ -128,7 +128,7 @@ const useChatStore = create(
       set({ isChatOpen: true, viewMode: 'list', isLoading: true, isLoadingChatList: true });
       
       try {
-        // 채팅방 목록 조회 (백엔드에서 자동으로 누락된 채팅방 생성 처리)
+        // 1. 먼저 채팅방 목록을 빠르게 조회하여 UI 표시 (느린 렌더링 해결)
         const response = await chatService.getChatRoomsByAgency(agencyNo, 'all');
         const data = response?.data || response;
 
@@ -142,11 +142,38 @@ const useChatStore = create(
             chatRooms: data,
             lastRefreshTime: Date.now(),
             _memoizedTotalUnreadCount: totalUnreadCount,
-            _lastChatRoomsHash: currentHash
+            _lastChatRoomsHash: currentHash,
+            isLoading: false,
+            isLoadingChatList: false
           });
           
           // 전역 메시지 리스너 초기화 (채팅방 목록 로드 후)
           get().initializeGlobalMessageListener();
+          
+          // 2. 백그라운드에서 채팅방 자동 생성 (UI 블로킹 없이, 비동기 처리)
+          // 느린 렌더링 해결을 위해 Promise를 기다리지 않고 백그라운드에서 실행
+          chatService.ensureChatRooms()
+            .then(async () => {
+              // 생성 후 목록 다시 조회 (조용히)
+              const updatedResponse = await chatService.getChatRoomsByAgency(agencyNo, 'all');
+              const updatedData = updatedResponse?.data || updatedResponse;
+              
+              if (Array.isArray(updatedData)) {
+                const newHash = get()._calculateChatRoomsHash(updatedData);
+                const newTotalUnreadCount = updatedData.reduce((total, room) => total + (room.unreadCount || 0), 0);
+                
+                set({ 
+                  chatRooms: updatedData,
+                  lastRefreshTime: Date.now(),
+                  _memoizedTotalUnreadCount: newTotalUnreadCount,
+                  _lastChatRoomsHash: newHash
+                });
+              }
+            })
+            .catch(error => {
+              console.error('❌ [채팅] 백그라운드 채팅방 생성 실패:', error);
+            });
+          
         } else {
           console.warn('⚠️ [채팅] 채팅방 목록이 배열이 아닙니다:', data);
           set({ chatRooms: [], _memoizedTotalUnreadCount: 0, _lastChatRoomsHash: null });
@@ -163,7 +190,7 @@ const useChatStore = create(
       }
     },
 
-    // [대화방 입장] 목록에서 특정 방 클릭 시 호출 (최적화된 버전)
+    // [대화방 입장] 목록에서 특정 방 클릭 시 호출 (chatRoomNo를 통해 chatMember로 조회)
     openChatDetail: async (room) => {
       // 룸 ID 추출 (chatRoomNo 필드명 사용)
       const roomId = room.chatRoomNo || room.roomId || room.roomNo || room.id;
@@ -183,6 +210,9 @@ const useChatStore = create(
       set({ isChatOpen: true, viewMode: 'detail', selectedChat: room, isLoading: true });
 
       try {
+        // chatRoomNo를 통해 ChatRoomMember 엔티티에서 참여자 목록 조회 및 로그 출력
+        await chatService.logChatRoomMembers(roomId);
+        
         // 메시지 로드는 ChatModal에서 처리하므로 여기서는 상태만 설정
         // 필요시 미리 로드할 수도 있지만, 현재는 ChatModal에서 처리
       } catch (error) {

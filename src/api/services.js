@@ -805,6 +805,52 @@ export const chatService = {
     );
   },
 
+  // 채팅방 참여자 목록 조회
+  getChatRoomMembers: (chatRoomNo) => {
+    if (!chatRoomNo) {
+      return Promise.reject(new Error('채팅방 번호가 필요합니다.'));
+    }
+    
+    return api.get(`/api/chat/rooms/${chatRoomNo}/members`)
+      .then(response => {
+        return response;
+      })
+      .catch(error => {
+        console.error('❌ [API] getChatRoomMembers 실패:', error);
+        return { data: [] };
+      });
+  },
+
+  // 간단한 채팅방 멤버 로그 출력
+  logChatRoomMembers: (chatRoomNo) => {
+    if (!chatRoomNo) {
+      return Promise.reject(new Error('채팅방 번호가 필요합니다.'));
+    }
+    
+    return api.get(`/api/chat/rooms/${chatRoomNo}/members/simple`)
+      .then(response => {
+        return response;
+      })
+      .catch(error => {
+        console.error('❌ [API] logChatRoomMembers 실패:', error);
+        return { data: null };
+      });
+  },
+
+  // 채팅방 자동 생성 및 참여자 초대
+  ensureChatRooms: () => {
+    return api.post('/api/chat/ensure-rooms')
+      .then(response => {
+        // 채팅방 목록 캐시 무효화
+        chatService.invalidateCache('getChatRoomsByAgency');
+        return response;
+      })
+      .catch(error => {
+        console.error('❌ [API] ensureChatRooms 실패:', error);
+        throw error;
+      });
+  },
+
   // 캐시 정리 함수
   clearCache: () => {
     chatService._cache.clear();

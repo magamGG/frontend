@@ -232,8 +232,6 @@ class WebSocketService {
       });
 
       this.subscriptions.set(destination, subscription);
-      console.log('📡 [WebSocket] 채팅방 구독 완료:', roomId);
-
       return subscription;
     } catch (error) {
       console.error('❌ [WebSocket] 채팅방 구독 실패:', error);
@@ -250,7 +248,6 @@ class WebSocketService {
       try {
         subscription.unsubscribe();
         this.subscriptions.delete(destination);
-        console.log('📡 [WebSocket] 채팅방 구독 해제 완료:', roomId);
       } catch (error) {
         console.error('❌ [WebSocket] 구독 해제 실패:', roomId, error);
         // 에러가 발생해도 Map에서는 제거

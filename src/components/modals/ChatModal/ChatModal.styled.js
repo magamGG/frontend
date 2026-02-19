@@ -165,6 +165,10 @@ export const ProfileImage = styled.img`
   object-fit: cover;
   border: 2px solid var(--border);
   flex-shrink: 0;
+  
+  &:hover {
+    border-color: var(--primary);
+  }
 `;
 
 export const DefaultProfile = styled.div`
@@ -180,6 +184,11 @@ export const DefaultProfile = styled.div`
   color: var(--muted-foreground);
   border: 2px solid var(--border);
   flex-shrink: 0;
+  
+  &:hover {
+    border-color: var(--primary);
+    background-color: var(--accent);
+  }
 `;
 
 export const MessageContent = styled.div`
