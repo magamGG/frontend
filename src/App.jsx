@@ -9,8 +9,6 @@ import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { ProjectProvider } from '@/contexts/ProjectContext';
 import useAuthStore from '@/store/authStore';
-import { ChatModal } from '@/components/modals/ChatModal';
-import useChatStore from '@/store/chatStore';
 
 // Lazy load artist pages
 const ArtistDashboardPage = lazy(() => import('@/pages/artist/ArtistDashboard').then(m => ({ default: m.ArtistDashboardPage })));
@@ -57,7 +55,6 @@ const PageLoadingFallback = () => (
  */
 
 export default function App() {
-  const { isChatOpen, closeChat, selectedChat } = useChatStore();
   const [authView, setAuthView] = useState('login');
   const [userRole, setUserRole] = useState(null);
   const [hasAgency, setHasAgency] = useState(true); // Track if user has agency affiliation
@@ -450,11 +447,6 @@ export default function App() {
             <FullPageLayout sections={sections} onLogout={handleLogout} userRole={userRole} />
           </Suspense>
         )}
-        <ChatModal 
-          isOpen={isChatOpen} 
-          onClose={closeChat} 
-          chatPartner={selectedChat}
-          />
       </ProjectProvider>
     </DndProvider>
   );
