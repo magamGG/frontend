@@ -432,6 +432,36 @@ export const projectService = {
   updateComment: (projectNo, cardId, commentId, payload) => {
     return api.put(API_ENDPOINTS.PROJECTS.KANBAN_CARD_COMMENT_UPDATE(projectNo, cardId, commentId), payload);
   },
+
+  // Notion OAuth 설정 조회 (clientId, redirectUri)
+  getNotionConfig: () => {
+    return api.get(API_ENDPOINTS.PROJECTS.NOTION_CONFIG);
+  },
+
+  // Notion OAuth code → token 교환
+  notionCallback: (projectNo, code) => {
+    return api.post(API_ENDPOINTS.PROJECTS.NOTION_CALLBACK(projectNo), { code });
+  },
+
+  // Notion 연동 상태 조회
+  getNotionStatus: (projectNo) => {
+    return api.get(API_ENDPOINTS.PROJECTS.NOTION_STATUS(projectNo));
+  },
+
+  // Notion Database ID 저장
+  setNotionDatabase: (projectNo, databaseId) => {
+    return api.put(API_ENDPOINTS.PROJECTS.NOTION_DATABASE(projectNo), { databaseId });
+  },
+
+  // Notion 연동 해제
+  disconnectNotion: (projectNo) => {
+    return api.delete(API_ENDPOINTS.PROJECTS.NOTION_DISCONNECT(projectNo));
+  },
+
+  // Notion 수동 동기화
+  syncNotion: (projectNo) => {
+    return api.post(API_ENDPOINTS.PROJECTS.NOTION_SYNC(projectNo));
+  },
 };
 
 // 캘린더 서비스
@@ -444,6 +474,15 @@ export const calendarService = {
   // 에이전시 대시보드 마감 임박 현황 (오늘~4일 후별 건수)
   getDeadlineCountsByAgency: (agencyNo) => {
     return api.get(API_ENDPOINTS.CALENDAR.DEADLINE_COUNTS_BY_AGENCY(agencyNo));
+  },
+};
+
+// 공휴일 서비스
+export const holidayService = {
+  getHolidaysByYear: async (year) => {
+    // axios interceptor가 이미 response.data를 반환하므로 그대로 사용
+    const response = await api.get(API_ENDPOINTS.HOLIDAYS.GET_BY_YEAR(year));
+    return response; // response.data가 아니라 response 자체 반환
   },
 };
 
@@ -894,4 +933,5 @@ export default {
   agencyService,
   managerService,
   chatService,
+  holidayService,
 };

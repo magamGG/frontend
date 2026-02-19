@@ -18,7 +18,10 @@ import {
   XCircle,
   MessageSquare,
   Circle,
-  CheckCircle2
+  CheckCircle2,
+  ExternalLink,
+  Link2Off,
+  RefreshCw
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
@@ -381,6 +384,124 @@ export function ProjectDetailPage({
     };
     fetchArtists();
   }, [user?.memberNo]);
+
+  // Notion 연동 상태
+  const [notionStatus, setNotionStatus] = useState({ connected: false, workspaceName: '', databaseId: '' });
+  const [notionLoading, setNotionLoading] = useState(false);
+  const [notionSyncing, setNotionSyncing] = useState(false);
+
+  useEffect(() => {
+    if (!project?.id) return;
+    const fetchNotionStatus = async () => {
+      try {
+        const res = await projectService.getNotionStatus(project.id);
+        setNotionStatus(res || { connected: false, workspaceName: '', databaseId: '' });
+      } catch {
+        setNotionStatus({ connected: false, workspaceName: '', databaseId: '' });
+      }
+    };
+    fetchNotionStatus();
+  }, [project?.id]);
+
+  const handleNotionConnect = async () => {
+    setNotionLoading(true);
+    try {
+      const config = await projectService.getNotionConfig();
+      console.log('[Notion] config:', config);
+      const { clientId, redirectUri } = config;
+      const state = JSON.stringify({ projectNo: project.id });
+      const authUrl =
+        `https://api.notion.com/v1/oauth/authorize?client_id=${clientId}` +
+        `&response_type=code&owner=user&redirect_uri=${encodeURIComponent(redirectUri)}` +
+        `&state=${encodeURIComponent(state)}`;
+      const popup = window.open(authUrl, 'notion-oauth', 'width=600,height=700');
+
+      let callbackHandled = false;
+
+      const handleMessage = async (event) => {
+        if (event.data?.type !== 'notion-callback') return;
+        callbackHandled = true;
+        window.removeEventListener('message', handleMessage);
+        const { code } = event.data;
+        if (!code) {
+          toast.error('Notion 인증에 실패했습니다.');
+          setNotionLoading(false);
+          return;
+        }
+        try {
+          const result = await projectService.notionCallback(project.id, code);
+          console.log('Notion callback result:', result);
+          const dbStatus = result?.dbStatus || '';
+          const syncedCards = result?.syncedCards || 0;
+          if (result?.databaseId) {
+            setNotionStatus({ connected: true, workspaceName: result?.workspaceName || '', databaseId: result?.databaseId || '' });
+            toast.success(`Notion 연동 완료! (DB: ${dbStatus}, 동기화: ${syncedCards}건)`);
+          } else if (dbStatus === 'no_pages_shared') {
+            setNotionStatus({ connected: true, workspaceName: result?.workspaceName || '', databaseId: '' });
+            toast.error('Notion 인증은 됐지만, 공유된 페이지가 없어 데이터베이스를 생성할 수 없습니다. Notion에서 페이지를 공유한 뒤 다시 연결해주세요.');
+          } else {
+            setNotionStatus({ connected: true, workspaceName: result?.workspaceName || '', databaseId: '' });
+            toast.error(`Notion 인증 완료, 데이터베이스 연결 실패 (${dbStatus}). 연동 해제 후 다시 시도해주세요.`);
+          }
+        } catch (err) {
+          console.error('Notion callback error:', err);
+          toast.error('Notion 연동 중 오류가 발생했습니다.');
+        } finally {
+          setNotionLoading(false);
+        }
+      };
+      window.addEventListener('message', handleMessage);
+
+      const checkClosed = setInterval(() => {
+        if (popup && popup.closed) {
+          clearInterval(checkClosed);
+          if (!callbackHandled) {
+            setNotionLoading(false);
+            window.removeEventListener('message', handleMessage);
+            // 팝업이 닫혔지만 callback이 안 왔으면 status를 다시 확인
+            projectService.getNotionStatus(project.id).then(res => {
+              if (res?.connected) {
+                setNotionStatus(res);
+                toast.success('Notion 연동이 완료되었습니다!');
+              }
+            }).catch(() => {});
+          }
+        }
+      }, 1000);
+    } catch (err) {
+      toast.error('Notion 설정을 불러올 수 없습니다.');
+      setNotionLoading(false);
+    }
+  };
+
+  const handleNotionSync = async () => {
+    setNotionSyncing(true);
+    try {
+      const res = await projectService.syncNotion(project.id);
+      const count = res?.synced ?? 0;
+      if (count > 0) {
+        toast.success(`Notion에 ${count}건의 카드를 동기화했습니다.`);
+      } else {
+        toast.info('동기화할 새 카드가 없습니다. (이미 동기화된 카드는 건너뜁니다)');
+      }
+    } catch (err) {
+      console.error('Notion sync error:', err);
+      toast.error('Notion 동기화 중 오류가 발생했습니다.');
+    } finally {
+      setNotionSyncing(false);
+    }
+  };
+
+  const handleNotionDisconnect = async () => {
+    if (!window.confirm('Notion 연동을 해제하시겠습니까?')) return;
+    try {
+      await projectService.disconnectNotion(project.id);
+      setNotionStatus({ connected: false, workspaceName: '', databaseId: '' });
+      toast.success('Notion 연동이 해제되었습니다.');
+    } catch {
+      toast.error('Notion 연동 해제에 실패했습니다.');
+    }
+  };
 
   // 추가 가능한 팀원 (DB: MEMBER_ROLE != 담당자/작가, 프로젝트 미소속)
   const [availableMembers, setAvailableMembers] = useState([]);
@@ -1410,7 +1531,46 @@ export function ProjectDetailPage({
             <div className="flex-1 min-w-0">
               <Card className="p-6 h-[calc(100vh-320px)] flex flex-col">
                 <div className="flex items-center justify-between mb-6 flex-shrink-0">
-                  <h2 className="text-xl font-bold text-foreground">업무 일정 보드</h2>
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-xl font-bold text-foreground">업무 일정 보드</h2>
+                    {notionStatus.connected ? (
+                      <div className="flex items-center gap-1.5">
+                        <Badge className="bg-emerald-100 text-emerald-700 text-xs px-2.5 py-1 flex items-center gap-1">
+                          <svg className="w-3 h-3" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6.017 4.313l55.333-4.087c6.797-.583 8.543-.19 12.817 2.917l17.663 12.443c2.913 2.14 3.883 2.723 3.883 5.053v68.243c0 4.277-1.553 6.807-6.99 7.193L24.467 99.967c-4.08.193-6.023-.39-8.16-3.113L3.3 79.94c-2.333-3.113-3.3-5.443-3.3-8.167V11.113c0-3.497 1.553-6.413 6.017-6.8z" fill="#fff"/>
+                            <path d="M61.35.227l-55.333 4.087C.583 4.7-1 7.617-1 11.113v60.66c0 2.724.967 5.054 3.3 8.167l12.987 16.913c2.137 2.723 4.08 3.307 8.16 3.113L87.573 96.08c5.437-.387 6.99-2.917 6.99-7.193V17.64c0-2.207-.86-2.867-3.46-4.74L73.767 0.84C69.893-.377 68.147-.767 61.35.227zM25.505 16.064c-6.24.39-7.66.477-11.233-2.527L7.49 8.223c-.97-.78-.58-1.753 1.36-1.947l52.053-3.693c5.437-.39 8.16 1.167 10.3 2.917l8.16 5.833c.39.193 1.36 1.36.193 1.36l-53.86 3.178-.19.193zm-4.663 75.937V29.09c0-2.917 1.94-4.47 1.94-4.47.58-1.553 2.137-2.333 4.857-2.527l56.053-3.303c2.527-.193 3.883 1.36 3.883 3.887v62.52c0 2.723-.39 5.053-3.887 5.247l-53.66 3.11c-3.5.193-5.187-1.167-5.187-3.693v.14zm52.827-59.607c.39 1.753 0 3.5-1.75 3.693l-2.72.583v46.177c-2.333 1.167-4.47 1.943-6.217 1.943-2.917 0-3.693-.97-5.833-3.497L37.895 46.73v31.267l5.637 1.167s0 3.5-4.857 3.5l-13.377.78c-.39-.78 0-2.723 1.36-3.11l3.497-.97V37.09l-4.857-.39c-.39-1.753.583-4.277 3.3-4.47l14.35-.97 22.857 34.96V37.48l-4.667-.583c-.39-2.137 1.167-3.69 3.11-3.883l13.377-.78z" fill="currentColor"/>
+                          </svg>
+                          Notion {notionStatus.workspaceName && `(${notionStatus.workspaceName})`}
+                        </Badge>
+                        <button
+                          onClick={handleNotionSync}
+                          disabled={notionSyncing}
+                          className="text-muted-foreground hover:text-primary p-1 disabled:opacity-50"
+                          title="Notion에 카드 동기화"
+                        >
+                          <RefreshCw className={`w-3.5 h-3.5 ${notionSyncing ? 'animate-spin' : ''}`} />
+                        </button>
+                        <button
+                          onClick={handleNotionDisconnect}
+                          className="text-muted-foreground hover:text-destructive p-1"
+                          title="Notion 연동 해제"
+                        >
+                          <Link2Off className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleNotionConnect}
+                        disabled={notionLoading}
+                        className="border-dashed text-xs h-7"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5 mr-1" />
+                        {notionLoading ? '연동 중...' : '노션 연결'}
+                      </Button>
+                    )}
+                  </div>
                   <Button
                     size="sm"
                     onClick={() => setIsBoardModalOpen(true)}
