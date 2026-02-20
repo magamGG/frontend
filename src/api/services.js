@@ -24,14 +24,19 @@ export const authService = {
     return api.post(API_ENDPOINTS.AUTH.RESET_PASSWORD, { email, code, newPassword });
   },
   
-  // 토큰 갱신
+  // 토큰 갱신 (하위 호환성 - Request Body 방식)
   refresh: (refreshToken) => {
     return api.post(API_ENDPOINTS.AUTH.REFRESH, { refreshToken });
   },
   
-  // 로그아웃
-  logout: (refreshToken) => {
-    return api.post(API_ENDPOINTS.AUTH.LOGOUT, { refreshToken });
+  // 토큰 재발급 (쿠키 기반 - 권장)
+  reissue: () => {
+    return api.post(API_ENDPOINTS.AUTH.REISSUE);
+  },
+  
+  // 로그아웃 (쿠키 기반이므로 body 없이 요청)
+  logout: () => {
+    return api.post(API_ENDPOINTS.AUTH.LOGOUT);
   },
   
   // OAuth 인증 URL 조회 (범용)
@@ -195,7 +200,12 @@ export const leaveService = {
 
   // 연차 잔액 조회
   getLeaveBalance: (memberNo) => {
-    return api.get(API_ENDPOINTS.LEAVE.BALANCE(memberNo));
+    // memberNo를 숫자로 변환하여 전달 (문자열 전달로 인한 400 에러 방지)
+    const numericMemberNo = Number(memberNo);
+    if (isNaN(numericMemberNo)) {
+      return Promise.reject(new Error('회원번호는 숫자여야 합니다.'));
+    }
+    return api.get(API_ENDPOINTS.LEAVE.BALANCE(numericMemberNo));
   },
 
   // 내 근태 신청 목록 조회

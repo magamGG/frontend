@@ -23,6 +23,7 @@ import { toast } from 'sonner';
 import { leaveService, attendanceService, calendarService, projectService, memoService, memberService } from '@/api/services';
 import useAuthStore from '@/store/authStore';
 import { LeaveRequestEditModal } from '@/components/modals/LeaveRequestEditModal';
+import { parseBackendDate } from '@/utils/dateUtils';
 import {
   ArtistDashboardRoot,
   ArtistDashboardBody,
@@ -550,7 +551,8 @@ export function ArtistDashboardPage() {
           const status = REQUEST_STATUS_MAP[item.attendanceRequestStatus] || REQUEST_STATUS.PENDING;
           const formatReqDate = (dt) => {
             if (!dt) return '';
-            const d = typeof dt === 'string' ? new Date(dt) : dt;
+            const d = parseBackendDate(dt);
+            if (!d) return '';
             return `${d.getMonth() + 1}월 ${d.getDate()}일`;
           };
           return {
@@ -845,7 +847,8 @@ export function ArtistDashboardPage() {
 
   const formatPeriodDate = (dateString) => {
     if (!dateString) return '';
-    const date = new Date(dateString);
+    const date = parseBackendDate(dateString);
+    if (!date) return '';
     return `${date.getMonth() + 1}월 ${date.getDate()}일`;
   };
 

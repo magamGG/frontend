@@ -1,9 +1,9 @@
 // API 기본 설정
-// 개발 환경에서는 프록시를 사용하므로 빈 문자열 (상대 경로)
-// 프로덕션 환경에서는 전체 URL 사용
+// 개발 환경: 직접 백엔드로 요청 (CORS 설정 필요)
+// 프로덕션 환경: 실제 배포 URL로 변경 필요
 export const API_BASE_URL = import.meta.env.PROD
   ? 'http://localhost:8888'  // 프로덕션 환경 URL (실제 배포 시 변경 필요)
-  : '';  // 개발 환경에서는 프록시 사용 (상대 경로)
+  : 'http://localhost:8888';  // 개발 환경: 백엔드 직접 연결 (CORS 설정 필요)
 export const API_TIMEOUT = 10000;
 
 /** DB THUMBNAIL_FILE을 이미지 URL로 변환 (업로드 경로: /uploads/) */
@@ -37,11 +37,12 @@ export const API_ENDPOINTS = {
   // 인증 API
   AUTH: {
     LOGIN: `/api/auth/login`,
+    REFRESH: `/api/auth/refresh`,
+    REISSUE: `/api/auth/reissue`,  // 쿠키 기반 토큰 재발급
+    LOGOUT: `/api/auth/logout`,
     FORGOT_PASSWORD: `/api/auth/forgot-password`,
     VERIFY_RESET_CODE: `/api/auth/verify-reset-code`,
     RESET_PASSWORD: `/api/auth/reset-password`,
-    REFRESH: `/api/auth/refresh`,
-    LOGOUT: `/api/auth/logout`,
     // OAuth 범용 엔드포인트
     OAUTH_AUTHORIZATION_URL: (provider) => `/api/auth/${provider}/authorization-url`,
     OAUTH_CALLBACK: (provider) => `/api/auth/${provider}/callback`,
@@ -139,23 +140,12 @@ export const API_ENDPOINTS = {
     KANBAN_CARD_UPDATE: (projectNo, cardId) => `/api/projects/${projectNo}/kanban-card/${cardId}`, // PUT: 칸반 카드 수정
     KANBAN_CARD_COMMENTS: (projectNo, cardId) => `/api/projects/${projectNo}/kanban-card/${cardId}/comments`, // GET: 목록, POST: 추가
     KANBAN_CARD_COMMENT_UPDATE: (projectNo, cardId, commentId) => `/api/projects/${projectNo}/kanban-card/${cardId}/comments/${commentId}`, // PUT: 코멘트 수정
-    NOTION_CONFIG: `/api/projects/notion/config`, // GET: Notion OAuth 설정 (clientId, redirectUri)
-    NOTION_CALLBACK: (projectNo) => `/api/projects/${projectNo}/notion/callback`, // POST: Notion OAuth code → token 교환
-    NOTION_STATUS: (projectNo) => `/api/projects/${projectNo}/notion/status`, // GET: Notion 연동 상태 조회
-    NOTION_DATABASE: (projectNo) => `/api/projects/${projectNo}/notion/database`, // PUT: Notion Database ID 저장
-    NOTION_DISCONNECT: (projectNo) => `/api/projects/${projectNo}/notion`, // DELETE: Notion 연동 해제
-    NOTION_SYNC: (projectNo) => `/api/projects/${projectNo}/notion/sync`, // POST: Notion 수동 동기화
   },
 
   // 캘린더 API
   CALENDAR: {
     DEADLINE_COUNTS: `/api/calendar/deadline-counts`, // GET: 담당자 대시보드 마감 임박 현황
     DEADLINE_COUNTS_BY_AGENCY: (agencyNo) => `/api/calendar/deadline-counts/agency/${agencyNo}`, // GET: 에이전시 대시보드 마감 임박 현황
-  },
-
-  // 공휴일 API
-  HOLIDAYS: {
-    GET_BY_YEAR: (year) => `/api/holidays/${year}`,
   },
 
   // 알림 API
@@ -230,14 +220,6 @@ export const API_ENDPOINTS = {
     HEALTH_SCHEDULE: `/api/managers/health-schedule`, // GET: 담당자 소속 에이전시 건강 검진 일정
     UNSCREENED_LIST: `/api/managers/unscreened-list`, // GET: 담당자 배정 작가 미검진 인원 목록
     HEALTH_MONITORING_DETAIL: (type) => `/api/managers/health-monitoring-detail?type=${type || 'mental'}`, // GET: 담당자 배정 작가 검진 모니터링 상세 (정신/신체)
-  },
-
-  // 채팅 API
-  CHAT: {
-    ROOMS: (memberNo) => `/api/chat/rooms/${memberNo}`, // GET: 내 채팅방 목록 조회
-    ROOMS_BY_AGENCY: (agencyNo, type = 'all') => `/api/chat/rooms/agency/${agencyNo}?type=${type}`, // GET: 에이전시별 채팅방 목록 조회
-    JOIN_ROOM: (chatRoomNo) => `/api/chat/rooms/${chatRoomNo}/join`, // POST: 채팅방 입장 (멤버 등록)
-    MESSAGES: (chatRoomNo) => `/api/chat/rooms/${chatRoomNo}/messages`, // GET: 채팅방 메시지 목록 조회
   },
 };
 

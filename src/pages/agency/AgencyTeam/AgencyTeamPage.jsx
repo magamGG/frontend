@@ -28,6 +28,7 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 import { memberService, leaveService, attendanceService } from '@/api';
 import { getMemberProfileUrl } from '@/api/config';
 import useAuthStore from '@/store/authStore';
+import { formatDateToString } from '@/utils/dateUtils';
 
 // 상대 경로
 import {
@@ -149,7 +150,7 @@ export function AgencyTeamPage() {
           email: member.memberEmail,
           phone: member.memberPhone || '',
           status: member.todayWorkStatus ?? (member.memberStatus === 'ACTIVE' ? '근무중' : member.memberStatus === 'ON_LEAVE' ? '휴가' : member.memberStatus === 'SICK_LEAVE' ? '병가' : '작업 시작전'),
-          joinDate: member.memberCreatedAt ? new Date(member.memberCreatedAt).toISOString().split('T')[0] : '',
+          joinDate: formatDateToString(member.memberCreatedAt),
           avatar: getMemberProfileUrl(member.memberProfileImage) || null,
         }));
 
