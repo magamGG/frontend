@@ -193,6 +193,27 @@ export const API_ENDPOINTS = {
     DEADLINE_COUNTS: (agencyNo) => `/api/agency/${agencyNo}/deadline-counts`, // GET: 마감 임박 현황 (담당자 관리 프로젝트 업무, 오늘~4일 후)
   },
 
+  // AI 챗봇 API (역할별)
+  AI: {
+    ARTIST_HEALTH_FEEDBACK: `/api/v1/ai/artist/health-feedback`,
+    MANAGER_HEALTH_SUMMARY: `/api/v1/ai/manager/artist-health-summary`,
+    AGENCY_HEALTH_OVERVIEW: `/api/v1/ai/agency/health-overview`,
+    AGENCY_RISK_SUMMARY: `/api/v1/ai/agency/risk-summary`,
+    AGENCY_LEAVE_OVERLAP_ALERT: `/api/v1/ai/agency/leave-overlap-alert`,
+    AGENCY_ARTIST_ASSIGNMENT_BALANCE: `/api/v1/ai/agency/artist-assignment-balance`,
+    AGENCY_REJECTED_THEN_REAPPLIED_ALERT: `/api/v1/ai/agency/rejected-then-reapplied-alert`,
+    ARTIST_LEAVE_RECOMMENDATION: `/api/v1/ai/artist/leave-recommendation`,
+    MANAGER_LEAVE_RECOMMENDATION: `/api/v1/ai/manager/leave-recommendation`,
+    ARTIST_WORKLOAD_SUMMARY: `/api/v1/ai/artist/workload-summary`,
+    ARTIST_PROJECT_PRIORITY_ADVICE: `/api/v1/ai/artist/project-priority-advice`,
+    ARTIST_WORKATION_RECOMMENDATION: `/api/v1/ai/artist/workation-recommendation`,
+    MANAGER_ARTIST_WORKLOAD_BALANCE: `/api/v1/ai/manager/artist-workload-balance`,
+    MANAGER_MY_HEALTH_FEEDBACK: `/api/v1/ai/manager/my-health-feedback`,
+    MANAGER_WORKATION_RECOMMENDATION: `/api/v1/ai/manager/workation-recommendation`,
+    MANAGER_NUDGE_MESSAGE_RECOMMENDATION: `/api/v1/ai/manager/nudge-message-recommendation`,
+    MANAGER_ARTIST_DAILY_HEALTH_SUMMARY: `/api/v1/ai/manager/artist-daily-health-summary`,
+  },
+
   // 담당자(manager) API (X-Member-No로 담당자 식별, 배정 작가만 대상)
   MANAGER: {
     HEALTH_DISTRIBUTION: `/api/managers/health-distribution`, // GET: 담당자 배정 작가 건강 인원 분포 (정신/신체)

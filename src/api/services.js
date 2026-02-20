@@ -937,6 +937,32 @@ export const chatService = {
   },
 };
 
+// AI 챗봇 서비스 (OpenAI 응답 대기를 위해 타임아웃 60초, tone: 말투 선택 시 쿼리로 전달)
+const AI_TIMEOUT = 60000;
+const aiConfig = (tone) => ({
+  timeout: AI_TIMEOUT,
+  ...(tone && tone !== 'standard' ? { params: { tone } } : {}),
+});
+export const aiService = {
+  getArtistHealthFeedback: (tone) => api.get(API_ENDPOINTS.AI.ARTIST_HEALTH_FEEDBACK, aiConfig(tone)),
+  getManagerHealthSummary: (tone) => api.get(API_ENDPOINTS.AI.MANAGER_HEALTH_SUMMARY, aiConfig(tone)),
+  getAgencyHealthOverview: (tone) => api.get(API_ENDPOINTS.AI.AGENCY_HEALTH_OVERVIEW, aiConfig(tone)),
+  getAgencyRiskSummary: (tone) => api.get(API_ENDPOINTS.AI.AGENCY_RISK_SUMMARY, aiConfig(tone)),
+  getAgencyLeaveOverlapAlert: (tone) => api.get(API_ENDPOINTS.AI.AGENCY_LEAVE_OVERLAP_ALERT, aiConfig(tone)),
+  getAgencyArtistAssignmentBalance: (tone) => api.get(API_ENDPOINTS.AI.AGENCY_ARTIST_ASSIGNMENT_BALANCE, aiConfig(tone)),
+  getAgencyRejectedThenReappliedAlert: (tone) => api.get(API_ENDPOINTS.AI.AGENCY_REJECTED_THEN_REAPPLIED_ALERT, aiConfig(tone)),
+  getArtistLeaveRecommendation: (tone) => api.get(API_ENDPOINTS.AI.ARTIST_LEAVE_RECOMMENDATION, aiConfig(tone)),
+  getManagerLeaveRecommendation: (tone) => api.get(API_ENDPOINTS.AI.MANAGER_LEAVE_RECOMMENDATION, aiConfig(tone)),
+  getArtistWorkloadSummary: (tone) => api.get(API_ENDPOINTS.AI.ARTIST_WORKLOAD_SUMMARY, aiConfig(tone)),
+  getArtistProjectPriorityAdvice: (tone) => api.get(API_ENDPOINTS.AI.ARTIST_PROJECT_PRIORITY_ADVICE, aiConfig(tone)),
+  getArtistWorkationRecommendation: (tone) => api.get(API_ENDPOINTS.AI.ARTIST_WORKATION_RECOMMENDATION, aiConfig(tone)),
+  getManagerArtistWorkloadBalance: (tone) => api.get(API_ENDPOINTS.AI.MANAGER_ARTIST_WORKLOAD_BALANCE, aiConfig(tone)),
+  getManagerMyHealthFeedback: (tone) => api.get(API_ENDPOINTS.AI.MANAGER_MY_HEALTH_FEEDBACK, aiConfig(tone)),
+  getManagerWorkationRecommendation: (tone) => api.get(API_ENDPOINTS.AI.MANAGER_WORKATION_RECOMMENDATION, aiConfig(tone)),
+  getManagerNudgeMessageRecommendation: (tone) => api.get(API_ENDPOINTS.AI.MANAGER_NUDGE_MESSAGE_RECOMMENDATION, aiConfig(tone)),
+  getManagerArtistDailyHealthSummary: (tone) => api.get(API_ENDPOINTS.AI.MANAGER_ARTIST_DAILY_HEALTH_SUMMARY, aiConfig(tone)),
+};
+
 export default {
   authService,
   memberService,
@@ -950,4 +976,5 @@ export default {
   managerService,
   chatService,
   holidayService,
+  aiService,
 };
