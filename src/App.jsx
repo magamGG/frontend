@@ -9,6 +9,7 @@ import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { ProjectProvider } from '@/contexts/ProjectContext';
 import useAuthStore from '@/store/authStore';
+import { AiChatBot } from '@/components/common/AiChatBot';
 
 // Lazy load artist pages
 const ArtistDashboardPage = lazy(() => import('@/pages/artist/ArtistDashboard').then(m => ({ default: m.ArtistDashboardPage })));
@@ -453,9 +454,12 @@ export default function App() {
         )}
 
         {authView === 'dashboard' && (
-          <Suspense fallback={<PageLoadingFallback />}>
-            <FullPageLayout sections={sections} onLogout={handleLogout} userRole={userRole} />
-          </Suspense>
+          <>
+            <Suspense fallback={<PageLoadingFallback />}>
+              <FullPageLayout sections={sections} onLogout={handleLogout} userRole={userRole} />
+            </Suspense>
+            <AiChatBot />
+          </>
         )}
       </ProjectProvider>
     </DndProvider>
