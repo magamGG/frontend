@@ -22,6 +22,7 @@ import { memberService, leaveService, projectService } from '@/api/services';
 import { API_BASE_URL } from '@/api/config';
 import useAuthStore from '@/store/authStore';
 import { toast } from 'sonner';
+import { parseBackendDate } from '@/utils/dateUtils';
 import {
   AgencyWorkcationRoot,
   AgencyWorkcationBody,
@@ -145,11 +146,11 @@ export function AgencyWorkcationPage() {
             return false;
           }
           
-          // LocalDateTime 문자열 파싱 (예: "2026-01-15T00:00:00" 또는 "2026-01-15")
-          const startDate = new Date(startDateStr);
-          const endDate = new Date(endDateStr);
+          // 배열 형태의 날짜 파싱 (LocalDateTime이 배열로 직렬화됨)
+          const startDate = parseBackendDate(startDateStr);
+          const endDate = parseBackendDate(endDateStr);
           
-          if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+          if (!startDate || !endDate) {
             console.warn('날짜 파싱 실패:', { startDateStr, endDateStr });
             return false;
           }

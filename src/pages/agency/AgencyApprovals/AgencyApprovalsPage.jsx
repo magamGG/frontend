@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { agencyService, leaveService } from '@/api';
 import useAuthStore from '@/store/authStore';
 import { RequestDetailModal } from '@/components/modals/RequestDetailModal/RequestDetailModal';
+import { formatDateToString } from '@/utils/dateUtils';
 import {
   AgencyApprovalsRoot,
   AgencyApprovalsBody,
@@ -86,8 +87,8 @@ export function AgencyApprovalsPage() {
           phone: req.memberPhone,
           reason: `${req.memberRole} 가입 신청`,
           status: req.newRequestStatus === '대기' ? '대기' : req.newRequestStatus === '승인' ? '승인' : '반려',
-          submittedDate: req.newRequestDate ? new Date(req.newRequestDate).toISOString().split('T')[0] : '',
-          processedDate: req.newRequestStatus !== '대기' ? req.newRequestDate ? new Date(req.newRequestDate).toISOString().split('T')[0] : '' : null,
+          submittedDate: formatDateToString(req.newRequestDate),
+          processedDate: req.newRequestStatus !== '대기' ? formatDateToString(req.newRequestDate) : null,
         }));
         
         // 근태 신청 변환 (취소된 건 제외 - 작가가 삭제한 신청은 목록에서 제거)
@@ -100,8 +101,8 @@ export function AgencyApprovalsPage() {
           category: 'attendance',
           requester: req.memberName,
           role: '작가', // 기본값
-          startDate: req.attendanceRequestStartDate ? new Date(req.attendanceRequestStartDate).toISOString().split('T')[0] : '',
-          endDate: req.attendanceRequestEndDate ? new Date(req.attendanceRequestEndDate).toISOString().split('T')[0] : '',
+          startDate: formatDateToString(req.attendanceRequestStartDate),
+          endDate: formatDateToString(req.attendanceRequestEndDate),
           days: req.attendanceRequestUsingDays,
           reason: req.attendanceRequestReason || '',
           workcationLocation: req.workcationLocation,
@@ -112,8 +113,8 @@ export function AgencyApprovalsPage() {
                 : req.attendanceRequestStatus === 'APPROVED' ? '승인' 
                 : req.attendanceRequestStatus === 'REJECTED' ? '반려' : '대기',
           rejectionReason: req.attendanceRequestRejectReason,
-          submittedDate: req.attendanceRequestCreatedAt ? new Date(req.attendanceRequestCreatedAt).toISOString().split('T')[0] : '',
-          processedDate: req.attendanceRequestUpdatedAt ? new Date(req.attendanceRequestUpdatedAt).toISOString().split('T')[0] : null,
+          submittedDate: formatDateToString(req.attendanceRequestCreatedAt),
+          processedDate: formatDateToString(req.attendanceRequestUpdatedAt),
         }));
         
         // 모든 요청 합치기
