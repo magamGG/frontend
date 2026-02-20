@@ -201,6 +201,19 @@ export const API_ENDPOINTS = {
     DEADLINE_COUNTS: (agencyNo) => `/api/agency/${agencyNo}/deadline-counts`, // GET: 마감 임박 현황 (담당자 관리 프로젝트 업무, 오늘~4일 후)
   },
 
+  // 채팅 API
+  CHAT: {
+    ROOMS_BY_AGENCY: (agencyNo, type = 'all') => `/api/chat/rooms/agency/${agencyNo}?type=${type}`, // GET: 에이전시별 채팅방 목록
+    ROOM_DETAIL: (roomId) => `/api/chat/rooms/${roomId}`, // GET: 채팅방 상세 정보
+    MESSAGES: (roomId, page = 0, size = 50) => `/api/chat/rooms/${roomId}/messages?page=${page}&size=${size}`, // GET: 채팅 메시지 목록
+    SEND_MESSAGE: (roomId) => `/api/chat/rooms/${roomId}/messages`, // POST: 메시지 전송
+    UPLOAD_FILE: (roomId) => `/api/chat/rooms/${roomId}/upload`, // POST: 파일 업로드
+    CREATE_ROOM: `/api/chat/rooms`, // POST: 채팅방 생성
+    JOIN_ROOM: (roomId) => `/api/chat/rooms/${roomId}/join`, // POST: 채팅방 참여
+    LEAVE_ROOM: (roomId) => `/api/chat/rooms/${roomId}/leave`, // POST: 채팅방 나가기
+    READ_MESSAGE: (roomId, messageId) => `/api/chat/rooms/${roomId}/messages/${messageId}/read`, // PUT: 메시지 읽음 처리
+  },
+
   // AI 챗봇 API (역할별)
   AI: {
     ARTIST_HEALTH_FEEDBACK: `/api/v1/ai/artist/health-feedback`,
