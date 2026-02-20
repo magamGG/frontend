@@ -103,6 +103,7 @@ export function AdminProjectsPage() {
   const formatDate = (date) => {
     if (!date) return null;
     const d = new Date(date);
+    if (isNaN(d.getTime())) return null;
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
@@ -127,6 +128,7 @@ export function AdminProjectsPage() {
   const getDeadlineDn = (date) => {
     if (!date) return '미정';
     const next = new Date(date);
+    if (isNaN(next.getTime())) return '미정';
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     next.setHours(0, 0, 0, 0);
@@ -281,6 +283,7 @@ export function AdminProjectsPage() {
   const formatDateKorean = (date) => {
     if (!date) return null;
     const d = new Date(date);
+    if (isNaN(d.getTime())) return null;
     const month = d.getMonth() + 1;
     const day = d.getDate();
     const weekdays = ['일', '월', '화', '수', '목', '금', '토'];

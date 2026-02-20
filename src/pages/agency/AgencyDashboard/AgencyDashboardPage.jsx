@@ -156,6 +156,7 @@ export function AgencyDashboardPage() {
   const formatDateKr = (dateStr) => {
     if (!dateStr) return '-';
     const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '-';
     return `${d.getMonth() + 1}월 ${d.getDate()}일`;
   };
 
