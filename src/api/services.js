@@ -860,22 +860,6 @@ export const chatService = {
       });
   },
 
-  // 간단한 채팅방 멤버 로그 출력
-  logChatRoomMembers: (chatRoomNo) => {
-    if (!chatRoomNo) {
-      return Promise.reject(new Error('채팅방 번호가 필요합니다.'));
-    }
-    
-    return api.get(`/api/chat/rooms/${chatRoomNo}/members/simple`)
-      .then(response => {
-        return response;
-      })
-      .catch(error => {
-        console.error('❌ [API] logChatRoomMembers 실패:', error);
-        return { data: null };
-      });
-  },
-
   // 채팅방 자동 생성 및 참여자 초대
   ensureChatRooms: () => {
     return api.post('/api/chat/ensure-rooms')
@@ -918,6 +902,53 @@ export const chatService = {
 
   createAllMissingChatRooms: () => {
     return api.post('/api/chat/admin/create-all-missing-rooms');
+  },
+
+  // 사용자의 마지막 읽은 메시지 번호 조회
+  getLastReadChatNo: (chatRoomNo) => {
+    const cacheKey = chatService._getCacheKey('getLastReadChatNo', chatRoomNo);
+    const cached = chatService._getCachedData(cacheKey, 5000); // 5초 캐시
+    
+    if (cached) {
+      return Promise.resolve(cached);
+    }
+    
+    return chatService._withRequestDeduplication(cacheKey, () =>
+      api.get(`/api/chat/rooms/${chatRoomNo}/last-read`)
+        .then(response => {
+          chatService._setCachedData(cacheKey, response);
+          return response;
+        })
+        .catch(error => {
+          console.error('❌ [API] 마지막 읽은 메시지 조회 실패:', error);
+          throw error;
+        })
+    );
+  },
+
+  // 채팅 파일 업로드
+  uploadFile: (formData) => {
+    const chatRoomNo = formData.get('chatRoomNo');
+    const memberNo = formData.get('memberNo');
+    
+    // FormData에서 memberNo 제거 (헤더로 보낼 것이므로)
+    formData.delete('memberNo');
+    
+    return api.post(`/api/chat/rooms/${chatRoomNo}/upload`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        'X-Member-No': memberNo,
+      },
+    })
+    .then(response => {
+      // 파일 업로드 성공 시 관련 캐시 무효화
+      chatService.invalidateCache('getChatMessages');
+      return response;
+    })
+    .catch(error => {
+      console.error('❌ [API] 파일 업로드 실패:', error);
+      throw error;
+    });
   },
 };
 

@@ -204,11 +204,6 @@ class ChatPerformanceMonitor {
       '평균 응답시간': `${report.api.avgDuration.toFixed(2)}ms`
     });
     
-    console.log('🔌 WebSocket:', {
-      '총 이벤트': report.websocket.total,
-      '이벤트별': report.websocket.byType
-    });
-    
     if (report.memory) {
       const currentUsage = (report.memory.current.usedJSHeapSize / 1024 / 1024).toFixed(2);
       const peakUsage = (report.memory.peak.usedJSHeapSize / 1024 / 1024).toFixed(2);

@@ -30,17 +30,13 @@ class WebSocketService {
   connect() {
     // 이미 연결되어 있으면 즉시 반환
     if (this.isConnected()) {
-      console.log('✅ [WebSocket] 이미 연결됨');
       return Promise.resolve();
     }
 
     // 연결 중이면 기존 Promise 반환
     if (this.connecting && this.connectionPromise) {
-      console.log('🔄 [WebSocket] 연결 중... 기존 Promise 반환');
       return this.connectionPromise;
     }
-
-    console.log('🔌 [WebSocket] 새로운 연결 시도 시작');
 
     // 성능 모니터링 시작
     const connectStartTime = performance.now();
@@ -51,7 +47,6 @@ class WebSocketService {
     this.connectionPromise = new Promise((resolve, reject) => {
       try {
         // SockJS 인스턴스 생성
-        console.log('🔌 [WebSocket] SockJS 인스턴스 생성 중...');
         const sockjsInstance = new SockJS('http://localhost:8888/ws-stomp');
 
         // SockJS 에러 핸들링
@@ -64,23 +59,21 @@ class WebSocketService {
         };
         
         sockjsInstance.onclose = (event) => {
-          console.log('🔒 [WebSocket] SockJS 연결 닫힘:', event.code, event.reason);
           this.connected = false;
           this.connecting = false;
         };
 
         sockjsInstance.onopen = () => {
-          console.log('🔌 [WebSocket] SockJS 연결 열림');
+          // SockJS 연결 열림
         };
 
         // STOMP 클라이언트 생성
-        console.log('🔌 [WebSocket] STOMP 클라이언트 생성 중...');
         this.client = new Client({
           webSocketFactory: () => sockjsInstance,
           debug: (str) => {
             // 프로덕션에서는 debug 로그 비활성화
             if (process.env.NODE_ENV === 'development') {
-              console.log('🔌 [STOMP]:', str);
+              // STOMP debug 로그 비활성화
             }
           },
           onConnect: (frame) => {
@@ -94,14 +87,12 @@ class WebSocketService {
               duration: connectDuration 
             });
             
-            console.log('✅ [WebSocket] 연결 성공:', frame);
             resolve();
           },
           onDisconnect: (frame) => {
             this.connected = false;
             this.connecting = false;
             chatPerformanceMonitor.recordWebSocketEvent('disconnection');
-            console.log('❌ [WebSocket] 연결 해제:', frame);
           },
           onStompError: (frame) => {
             console.error('❌ [WebSocket] STOMP 에러:', frame);
@@ -134,7 +125,6 @@ class WebSocketService {
         });
 
         // 연결 시도
-        console.log('🔌 [WebSocket] STOMP 클라이언트 활성화 중...');
         this.client.activate();
       } catch (error) {
         console.error('❌ [WebSocket] 연결 초기화 실패:', error);
@@ -180,8 +170,6 @@ class WebSocketService {
     this.connected = false;
     this.connecting = false;
     this.reconnectAttempts = 0;
-    
-    console.log('🔌 [WebSocket] 연결 해제 완료');
   }
 
   // 채팅방 구독 (최적화된 버전)
@@ -195,7 +183,6 @@ class WebSocketService {
 
     // 기존 구독이 있으면 반환
     if (this.subscriptions.has(destination)) {
-      console.log('🔄 [WebSocket] 기존 구독 재사용:', roomId);
       return this.subscriptions.get(destination);
     }
 

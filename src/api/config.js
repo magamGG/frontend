@@ -3,7 +3,7 @@
 // 프로덕션 환경에서는 전체 URL 사용
 export const API_BASE_URL = import.meta.env.PROD
   ? 'http://localhost:8888'  // 프로덕션 환경 URL (실제 배포 시 변경 필요)
-  : '';  // 개발 환경에서는 프록시 사용 (상대 경로)
+  : 'http://localhost:8888';  // 개발 환경에서도 백엔드 직접 호출
 export const API_TIMEOUT = 10000;
 
 /** DB THUMBNAIL_FILE을 이미지 URL로 변환 (업로드 경로: /uploads/) */
@@ -27,6 +27,14 @@ export function getMemberProfileUrl(profileImage) {
 /** 회원 프로필 없을 때 placeholder */
 export const MEMBER_AVATAR_PLACEHOLDER =
   'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"%3E%3Ccircle fill="%23e5e7eb" cx="24" cy="24" r="24"/%3E%3Cpath fill="%239ca3af" d="M24 24c4.4 0 8-3.6 8-8s-3.6-8-8-8-8 3.6-8 8 3.6 8 8 8zm0 4c-5.3 0-16 2.7-16 8v4h32v-4c0-5.3-10.7-8-16-8z"/%3E%3C/svg%3E';
+
+/** 채팅 첨부 파일 URL 변환 */
+export function getChatAttachmentUrl(attachmentUrl) {
+  if (!attachmentUrl) return null;
+  if (attachmentUrl.startsWith('http://') || attachmentUrl.startsWith('https://')) return attachmentUrl;
+  const base = API_BASE_URL || 'http://localhost:8888';
+  return `${base}${attachmentUrl}`;
+}
 
 /** 썸네일 없을 때 사용할 placeholder (회색 박스 SVG) */
 export const PROJECT_THUMBNAIL_PLACEHOLDER =
