@@ -270,22 +270,8 @@ export function Header({
   // 채팅 읽지 않은 메시지 개수 - chatRooms가 변경될 때마다 자동 재계산
   const chatUnreadCount = useMemo(() => {
     const total = chatRooms.reduce((total, room) => total + (room.unreadCount || 0), 0);
-    console.log('🔍 [헤더] chatUnreadCount 계산:', { 
-      chatRoomsLength: chatRooms.length, 
-      total,
-      chatRooms: chatRooms.map(room => ({ 
-        chatRoomNo: room.chatRoomNo, 
-        name: room.chatRoomName, 
-        unreadCount: room.unreadCount 
-      }))
-    });
     return total;
   }, [chatRooms]);
-
-  // 헤더 렌더링 시 chatUnreadCount 확인
-  useEffect(() => {
-    console.log('🔍 [헤더] 렌더링 - chatUnreadCount:', chatUnreadCount, 'chatRooms 개수:', chatRooms.length);
-  }, [chatUnreadCount, chatRooms]);
 
   // 사용자 정보 로드
   const loadUserInfo = async () => {
@@ -309,7 +295,6 @@ export function Header({
   // 헤더 마운트 시 채팅방 목록 로드 (unreadCount 확인용)
   useEffect(() => {
     if (user?.agencyNo) {
-      console.log('🔍 [헤더] 채팅방 목록 새로고침 시작');
       refreshChatRooms();
     }
   }, [user?.agencyNo, refreshChatRooms]);

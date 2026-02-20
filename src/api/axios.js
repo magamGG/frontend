@@ -30,9 +30,6 @@ api.interceptors.request.use(
 
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
-        console.log('토큰 첨부:', token.substring(0, 20) + '...');
-      } else {
-        console.log('토큰 없음');
       }
 
       // 회원번호가 있으면 헤더에 추가
