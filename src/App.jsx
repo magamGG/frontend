@@ -1,5 +1,5 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
-import { Toaster } from 'sonner';
+import { Toaster, toast } from 'sonner';
 import { FullPageLayout } from '@/components/layout/FullPageLayout';
 import { LoginPage } from '@/pages/Login';
 import { SignupPage } from '@/pages/Signup';
@@ -9,6 +9,8 @@ import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { ProjectProvider } from '@/contexts/ProjectContext';
 import useAuthStore from '@/store/authStore';
+import { ChatModal } from '@/components/modals/ChatModal';
+import useChatStore from '@/store/chatStore';
 import { AiChatBot } from '@/components/common/AiChatBot';
 
 // Lazy load artist pages
@@ -56,14 +58,132 @@ const PageLoadingFallback = () => (
  */
 
 export default function App() {
+  const { isChatOpen, closeChat, selectedChat, refreshChatRooms } = useChatStore();
+  
   // Notion OAuth 팝업 콜백 감지: 팝업으로 열렸고 code 파라미터가 있으면 부모에 전달 후 닫기
+  // OAuth 콜백 처리 (Google, Naver, Kakao 등)
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get('code');
-    if (code && window.opener) {
-      window.opener.postMessage({ type: 'notion-callback', code, state: params.get('state') }, '*');
-      setTimeout(() => window.close(), 300);
-    }
+    const handleLocationChange = () => {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
+      const pathname = window.location.pathname;
+      
+      // Notion OAuth 팝업 콜백 처리
+      if (code && window.opener) {
+        window.opener.postMessage({ type: 'notion-callback', code, state: params.get('state') }, '*');
+        setTimeout(() => window.close(), 300);
+        return;
+      }
+      
+      // /signup 경로로 직접 접근한 경우 (OAuth 회원가입)
+      if (pathname === '/signup') {
+        const email = params.get('email');
+        const name = params.get('name');
+        const oauth = params.get('oauth');
+        if (email && name && oauth) {
+          setAuthView('signup');
+          // URL 정리하지 않음 (SignupPage에서 파라미터 읽기 위해)
+          return;
+        }
+      }
+      
+      // OAuth 콜백 처리 (Google, Naver, Kakao 등)
+      const oauthCallbackMatch = pathname.match(/^\/auth\/(google|naver|kakao)\/callback/);
+      
+      if (oauthCallbackMatch) {
+        const provider = oauthCallbackMatch[1];
+        const accessToken = params.get('accessToken');
+        const refreshToken = params.get('refreshToken');
+        const memberNo = params.get('memberNo');
+        const memberName = params.get('memberName');
+        const memberRole = params.get('memberRole');
+        const agencyNo = params.get('agencyNo');
+        const error = params.get('error');
+        
+        if (error) {
+          toast.error(`${provider === 'google' ? 'Google' : provider === 'naver' ? 'Naver' : 'Kakao'} 로그인에 실패했습니다.`);
+          setAuthView('login');
+          // URL 정리
+          window.history.replaceState({}, '', '/');
+          return;
+        }
+        
+        if (accessToken && refreshToken && memberNo) {
+          const { login: storeLogin } = useAuthStore.getState();
+          storeLogin({
+            token: accessToken,
+            accessToken: accessToken,
+            refreshToken: refreshToken,
+            memberNo: parseInt(memberNo),
+            memberName: memberName || '',
+            memberRole: memberRole || 'ARTIST',
+            agencyNo: agencyNo ? parseInt(agencyNo) : null,
+          });
+          
+          toast.success(`${provider === 'google' ? 'Google' : provider === 'naver' ? 'Naver' : 'Kakao'} 로그인에 성공했습니다.`);
+          
+          // handleLogin과 동일한 로직
+          const agencyNoNum = agencyNo ? parseInt(agencyNo) : null;
+          const hasAgencyVal = agencyNoNum != null && agencyNoNum !== 0;
+          
+          const artistAndManagerRoles = [
+            '웹툰 작가',
+            '웹소설 작가',
+            '어시스트 - 채색',
+            '어시스트 - 조명',
+            '어시스트 - 배경',
+            '어시스트 - 선화',
+            '어시스트 - 기타',
+            '담당자',
+          ];
+          const isArtistOrManager = artistAndManagerRoles.includes(memberRole) || (memberRole?.startsWith?.('어시스트'));
+          
+          let roleType = null;
+          if (memberRole === '에이전시 관리자') {
+            roleType = 'agency';
+            setAuthView('dashboard');
+          } else if (isArtistOrManager) {
+            roleType = memberRole === '담당자' ? 'manager' : 'individual';
+            setAuthView(hasAgencyVal ? 'dashboard' : 'join-request');
+          } else {
+            roleType = 'individual';
+            setAuthView('dashboard');
+          }
+          
+          setUserRole(roleType);
+          setHasAgency(hasAgencyVal);
+          
+          // URL 정리
+          window.history.replaceState({}, '', '/');
+        } else {
+          toast.error('로그인 정보를 받아오지 못했습니다.');
+          setAuthView('login');
+          window.history.replaceState({}, '', '/');
+        }
+      }
+    };
+    
+    // 초기 실행
+    handleLocationChange();
+    
+    // popstate 이벤트 리스너 추가 (뒤로가기/앞으로가기)
+    window.addEventListener('popstate', handleLocationChange);
+    
+    // 서버 리디렉션 감지를 위한 주기적 체크 (최대 5초)
+    let checkCount = 0;
+    const maxChecks = 10; // 5초 (500ms * 10)
+    const checkInterval = setInterval(() => {
+      checkCount++;
+      handleLocationChange();
+      if (checkCount >= maxChecks) {
+        clearInterval(checkInterval);
+      }
+    }, 500);
+    
+    return () => {
+      window.removeEventListener('popstate', handleLocationChange);
+      clearInterval(checkInterval);
+    };
   }, []);
 
   const [authView, setAuthView] = useState('login');
@@ -120,6 +240,13 @@ export default function App() {
           
           setUserRole(roleType);
           setHasAgency(hasAgencyVal);
+          
+          // 대시보드로 이동할 때 채팅방 목록 미리 로드 (백그라운드)
+          if (hasAgencyVal && currentUser.agencyNo) {
+            setTimeout(() => {
+              refreshChatRooms();
+            }, 1000); // 1초 후 백그라운드에서 로드
+          }
         } else {
           // 복원 실패 또는 토큰 없음 → 로그인 화면
           setAuthView('login');
@@ -177,6 +304,13 @@ export default function App() {
 
     setUserRole(roleType);
     setHasAgency(hasAgencyVal);
+    
+    // 대시보드로 이동할 때 채팅방 목록 미리 로드 (백그라운드)
+    if (hasAgencyVal && user?.agencyNo) {
+      setTimeout(() => {
+        refreshChatRooms();
+      }, 1000); // 1초 후 백그라운드에서 로드
+    }
   };
 
   const handleSignup = () => {
@@ -461,6 +595,11 @@ export default function App() {
             <AiChatBot />
           </>
         )}
+        <ChatModal
+          isOpen={isChatOpen}
+          onClose={closeChat}
+          chatPartner={selectedChat}
+          />
       </ProjectProvider>
     </DndProvider>
   );

@@ -13,6 +13,10 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  define: {
+    // SockJS를 위한 global 객체 polyfill
+    global: 'globalThis',
+  },
   resolve: {
     alias: {
       // Alias @ to the src directory
