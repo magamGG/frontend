@@ -11,6 +11,7 @@ import { ProjectProvider } from '@/contexts/ProjectContext';
 import useAuthStore from '@/store/authStore';
 import { ChatModal } from '@/components/modals/ChatModal';
 import useChatStore from '@/store/chatStore';
+import { AiChatBot } from '@/components/common/AiChatBot';
 
 // Lazy load artist pages
 const ArtistDashboardPage = lazy(() => import('@/pages/artist/ArtistDashboard').then(m => ({ default: m.ArtistDashboardPage })));
@@ -587,9 +588,12 @@ export default function App() {
         )}
 
         {authView === 'dashboard' && (
-          <Suspense fallback={<PageLoadingFallback />}>
-            <FullPageLayout sections={sections} onLogout={handleLogout} userRole={userRole} />
-          </Suspense>
+          <>
+            <Suspense fallback={<PageLoadingFallback />}>
+              <FullPageLayout sections={sections} onLogout={handleLogout} userRole={userRole} />
+            </Suspense>
+            <AiChatBot />
+          </>
         )}
         <ChatModal
           isOpen={isChatOpen}
