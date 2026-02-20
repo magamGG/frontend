@@ -224,10 +224,19 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
                     justifyContent: 'center',
                     gap: '12px',
                   }}
-                  onClick={() => {
-                    // TODO: Google 로그인 로직
-                    console.log('Google login clicked');
+                  onClick={async () => {
+                    try {
+                      setIsLoading(true);
+                      const authorizationUrl = await authService.getOAuthAuthorizationUrl('google');
+                      // Google 인증 페이지로 리디렉션
+                      window.location.href = authorizationUrl;
+                    } catch (error) {
+                      console.error('Google 로그인 URL 조회 실패:', error);
+                      toast.error('Google 로그인을 시작할 수 없습니다.');
+                      setIsLoading(false);
+                    }
                   }}
+                  disabled={isLoading}
                 >
                   <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M17.64 9.2045C17.64 8.5665 17.5827 7.9525 17.4764 7.3635H9V10.845H13.8436C13.635 11.97 13.0009 12.9232 12.0477 13.5613V15.8195H14.9564C16.6582 14.2527 17.64 11.9455 17.64 9.2045Z" fill="#4285F4"/>

@@ -38,6 +38,12 @@ export const authService = {
   logout: () => {
     return api.post(API_ENDPOINTS.AUTH.LOGOUT);
   },
+  
+  // OAuth 인증 URL 조회 (범용)
+  getOAuthAuthorizationUrl: async (provider) => {
+    const response = await api.get(API_ENDPOINTS.AUTH.OAUTH_AUTHORIZATION_URL(provider));
+    return response.authorizationUrl;
+  },
 };
 
 // 회원 서비스

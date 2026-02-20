@@ -43,6 +43,9 @@ export const API_ENDPOINTS = {
     FORGOT_PASSWORD: `/api/auth/forgot-password`,
     VERIFY_RESET_CODE: `/api/auth/verify-reset-code`,
     RESET_PASSWORD: `/api/auth/reset-password`,
+    // OAuth 범용 엔드포인트
+    OAUTH_AUTHORIZATION_URL: (provider) => `/api/auth/${provider}/authorization-url`,
+    OAUTH_CALLBACK: (provider) => `/api/auth/${provider}/callback`,
   },
 
   // 회원 API
