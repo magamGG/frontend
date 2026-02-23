@@ -62,6 +62,13 @@ export const API_ENDPOINTS = {
     EMPLOYEE_STATISTICS: (agencyNo) => `/api/members/agency/${agencyNo}/statistics`,
   },
 
+  // 포트폴리오 URL/이미지 인식 (1~2번: 추출 → Spring AI 구조화, 마감지기용)
+  PORTFOLIO: {
+    EXTRACT_IMAGE: `/api/portfolio/extract/image`,
+    EXTRACT_FROM_PAGE: `/api/portfolio/extract/from-page`,
+    EXTRACT_FROM_PAGE_SCREENSHOT: `/api/portfolio/extract/from-page-screenshot`,
+  },
+
   // 출석/근태 API
   ATTENDANCE: {
     CHECK_IN: `/api/attendance/check-in`, // POST: 출근 체크
