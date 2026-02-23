@@ -5,7 +5,7 @@ import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/app/components/ui/dialog';
-import { Building2, User, Mail, Phone, Key, Send, ArrowLeft, CheckCircle2, Edit } from 'lucide-react';
+import { Building2, User, Phone, Key, Send, ArrowLeft, CheckCircle2, Edit } from 'lucide-react';
 import { toast } from 'sonner';
 import { agencyService, memberService } from '@/api';
 import useAuthStore from '@/store/authStore';
@@ -184,17 +184,13 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
       // 이름은 한글(완성형 + 자모), 영문만 허용 (공백 제외)
       const filtered = value.replace(/[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z]/g, '');
       setEditFormData(prev => ({ ...prev, [field]: filtered }));
-    } else if (field === 'email') {
-      // 이메일은 띄어쓰기 제거
-      const filtered = value.replace(/\s/g, '');
-      setEditFormData(prev => ({ ...prev, [field]: filtered }));
     } else {
       setEditFormData(prev => ({ ...prev, [field]: value }));
     }
   };
 
   const handleSaveProfile = async () => {
-    if (!editFormData.name || !editFormData.email || !editFormData.phone) {
+    if (!editFormData.name || !editFormData.phone) {
       toast.error('필수 항목을 모두 입력해주세요.');
       return;
     }
@@ -202,12 +198,6 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
     // 이름에 초성이 포함되어 있는지 검증
     if (hasHangulJamo(editFormData.name)) {
       toast.error('이름을 완성해주세요. 초성을 포함할 수 없습니다.');
-      return;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(editFormData.email)) {
-      toast.error('올바른 이메일 형식을 입력해주세요.');
       return;
     }
 
@@ -505,23 +495,6 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
                   }
                 }}
                 maxLength={20}
-                style={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
-              />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <Label htmlFor="edit-email" style={{ fontSize: '14px', color: 'var(--foreground)' }}>이메일 *</Label>
-              <Input
-                id="edit-email"
-                type="email"
-                value={editFormData.email}
-                onChange={(e) => handleEditInputChange('email', e.target.value)}
-                onKeyDown={(e) => {
-                  // 스페이스바 입력 자체를 막기
-                  if (e.key === ' ') {
-                    e.preventDefault();
-                  }
-                }}
-                maxLength={50}
                 style={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
               />
             </div>
