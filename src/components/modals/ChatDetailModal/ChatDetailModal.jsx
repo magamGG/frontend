@@ -60,25 +60,19 @@ export function ChatDetailModal() {
 
   // --- [2. 무한 스크롤 및 위치 보정] ---
   const loadMoreMessages = useCallback(async () => {
-    if (isLoadingMore || !hasMoreMessages || !currentChatRoomNo) {
-      return;
-    }
+    if (isLoadingMore || !hasMoreMessages || !currentChatRoomNo) return;
 
     const chatBody = chatBodyRef.current;
-    if (!chatBody) {
-      return;
-    }
+    if (!chatBody) return;
 
-    // 스크롤 위치 보정을 위한 정보 저장
     const scrollTopBefore = chatBody.scrollTop;
     const scrollHeightBefore = chatBody.scrollHeight;
     
     setIsLoadingMore(true);
-    isInfiniteScrollingRef.current = true; // 플래그 즉시 설정
+    isInfiniteScrollingRef.current = true;
 
     try {
       const nextPage = currentPage + 1;
-      
       const res = await chatService.getChatMessages(currentChatRoomNo, nextPage, 20);
       const messageData = res.data || res;
 
@@ -90,7 +84,9 @@ export function ChatDetailModal() {
         isLast = messageData.length < 20;
       } else if (messageData?.content) {
         newMessages = [...messageData.content].reverse();
-        isLast = messageData.last;
+        const lastPage = messageData.last === true;
+        const noNext = messageData.hasNext === false;
+        isLast = lastPage || noNext;
       }
 
       if (newMessages.length > 0) {
@@ -103,17 +99,12 @@ export function ChatDetailModal() {
         setCurrentPage(nextPage);
         setHasMoreMessages(!isLast);
 
-        // 렌더링 후 스크롤 위치 보정
         requestAnimationFrame(() => {
           const scrollHeightAfter = chatBody.scrollHeight;
           const heightDiff = scrollHeightAfter - scrollHeightBefore;
-          
           if (heightDiff > 0) {
-            // 기존 스크롤 위치에 새로 추가된 높이를 더해서 위치 유지
             chatBody.scrollTop = scrollTopBefore + heightDiff;
           }
-          
-          // 보정 완료 후 플래그 해제 (약간의 지연을 두어 useEffect 간섭 방지)
           setTimeout(() => {
             isInfiniteScrollingRef.current = false;
             setLastMessageCount(prev => prev + newMessages.length);
@@ -213,12 +204,12 @@ export function ChatDetailModal() {
         setMessages(initialMsgs);
         setLastMessageCount(initialMsgs.length);
         
-        // hasMoreMessages 상태 설정
-        if (msgRes.content !== undefined) {
-          // Slice 응답인 경우
-          setHasMoreMessages(!msgRes.last && initialMsgs.length === 20);
+        const sliceData = msgRes.data ?? msgRes;
+        if (typeof sliceData.hasNext === 'boolean') {
+          setHasMoreMessages(sliceData.hasNext);
+        } else if (typeof sliceData.last === 'boolean') {
+          setHasMoreMessages(!sliceData.last);
         } else {
-          // Array 응답인 경우
           setHasMoreMessages(initialMsgs.length === 20);
         }
         
@@ -229,6 +220,11 @@ export function ChatDetailModal() {
         setTimeout(() => {
           bottomRef.current?.scrollIntoView({ behavior: 'instant' });
           setIsInitialLoad(false);
+          // 스크롤이 없을 정도로 짧은 채팅방도 열었을 때 읽음 처리 (스크롤 이벤트가 안 나오므로)
+          if (initialMsgs.length > 0) {
+            const lastChatNo = initialMsgs[initialMsgs.length - 1].chatNo;
+            debouncedUpdateLastRead(currentChatRoomNo, lastChatNo);
+          }
         }, 100);
       } catch (e) {
         setInitError('채팅을 불러오는데 실패했습니다.');
@@ -409,12 +405,6 @@ export function ChatDetailModal() {
                 e.preventDefault();
               }
             }}
-            onSelectStart={(e) => {
-              // 메시지 내용이 아닌 경우 선택 방지
-              if (!e.target.matches('.message-content, .message-content *')) {
-                e.preventDefault();
-              }
-            }}
             style={{
               cursor: 'default',
               userSelect: 'none',
@@ -446,7 +436,6 @@ export function ChatDetailModal() {
                 msUserSelect: 'none'
               }}
               onMouseDown={(e) => e.preventDefault()}
-              onSelectStart={(e) => e.preventDefault()}
               onDragStart={(e) => e.preventDefault()}
             >
               {isLoadingMore && (

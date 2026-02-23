@@ -76,9 +76,6 @@ export function formatDateSafe(dateValue, style = 'hyphen', fallback = '-') {
   return style === 'dot' ? `${year}.${month}.${day}` : `${year}-${month}-${day}`;
 }
 
- * 채팅 시간 관련 유틸리티 함수들
- */
-
 /**
  * 채팅 시간 문자열을 Date 객체로 파싱
  * @param {string} timeStr - "HH:mm" 또는 "M월 d일" 형태의 시간 문자열

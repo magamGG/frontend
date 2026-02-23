@@ -771,7 +771,7 @@ export const chatService = {
     const callId = chatPerformanceMonitor.startApiCall('getChatMessages', { chatRoomNo, page, size });
     
     return chatService._withRequestDeduplication(cacheKey, () =>
-      api.get(`${API_ENDPOINTS.CHAT.MESSAGES(chatRoomNo)}?page=${page}&size=${size}`)
+      api.get(API_ENDPOINTS.CHAT.MESSAGES(chatRoomNo, page, size))
         .then(response => {
           chatPerformanceMonitor.endApiCall(callId, true);
           
