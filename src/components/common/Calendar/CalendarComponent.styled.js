@@ -186,12 +186,13 @@ export const DateCell = styled.div`
   // 오늘 날짜: 파란 테두리 (배경색은 휴가/워케이션 구분 유지)
   border: 2px solid ${props => (props.$isToday ? '#3b82f6' : 'transparent')};
   box-sizing: border-box;
-  // 날짜 배경색
+  // 날짜 배경색 (break=휴가, hiatus=휴재·작품 일정만)
   background-color: ${props => {
     if (props.$isOtherMonth) return 'rgba(249, 249, 249, 0.8)';         // 다른 달 날짜: 밝은 회색 80%
     if (props.$attendanceType === 'workation') return 'rgba(139, 92, 246, 0.7)'; // 워케이션: 진한 보라 70%
     if (props.$attendanceType === 'remote') return 'rgba(251, 146, 60, 0.7)';    // 재택근무: 주황 70%
     if (props.$attendanceType === 'break') return 'rgba(156, 163, 175, 0.6)';    // 휴가: 회색 60%
+    if (props.$attendanceType === 'hiatus') return 'rgba(120, 113, 108, 0.5)';   // 휴재: 스톤 50%
     return 'rgba(255, 255, 255, 0.9)';                                           // 기본 날짜: 흰색 90%
   }};
 
@@ -204,6 +205,7 @@ export const DateCell = styled.div`
       if (props.$attendanceType === 'workation') return 'rgba(124, 58, 237, 0.8)';
       if (props.$attendanceType === 'remote') return 'rgba(249, 115, 22, 0.8)';
       if (props.$attendanceType === 'break') return 'rgba(107, 114, 128, 0.7)';
+      if (props.$attendanceType === 'hiatus') return 'rgba(120, 113, 108, 0.65)';
       return 'rgba(243, 243, 243, 0.8)';
     }};
   }
@@ -221,13 +223,15 @@ export const DateNumberWrapper = styled.div`
 
 export const DateNumber = styled.div`
   font-size: 1rem;
-  font-weight: ${props => (props.$isToday ? '700' : 'var(--font-weight-medium)')};
+  font-weight: ${props => (props.$isToday ? '700' : (props.$isHoliday ? '600' : 'var(--font-weight-medium)'))};
   color: ${props => {
     // 다른 달 날짜는 흐릿하게 표시 (회색)
     if (props.$isOtherMonth) {
       if (props.$isSunday) return 'color-mix(in srgb, var(--destructive) 40%, transparent)';
       return 'color-mix(in srgb, var(--muted-foreground) 40%, transparent)';
     }
+    // 공휴일은 빨간색 (일요일 제외)
+    if (props.$isHoliday && !props.$isSunday) return '#ef4444';
     if (props.$isSunday && !props.$isToday) return 'var(--destructive)';
     if (props.$isToday) return 'var(--primary)';
     return 'var(--foreground)';
@@ -242,44 +246,35 @@ export const AttendanceBadge = styled.span`
   border-radius: 0.25rem;
   background-color: ${props => {
     if (props.$attendanceType === 'workation') {
-      // 오늘 날짜와 겹칠 경우 더 진하게
       if (props.$isToday) return 'color-mix(in srgb, var(--status-workation) 60%, transparent)';
       return 'color-mix(in srgb, var(--status-workation) 40%, transparent)';
     }
     if (props.$attendanceType === 'remote') {
-      // 재택근무: 주황색
       if (props.$isToday) return 'color-mix(in srgb, #f97316 60%, transparent)';
       return 'color-mix(in srgb, #f97316 40%, transparent)';
     }
     if (props.$attendanceType === 'break') {
-      // 오늘 날짜와 겹칠 경우 더 진하게
       if (props.$isToday) return 'color-mix(in srgb, var(--status-hiatus) 70%, transparent)';
       return 'color-mix(in srgb, var(--status-hiatus) 50%, transparent)';
+    }
+    if (props.$attendanceType === 'hiatus') {
+      if (props.$isToday) return 'color-mix(in srgb, #78716c 60%, transparent)';
+      return 'color-mix(in srgb, #78716c 40%, transparent)';
     }
     return 'transparent';
   }};
   color: ${props => {
-    if (props.$attendanceType === 'workation') {
-      return 'var(--status-workation)';
-    }
-    if (props.$attendanceType === 'remote') {
-      return '#f97316'; // 재택근무: 주황색
-    }
-    if (props.$attendanceType === 'break') {
-      return 'var(--status-hiatus)';
-    }
+    if (props.$attendanceType === 'workation') return 'var(--status-workation)';
+    if (props.$attendanceType === 'remote') return '#f97316';
+    if (props.$attendanceType === 'break') return 'var(--status-hiatus)';
+    if (props.$attendanceType === 'hiatus') return '#78716c';
     return 'var(--foreground)';
   }};
   border: 1px solid ${props => {
-    if (props.$attendanceType === 'workation') {
-      return 'color-mix(in srgb, var(--status-workation) 60%, transparent)';
-    }
-    if (props.$attendanceType === 'remote') {
-      return 'color-mix(in srgb, #f97316 60%, transparent)'; // 재택근무: 주황색
-    }
-    if (props.$attendanceType === 'break') {
-      return 'color-mix(in srgb, var(--status-hiatus) 60%, transparent)';
-    }
+    if (props.$attendanceType === 'workation') return 'color-mix(in srgb, var(--status-workation) 60%, transparent)';
+    if (props.$attendanceType === 'remote') return 'color-mix(in srgb, #f97316 60%, transparent)';
+    if (props.$attendanceType === 'break') return 'color-mix(in srgb, var(--status-hiatus) 60%, transparent)';
+    if (props.$attendanceType === 'hiatus') return 'color-mix(in srgb, #78716c 60%, transparent)';
     return 'transparent';
   }};
   white-space: nowrap;

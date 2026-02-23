@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { CheckCircle, Calendar, Clock, FileText, AlertCircle, Activity, Shield, Stethoscope, X } from 'lucide-react';
 import { toast } from 'sonner';
 import useAuthStore from '@/store/authStore';
+import { formatDateSafe } from '@/utils/dateUtils';
 import api from '@/api/axios';
 import {
   ArtistHealthRoot,
@@ -306,15 +307,11 @@ export function ArtistHealthPage() {
       const mentalIsCompleted = mentalStatus.isCompleted ?? mentalStatus.completed ?? false;
       
       if (mentalIsCompleted) {
-        const checkDate = new Date(mentalStatus.lastCheckDate);
-        const formattedDate = `${checkDate.getFullYear()}.${String(checkDate.getMonth() + 1).padStart(2, '0')}.${String(checkDate.getDate()).padStart(2, '0')}`;
-        
-        // 다음 검진일 포맷팅
+        const formattedDate = formatDateSafe(mentalStatus.lastCheckDate, 'dot', '');
         let nextCheckupDateFormatted = '';
         let daysRemaining = null;
         if (mentalStatus.nextCheckupDate) {
-          const nextDate = new Date(mentalStatus.nextCheckupDate);
-          nextCheckupDateFormatted = `${nextDate.getFullYear()}.${String(nextDate.getMonth() + 1).padStart(2, '0')}.${String(nextDate.getDate()).padStart(2, '0')}`;
+          nextCheckupDateFormatted = formatDateSafe(mentalStatus.nextCheckupDate, 'dot', '');
           daysRemaining = mentalStatus.daysRemaining ?? null;
         }
         
@@ -338,8 +335,7 @@ export function ArtistHealthPage() {
         let deadlineDateFormatted = '';
         let daysRemaining = null;
         if (mentalStatus.deadlineDate) {
-          const deadline = new Date(mentalStatus.deadlineDate);
-          deadlineDateFormatted = `${deadline.getFullYear()}.${String(deadline.getMonth() + 1).padStart(2, '0')}.${String(deadline.getDate()).padStart(2, '0')}`;
+          deadlineDateFormatted = formatDateSafe(mentalStatus.deadlineDate, 'dot', '');
           daysRemaining = mentalStatus.daysRemaining ?? null;
         }
         setDeepCheckupData(prev => ({
@@ -368,15 +364,11 @@ export function ArtistHealthPage() {
       const physicalIsCompleted = physicalStatus.isCompleted ?? physicalStatus.completed ?? false;
       
       if (physicalIsCompleted) {
-        const checkDate = new Date(physicalStatus.lastCheckDate);
-        const formattedDate = `${checkDate.getFullYear()}.${String(checkDate.getMonth() + 1).padStart(2, '0')}.${String(checkDate.getDate()).padStart(2, '0')}`;
-        
-        // 다음 검진일 포맷팅
+        const formattedDate = formatDateSafe(physicalStatus.lastCheckDate, 'dot', '');
         let nextCheckupDateFormatted = '';
         let daysRemaining = null;
         if (physicalStatus.nextCheckupDate) {
-          const nextDate = new Date(physicalStatus.nextCheckupDate);
-          nextCheckupDateFormatted = `${nextDate.getFullYear()}.${String(nextDate.getMonth() + 1).padStart(2, '0')}.${String(nextDate.getDate()).padStart(2, '0')}`;
+          nextCheckupDateFormatted = formatDateSafe(physicalStatus.nextCheckupDate, 'dot', '');
           daysRemaining = physicalStatus.daysRemaining ?? null;
         }
         
@@ -400,8 +392,7 @@ export function ArtistHealthPage() {
         let deadlineDateFormatted = '';
         let daysRemaining = null;
         if (physicalStatus.deadlineDate) {
-          const deadline = new Date(physicalStatus.deadlineDate);
-          deadlineDateFormatted = `${deadline.getFullYear()}.${String(deadline.getMonth() + 1).padStart(2, '0')}.${String(deadline.getDate()).padStart(2, '0')}`;
+          deadlineDateFormatted = formatDateSafe(physicalStatus.deadlineDate, 'dot', '');
           daysRemaining = physicalStatus.daysRemaining ?? null;
         }
         setDeepCheckupData(prev => ({

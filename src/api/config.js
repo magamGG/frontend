@@ -1,9 +1,9 @@
 // API 기본 설정
-// 개발 환경에서는 프록시를 사용하므로 빈 문자열 (상대 경로)
-// 프로덕션 환경에서는 전체 URL 사용
+// 개발 환경: 직접 백엔드로 요청 (CORS 설정 필요)
+// 프로덕션 환경: 실제 배포 URL로 변경 필요
 export const API_BASE_URL = import.meta.env.PROD
   ? 'http://localhost:8888'  // 프로덕션 환경 URL (실제 배포 시 변경 필요)
-  : '';  // 개발 환경에서는 프록시 사용 (상대 경로)
+  : 'http://localhost:8888';  // 개발 환경: 백엔드 직접 연결 (CORS 설정 필요)
 export const API_TIMEOUT = 10000;
 
 /** DB THUMBNAIL_FILE을 이미지 URL로 변환 (업로드 경로: /uploads/) */
@@ -37,6 +37,15 @@ export const API_ENDPOINTS = {
   // 인증 API
   AUTH: {
     LOGIN: `/api/auth/login`,
+    REFRESH: `/api/auth/refresh`,
+    REISSUE: `/api/auth/reissue`,  // 쿠키 기반 토큰 재발급
+    LOGOUT: `/api/auth/logout`,
+    FORGOT_PASSWORD: `/api/auth/forgot-password`,
+    VERIFY_RESET_CODE: `/api/auth/verify-reset-code`,
+    RESET_PASSWORD: `/api/auth/reset-password`,
+    // OAuth 범용 엔드포인트
+    OAUTH_AUTHORIZATION_URL: (provider) => `/api/auth/${provider}/authorization-url`,
+    OAUTH_CALLBACK: (provider) => `/api/auth/${provider}/callback`,
   },
 
   // 회원 API
@@ -189,6 +198,27 @@ export const API_ENDPOINTS = {
     UNSCREENED_NOTIFY: (agencyNo, memberNo) => `/api/agency/${agencyNo}/unscreened-notify/${memberNo}`, // POST: 미검진 1명 알림
     UNSCREENED_NOTIFY_BULK: (agencyNo) => `/api/agency/${agencyNo}/unscreened-notify-bulk`, // POST: 7일 이상 지연 일괄 알림
     DEADLINE_COUNTS: (agencyNo) => `/api/agency/${agencyNo}/deadline-counts`, // GET: 마감 임박 현황 (담당자 관리 프로젝트 업무, 오늘~4일 후)
+  },
+
+  // AI 챗봇 API (역할별)
+  AI: {
+    ARTIST_HEALTH_FEEDBACK: `/api/v1/ai/artist/health-feedback`,
+    MANAGER_HEALTH_SUMMARY: `/api/v1/ai/manager/artist-health-summary`,
+    AGENCY_HEALTH_OVERVIEW: `/api/v1/ai/agency/health-overview`,
+    AGENCY_RISK_SUMMARY: `/api/v1/ai/agency/risk-summary`,
+    AGENCY_LEAVE_OVERLAP_ALERT: `/api/v1/ai/agency/leave-overlap-alert`,
+    AGENCY_ARTIST_ASSIGNMENT_BALANCE: `/api/v1/ai/agency/artist-assignment-balance`,
+    AGENCY_REJECTED_THEN_REAPPLIED_ALERT: `/api/v1/ai/agency/rejected-then-reapplied-alert`,
+    ARTIST_LEAVE_RECOMMENDATION: `/api/v1/ai/artist/leave-recommendation`,
+    MANAGER_LEAVE_RECOMMENDATION: `/api/v1/ai/manager/leave-recommendation`,
+    ARTIST_WORKLOAD_SUMMARY: `/api/v1/ai/artist/workload-summary`,
+    ARTIST_PROJECT_PRIORITY_ADVICE: `/api/v1/ai/artist/project-priority-advice`,
+    ARTIST_WORKATION_RECOMMENDATION: `/api/v1/ai/artist/workation-recommendation`,
+    MANAGER_ARTIST_WORKLOAD_BALANCE: `/api/v1/ai/manager/artist-workload-balance`,
+    MANAGER_MY_HEALTH_FEEDBACK: `/api/v1/ai/manager/my-health-feedback`,
+    MANAGER_WORKATION_RECOMMENDATION: `/api/v1/ai/manager/workation-recommendation`,
+    MANAGER_NUDGE_MESSAGE_RECOMMENDATION: `/api/v1/ai/manager/nudge-message-recommendation`,
+    MANAGER_ARTIST_DAILY_HEALTH_SUMMARY: `/api/v1/ai/manager/artist-daily-health-summary`,
   },
 
   // 담당자(manager) API (X-Member-No로 담당자 식별, 배정 작가만 대상)

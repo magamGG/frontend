@@ -24,41 +24,26 @@ export const HeaderContent = styled.div`
 
 export const LogoSection = styled.div`
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
 `;
 
 export const LogoIcon = styled.div`
-  width: 40px;
-  height: 40px;
-  background-color: var(--primary);
-  border-radius: 50%;
+  width: 48px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
 `;
 
-export const LogoText = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-`;
-
-export const LogoTitle = styled.h1`
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--foreground);
+export const LogoDomain = styled.span`
+  font-size: 10px;
+  color: var(--muted-foreground);
   margin: 0;
-  line-height: 1.2;
+  line-height: 1;
   white-space: nowrap;
-`;
-
-export const LogoSubtitle = styled.p`
-  font-size: 12px;
-  color: var(--accent);
-  margin: 0;
-  line-height: 1.2;
-  white-space: nowrap;
+  font-weight: 400;
 `;
 
 export const CurrentPageTitle = styled.h2`

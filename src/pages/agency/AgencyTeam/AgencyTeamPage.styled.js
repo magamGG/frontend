@@ -7,7 +7,6 @@ export const AgencyTeamRoot = styled.div`
   justify-content: center;
   padding: 32px 32px 96px;
   background-color: var(--background);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 `;
 
 export const AgencyTeamBody = styled.div`

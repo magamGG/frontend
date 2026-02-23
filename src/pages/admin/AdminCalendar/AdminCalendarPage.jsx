@@ -33,11 +33,12 @@ function mapCalendarMemosToDayNotes(memos, viewYear, viewMonth) {
     });
 }
 
-/** 담당 작가 근태 API → 캘린더 근태 데이터 */
+/** 담당 작가 근태 API → 캘린더 근태 데이터. 휴재는 캘린더에 표시하지 않음(작품 일정만 영향) */
 function mapManagerRequestsToCalendar(list) {
   if (!Array.isArray(list)) return [];
   return list
     .filter((r) => String(r.attendanceRequestStatus || '').toUpperCase() === 'APPROVED')
+    .filter((r) => String(r.attendanceRequestType || '').trim() !== '휴재')
     .map((r) => {
       const start = r.attendanceRequestStartDate ? String(r.attendanceRequestStartDate).slice(0, 10) : null;
       const end = r.attendanceRequestEndDate ? String(r.attendanceRequestEndDate).slice(0, 10) : null;
@@ -46,7 +47,7 @@ function mapManagerRequestsToCalendar(list) {
       let type = 'break';
       if (t === '워케이션') type = 'workation';
       else if (t === '재택근무') type = 'remote';
-      else if (['휴가', '연차', '반차', '반반차', '병가', '휴재'].includes(t)) type = 'break';
+      else if (['휴가', '연차', '반차', '반반차', '병가'].includes(t)) type = 'break';
 
       return {
         id: r.attendanceRequestNo,

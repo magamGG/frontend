@@ -60,6 +60,7 @@ export function ArtistProjectsPage() {
   const formatDate = (date) => {
     if (!date) return null;
     const d = new Date(date);
+    if (isNaN(d.getTime())) return null;
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   };
 
@@ -80,6 +81,7 @@ export function ArtistProjectsPage() {
   const getDeadlineDn = (date) => {
     if (!date) return '미정';
     const next = new Date(date);
+    if (isNaN(next.getTime())) return '미정';
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     next.setHours(0, 0, 0, 0);

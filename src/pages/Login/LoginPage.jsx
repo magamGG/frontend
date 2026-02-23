@@ -32,6 +32,7 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false); // 기본값 false (로그인 상태 유지)
   const login = useAuthStore((state) => state.login);
 
   const handleSubmit = async (e) => {
@@ -53,6 +54,8 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
       // 가이드 문서에 따른 응답 데이터 구조
       login({
         token: response.token || response.accessToken,
+        accessToken: response.accessToken || response.token,
+        refreshToken: response.refreshToken,
         memberNo: response.memberNo,
         memberName: response.memberName || emailInput,
         memberRole: response.memberRole,
@@ -65,9 +68,20 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
       // onLogin에 실제 memberRole과 agencyNo를 전달
       onLogin(response.memberRole, response.agencyNo);
     } catch (error) {
-      const errorMessage = error?.message || '로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.';
+      const status = error?.response?.status;
+      const isServerError = status >= 500;
+      const isTimeout = error?.code === 'ECONNABORTED' || error?.message?.includes('timeout');
+      const isNetworkError = error?.message === 'Network Error' || !error?.response;
+      let errorMessage = '로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.';
+      if (isServerError || isTimeout || isNetworkError) {
+        errorMessage = '서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.';
+      } else if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error?.message && !isTimeout && !isNetworkError) {
+        errorMessage = error.message;
+      }
       toast.error(errorMessage);
-      console.error('Login error:', error);
+      console.error('Login error:', error?.response?.data ?? error?.message ?? error);
     } finally {
       setIsLoading(false);
     }
@@ -168,6 +182,8 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
                     <CheckboxLabel>
                       <input
                         type="checkbox"
+                        checked={rememberMe}
+                        onChange={(e) => setRememberMe(e.target.checked)}
                         style={{
                           width: '16px',
                           height: '16px',
@@ -208,10 +224,19 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
                     justifyContent: 'center',
                     gap: '12px',
                   }}
-                  onClick={() => {
-                    // TODO: Google 로그인 로직
-                    console.log('Google login clicked');
+                  onClick={async () => {
+                    try {
+                      setIsLoading(true);
+                      const authorizationUrl = await authService.getOAuthAuthorizationUrl('google');
+                      // Google 인증 페이지로 리디렉션
+                      window.location.href = authorizationUrl;
+                    } catch (error) {
+                      console.error('Google 로그인 URL 조회 실패:', error);
+                      toast.error('Google 로그인을 시작할 수 없습니다.');
+                      setIsLoading(false);
+                    }
                   }}
+                  disabled={isLoading}
                 >
                   <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M17.64 9.2045C17.64 8.5665 17.5827 7.9525 17.4764 7.3635H9V10.845H13.8436C13.635 11.97 13.0009 12.9232 12.0477 13.5613V15.8195H14.9564C16.6582 14.2527 17.64 11.9455 17.64 9.2045Z" fill="#4285F4"/>

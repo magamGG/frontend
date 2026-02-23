@@ -1,0 +1,522 @@
+/**
+ * 다크 테마 오버라이드 CSS
+ * DARK_THEME_CODE_GUIDE.md 섹션 5 기반
+ * .dark 클래스가 html에 있을 때만 적용 (themeStore에서 토글)
+ * MVP 구조 변경 없이 추가만 함
+ */
+
+.dark body {
+  background: var(--background) !important;
+  color: var(--foreground) !important;
+}
+
+/* Tailwind 유틸리티 클래스 오버라이드 */
+.dark .bg-white,
+.dark [class*="bg-white"],
+.dark .bg-gray-50,
+.dark .bg-gray-100 {
+  background-color: var(--card) !important;
+  color: var(--foreground) !important;
+}
+
+/* Card 컴포넌트 */
+.dark .card,
+.dark [class*="Card"]:not([class*="Dialog"]),
+.dark [class*="card"]:not([class*="dialog"]) {
+  background-color: var(--card) !important;
+  color: var(--foreground) !important;
+  border-color: var(--border-light, var(--border)) !important;
+}
+
+/* 스크롤바 (다크 모드) */
+.dark ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: var(--muted);
+  border-radius: 9999px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+}
+
+/* Dialog/Modal — 모든 다이얼로그 */
+.dark [class*="DialogContent"],
+.dark [class*="Modal"] [class*="Content"],
+.dark [data-slot="dialog-content"] {
+  background-color: var(--card) !important;
+  color: var(--foreground) !important;
+  border-color: var(--border) !important;
+}
+
+/* 모달 내부 bg-white 제거 */
+.dark [data-slot="dialog-content"].bg-white,
+.dark [data-slot="dialog-content"][class*="bg-white"] {
+  background-color: var(--card) !important;
+}
+
+.dark [class*="DialogTitle"],
+.dark [class*="DialogDescription"] {
+  color: var(--foreground) !important;
+}
+
+/* Input 필드 */
+.dark input,
+.dark textarea,
+.dark select {
+  background-color: var(--card) !important;
+  color: var(--foreground) !important;
+  border-color: var(--border) !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: var(--muted-foreground) !important;
+}
+
+/* 텍스트 색상 */
+.dark .text-gray-800,
+.dark .text-gray-900,
+.dark .text-[#2C2C2C],
+.dark .text-[#1F2328] {
+  color: var(--foreground) !important;
+}
+
+.dark .text-gray-600,
+.dark .text-gray-500,
+.dark .text-[#737373],
+.dark .text-[#6E8FB3] {
+  color: var(--muted-foreground) !important;
+}
+
+/* 보더 */
+.dark .border-gray-200,
+.dark .border-[#E0E0E0],
+.dark .border-[#DADDE1] {
+  border-color: var(--border) !important;
+}
+
+/* Radix Button outline variant */
+.dark button[data-slot="button"][class*="outline"] {
+  background-color: transparent !important;
+  color: var(--foreground) !important;
+  border-color: var(--border) !important;
+}
+
+.dark button[data-slot="button"][class*="outline"]:hover {
+  background-color: var(--muted) !important;
+  border-color: var(--border) !important;
+}
+
+/* Radix Button default variant */
+.dark button[data-slot="button"]:not([class*="outline"]):not([class*="ghost"]):not([class*="link"]):not([class*="destructive"]):not([class*="secondary"]) {
+  background-color: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+  border-color: var(--primary) !important;
+}
+
+/* 마이페이지 (MyPage 컴포넌트) */
+.dark [class*="MyPageContainer"] {
+  background-color: var(--card) !important;
+  color: var(--foreground) !important;
+}
+
+.dark [class*="MyPageOverlay"] {
+  background-color: var(--background) !important;
+}
+
+.dark [class*="HeaderBackground"] {
+  background-color: var(--surface-base, var(--card)) !important;
+}
+
+.dark [class*="ProfilePhotoContainer"],
+.dark [class*="ProfilePhotoWrapper"] {
+  background-color: var(--card) !important;
+  border-color: var(--border) !important;
+}
+
+.dark [class*="ProfileName"],
+.dark [class*="ProfileRole"],
+.dark [class*="AttendanceStatsTitle"],
+.dark [class*="AttendanceStatsMonth"],
+.dark [class*="ChartCenterValue"],
+.dark [class*="ChartCenterLabel"],
+.dark [class*="LegendValue"],
+.dark [class*="BasicInfoTitle"],
+.dark [class*="InfoValue"] {
+  color: var(--foreground) !important;
+}
+
+.dark [class*="LegendText"],
+.dark [class*="InfoLabel"],
+.dark [class*="InfoIcon"] {
+  color: var(--muted-foreground) !important;
+}
+
+.dark [class*="ActionButton"] {
+  border-color: var(--border) !important;
+  color: var(--foreground) !important;
+}
+
+.dark [class*="ActionButton"]:hover {
+  background-color: var(--muted) !important;
+}
+
+/* Label */
+.dark label {
+  color: var(--foreground) !important;
+}
+
+/* 근태 신청 모달 (가이드 기반) */
+.dark [data-slot="dialog-content"][class*="sm:max-w-[960px]"] {
+  background: linear-gradient(180deg, #334155 0%, #1E293B 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4) !important;
+}
+
+.dark [data-slot="dialog-content"][class*="sm:max-w-[960px]"] input,
+.dark [data-slot="dialog-content"][class*="sm:max-w-[960px]"] textarea {
+  background-color: rgba(51, 65, 85, 0.6) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.dark [data-slot="dialog-content"][class*="sm:max-w-[960px]"] input:focus,
+.dark [data-slot="dialog-content"][class*="sm:max-w-[960px]"] textarea:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 2px rgba(110, 143, 179, 0.2) !important;
+}
+
+.dark [data-slot="dialog-content"][class*="sm:max-w-[960px]"] label {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.dark [data-slot="dialog-overlay"] {
+  background-color: rgba(0, 0, 0, 0.6) !important;
+}
+
+/* 모달 스크롤바 (다크 모드) */
+.dark [data-slot="dialog-content"][class*="overflow"]::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dark [data-slot="dialog-content"][class*="overflow"]::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dark [data-slot="dialog-content"][class*="overflow"]::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+}
+
+.dark [data-slot="dialog-content"][class*="overflow"]::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.dark [data-slot="dialog-content"][class*="overflow"] {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+
+/* 집계 컴포넌트 - 그라데이션 배경 (StatCard, AttendanceRequestSummary, QuickInfoCard 등) */
+.dark [class*="StatCard"],
+.dark [class*="AttendanceRequestSummary"],
+.dark [class*="QuickInfoCard"],
+.dark [class*="WorkationStatCard"],
+.dark [class*="AgencyProjectsStatCard"],
+.dark [class*="AdminProjectsStatCard"] {
+  background: linear-gradient(135deg, var(--card) 0%, var(--muted) 100%) !important;
+  background-color: unset !important;
+}
+
+/* 로딩 화면 */
+.dark .bg-gray-50 {
+  background-color: var(--background) !important;
+}
+
+.dark .text-gray-600 {
+  color: var(--muted-foreground) !important;
+}
+
+/* 테마 토글 버튼 다크 모드 */
+.dark .theme-toggle {
+  background-color: var(--muted) !important;
+  color: var(--foreground) !important;
+  border-color: var(--border) !important;
+}
+
+.dark .theme-toggle:hover {
+  background-color: var(--card) !important;
+  border-color: var(--accent) !important;
+}
+
+/* ========== 페이지/컴포넌트 대량 오버라이드 ========== */
+
+/* Admin 페이지 */
+.dark [class*="AdminDashboard"],
+.dark [class*="AdminProjects"],
+.dark [class*="AdminTeam"],
+.dark [class*="AdminHealth"],
+.dark [class*="AdminPersonalHealth"],
+.dark [class*="AdminCalendar"],
+.dark [class*="AdminWorkcation"] {
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+}
+
+/* Agency 페이지 */
+.dark [class*="AgencyDashboard"],
+.dark [class*="AgencyProjects"],
+.dark [class*="AgencyTeam"],
+.dark [class*="AgencyHealth"],
+.dark [class*="AgencyWorkcation"],
+.dark [class*="AgencyApprovals"],
+.dark [class*="AgencyAssignment"],
+.dark [class*="AgencyLeaveSettings"],
+.dark [class*="AgencyJoinRequests"],
+.dark [class*="AgencyProjectDetail"] {
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+}
+
+/* Chart/Projects 카드 (white 배경) */
+.dark [class*="ChartCard"],
+.dark [class*="ProjectsCard"],
+.dark [class*="ProjectsInfoBox"],
+.dark [class*="AttendanceScheduleCard"],
+.dark [class*="WorkingArtistsCard"],
+.dark [class*="AttendanceRequestCard"],
+.dark [class*="QuickInfoCard"] {
+  background-color: var(--card) !important;
+  color: var(--foreground) !important;
+  border-color: var(--border) !important;
+}
+
+.dark [class*="ChartTitle"],
+.dark [class*="ProjectsHeader"] {
+  color: var(--foreground) !important;
+}
+
+/* ChartAlert 빨간 배경 → 다크 적합 */
+.dark [class*="ChartAlert"] {
+  background-color: rgba(185, 28, 28, 0.2) !important;
+  border-color: rgba(248, 113, 113, 0.3) !important;
+}
+
+.dark [class*="ChartAlertText"] {
+  color: #FCA5A5 !important;
+}
+
+/* Filter/Project 카드 */
+.dark [class*="FilterSection"],
+.dark [class*="AdminProjectCard"],
+.dark [class*="AdminProjectsFilterCard"],
+.dark [class*="ProjectCard"],
+.dark [class*="ProjectItem"],
+.dark [class*="WorkingArtistCard"],
+.dark [class*="AttendanceRequestCardItem"],
+.dark [class*="AttendanceScheduleItem"] {
+  background-color: var(--card) !important;
+  color: var(--foreground) !important;
+  border-color: var(--border) !important;
+}
+
+/* EmptyState */
+.dark [class*="EmptyState"],
+.dark [class*="EmptyStateIcon"],
+.dark [class*="AdminProjectsEmpty"] {
+  color: var(--muted-foreground) !important;
+}
+
+/* Header 컴포넌트 */
+.dark [class*="HeaderContainer"],
+.dark [class*="HeaderContent"],
+.dark [class*="LogoSection"],
+.dark [class*="NotificationPanel"] {
+  background-color: var(--card) !important;
+  color: var(--foreground) !important;
+  border-color: var(--border) !important;
+}
+
+.dark [class*="CurrentPageTitle"],
+.dark [class*="ProfileName"],
+.dark [class*="ProfileRole"],
+.dark [class*="NotificationItemTitle"] {
+  color: var(--foreground) !important;
+}
+
+/* Calendar 컴포넌트 */
+.dark [class*="CalendarRoot"],
+.dark [class*="CalendarBody"],
+.dark [class*="CalendarComponent"],
+.dark [class*="CalendarHeader"],
+.dark [class*="CalendarGrid"],
+.dark [class*="CalendarCard"],
+.dark [class*="CalendarGridContainer"],
+.dark [class*="DatesGrid"],
+.dark [class*="DateCell"],
+.dark [class*="UpcomingEventsCard"],
+.dark [class*="FilterCard"],
+.dark [class*="EventDetailCard"],
+.dark [class*="DateEventsArea"] {
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+}
+
+.dark [class*="CalendarCard"],
+.dark [class*="DateCell"],
+.dark [class*="UpcomingEventsCard"],
+.dark [class*="FilterCard"] {
+  background-color: var(--card) !important;
+  border-color: var(--border) !important;
+}
+
+.dark [class*="DateCell"] {
+  border-color: var(--border) !important;
+}
+
+.dark [class*="CalendarMonthTitle"],
+.dark [class*="SectionTitle"],
+.dark [class*="UpcomingEventTitle"],
+.dark [class*="DateNumber"] {
+  color: var(--foreground) !important;
+}
+
+.dark [class*="LegendLabel"],
+.dark [class*="UpcomingEventDate"],
+.dark [class*="MemoDate"] {
+  color: var(--muted-foreground) !important;
+}
+
+/* Health 관련 */
+.dark [class*="AdminHealthRoot"],
+.dark [class*="AdminPersonalHealthRoot"],
+.dark [class*="AgencyHealth"],
+.dark [class*="PhysicalHealthDetail"],
+.dark [class*="MentalHealthDetail"],
+.dark [class*="MonitoringDetail"],
+.dark [class*="UnscreenedDetail"] {
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+}
+
+/* Tailwind 배경 유틸리티 확장 */
+.dark .bg-purple-50,
+.dark .bg-blue-50,
+.dark .bg-gray-50,
+.dark .bg-red-50,
+.dark .bg-orange-50,
+.dark .bg-indigo-50,
+.dark [class*="from-purple-50"],
+.dark [class*="from-blue-50"],
+.dark [class*="to-purple-100"],
+.dark [class*="to-blue-100"] {
+  background-color: var(--card) !important;
+  color: var(--foreground) !important;
+}
+
+.dark .border-purple-200,
+.dark .border-blue-200,
+.dark .border-red-200,
+.dark .border-orange-200 {
+  border-color: var(--border) !important;
+}
+
+/* Signup/ForgotPassword/JoinRequest 루트 */
+.dark [class*="SignupRoot"],
+.dark [class*="ForgotPasswordRoot"],
+.dark [class*="JoinAgencyRequestRoot"] {
+  background-color: var(--background) !important;
+}
+
+.dark [class*="SignupCard"],
+.dark [class*="ForgotPasswordCard"],
+.dark [class*="RequestCard"],
+.dark [class*="SuccessCard"] {
+  background-color: var(--card) !important;
+  border-color: var(--border) !important;
+}
+
+/* LeaveRequest/Approvals/Assignment */
+.dark [class*="LeaveRequest"],
+.dark [class*="AgencyApprovals"],
+.dark [class*="AgencyAssignment"],
+.dark [class*="AgencyLeaveSettings"] {
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+}
+
+/* StatCard 확장 */
+.dark [class*="AdminTeam"] [class*="StatCard"],
+.dark [class*="AgencyTeam"] [class*="StatCard"],
+.dark [class*="AgencyProjectsStatCard"],
+.dark [class*="AdminProjectsStatCard"] {
+  background: linear-gradient(135deg, var(--card) 0%, var(--muted) 100%) !important;
+}
+
+/* SearchContainer, DockContainer */
+.dark [class*="SearchContainer"],
+.dark [class*="DockContainer"] {
+  background-color: color-mix(in srgb, var(--card) 80%, transparent) !important;
+  border-color: var(--border) !important;
+}
+
+/* Recharts 툴팁 등 */
+.dark .recharts-default-tooltip,
+.dark .recharts-tooltip-wrapper {
+  background-color: var(--card) !important;
+  color: var(--foreground) !important;
+  border-color: var(--border) !important;
+}
+
+/* Select/Dropdown/Popover */
+.dark [class*="SelectContent"],
+.dark [class*="PopoverContent"],
+.dark [class*="DropdownMenuContent"] {
+  background-color: var(--card) !important;
+  color: var(--foreground) !important;
+  border-color: var(--border) !important;
+}
+
+/* Badge */
+.dark [class*="Badge"],
+.dark [data-slot="badge"] {
+  background-color: var(--muted) !important;
+  color: var(--foreground) !important;
+  border-color: var(--border) !important;
+}
+
+/* Table */
+.dark table,
+.dark th,
+.dark td {
+  border-color: var(--border) !important;
+  color: var(--foreground) !important;
+}
+
+.dark th {
+  background-color: var(--muted) !important;
+}
+
+.dark td {
+  background-color: var(--card) !important;
+}
+
+/* 구분선/Divider */
+.dark hr,
+.dark [class*="Divider"] {
+  border-color: var(--border) !important;
+}
+
+/* Blockquote/인용 */
+.dark blockquote {
+  border-color: var(--border) !important;
+  color: var(--muted-foreground) !important;
+}

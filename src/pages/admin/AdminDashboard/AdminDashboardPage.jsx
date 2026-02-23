@@ -126,13 +126,12 @@ import {
   EmptyStateText,
 } from './AdminDashboardPage.styled';
 
-// 근태 신청 타입 매핑 (백엔드 → 프론트 표시, GUIDE 변수명 준수)
+// 근태 신청 타입 매핑 (백엔드 → 프론트 표시). 휴재는 대시보드/캘린더에 표시하지 않음(작품 일정만 영향)
 const ATTENDANCE_TYPE_MAP = {
   연차: { type: '휴가', typeName: '연차' },
   반차: { type: '휴가', typeName: '반차' },
   반반차: { type: '휴가', typeName: '반반차' },
   병가: { type: '휴가', typeName: '병가' },
-  휴재: { type: '휴가', typeName: '휴재' },
   휴가: { type: '휴가', typeName: '휴가' },
   재택: { type: '재택근무', typeName: '재택근무' },
   재택근무: { type: '재택근무', typeName: '재택근무' },
@@ -185,9 +184,9 @@ export function AdminDashboardPage({ onNavigateToSection }) {
             '재택근무': '재택근무',
             '재택': '재택근무',
             '휴가': '휴가',
-            '휴재': '휴가',
           };
-          const displayType = typeMap[data.attendanceRequestType] || data.attendanceRequestType;
+          const raw = data.attendanceRequestType;
+          const displayType = raw === '휴재' ? '출근' : (typeMap[raw] || raw);
           setCurrentAttendanceType(displayType);
           setCurrentAttendanceData(data);
         } else {
@@ -440,6 +439,7 @@ export function AdminDashboardPage({ onNavigateToSection }) {
         const formatReqDate = (dt) => {
           if (!dt) return '';
           const d = typeof dt === 'string' ? new Date(dt) : dt;
+          if (isNaN(d.getTime())) return '';
           return `${d.getMonth() + 1}월 ${d.getDate()}일`;
         };
         const mapped = filtered.map((item) => {
@@ -561,7 +561,6 @@ export function AdminDashboardPage({ onNavigateToSection }) {
           반차: '휴가',
           반반차: '휴가',
           병가: '휴가',
-          휴재: '휴가',
           휴가: '휴가',
           재택: '재택근무',
           재택근무: '재택근무',
@@ -571,9 +570,11 @@ export function AdminDashboardPage({ onNavigateToSection }) {
         const formatDate = (dt) => {
           if (!dt) return '';
           const d = typeof dt === 'string' ? new Date(dt) : dt;
+          if (isNaN(d.getTime())) return '';
           return `${d.getMonth() + 1}월 ${d.getDate()}일`;
         };
-        const mapped = arr.map((item) => {
+        const filtered = arr.filter((item) => String(item.attendanceRequestType || '').trim() !== '휴재');
+        const mapped = filtered.map((item) => {
           const startStr = formatDate(item.attendanceRequestStartDate);
           const endStr = formatDate(item.attendanceRequestEndDate);
           const dateStr = startStr === endStr ? startStr : `${startStr} ~ ${endStr}`;
@@ -721,6 +722,7 @@ export function AdminDashboardPage({ onNavigateToSection }) {
   const formatPeriodDate = (dateString) => {
     if (!dateString) return '';
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
     return `${date.getMonth() + 1}월 ${date.getDate()}일`;
   };
 
@@ -881,8 +883,8 @@ export function AdminDashboardPage({ onNavigateToSection }) {
                     </AttendanceStatusBoxInfo>
                   </AttendanceStatusBoxContent>
                   {(displayType === '휴가' || displayType === '워케이션') && currentAttendanceData && displayProps.period && (
-                    <AttendanceStatusBoxPeriod $borderColor={displayProps.borderColor}>
-                      <AttendanceStatusBoxPeriodLabel>{displayType === '휴가' ? '휴가 기간' : '워케이션 기간'}</AttendanceStatusBoxPeriodLabel>
+                      <AttendanceStatusBoxPeriod $borderColor={displayProps.borderColor}>
+                        <AttendanceStatusBoxPeriodLabel>{displayType === '휴가' ? '휴가 기간' : '워케이션 기간'}</AttendanceStatusBoxPeriodLabel>
                       <AttendanceStatusBoxPeriodValue>{displayProps.period}</AttendanceStatusBoxPeriodValue>
                     </AttendanceStatusBoxPeriod>
                   )}

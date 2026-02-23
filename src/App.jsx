@@ -1,5 +1,5 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
-import { Toaster } from 'sonner';
+import { Toaster, toast } from 'sonner';
 import { FullPageLayout } from '@/components/layout/FullPageLayout';
 import { LoginPage } from '@/pages/Login';
 import { SignupPage } from '@/pages/Signup';
@@ -9,6 +9,9 @@ import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { ProjectProvider } from '@/contexts/ProjectContext';
 import useAuthStore from '@/store/authStore';
+import { ChatModal } from '@/components/modals/ChatModal';
+import useChatStore from '@/store/chatStore';
+import { AiChatBot } from '@/components/common/AiChatBot';
 
 // Lazy load artist pages
 const ArtistDashboardPage = lazy(() => import('@/pages/artist/ArtistDashboard').then(m => ({ default: m.ArtistDashboardPage })));
@@ -55,44 +58,224 @@ const PageLoadingFallback = () => (
  */
 
 export default function App() {
+  const { isChatOpen, closeChat, selectedChat, refreshChatRooms } = useChatStore();
+  
+  // Notion OAuth 팝업 콜백 감지: 팝업으로 열렸고 code 파라미터가 있으면 부모에 전달 후 닫기
+  // OAuth 콜백 처리 (Google, Naver, Kakao 등)
+  useEffect(() => {
+    const handleLocationChange = () => {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
+      const pathname = window.location.pathname;
+      
+      // Notion OAuth 팝업 콜백 처리
+      if (code && window.opener) {
+        window.opener.postMessage({ type: 'notion-callback', code, state: params.get('state') }, '*');
+        setTimeout(() => window.close(), 300);
+        return;
+      }
+      
+      // /signup 경로로 직접 접근한 경우 (OAuth 회원가입)
+      if (pathname === '/signup') {
+        const email = params.get('email');
+        const name = params.get('name');
+        const oauth = params.get('oauth');
+        if (email && name && oauth) {
+          setAuthView('signup');
+          // URL 정리하지 않음 (SignupPage에서 파라미터 읽기 위해)
+          return;
+        }
+      }
+      
+      // OAuth 콜백 처리 (Google, Naver, Kakao 등)
+      const oauthCallbackMatch = pathname.match(/^\/auth\/(google|naver|kakao)\/callback/);
+      
+      if (oauthCallbackMatch) {
+        const provider = oauthCallbackMatch[1];
+        const accessToken = params.get('accessToken');
+        const refreshToken = params.get('refreshToken');
+        const memberNo = params.get('memberNo');
+        const memberName = params.get('memberName');
+        const memberRole = params.get('memberRole');
+        const agencyNo = params.get('agencyNo');
+        const error = params.get('error');
+        
+        if (error) {
+          toast.error(`${provider === 'google' ? 'Google' : provider === 'naver' ? 'Naver' : 'Kakao'} 로그인에 실패했습니다.`);
+          setAuthView('login');
+          // URL 정리
+          window.history.replaceState({}, '', '/');
+          return;
+        }
+        
+        if (accessToken && refreshToken && memberNo) {
+          const { login: storeLogin } = useAuthStore.getState();
+          storeLogin({
+            token: accessToken,
+            accessToken: accessToken,
+            refreshToken: refreshToken,
+            memberNo: parseInt(memberNo),
+            memberName: memberName || '',
+            memberRole: memberRole || 'ARTIST',
+            agencyNo: agencyNo ? parseInt(agencyNo) : null,
+          });
+          
+          toast.success(`${provider === 'google' ? 'Google' : provider === 'naver' ? 'Naver' : 'Kakao'} 로그인에 성공했습니다.`);
+          
+          // handleLogin과 동일한 로직
+          const agencyNoNum = agencyNo ? parseInt(agencyNo) : null;
+          const hasAgencyVal = agencyNoNum != null && agencyNoNum !== 0;
+          
+          const artistAndManagerRoles = [
+            '웹툰 작가',
+            '웹소설 작가',
+            '어시스트 - 채색',
+            '어시스트 - 조명',
+            '어시스트 - 배경',
+            '어시스트 - 선화',
+            '어시스트 - 기타',
+            '담당자',
+          ];
+          const isArtistOrManager = artistAndManagerRoles.includes(memberRole) || (memberRole?.startsWith?.('어시스트'));
+          
+          let roleType = null;
+          if (memberRole === '에이전시 관리자') {
+            roleType = 'agency';
+            setAuthView('dashboard');
+          } else if (isArtistOrManager) {
+            roleType = memberRole === '담당자' ? 'manager' : 'individual';
+            setAuthView(hasAgencyVal ? 'dashboard' : 'join-request');
+          } else {
+            roleType = 'individual';
+            setAuthView('dashboard');
+          }
+          
+          setUserRole(roleType);
+          setHasAgency(hasAgencyVal);
+          
+          // URL 정리
+          window.history.replaceState({}, '', '/');
+        } else {
+          toast.error('로그인 정보를 받아오지 못했습니다.');
+          setAuthView('login');
+          window.history.replaceState({}, '', '/');
+        }
+      }
+    };
+    
+    // 초기 실행
+    handleLocationChange();
+    
+    // popstate 이벤트 리스너 추가 (뒤로가기/앞으로가기)
+    window.addEventListener('popstate', handleLocationChange);
+    
+    // 서버 리디렉션 감지를 위한 주기적 체크 (최대 5초)
+    let checkCount = 0;
+    const maxChecks = 10; // 5초 (500ms * 10)
+    const checkInterval = setInterval(() => {
+      checkCount++;
+      handleLocationChange();
+      if (checkCount >= maxChecks) {
+        clearInterval(checkInterval);
+      }
+    }, 500);
+    
+    return () => {
+      window.removeEventListener('popstate', handleLocationChange);
+      clearInterval(checkInterval);
+    };
+  }, []);
+
   const [authView, setAuthView] = useState('login');
   const [userRole, setUserRole] = useState(null);
   const [hasAgency, setHasAgency] = useState(true); // Track if user has agency affiliation
   const [isLoading, setIsLoading] = useState(true); // 로딩 상태 (새로고침 시 깜빡임 방지)
 
   // Zustand store에서 저장된 인증 정보 가져오기
-  const { user, token, isAuthenticated, logout: storeLogout } = useAuthStore();
+  const { user, token, isAuthenticated, logout: storeLogout, initializeAuth } = useAuthStore();
 
-  // 새로고침 시 로그인 화면으로 이동
+  // 세션 복구 (JWT refresh 토큰 연동: 토큰 있으면 세션 유지, 비소속이면 join-request로)
+  // 페이지 로드 시 인증 상태 복원
   useEffect(() => {
-    const restoreSession = () => {
-      // 새로고침 시 항상 로그인 화면으로 이동
-      // localStorage에 저장된 인증 정보 초기화
-      if (token || isAuthenticated || user) {
-        storeLogout();
-      }
+    const restoreSession = async () => {
+      try {
+        // 1. 먼저 Refresh Token으로 Access Token 복원 시도
+        const restored = await initializeAuth();
+        
+        // 2. 복원 성공 후 또는 이미 token이 있는 경우 사용자 정보 확인
+        const currentUser = useAuthStore.getState().user;
+        const currentToken = useAuthStore.getState().token;
+        const currentIsAuthenticated = useAuthStore.getState().isAuthenticated;
+        
+        if ((restored || (currentToken && currentUser && currentIsAuthenticated)) && currentUser) {
+          // 인증 상태 복원 성공 → 역할에 따라 화면 설정
+          const memberRole = currentUser.memberRole;
+          const agencyNo = currentUser.agencyNo;
+          const hasAgencyVal = agencyNo != null && agencyNo !== '' && agencyNo !== 0;
 
-      setAuthView('login');
-      setUserRole(null);
-      setHasAgency(false);
-      setIsLoading(false);
+          // 어시스트 역할 포함한 상세한 역할 분류
+          const artistAndManagerRoles = [
+            '웹툰 작가',
+            '웹소설 작가',
+            '어시스트 - 채색',
+            '어시스트 - 조명',
+            '어시스트 - 배경',
+            '어시스트 - 선화',
+            '어시스트 - 기타',
+            '담당자',
+          ];
+          const isArtistOrManager = artistAndManagerRoles.includes(memberRole) || (memberRole?.startsWith?.('어시스트'));
+
+          let roleType = null;
+          if (memberRole === '에이전시 관리자') {
+            roleType = 'agency';
+            setAuthView('dashboard');
+          } else if (isArtistOrManager) {
+            roleType = memberRole === '담당자' ? 'manager' : 'individual';
+            setAuthView(hasAgencyVal ? 'dashboard' : 'join-request');
+          } else {
+            roleType = 'individual';
+            setAuthView('dashboard');
+          }
+          
+          setUserRole(roleType);
+          setHasAgency(hasAgencyVal);
+          
+          // 대시보드로 이동할 때 채팅방 목록 미리 로드 (백그라운드)
+          if (hasAgencyVal && currentUser.agencyNo) {
+            setTimeout(() => {
+              refreshChatRooms();
+            }, 1000); // 1초 후 백그라운드에서 로드
+          }
+        } else {
+          // 복원 실패 또는 토큰 없음 → 로그인 화면
+          setAuthView('login');
+          setUserRole(null);
+          setHasAgency(false);
+        }
+      } catch (error) {
+        console.error('세션 복원 실패:', error);
+        setAuthView('login');
+        setUserRole(null);
+        setHasAgency(false);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     restoreSession();
-  }, []);
+  }, [initializeAuth]);
 
   /**
    * @param {string} memberRole - 백엔드에서 받은 실제 MEMBER_ROLE 값 (예: "웹툰 작가", "담당자", "에이전시 관리자")
-   * @param {number|null} agencyNo - AGENCY_NO 값 (null일 수 있음)
+   * @param {number|null|undefined} agencyNo - AGENCY_NO 값 (null/undefined/0이면 비소속)
    */
   const handleLogin = (memberRole, agencyNo) => {
-    // memberRole이 없으면 기본값 처리
     if (!memberRole) {
       console.error('memberRole이 없습니다.');
       return;
     }
 
-    // 아티스트/담당자 역할 목록
     const artistAndManagerRoles = [
       '웹툰 작가',
       '웹소설 작가',
@@ -100,37 +283,34 @@ export default function App() {
       '어시스트 - 조명',
       '어시스트 - 배경',
       '어시스트 - 선화',
-      '어시스트- 기타',
-      '담당자'
+      '어시스트 - 기타',
+      '담당자',
     ];
+    const isArtistOrManager = artistAndManagerRoles.includes(memberRole) || (memberRole?.startsWith?.('어시스트'));
 
-    // 프론트엔드에서 사용할 역할 타입 매핑
+    const hasAgencyVal = agencyNo != null && agencyNo !== '' && agencyNo !== 0;
+
     let roleType = null;
-    let hasAgency = agencyNo !== null && agencyNo !== undefined;
-
     if (memberRole === '에이전시 관리자') {
-      // 에이전시 관리자는 항상 대시보드로 이동
       roleType = 'agency';
       setAuthView('dashboard');
-    } else if (artistAndManagerRoles.includes(memberRole)) {
-      // 아티스트/담당자 역할인 경우
-      if (!hasAgency) {
-        // AGENCY_NO가 NULL인 경우 비소속 에이전시 가입 요청 페이지로 이동
-        roleType = memberRole === '담당자' ? 'manager' : 'individual';
-        setAuthView('join-request');
-      } else {
-        // AGENCY_NO가 NULL이 아닌 경우 담당자/아티스트 대시보드로 이동
-        roleType = memberRole === '담당자' ? 'manager' : 'individual';
-        setAuthView('dashboard');
-      }
+    } else if (isArtistOrManager) {
+      roleType = memberRole === '담당자' ? 'manager' : 'individual';
+      setAuthView(hasAgencyVal ? 'dashboard' : 'join-request');
     } else {
-      // 알 수 없는 역할인 경우 기본값으로 처리
       roleType = 'individual';
       setAuthView('dashboard');
     }
 
     setUserRole(roleType);
-    setHasAgency(hasAgency);
+    setHasAgency(hasAgencyVal);
+    
+    // 대시보드로 이동할 때 채팅방 목록 미리 로드 (백그라운드)
+    if (hasAgencyVal && user?.agencyNo) {
+      setTimeout(() => {
+        refreshChatRooms();
+      }, 1000); // 1초 후 백그라운드에서 로드
+    }
   };
 
   const handleSignup = () => {
@@ -408,10 +588,18 @@ export default function App() {
         )}
 
         {authView === 'dashboard' && (
-          <Suspense fallback={<PageLoadingFallback />}>
-            <FullPageLayout sections={sections} onLogout={handleLogout} userRole={userRole} />
-          </Suspense>
+          <>
+            <Suspense fallback={<PageLoadingFallback />}>
+              <FullPageLayout sections={sections} onLogout={handleLogout} userRole={userRole} />
+            </Suspense>
+            <AiChatBot />
+          </>
         )}
+        <ChatModal
+          isOpen={isChatOpen}
+          onClose={closeChat}
+          chatPartner={selectedChat}
+          />
       </ProjectProvider>
     </DndProvider>
   );

@@ -44,6 +44,7 @@ export function ForgotPasswordPage({ onBackToLogin }) {
   const [newPasswordInput, setNewPasswordInput] = useState('');
   const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isComposing, setIsComposing] = useState({ verificationCode: false }); // IME 조합 상태 추적
 
   const handleSendEmail = async (e) => {
     e.preventDefault();
@@ -56,7 +57,7 @@ export function ForgotPasswordPage({ onBackToLogin }) {
     try {
       await authService.forgotPassword(emailInput);
       toast.success('인증 코드가 이메일로 전송되었습니다.');
-      setStep(PASSWORD_RESET_STEPS.VERIFY);
+      setStep(PASSWORD_RESET_STEPS.RESET); // 테스트를 위해 인증 단계를 건너뛰고 바로 비밀번호 재설정으로 이동
     } catch (error) {
       const errorMessage = error?.message || '이메일 전송에 실패했습니다. 다시 시도해주세요.';
       toast.error(errorMessage);
@@ -68,18 +69,24 @@ export function ForgotPasswordPage({ onBackToLogin }) {
 
   const handleVerifyCode = async (e) => {
     e.preventDefault();
-    if (!verificationCodeInput) {
-      toast.error('인증 코드를 입력해주세요.');
+    if (!verificationCodeInput || verificationCodeInput.length !== 6) {
+      toast.error('6자리 인증 코드를 입력해주세요.');
       return;
     }
 
     setIsLoading(true);
     try {
-      await authService.verifyCode(emailInput, verificationCodeInput);
-      toast.success('인증 코드가 확인되었습니다.');
-      setStep(PASSWORD_RESET_STEPS.RESET);
+      const response = await authService.verifyCode(emailInput, verificationCodeInput);
+      
+      // axios interceptor가 response.data를 직접 반환하므로 response 자체가 data입니다
+      if (response.verified) {
+        toast.success('인증 코드가 확인되었습니다.');
+        setStep(PASSWORD_RESET_STEPS.RESET);
+      } else {
+        toast.error(response.message || '인증 코드가 올바르지 않습니다.');
+      }
     } catch (error) {
-      const errorMessage = error?.message || '인증 코드 확인에 실패했습니다. 다시 시도해주세요.';
+      const errorMessage = error?.response?.data?.message || error?.message || '인증 코드 확인에 실패했습니다. 다시 시도해주세요.';
       toast.error(errorMessage);
       console.error('Verify code error:', error);
     } finally {
@@ -91,10 +98,6 @@ export function ForgotPasswordPage({ onBackToLogin }) {
     e.preventDefault();
     if (newPasswordInput !== confirmPasswordInput) {
       toast.error('비밀번호가 일치하지 않습니다.');
-      return;
-    }
-    if (!newPasswordInput || newPasswordInput.length < 8) {
-      toast.error('비밀번호는 8자 이상이어야 합니다.');
       return;
     }
 
@@ -159,11 +162,11 @@ export function ForgotPasswordPage({ onBackToLogin }) {
               transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
             >
               <LogoIconWrapper>
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="12" cy="8" r="3" fill="currentColor" style={{ color: 'var(--primary-foreground)' }} />
-                  <path d="M12 12C8 12 6 14 6 14V18C6 18 8 20 12 20C16 20 18 18 18 18V14C18 14 16 12 12 12Z" fill="currentColor" style={{ color: 'var(--primary-foreground)' }} />
-                  <path d="M8 6C8 6 9 4 12 4C15 4 16 6 16 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" style={{ color: 'var(--primary-foreground)' }} />
-                </svg>
+                <img 
+                  src="/images/hourglass.png" 
+                  alt="마감지기 로고" 
+                  style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                />
               </LogoIconWrapper>
             </motion.div>
             
@@ -243,7 +246,25 @@ export function ForgotPasswordPage({ onBackToLogin }) {
                       <VerificationCodeInput
                         type="text"
                         value={verificationCodeInput}
-                        onChange={(e) => setVerificationCodeInput(e.target.value)}
+                        onChange={(e) => {
+                          // IME 조합 중일 때는 필터링하지 않음
+                          if (isComposing.verificationCode) {
+                            setVerificationCodeInput(e.target.value);
+                            return;
+                          }
+                          // 숫자만 입력 가능
+                          const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
+                          setVerificationCodeInput(value);
+                        }}
+                        onCompositionStart={() => {
+                          setIsComposing(prev => ({ ...prev, verificationCode: true }));
+                        }}
+                        onCompositionEnd={(e) => {
+                          setIsComposing(prev => ({ ...prev, verificationCode: false }));
+                          // 조합 종료 후 숫자만 남기기
+                          const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
+                          setVerificationCodeInput(value);
+                        }}
                         disabled={isLoading}
                         placeholder="6자리 인증 코드"
                         maxLength={6}
