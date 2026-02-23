@@ -237,7 +237,7 @@ export const CloseIcon = styled(X)`
 /* 바디 영역 - 애니메이션을 위해 motion.div로 확장 가능 */
 export const ChatBody = styled(motion.div)`
   flex: 1;
-  padding: 20px;
+  padding: 20px; /* 좌우 동일 여백 */
   overflow-y: scroll;
   background-color: transparent;
   display: flex;
@@ -284,6 +284,14 @@ export const ChatBody = styled(motion.div)`
       outline: none !important;
       caret-color: transparent !important;
     }
+  }
+
+  /* 읽음 숫자 영역: user-select 예외 + 강제 리페인트(실시간 반영) */
+  .chat-unread-count {
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    transform: translateZ(0);
+    will-change: contents;
   }
 `;
 
@@ -393,11 +401,11 @@ export const MessageContent = styled.div`
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-width: 240px; /* 280px에서 240px로 축소 */
-  cursor: default !important; /* 기본 커서로 설정 */
-  user-select: none; /* 기본적으로 선택 방지 */
+  max-width: 240px;
+  align-items: ${props => (props.$isMe ? 'flex-end' : 'flex-start')};
+  cursor: default !important;
+  user-select: none;
   
-  /* 포커스 방지 */
   &:focus {
     outline: none !important;
   }

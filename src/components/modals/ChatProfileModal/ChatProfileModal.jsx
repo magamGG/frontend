@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { X, Mail, Phone, MapPin, User, Briefcase } from 'lucide-react';
+import { X, Mail, Phone, MapPin, User, Briefcase, BookOpen, ChevronRight } from 'lucide-react';
 import { getMemberProfileUrl } from '@/api/config';
 import { memberService } from '@/api/services';
 import * as S from './ChatProfileModal.styled';
@@ -9,10 +9,11 @@ export function ChatProfileModal({ isOpen, onClose, memberNo, memberInfo: initia
   const [memberDetails, setMemberDetails] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // 1. useMemo를 이용한 데이터 병합 최적화: 의존성이 변할 때만 계산
+  // 1. useMemo를 이용한 데이터 병합: initialMemberInfo + memberDetails + MemberResponse(member)
   const mergedMemberInfo = useMemo(() => ({
     ...initialMemberInfo,
     ...memberDetails,
+    ...(memberDetails?.member || {}), // MemberResponse의 memberEmail, memberPhone 등 상위로 펼침
   }), [initialMemberInfo, memberDetails]);
 
   useEffect(() => {
@@ -103,11 +104,12 @@ export function ChatProfileModal({ isOpen, onClose, memberNo, memberInfo: initia
                 </S.DefaultProfileLarge>
               </S.ProfileImageContainer>
 
-              <S.ProfileName>{mergedMemberInfo.memberName || '사용자'}</S.ProfileName>
-              {mergedMemberInfo.memberRole && (
+              <S.ProfileName>
+                {mergedMemberInfo.memberRole && (
                 <S.ProfileRole>{mergedMemberInfo.memberRole}</S.ProfileRole>
-              )}
-            </S.ProfileSection>
+                )}
+                {mergedMemberInfo.memberName || '사용자'}</S.ProfileName>
+             </S.ProfileSection>
 
             <S.InfoSection>
               {loading && (
@@ -127,65 +129,23 @@ export function ChatProfileModal({ isOpen, onClose, memberNo, memberInfo: initia
                   <S.InfoText>등록된 정보가 없습니다</S.InfoText>
                 </S.InfoItem>
               )}
-
-              {/* 연락처 정보 */}
-              {mergedMemberInfo.memberEmail && (
                 <S.InfoItem>
                   <S.InfoIcon>
                     <Mail size={16} />
                   </S.InfoIcon>
-                  <S.InfoText>{mergedMemberInfo.memberEmail}</S.InfoText>
+                  <S.InfoText>{mergedMemberInfo.memberEmail}</S.InfoText>  
+                <S.InfoIcon>
+                  <Phone size={16} />
+                </S.InfoIcon>
+                <S.InfoText>{mergedMemberInfo.memberPhone}</S.InfoText>
                 </S.InfoItem>
-              )}
-
-              {mergedMemberInfo.memberPhone && (
                 <S.InfoItem>
                   <S.InfoIcon>
-                    <Phone size={16} />
+                    <BookOpen size={16} />
                   </S.InfoIcon>
-                  <S.InfoText>{mergedMemberInfo.memberPhone}</S.InfoText>
+                  <S.InfoText>포트폴리오</S.InfoText>
+                  <ChevronRight size={18} style={{ color: '#9ca3af', flexShrink: 0 }} />
                 </S.InfoItem>
-              )}
-
-              {/* 직무 정보 */}
-              {mergedMemberInfo.memberPosition && (
-                <S.InfoItem>
-                  <S.InfoIcon>
-                    <User size={16} />
-                  </S.InfoIcon>
-                  <S.InfoText>{mergedMemberInfo.memberPosition}</S.InfoText>
-                </S.InfoItem>
-              )}
-
-              {mergedMemberInfo.memberDepartment && (
-                <S.InfoItem>
-                  <S.InfoIcon>
-                    <MapPin size={16} />
-                  </S.InfoIcon>
-                  <S.InfoText>{mergedMemberInfo.memberDepartment}</S.InfoText>
-                </S.InfoItem>
-              )}
-
-              {/* 프로젝트 정보 - 태그 형태로 개선된 UI */}
-              {hasProjectInfo && (
-                <S.InfoItem>
-                  <S.InfoIcon>
-                    <Briefcase size={16} />
-                  </S.InfoIcon>
-                  <S.ProjectContainer>
-                    <S.ProjectLabel>현재 프로젝트</S.ProjectLabel>
-                    <S.ProjectTags>
-                      {memberDetails.currentProjects
-                        .filter(project => project && project.trim()) // 빈 프로젝트명 필터링
-                        .map((project, index) => (
-                          <S.ProjectTag key={index} title={project}>
-                            {project.length > 20 ? `${project.substring(0, 20)}...` : project}
-                          </S.ProjectTag>
-                        ))}
-                    </S.ProjectTags>
-                  </S.ProjectContainer>
-                </S.InfoItem>
-              )}
             </S.InfoSection>
           </S.Content>
         </S.ModalContainer>

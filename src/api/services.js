@@ -1,6 +1,5 @@
 import api from './axios';
 import { API_ENDPOINTS } from './config';
-import chatPerformanceMonitor from '@/utils/chatPerformanceMonitor';
 
 // 인증 서비스
 export const authService = {
@@ -712,12 +711,10 @@ export const chatService = {
   // 에이전시별 채팅방 목록 조회 (캐싱 비활성화 - 실시간 DB 조회)
   getChatRoomsByAgency: (agencyNo, type = 'all') => {
     const url = API_ENDPOINTS.CHAT.ROOMS_BY_AGENCY(agencyNo, type);
-    const callId = chatPerformanceMonitor.startApiCall('getChatRoomsByAgency', { agencyNo, type });
     
     // 캐시 사용하지 않고 항상 DB에서 최신 데이터 조회
     return api.get(url)
       .then(response => {
-        chatPerformanceMonitor.endApiCall(callId, true);
         
         // 응답 데이터 검증 및 정규화
         if (response.data && Array.isArray(response.data)) {
@@ -731,7 +728,6 @@ export const chatService = {
         return response;
       })
       .catch(error => {
-        chatPerformanceMonitor.endApiCall(callId, false, error);
         console.error('❌ [API] getChatRoomsByAgency 실패:', error);
         // 에러 시 빈 배열 반환하여 UI 깨짐 방지
         return { data: [] };
@@ -767,13 +763,11 @@ export const chatService = {
     if (cached) {
       return Promise.resolve(cached);
     }
-    
-    const callId = chatPerformanceMonitor.startApiCall('getChatMessages', { chatRoomNo, page, size });
+
     
     return chatService._withRequestDeduplication(cacheKey, () =>
       api.get(API_ENDPOINTS.CHAT.MESSAGES(chatRoomNo, page, size))
         .then(response => {
-          chatPerformanceMonitor.endApiCall(callId, true);
           
           // 메시지 데이터 정규화
           if (response.data) {
@@ -800,7 +794,6 @@ export const chatService = {
           return response;
         })
         .catch(error => {
-          chatPerformanceMonitor.endApiCall(callId, false, error);
           console.error('❌ [API] getChatMessages 실패:', error);
           // 에러 시 빈 배열 반환
           return { data: [] };
@@ -813,7 +806,7 @@ export const chatService = {
     if (!chatRoomNo || !lastChatNo) {
       return Promise.reject(new Error('채팅방 번호와 메시지 번호가 필요합니다.'));
     }
-    
+    console.log('[READ] API 호출 room=', chatRoomNo, 'lastChatNo=', lastChatNo);
     return api.put(`/api/chat/rooms/${chatRoomNo}/read?lastChatNo=${lastChatNo}`)
       .then(response => {
         // 관련 캐시 무효화
@@ -824,7 +817,7 @@ export const chatService = {
           }
         }
         keysToInvalidate.forEach(key => chatService._cache.delete(key));
-        
+        console.log('[READ] API 응답 완료 → 서버가 READ_UPDATE 브로드캐스트함 (서버 터미널 확인)');
         return response;
       })
       .catch(error => {
@@ -858,6 +851,19 @@ export const chatService = {
           return { data: 0 };
         })
     );
+  },
+
+  // 특정 메시지를 읽지 않은 참여 중인 멤버 수 (카카오톡 스타일)
+  getMessageReadStatus: (chatRoomNo, chatNo, senderMemberNo = null) => {
+    if (!chatRoomNo || chatNo == null) {
+      return Promise.reject(new Error('채팅방 번호와 메시지 번호가 필요합니다.'));
+    }
+    const params = senderMemberNo != null ? { senderMemberNo } : {};
+    return api.get(`/api/chat/rooms/${chatRoomNo}/messages/${chatNo}/read-status`, { params })
+      .catch(error => {
+        console.error('❌ [API] getMessageReadStatus 실패:', error);
+        return { data: { unreadMemberCount: 0 } };
+      });
   },
 
   // 채팅방 참여자 목록 조회

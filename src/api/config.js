@@ -212,6 +212,7 @@ export const API_ENDPOINTS = {
     JOIN_ROOM: (roomId) => `/api/chat/rooms/${roomId}/join`, // POST: 채팅방 참여
     LEAVE_ROOM: (roomId) => `/api/chat/rooms/${roomId}/leave`, // POST: 채팅방 나가기
     READ_MESSAGE: (roomId, messageId) => `/api/chat/rooms/${roomId}/messages/${messageId}/read`, // PUT: 메시지 읽음 처리
+    MESSAGE_READ_STATUS: (roomId, chatNo) => `/api/chat/rooms/${roomId}/messages/${chatNo}/read-status`, // GET: 해당 메시지를 읽지 않은 참여 멤버 수
   },
 
   // AI 챗봇 API (역할별)

@@ -26,37 +26,88 @@ export function ChatDetailModal() {
   const [initError, setInitError] = useState(null);
   const [lastMessageCount, setLastMessageCount] = useState(0);
   const [isUploading, setIsUploading] = useState(false); // 파일 업로드 상태
+  const [, setTick] = useState(0); // 읽음 반영 후 강제 리렌더 트리거
 
   const bottomRef = useRef(null);
   const chatBodyRef = useRef(null);
   const lastReadUpdateRef = useRef(null);
-  const debounceTimerRef = useRef(null);
   const fileInputRef = useRef(null); // 파일 입력 참조
   
   // 💡 핵심: 무한 스크롤 상태를 즉각적으로 판별하기 위해 useRef 사용
   const isInfiniteScrollingRef = useRef(false);
   const lastMessageIdRef = useRef(null);
+  /** 읽음 실시간 반영: 멤버별로 이미 반영한 lastChatNo (중복 감소 방지) */
+  const lastAppliedReadByMemberRef = useRef({});
+  /** WebSocket 콜백에서 항상 최신 apply 호출용 (클로저 스테일 방지) */
+  const applyReadUpdateToMessagesRef = useRef(null);
 
   const currentChatRoomNo = useMemo(() => selectedChat?.chatRoomNo, [selectedChat?.chatRoomNo]);
   const currentMemberNo = useMemo(() => user?.memberNo, [user?.memberNo]);
 
-  // --- [1. 읽음 처리 로직] ---
-  const debouncedUpdateLastRead = useCallback((chatRoomNo, lastChatNo) => {
-    if (lastReadUpdateRef.current && lastReadUpdateRef.current >= lastChatNo) return;
-    lastReadUpdateRef.current = lastChatNo;
+  /** 배열에 읽음 반영 적용 (순수 함수, 초기 로드 시 한 번에 setMessages 하기 위함) */
+  const applyReadToArray = useCallback((msgArray, memberNo, lastChatNo) => {
+    const lastNum = Number(lastChatNo);
+    const prevNum = Number(lastAppliedReadByMemberRef.current[memberNo]) || 0;
+    if (lastNum <= prevNum) return msgArray;
+    const seen = new Set();
+    const unique = msgArray.filter((m) => {
+      if (seen.has(m.chatNo)) return false;
+      seen.add(m.chatNo);
+      return true;
+    });
+    return unique.map((m) => {
+      const numChatNo = Number(m.chatNo);
+      if (Number.isNaN(numChatNo) || numChatNo <= prevNum || numChatNo > lastNum) return m;
+      const currentUnread = Number(m.unreadMemberCount ?? m.unreadCount) || 0;
+      return { ...m, unreadMemberCount: Math.max(0, currentUnread - 1) };
+    });
+  }, []);
 
-    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-    debounceTimerRef.current = setTimeout(async () => {
-      try {
-        await chatService.updateLastReadMessage(chatRoomNo, lastChatNo);
-        refreshChatRooms();
-      } catch (error) {
-        // 읽음 처리 실패 시 무시 (사용자 경험에 영향 없음)
-      } finally {
-        lastReadUpdateRef.current = null;
-      }
-    }, 1000);
-  }, [refreshChatRooms]);
+  /**
+   * 읽음 반영: 선언적 setState만 사용 (prev 기준 map → 렌더 누락 방지).
+   * unreadMemberCount 없으면 0으로 간주 후 -1, 타입은 항상 Number로 비교.
+   */
+  const applyReadUpdateToMessages = useCallback((memberNo, lastChatNo) => {
+    const lastNum = Number(lastChatNo);
+    const prevNum = Number(lastAppliedReadByMemberRef.current[memberNo]) || 0;
+    if (lastNum <= prevNum) return;
+    lastAppliedReadByMemberRef.current[memberNo] = lastNum;
+
+    setMessages((prevMsgs) => {
+      const seen = new Set();
+      const unique = prevMsgs.filter((m) => {
+        if (seen.has(m.chatNo)) return false;
+        seen.add(m.chatNo);
+        return true;
+      });
+      const next = unique.map((m) => {
+        const numChatNo = Number(m.chatNo);
+        if (Number.isNaN(numChatNo) || numChatNo <= prevNum || numChatNo > lastNum) return m;
+        const currentUnread = Number(m.unreadMemberCount ?? m.unreadCount) || 0;
+        return { ...m, unreadMemberCount: Math.max(0, currentUnread - 1) };
+      });
+      return [...next];
+    });
+    setTick((t) => t + 1);
+  }, []);
+  applyReadUpdateToMessagesRef.current = applyReadUpdateToMessages;
+
+  // --- [1. 읽음 처리 로직] 즉시 반영 (디바운스 없음) ---
+  const updateLastRead = useCallback(
+    (chatRoomNo, lastChatNo) => {
+      if (lastReadUpdateRef.current != null && lastReadUpdateRef.current >= lastChatNo) return;
+      lastReadUpdateRef.current = lastChatNo;
+
+      applyReadUpdateToMessages(currentMemberNo, lastChatNo);
+
+      chatService
+        .updateLastReadMessage(chatRoomNo, lastChatNo)
+        .then(() => refreshChatRooms())
+        .catch(() => {});
+      /* finally에서 ref 초기화 안 함 → 같은 lastChatNo로 API 스팸 방지, 방 나갈 때만 초기화 */
+    },
+    [refreshChatRooms, currentMemberNo, applyReadUpdateToMessages]
+  );
 
   // --- [2. 무한 스크롤 및 위치 보정] ---
   const loadMoreMessages = useCallback(async () => {
@@ -90,9 +141,14 @@ export function ChatDetailModal() {
       }
 
       if (newMessages.length > 0) {
+        const normalizedNew = newMessages.map((m) => ({
+          ...m,
+          chatNo: m.chatNo != null ? Number(m.chatNo) : m.chatNo,
+          unreadMemberCount: Number(m.unreadMemberCount ?? m.unreadCount ?? 0) || 0,
+        }));
         setMessages((prev) => {
           const existingIds = new Set(prev.map((m) => m.chatNo));
-          const uniqueNew = newMessages.filter((m) => !existingIds.has(m.chatNo));
+          const uniqueNew = normalizedNew.filter((m) => !existingIds.has(m.chatNo));
           return [...uniqueNew, ...prev];
         });
         
@@ -136,10 +192,10 @@ export function ChatDetailModal() {
     if (scrollTop + clientHeight >= scrollHeight - 100 && messages.length > 0) {
       const realMsgs = messages.filter((m) => !m.isTemp);
       if (realMsgs.length > 0) {
-        debouncedUpdateLastRead(currentChatRoomNo, realMsgs[realMsgs.length - 1].chatNo);
+        updateLastRead(currentChatRoomNo, realMsgs[realMsgs.length - 1].chatNo);
       }
     }
-  }, [currentChatRoomNo, messages, hasMoreMessages, isLoadingMore, loadMoreMessages, debouncedUpdateLastRead]);
+  }, [currentChatRoomNo, messages, hasMoreMessages, isLoadingMore, loadMoreMessages, updateLastRead]);
 
   // --- [3. 메시지 자동 스크롤 제어] ---
   useEffect(() => {
@@ -177,7 +233,9 @@ export function ChatDetailModal() {
   useEffect(() => {
     if (!currentChatRoomNo || !isChatOpen) return;
 
-    // 상태 초기화
+    const abort = new AbortController();
+    const { signal } = abort;
+
     setMessages([]);
     setCurrentPage(0);
     setHasMoreMessages(true);
@@ -190,20 +248,37 @@ export function ChatDetailModal() {
     const initialize = async () => {
       try {
         await chatService.joinChatRoom(currentChatRoomNo);
+        if (signal.aborted) return;
         const [mRes, msgRes] = await Promise.all([
           chatService.getChatRoomMembers(currentChatRoomNo),
           chatService.getChatMessages(currentChatRoomNo, 0, 20),
         ]);
+        if (signal.aborted) return;
 
+        const raw = (msgRes.content || msgRes.data?.content || msgRes.data || msgRes || []).reverse();
+        const lastChatNo = raw.length > 0 ? (raw[raw.length - 1].chatNo != null ? Number(raw[raw.length - 1].chatNo) : raw[raw.length - 1].chatNo) : null;
+
+        // 1) 계산 먼저: n을 띄우지 말고, -1 적용한 값만 만들어 둠
+        const initialMsgs = raw.map((m) => {
+          const chatNo = m.chatNo != null ? Number(m.chatNo) : m.chatNo;
+          let unread = Number(m.unreadMemberCount ?? m.unreadCount ?? 0) || 0;
+          if (lastChatNo != null && Number(chatNo) <= Number(lastChatNo) && unread > 0) {
+            unread = unread - 1;
+          }
+          return { ...m, chatNo, unreadMemberCount: unread };
+        });
+        if (lastChatNo != null) {
+          lastAppliedReadByMemberRef.current[currentMemberNo] = lastChatNo;
+        }
+
+        // 2) 그 다음에만 한 번에 setState → 화면에는 n-1만 노출 (n을 먼저 띄우지 않음)
         const membersMap = {};
         (mRes.data || mRes).forEach((m) => { membersMap[m.memberNo] = m; });
         setChatRoomMembers(membersMap);
-
-        const initialMsgs = (msgRes.content || msgRes.data?.content || msgRes.data || msgRes || []).reverse();
-        
         setMessages(initialMsgs);
         setLastMessageCount(initialMsgs.length);
-        
+        setTick((t) => t + 1);
+
         const sliceData = msgRes.data ?? msgRes;
         if (typeof sliceData.hasNext === 'boolean') {
           setHasMoreMessages(sliceData.hasNext);
@@ -212,40 +287,63 @@ export function ChatDetailModal() {
         } else {
           setHasMoreMessages(initialMsgs.length === 20);
         }
-        
         if (initialMsgs.length > 0) {
           lastMessageIdRef.current = initialMsgs[initialMsgs.length - 1].chatNo;
         }
 
         setTimeout(() => {
+          if (signal.aborted) return;
           bottomRef.current?.scrollIntoView({ behavior: 'instant' });
           setIsInitialLoad(false);
-          // 스크롤이 없을 정도로 짧은 채팅방도 열었을 때 읽음 처리 (스크롤 이벤트가 안 나오므로)
-          if (initialMsgs.length > 0) {
-            const lastChatNo = initialMsgs[initialMsgs.length - 1].chatNo;
-            debouncedUpdateLastRead(currentChatRoomNo, lastChatNo);
+          if (lastChatNo != null) {
+            lastReadUpdateRef.current = lastChatNo;
+            chatService
+              .updateLastReadMessage(currentChatRoomNo, lastChatNo)
+              .then(() => {
+                if (signal.aborted) return;
+                refreshChatRooms();
+              })
+              .catch(() => {});
           }
         }, 100);
       } catch (e) {
-        setInitError('채팅을 불러오는데 실패했습니다.');
+        if (!signal.aborted) setInitError('채팅을 불러오는데 실패했습니다.');
       }
     };
 
     initialize();
 
-    const subscription = websocketService.subscribeToRoom(currentChatRoomNo, (newMsg) => {
+    // 방 바뀌면 읽음 적용 추적 초기화
+    lastAppliedReadByMemberRef.current = {};
+
+    const subscription = websocketService.subscribeToRoom(currentChatRoomNo, (payload) => {
+      if (payload.type === 'READ_UPDATE') {
+        const memberNo = Number(payload.memberNo);
+        const lastChatNo = Number(payload.lastChatNo);
+        applyReadUpdateToMessagesRef.current?.(memberNo, lastChatNo);
+        return;
+      }
+      // 일반 채팅 메시지: 타입 통일, 백엔드 필드명 폴백(unreadCount)
       setMessages((prev) => {
-        const isDup = prev.some((m) => m.chatNo === newMsg.chatNo);
+        const isDup = prev.some((m) => Number(m.chatNo) === Number(payload.chatNo) || m.chatNo === payload.chatNo);
         if (isDup) return prev;
-        const filtered = prev.filter((m) => !(m.isTemp && m.chatMessage === newMsg.chatMessage && m.memberNo === newMsg.memberNo));
-        return [...filtered, newMsg];
+        const normalized = {
+          ...payload,
+          chatNo: payload.chatNo != null ? Number(payload.chatNo) : payload.chatNo,
+          memberNo: payload.memberNo != null ? Number(payload.memberNo) : payload.memberNo,
+          unreadMemberCount: Number(payload.unreadMemberCount ?? payload.unreadCount ?? 0) || 0,
+        };
+        const filtered = prev.filter((m) => !(m.isTemp && m.chatMessage === payload.chatMessage && m.memberNo === payload.memberNo));
+        return [...filtered, normalized];
       });
     });
 
     return () => {
+      abort.abort();
+      lastReadUpdateRef.current = null;
       websocketService.unsubscribeFromRoom(currentChatRoomNo);
     };
-  }, [currentChatRoomNo, isChatOpen]);
+  }, [currentChatRoomNo, isChatOpen, currentMemberNo]);
 
   // 스크롤 이벤트 리스너 등록
   useEffect(() => {
@@ -444,10 +542,12 @@ export function ChatDetailModal() {
                 </div>
               )}
 
-              {messages.map((msg, idx) => (
-                <S.MessageItem key={msg.chatNo || `msg-${idx}`} $isMe={msg.memberNo === user?.memberNo}>
+              {messages.map((msg) => {
+                const itemKey = msg.isTemp ? msg.chatNo : `${msg.chatNo}-${msg.unreadMemberCount}`;
+                return (
+                <S.MessageItem key={itemKey} $isMe={msg.memberNo === user?.memberNo}>
                   <S.MessageContainer $isMe={msg.memberNo === user?.memberNo}>
-                    <S.MessageContent>
+                    <S.MessageContent $isMe={msg.memberNo === user?.memberNo}>
                       {msg.memberNo !== user?.memberNo && (
                         <S.SenderInfo>
                           <S.ProfileImageContainer onClick={() => {
@@ -473,33 +573,19 @@ export function ChatDetailModal() {
                         {(msg.chatMessageType === 'FILE' || msg.chatMessageType === 'IMAGE') && msg.attachmentUrl ? (
                           <div>
                             <div style={{ marginBottom: '8px' }}>{msg.chatMessage}</div>
-                            {/* 이미지 파일인 경우 미리보기 표시 */}
                             {msg.chatMessageType === 'IMAGE' || (msg.attachmentUrl && (msg.attachmentUrl.match(/\.(jpg|jpeg|png|gif|webp|bmp)$/i))) ? (
                               <div style={{ marginBottom: '8px' }}>
                                 <img 
                                   src={getChatAttachmentUrl(msg.attachmentUrl)} 
                                   alt="첨부 이미지"
-                                  style={{ 
-                                    maxWidth: '200px', 
-                                    maxHeight: '200px', 
-                                    borderRadius: '8px',
-                                    cursor: 'pointer'
-                                  }}
+                                  style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '8px', cursor: 'pointer' }}
                                   onClick={() => window.open(getChatAttachmentUrl(msg.attachmentUrl), '_blank')}
                                 />
                               </div>
                             ) : null}
                             <button
                               onClick={() => handleFileDownload(msg.attachmentUrl, msg.chatMessage.split(' (')[0])}
-                              style={{ 
-                                background: 'none',
-                                border: 'none',
-                                color: msg.memberNo === user?.memberNo ? 'rgba(255,255,255,0.8)' : 'var(--primary)',
-                                textDecoration: 'underline',
-                                fontSize: '12px',
-                                cursor: 'pointer',
-                                padding: 0
-                              }}
+                              style={{ background: 'none', border: 'none', color: msg.memberNo === user?.memberNo ? 'rgba(255,255,255,0.8)' : 'var(--primary)', textDecoration: 'underline', fontSize: '12px', cursor: 'pointer', padding: 0 }}
                             >
                               다운로드
                             </button>
@@ -509,10 +595,19 @@ export function ChatDetailModal() {
                         )}
                       </S.Bubble>
                       <S.MessageTime $isMe={msg.memberNo === user?.memberNo}>{msg.createdAt}</S.MessageTime>
+                      {msg.unreadMemberCount > 0 && (
+                        <span
+                          className="chat-unread-count"
+                          style={{ fontSize: '11px', color: 'var(--muted-foreground)', marginTop: '2px', display: 'inline-block', textAlign: msg.memberNo === user?.memberNo ? 'right' : 'left' }}
+                        >
+                          {msg.unreadMemberCount}명이 읽지 않음
+                        </span>
+                      )}
                     </S.MessageContent>
                   </S.MessageContainer>
                 </S.MessageItem>
-              ))}
+              );
+              })}
               <div ref={bottomRef} style={{ height: '1px' }} />
             </S.ChatBody>
 

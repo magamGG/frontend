@@ -4,7 +4,6 @@ import * as S from './ChatModal.styled';
 import useChatStore from '@/store/chatStore';
 import useAuthStore from '@/store/authStore';
 import websocketService from '@/services/websocketService';
-import chatPerformanceMonitor from '@/utils/chatPerformanceMonitor';
 import { sortChatRoomsByTime } from '@/utils/dateUtils';
 import { ChatDetailModal } from '../ChatDetailModal/ChatDetailModal';
 
@@ -39,17 +38,7 @@ export function ChatModal() {
   // 채팅 모달이 열릴 때 WebSocket 연결
   useEffect(() => {
     if (isChatOpen) {
-      connectWebSocket();
-      // 성능 모니터링 시작 (개발 환경에서만)
-      if (process.env.NODE_ENV === 'development') {
-        chatPerformanceMonitor.startAutoMonitoring(30000); // 30초 간격
-      }
-    } else {
-      // 모달이 닫히면 성능 모니터링 중지
-      if (process.env.NODE_ENV === 'development') {
-        chatPerformanceMonitor.stopAutoMonitoring();
-      }
-    }
+      connectWebSocket();}
   }, [isChatOpen, connectWebSocket]);
 
   // 채팅방 목록 로드 (useCallback으로 최적화)

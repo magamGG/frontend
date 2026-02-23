@@ -3,7 +3,6 @@ import { subscribeWithSelector } from 'zustand/middleware';
 import apiServices from '@/api/services';
 import useAuthStore from '@/store/authStore';
 import websocketService from '@/services/websocketService';
-import chatPerformanceMonitor from '@/utils/chatPerformanceMonitor';
 
 const { chatService } = apiServices;
 
@@ -183,10 +182,6 @@ const useChatStore = create(
         set({ chatRooms: [], _memoizedTotalUnreadCount: 0, _lastChatRoomsHash: null });
       } finally {
         set({ isLoading: false, isLoadingChatList: false });
-        
-        // 성능 기록
-        const duration = performance.now() - startTime;
-        chatPerformanceMonitor.recordRenderTime('openChatList_api', duration);
       }
     },
 
