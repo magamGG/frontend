@@ -42,8 +42,9 @@ import {
  * @param {(open: boolean) => void} props.onOpenChange
  * @param {Project[]} props.projects
  * @param {(project: Project) => void} [props.onProjectClick]
+ * @param {string} [props.title] - 모달 제목 (미지정 시 "담당 프로젝트 전체 목록")
  */
-export function ProjectListModal({ open, onOpenChange, projects, onProjectClick }) {
+export function ProjectListModal({ open, onOpenChange, projects, onProjectClick, title = '담당 프로젝트 전체 목록' }) {
   const [searchTerm, setSearchTerm] = useState('');
 
   const getStatusColor = (status) => {
@@ -81,7 +82,7 @@ export function ProjectListModal({ open, onOpenChange, projects, onProjectClick 
         aria-describedby={undefined}
       >
         <DialogHeader>
-          <DialogTitle className="text-xl" style={{ color: 'var(--foreground)' }}>담당 프로젝트 전체 목록</DialogTitle>
+          <DialogTitle className="text-xl" style={{ color: 'var(--foreground)' }}>{title}</DialogTitle>
         </DialogHeader>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '8px 0', flex: 1, overflow: 'hidden' }}>
           {/* 검색 */}
