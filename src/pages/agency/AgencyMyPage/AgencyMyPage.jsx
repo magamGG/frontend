@@ -20,13 +20,9 @@ import { InquiryModal } from '@/components/modals/InquiryModal';
  * @param {Function} props.onLogout
  */
 export function AgencyMyPage({ onClose, onLogout }) {
-  console.log('🎯 AgencyMyPage 컴포넌트 렌더링');
-  
   const { user } = useAuthStore();
   const memberNo = user?.memberNo;
   const agencyNo = user?.agencyNo;
-  
-  console.log('🔍 AgencyMyPage - user 정보:', { user, memberNo, agencyNo });
   
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -65,12 +61,7 @@ export function AgencyMyPage({ onClose, onLogout }) {
 
   // Load user data from API
   useEffect(() => {
-    console.log('🚀 useEffect 실행:', { memberNo, agencyNo });
-    
-    if (!memberNo) {
-      console.log('❌ memberNo가 없어서 종료');
-      return;
-    }
+    if (!memberNo) return;
     
     const loadMyPageData = async () => {
       try {
@@ -115,32 +106,18 @@ export function AgencyMyPage({ onClose, onLogout }) {
               item => item.role !== '에이전시 관리자'
             );
             
-            console.log('📊 필터링 전 roleCounts:', statistics.roleCounts);
-            console.log('📊 필터링 후 roleCounts:', filteredRoleCounts);
-            
             const formattedData = filteredRoleCounts.map((item, index) => {
-              // roleColorMap에서 색상 찾기 (대소문자 구분 없이)
               const roleKey = Object.keys(roleColorMap).find(
                 key => key === item.role || key.toLowerCase() === item.role?.toLowerCase()
               );
               const color = roleKey ? roleColorMap[roleKey] : 
                            ['#00ACC1', '#9C27B0', '#FF9800', '#4CAF50', '#E91E63', '#9C27B0'][index % 6];
-              
-              console.log('🎨 색상 매핑:', { 
-                role: item.role, 
-                roleKey, 
-                color,
-                index 
-              });
-              
               return {
                 name: item.role,
-                value: Number(item.count), // Long을 Number로 변환
+                value: Number(item.count),
                 color: color,
               };
             });
-            
-            console.log('📊 최종 포맷팅된 데이터:', formattedData);
             
             // 필터링된 데이터의 총합 계산
             const filteredTotalCount = formattedData.reduce(
@@ -391,17 +368,14 @@ export function AgencyMyPage({ onClose, onLogout }) {
                               paddingAngle={2}
                               dataKey="value"
                             >
-                              {employeeData.map((entry, index) => {
-                                console.log('🎨 Cell 색상:', { index, name: entry.name, color: entry.color });
-                                return (
+                              {employeeData.map((entry, index) => (
                                   <Cell 
                                     key={`cell-${index}`} 
                                     fill={entry.color || '#6E8FB3'}
                                     stroke={entry.color || '#6E8FB3'}
                                     strokeWidth={1}
                                   />
-                                );
-                              })}
+                              ))}
                             </Pie>
                             <Tooltip content={<CustomTooltip />} />
                           </PieChart>

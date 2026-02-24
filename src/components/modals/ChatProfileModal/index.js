@@ -1,0 +1,1 @@
+export { ChatProfileModal } from './ChatProfileModal';
