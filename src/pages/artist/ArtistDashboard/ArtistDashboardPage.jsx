@@ -23,6 +23,7 @@ import { toast } from 'sonner';
 import { leaveService, attendanceService, calendarService, projectService, memoService, memberService } from '@/api/services';
 import useAuthStore from '@/store/authStore';
 import { LeaveRequestEditModal } from '@/components/modals/LeaveRequestEditModal';
+import { ProjectListModal } from '@/components/modals/ProjectListModal';
 import { parseBackendDate } from '@/utils/dateUtils';
 import {
   ArtistDashboardRoot,
@@ -1453,41 +1454,21 @@ export function ArtistDashboardPage() {
         </TaskModalList>
       </Modal>
 
-      {/* 마감일 모달 */}
-      <Modal isOpen={showDeadlineModal} onClose={() => setShowDeadlineModal(false)} title="다음 연재 프로젝트" maxWidth="lg">
-        <ModalList>
-          {deadlineProjects.length === 0 ? (
-            <EmptyState>
-              <EmptyStateIcon>
-                <MessageSquare className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
-              </EmptyStateIcon>
-              <EmptyStateText>아직 다음 연재 프로젝트가 없습니다.</EmptyStateText>
-            </EmptyState>
-          ) : (
-            deadlineProjects.map((project) => (
-              <ModalListItem
-                key={project.id}
-                $borderColor={project.urgent ? '#ef4444' : 'var(--border)'}
-                $bgColor={project.urgent ? 'color-mix(in srgb, #ef4444 10%, transparent)' : 'color-mix(in srgb, var(--muted) 30%, transparent)'}
-                $hasShadow={project.urgent}
-              >
-                <ModalListItemHeader>
-                  <ModalListItemContent>
-                    <ModalListItemBadges>
-                      <Badge variant="outline" className="text-xs">
-                        프로젝트
-                      </Badge>
-                      {project.urgent && <Badge className="bg-red-500 text-xs">긴급</Badge>}
-                    </ModalListItemBadges>
-                    <ModalListItemTitle>{project.name}</ModalListItemTitle>
-                    <ModalListItemText>마감일: {project.deadline}</ModalListItemText>
-                  </ModalListItemContent>
-                </ModalListItemHeader>
-              </ModalListItem>
-            ))
-          )}
-        </ModalList>
-      </Modal>
+      {/* 다음 연재 프로젝트 전체보기 모달 (아티스트 컴포넌트 그대로) */}
+      <ProjectListModal
+        open={showDeadlineModal}
+        onOpenChange={setShowDeadlineModal}
+        title="다음 연재 프로젝트"
+        projects={deadlineProjects.map((p) => ({
+          id: p.id,
+          name: p.name,
+          artist: '내 프로젝트',
+          status: p.urgent ? '긴급' : '정상',
+          progress: 0,
+          deadline: p.deadline,
+        }))}
+        onProjectClick={() => {}}
+      />
 
       {/* 근태 신청 모달 */}
       <Modal 

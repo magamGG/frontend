@@ -30,9 +30,6 @@ api.interceptors.request.use(
 
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
-        console.log('토큰 첨부:', token.substring(0, 20) + '...');
-      } else {
-        console.log('토큰 없음');
       }
 
       // 회원번호가 있으면 헤더에 추가
@@ -105,10 +102,8 @@ api.interceptors.response.use(
         try {
           // 🔒 동시 실행 방지: 이미 refresh가 진행 중이면 대기
           if (!refreshTokenPromise) {
-            console.log('🔄 [Axios Interceptor] 새로운 reissue 요청 시작');
             refreshTokenPromise = useAuthStore.getState().refreshAccessToken()
               .then((token) => {
-                console.log('✅ [Axios Interceptor] reissue 성공');
                 refreshTokenPromise = null; // 완료 후 초기화
                 return token;
               })
@@ -126,8 +121,6 @@ api.interceptors.response.use(
                 
                 throw err;
               });
-          } else {
-            console.log('⏳ [Axios Interceptor] 이미 진행 중인 reissue 대기...');
           }
 
           // Access Token 갱신 시도 (동시 실행 방지)

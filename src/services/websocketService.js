@@ -1,6 +1,5 @@
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
-import chatPerformanceMonitor from '@/utils/chatPerformanceMonitor';
 
 // setImmediate 폴리필 (브라우저 호환성)
 const setImmediate = window.setImmediate || ((fn) => setTimeout(fn, 0));
@@ -11,6 +10,8 @@ class WebSocketService {
     this.connected = false;
     this.connecting = false; // 연결 중 상태 추가
     this.subscriptions = new Map();
+    /** 방별 최신 콜백 ref (구독 재사용 시에도 항상 최신 콜백 호출) */
+    this.roomCallbackRefs = new Map();
     this.globalMessageListeners = new Set(); // 전역 메시지 리스너들
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 5;
@@ -30,57 +31,46 @@ class WebSocketService {
   connect() {
     // 이미 연결되어 있으면 즉시 반환
     if (this.isConnected()) {
-      console.log('✅ [WebSocket] 이미 연결됨');
       return Promise.resolve();
     }
 
     // 연결 중이면 기존 Promise 반환
     if (this.connecting && this.connectionPromise) {
-      console.log('🔄 [WebSocket] 연결 중... 기존 Promise 반환');
       return this.connectionPromise;
     }
-
-    console.log('🔌 [WebSocket] 새로운 연결 시도 시작');
-
-    // 성능 모니터링 시작
-    const connectStartTime = performance.now();
-    chatPerformanceMonitor.recordWebSocketEvent('connection_attempt');
+  
 
     // 새로운 연결 시도
     this.connecting = true;
     this.connectionPromise = new Promise((resolve, reject) => {
       try {
         // SockJS 인스턴스 생성
-        console.log('🔌 [WebSocket] SockJS 인스턴스 생성 중...');
         const sockjsInstance = new SockJS('http://localhost:8888/ws-stomp');
 
         // SockJS 에러 핸들링
         sockjsInstance.onerror = (error) => {
           console.error('❌ [WebSocket] SockJS 에러:', error);
-          chatPerformanceMonitor.recordWebSocketEvent('connection_error', { error: error.message });
           this.connecting = false;
           this.connectionPromise = null;
           reject(error);
         };
         
         sockjsInstance.onclose = (event) => {
-          console.log('🔒 [WebSocket] SockJS 연결 닫힘:', event.code, event.reason);
           this.connected = false;
           this.connecting = false;
         };
 
         sockjsInstance.onopen = () => {
-          console.log('🔌 [WebSocket] SockJS 연결 열림');
+          // SockJS 연결 열림
         };
 
         // STOMP 클라이언트 생성
-        console.log('🔌 [WebSocket] STOMP 클라이언트 생성 중...');
         this.client = new Client({
           webSocketFactory: () => sockjsInstance,
           debug: (str) => {
             // 프로덕션에서는 debug 로그 비활성화
             if (process.env.NODE_ENV === 'development') {
-              console.log('🔌 [STOMP]:', str);
+              // STOMP debug 로그 비활성화
             }
           },
           onConnect: (frame) => {
@@ -88,30 +78,19 @@ class WebSocketService {
             this.connecting = false;
             this.reconnectAttempts = 0; // 성공 시 재연결 시도 횟수 리셋
             
-            // 성능 모니터링
-            const connectDuration = performance.now() - connectStartTime;
-            chatPerformanceMonitor.recordWebSocketEvent('connection_success', { 
-              duration: connectDuration 
-            });
+      
             
-            console.log('✅ [WebSocket] 연결 성공:', frame);
             resolve();
           },
           onDisconnect: (frame) => {
             this.connected = false;
             this.connecting = false;
-            chatPerformanceMonitor.recordWebSocketEvent('disconnection');
-            console.log('❌ [WebSocket] 연결 해제:', frame);
           },
           onStompError: (frame) => {
             console.error('❌ [WebSocket] STOMP 에러:', frame);
             this.connected = false;
             this.connecting = false;
             this.connectionPromise = null;
-            
-            chatPerformanceMonitor.recordWebSocketEvent('stomp_error', { 
-              error: frame.body || 'STOMP 연결 실패' 
-            });
             
             reject(new Error(frame.body || 'STOMP 연결 실패'));
           },
@@ -120,10 +99,6 @@ class WebSocketService {
             this.connected = false;
             this.connecting = false;
             this.connectionPromise = null;
-            
-            chatPerformanceMonitor.recordWebSocketEvent('websocket_error', { 
-              error: error.message 
-            });
             
             reject(error);
           },
@@ -134,7 +109,6 @@ class WebSocketService {
         });
 
         // 연결 시도
-        console.log('🔌 [WebSocket] STOMP 클라이언트 활성화 중...');
         this.client.activate();
       } catch (error) {
         console.error('❌ [WebSocket] 연결 초기화 실패:', error);
@@ -162,6 +136,7 @@ class WebSocketService {
       }
     });
     this.subscriptions.clear();
+    this.roomCallbackRefs.clear();
 
     // 전역 리스너 정리
     this.globalMessageListeners.clear();
@@ -180,11 +155,9 @@ class WebSocketService {
     this.connected = false;
     this.connecting = false;
     this.reconnectAttempts = 0;
-    
-    console.log('🔌 [WebSocket] 연결 해제 완료');
   }
 
-  // 채팅방 구독 (최적화된 버전)
+  // 채팅방 구독: 기존 구독이 있으면 해제 후 새로 구독 (방 진입 시 서버에 명확히 전달)
   subscribeToRoom(roomId, callback) {
     if (!this.isConnected()) {
       console.error('❌ [WebSocket] 연결되지 않음, 구독 불가');
@@ -193,41 +166,33 @@ class WebSocketService {
 
     const destination = `/topic/room/${roomId}`;
 
-    // 기존 구독이 있으면 반환
     if (this.subscriptions.has(destination)) {
-      console.log('🔄 [WebSocket] 기존 구독 재사용:', roomId);
-      return this.subscriptions.get(destination);
+      this.unsubscribeFromRoom(roomId);
     }
+
+    const callbackRef = { current: callback };
+    this.roomCallbackRefs.set(destination, callbackRef);
 
     try {
       const subscription = this.client.subscribe(destination, (message) => {
         try {
           const messageData = JSON.parse(message.body);
-          
-          // 메시지 유효성 검사
-          if (!messageData || !messageData.chatNo) {
-            console.warn('⚠️ [WebSocket] 유효하지 않은 메시지:', messageData);
-            return;
-          }
-          
-          // 성능 모니터링
-          chatPerformanceMonitor.recordWebSocketEvent('message_received', {
-            roomId,
-            messageLength: messageData.chatMessage?.length || 0
-          });
-          
-          // 전역 리스너들에게 메시지 전파 (비동기로 처리)
-          setImmediate(() => {
+          if (!messageData) return;
+
+          setTimeout(() => {
+            if (messageData.type === 'READ_UPDATE') {
+              callbackRef.current?.(messageData);
+              return;
+            }
+            if (!messageData.chatNo) {
+              console.warn('⚠️ [WebSocket] 유효하지 않은 메시지:', messageData);
+              return;
+            }
             this.notifyGlobalListeners(messageData);
-          });
-          
-          // 특정 채팅방 콜백 실행
-          callback(messageData);
+            callbackRef.current?.(messageData);
+          }, 0);
         } catch (error) {
           console.error('❌ [WebSocket] 메시지 파싱 에러:', error);
-          chatPerformanceMonitor.recordWebSocketEvent('message_parse_error', {
-            error: error.message
-          });
         }
       });
 
@@ -235,6 +200,7 @@ class WebSocketService {
       return subscription;
     } catch (error) {
       console.error('❌ [WebSocket] 채팅방 구독 실패:', error);
+      this.roomCallbackRefs.delete(destination);
       return null;
     }
   }
@@ -248,10 +214,11 @@ class WebSocketService {
       try {
         subscription.unsubscribe();
         this.subscriptions.delete(destination);
+        this.roomCallbackRefs.delete(destination);
       } catch (error) {
         console.error('❌ [WebSocket] 구독 해제 실패:', roomId, error);
-        // 에러가 발생해도 Map에서는 제거
         this.subscriptions.delete(destination);
+        this.roomCallbackRefs.delete(destination);
       }
     }
   }
@@ -277,12 +244,6 @@ class WebSocketService {
         chatMessageType: 'TEXT'
       };
 
-      // 성능 모니터링
-      chatPerformanceMonitor.recordWebSocketEvent('message_send', {
-        roomId,
-        messageLength: message.trim().length
-      });
-
       this.client.publish({
         destination: '/app/chat/message',
         body: JSON.stringify(messageData)
@@ -291,9 +252,6 @@ class WebSocketService {
       return true;
     } catch (error) {
       console.error('❌ [WebSocket] 메시지 전송 실패:', error);
-      chatPerformanceMonitor.recordWebSocketEvent('message_send_error', {
-        error: error.message
-      });
       return false;
     }
   }

@@ -377,7 +377,7 @@ export function AdminDashboardPage({ onNavigateToSection }) {
             artist: p.artist || '-',
             status: p.status || '정상',
             progress: p.progress ?? 0,
-            deadline,
+            deadline: deadline === '-' ? '미정' : deadline,
           };
         });
 

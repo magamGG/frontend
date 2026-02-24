@@ -8,6 +8,13 @@ import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
 import useAuthStore from '@/store/authStore';
 import { projectService } from '@/api/services';
 import { getProjectThumbnailUrl, PROJECT_THUMBNAIL_PLACEHOLDER } from '@/api/config';
+import {
+  PROJECT_SERIAL_STATUS,
+  SERIAL_STATUS_FILTER_OPTIONS,
+  getProjectStatusBadgeClass,
+} from '@/constants/projectSerialStatus';
+import { ProjectStatusBadge } from '@/components/common/ProjectStatusBadge';
+import { ProjectSerialCard } from '@/components/common/ProjectSerialCard';
 // TODO: ProjectDetailPage 리팩터링 후 경로 수정 필요
 import { ProjectDetailPage } from '@/pages/ProjectDetail';
 import {
@@ -26,26 +33,10 @@ import {
   FilterLabel,
   FilterButtonGroup,
   ProjectsList,
-  ProjectCard,
-  ProjectThumbnail,
-  ProjectContent,
-  ProjectTitle,
-  ProjectGenre,
-  ProjectInfo,
-  ProjectInfoRow,
-  ProjectInfoIcon,
-  ProjectInfoText,
   EmptyState,
   EmptyStateIcon,
   EmptyStateText,
 } from './ArtistProjectsPage.styled';
-
-// 작품 상태 정의
-const PROJECT_SERIAL_STATUS = {
-  SERIALIZING: '연재',
-  ON_BREAK: '휴재',
-  COMPLETED: '완결',
-};
 
 export function ArtistProjectsPage() {
   const { user } = useAuthStore();
@@ -95,7 +86,12 @@ export function ArtistProjectsPage() {
     const startDateStr = p.projectStartedAt
       ? (typeof p.projectStartedAt === 'string' ? p.projectStartedAt.slice(0, 10) : null)
       : null;
-    const nextDate = calculateNextScheduleDate(startDateStr, p.projectCycle);
+    const nextDateFromBackend = p.nextDeadline
+      ? (typeof p.nextDeadline === 'string' ? new Date(p.nextDeadline.slice(0, 10)) : null)
+      : null;
+    const nextDate = nextDateFromBackend && !isNaN(nextDateFromBackend.getTime())
+      ? nextDateFromBackend
+      : calculateNextScheduleDate(startDateStr, p.projectCycle);
     const deadlineDn = nextDate ? getDeadlineDn(nextDate) : '미정';
     return {
       id: p.projectNo,
@@ -176,20 +172,6 @@ export function ArtistProjectsPage() {
     ).length,
   };
 
-  // 상태별 배지 색상
-  const getStatusBadgeColor = (status) => {
-    switch (status) {
-      case PROJECT_SERIAL_STATUS.SERIALIZING:
-        return 'bg-green-500 hover:bg-green-600';
-      case PROJECT_SERIAL_STATUS.ON_BREAK:
-        return 'bg-orange-500 hover:bg-orange-600';
-      case PROJECT_SERIAL_STATUS.COMPLETED:
-        return 'bg-gray-500 hover:bg-gray-600';
-      default:
-        return 'bg-blue-500 hover:bg-blue-600';
-    }
-  };
-
   // 작품 상세 페이지 표시
   if (showDetailPage && selectedProject) {
     return (
@@ -246,19 +228,17 @@ export function ArtistProjectsPage() {
         <FilterSection>
           <FilterLabel>상태:</FilterLabel>
           <FilterButtonGroup>
-            {['전체', PROJECT_SERIAL_STATUS.SERIALIZING, PROJECT_SERIAL_STATUS.ON_BREAK, PROJECT_SERIAL_STATUS.COMPLETED].map(
-              (filter) => (
-                <Button
-                  key={filter}
-                  variant={statusFilter === filter ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => handleFilterChange(filter)}
-                  className={statusFilter === filter ? getStatusBadgeColor(filter === '전체' ? '' : filter) : ''}
-                >
-                  {filter}
-                </Button>
-              )
-            )}
+            {SERIAL_STATUS_FILTER_OPTIONS.map((filter) => (
+              <Button
+                key={filter}
+                variant={statusFilter === filter ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => handleFilterChange(filter)}
+                className={statusFilter === filter ? getProjectStatusBadgeClass(filter === '전체' ? '' : filter) : ''}
+              >
+                {filter}
+              </Button>
+            ))}
           </FilterButtonGroup>
         </FilterSection>
 
@@ -274,43 +254,19 @@ export function ArtistProjectsPage() {
           ) : (
           <>
           {filteredProjects.map((project) => (
-            <ProjectCard key={project.id} onClick={() => handleProjectClick(project)}>
-              <ProjectThumbnail>
-                <ImageWithFallback
-                  src={getProjectThumbnailUrl(project.thumbnail) || PROJECT_THUMBNAIL_PLACEHOLDER}
-                  alt={project.title}
-                />
-              </ProjectThumbnail>
-
-              <ProjectContent>
-                <div>
-                  <ProjectTitle>{project.title}</ProjectTitle>
-                  <ProjectGenre>{project.genre}</ProjectGenre>
-                </div>
-
-                <ProjectInfo>
-                  <ProjectInfoRow>
-                    <ProjectInfoIcon>
-                      <BookOpen className="w-4 h-4" />
-                    </ProjectInfoIcon>
-                    <ProjectInfoText>{project.platform}</ProjectInfoText>
-                  </ProjectInfoRow>
-
-                  <ProjectInfoRow>
-                    <ProjectInfoIcon>
-                      <Calendar className="w-4 h-4" />
-                    </ProjectInfoIcon>
-                    <ProjectInfoText>{project.schedule}</ProjectInfoText>
-                  </ProjectInfoRow>
-
-                  <ProjectInfoRow>
-                    <Badge className={getStatusBadgeColor(project.serialStatus)}>
-                      {project.serialStatus}
-                    </Badge>
-                  </ProjectInfoRow>
-                </ProjectInfo>
-              </ProjectContent>
-            </ProjectCard>
+            <ProjectSerialCard
+              key={project.id}
+              onClick={() => handleProjectClick(project)}
+              title={project.title}
+              artistName={project.artistName}
+              platform={project.platform}
+              schedule={project.schedule}
+              deadline={project.deadline}
+              genre={project.genre}
+              serialStatus={project.serialStatus}
+              thumbnail={project.thumbnail}
+              showThumbnail={true}
+            />
           ))}
 
           {filteredProjects.length === 0 && (
