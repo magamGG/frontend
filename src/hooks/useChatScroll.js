@@ -82,14 +82,9 @@ export const useChatScroll = ({
 
   // 추가 메시지 로드 함수 (무한 스크롤)
   const loadMoreMessages = useCallback(async () => {
-    console.log('🎯 [무한스크롤] loadMoreMessages 시작');
-    
     if (isLoadingMore || !hasMoreMessages || !currentChatRoomNo) {
-      console.log('🚫 [무한스크롤] 조건 불만족:', { isLoadingMore, hasMoreMessages, currentChatRoomNo });
       return;
     }
-
-    console.log('🔄 [무한스크롤] 로딩 시작, 현재 페이지:', currentPage);
     setIsLoadingMore(true);
     
     // 현재 스크롤 위치와 높이 저장
@@ -99,7 +94,6 @@ export const useChatScroll = ({
     }
     
     if (!chatBody) {
-      console.log('❌ [무한스크롤] chatBody 없음');
       setIsLoadingMore(false);
       return;
     }
@@ -107,17 +101,9 @@ export const useChatScroll = ({
     const scrollTopBefore = chatBody.scrollTop;
     const scrollHeightBefore = chatBody.scrollHeight;
     
-    console.log('📏 [무한스크롤] 로드 전 상태:', {
-      scrollTopBefore,
-      scrollHeightBefore,
-      clientHeight: chatBody.clientHeight
-    });
-    
     // 현재 화면에 보이는 메시지들의 ID를 저장 (더 정확한 기준점)
     const messageElements = chatBody.querySelectorAll('[data-message-id]');
     const visibleMessages = [];
-    
-    console.log('🔍 [무한스크롤] 메시지 요소 개수:', messageElements.length);
     
     // 현재 뷰포트에 보이는 메시지들 찾기
     for (let element of messageElements) {
@@ -138,30 +124,10 @@ export const useChatScroll = ({
     // 가장 위쪽에 보이는 메시지를 기준점으로 사용
     const referenceMessage = visibleMessages.length > 0 ? visibleMessages[0] : null;
     
-    if (referenceMessage) {
-      console.log('✅ [무한스크롤] 기준점 설정 (뷰포트 기준):', {
-        messageId: referenceMessage.id,
-        offsetTop: referenceMessage.offsetTop,
-        distanceFromTop: referenceMessage.distanceFromTop,
-        scrollTopBefore
-      });
-    } else {
-      console.log('⚠️ [무한스크롤] 기준점 없음');
-    }
-    
     try {
       const nextPage = currentPage + 1;
-      console.log('📡 [무한스크롤] API 호출:', { page: nextPage, size: 20 });
-      
       const res = await chatService.getChatMessages(currentChatRoomNo, nextPage, 20);
       const messageData = res.data || res;
-      
-      console.log('📨 [무한스크롤] API 응답:', {
-        isArray: Array.isArray(messageData),
-        hasContent: !!messageData?.content,
-        length: messageData?.length || messageData?.content?.length || 0
-      });
-      
       let newMessages = [];
       if (Array.isArray(messageData)) {
         // 유효한 메시지만 필터링
@@ -178,8 +144,6 @@ export const useChatScroll = ({
         setHasMoreMessages(!messageData.last && messageData.content.length > 0);
       }
       
-      console.log('📝 [무한스크롤] 새 메시지:', newMessages.length, '개');
-      
       if (newMessages.length > 0) {
         // 기존 메시지 앞에 새 메시지들 추가 (강화된 중복 제거)
         setMessages(prev => {
@@ -192,26 +156,13 @@ export const useChatScroll = ({
           const uniqueNewMessages = newMessages.filter(msg => 
             msg.chatNo && !existingChatNos.has(msg.chatNo)
           );
-          
-          console.log('📝 [무한스크롤] 메시지 추가:', {
-            기존: prev.length,
-            새로운: newMessages.length,
-            중복제거후: uniqueNewMessages.length,
-            최종: prev.length + uniqueNewMessages.length
-          });
-          
           return [...uniqueNewMessages, ...prev];
         });
         
         setCurrentPage(nextPage);
-        console.log('📄 [무한스크롤] 페이지 업데이트:', currentPage, '->', nextPage);
         
-        // DOM 업데이트 후 스크롤 위치 조정 (부드러운 방식)
         const adjustScroll = (attempts = 0) => {
-          console.log('🔧 [무한스크롤] 스크롤 조정 시도:', attempts + 1);
-          
           if (attempts > 3) {
-            console.log('❌ [무한스크롤] 최대 시도 횟수 초과');
             return;
           }
           
@@ -224,13 +175,6 @@ export const useChatScroll = ({
               if (newReferenceElement) {
                 const newOffsetTop = newReferenceElement.offsetTop;
                 const targetScrollTop = newOffsetTop - referenceMessage.distanceFromTop;
-                
-                console.log('📏 [무한스크롤] 기준점 기반 계산:', {
-                  기준메시지ID: referenceMessage.id,
-                  목표스크롤: targetScrollTop,
-                  현재스크롤: chatBody.scrollTop
-                });
-                
                 const currentScroll = chatBody.scrollTop;
                 const scrollDiff = Math.abs(currentScroll - targetScrollTop);
                 
@@ -251,8 +195,6 @@ export const useChatScroll = ({
                       
                       if (progress < 1) {
                         requestAnimationFrame(animate);
-                      } else {
-                        console.log('✅ [무한스크롤] 부드러운 스크롤 조정 완료:', chatBody.scrollTop);
                       }
                     };
                     
@@ -260,27 +202,15 @@ export const useChatScroll = ({
                   };
                   
                   smoothScroll(currentScroll, targetScrollTop);
-                } else {
-                  console.log('✅ [무한스크롤] 스크롤 조정 불필요');
                 }
               } else {
-                console.log('❌ [무한스크롤] 기준점 메시지를 찾을 수 없음');
-                // 재시도
+                setTimeout(() => adjustScroll(attempts + 1), 50);
                 setTimeout(() => adjustScroll(attempts + 1), 50);
               }
             } else {
-              // 기준점이 없으면 간단한 픽셀 기반 조정
               const scrollHeightAfter = chatBody.scrollHeight;
               const heightDifference = scrollHeightAfter - scrollHeightBefore;
               const newScrollTop = scrollTopBefore + heightDifference;
-              
-              console.log('📏 [무한스크롤] 픽셀 기반 계산 (fallback):', {
-                scrollTopBefore,
-                heightDifference,
-                newScrollTop
-              });
-              
-              // 부드러운 조정
               const currentScroll = chatBody.scrollTop;
               const scrollDiff = Math.abs(currentScroll - newScrollTop);
               
@@ -297,15 +227,12 @@ export const useChatScroll = ({
         
         adjustScroll();
       } else {
-        console.log('🔚 [무한스크롤] 더 이상 메시지 없음');
         setHasMoreMessages(false);
       }
-      
     } catch (error) {
       console.error('❌ [무한스크롤] API 호출 실패:', error);
     } finally {
       setIsLoadingMore(false);
-      console.log('✅ [무한스크롤] 로딩 완료');
     }
   }, [isLoadingMore, hasMoreMessages, currentChatRoomNo, currentPage, setIsLoadingMore, setMessages, setCurrentPage, setHasMoreMessages]);
 
@@ -320,15 +247,6 @@ export const useChatScroll = ({
     
     const { scrollTop, scrollHeight, clientHeight } = chatBody;
     
-    console.log('📏 [스크롤] 위치 정보:', {
-      scrollTop,
-      scrollHeight,
-      clientHeight,
-      isNearTop: scrollTop <= 300,
-      hasMoreMessages,
-      isLoadingMore
-    });
-    
     // 1. 읽음 처리
     const isNearBottom = scrollTop + clientHeight >= scrollHeight * 0.9;
     if (isNearBottom && messages.length > 0) {
@@ -342,7 +260,6 @@ export const useChatScroll = ({
     // 2. 무한 스크롤 (더 부드러운 트리거)
     const isNearTop = scrollTop <= 300; // 500에서 300으로 줄여서 더 빨리 로드
     if (isNearTop && hasMoreMessages && !isLoadingMore) {
-      console.log('🚀 [무한스크롤] 트리거! loadMoreMessages 호출');
       loadMoreMessages();
     }
   }, [currentChatRoomNo, messages, debouncedUpdateLastRead, hasMoreMessages, isLoadingMore, loadMoreMessages]);

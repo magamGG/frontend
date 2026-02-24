@@ -49,16 +49,13 @@ const useAuthStore = create(
       refreshAccessToken: async () => {
         const { isRefreshing } = get();
         
-        // 이미 갱신 중이면 대기
         if (isRefreshing) {
-          console.log('⏳ [authStore] 이미 갱신 중...');
           return null;
         }
         
         set({ isRefreshing: true });
         
         try {
-          console.log('📡 [authStore] 서버에 reissue 요청 전송 (쿠키 기반)...');
           // 쿠키 기반 reissue 사용 (body 없음)
           const response = await authService.reissue();
           const { accessToken } = response;
@@ -66,8 +63,6 @@ const useAuthStore = create(
           if (!accessToken) {
             throw new Error('Access Token이 응답에 없습니다.');
           }
-          
-          console.log('✅ [authStore] reissue 성공, 새 Access Token 저장');
           
           // 새 Access Token만 저장 (Refresh Token은 쿠키에 있음)
           set({

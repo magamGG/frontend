@@ -256,15 +256,14 @@ export function ChatDetailModal() {
         if (signal.aborted) return;
 
         const raw = (msgRes.content || msgRes.data?.content || msgRes.data || msgRes || []).reverse();
-        const lastChatNo = raw.length > 0 ? (raw[raw.length - 1].chatNo != null ? Number(raw[raw.length - 1].chatNo) : raw[raw.length - 1].chatNo) : null;
-
-        // 1) 계산 먼저: n을 띄우지 말고, -1 적용한 값만 만들어 둠
+        const lastChatNo = raw.length > 0
+          ? Math.max(...raw.map((m) => Number(m.chatNo) ?? 0))
+          : null;
+        // 1) 채팅방 열면 = 지금 로드된 메시지는 다 읽은 것 → 전부 -1 (조건 없이)
         const initialMsgs = raw.map((m) => {
           const chatNo = m.chatNo != null ? Number(m.chatNo) : m.chatNo;
           let unread = Number(m.unreadMemberCount ?? m.unreadCount ?? 0) || 0;
-          if (lastChatNo != null && Number(chatNo) <= Number(lastChatNo) && unread > 0) {
-            unread = unread - 1;
-          }
+          if (unread > 0) unread = unread - 1;
           return { ...m, chatNo, unreadMemberCount: unread };
         });
         if (lastChatNo != null) {
@@ -327,11 +326,12 @@ export function ChatDetailModal() {
       setMessages((prev) => {
         const isDup = prev.some((m) => Number(m.chatNo) === Number(payload.chatNo) || m.chatNo === payload.chatNo);
         if (isDup) return prev;
+        const unread = Number(payload.unreadMemberCount ?? payload.unreadCount ?? 0) || 0;
         const normalized = {
           ...payload,
           chatNo: payload.chatNo != null ? Number(payload.chatNo) : payload.chatNo,
           memberNo: payload.memberNo != null ? Number(payload.memberNo) : payload.memberNo,
-          unreadMemberCount: Number(payload.unreadMemberCount ?? payload.unreadCount ?? 0) || 0,
+          unreadMemberCount: unread,
         };
         const filtered = prev.filter((m) => !(m.isTemp && m.chatMessage === payload.chatMessage && m.memberNo === payload.memberNo));
         return [...filtered, normalized];

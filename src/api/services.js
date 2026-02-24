@@ -806,7 +806,6 @@ export const chatService = {
     if (!chatRoomNo || !lastChatNo) {
       return Promise.reject(new Error('채팅방 번호와 메시지 번호가 필요합니다.'));
     }
-    console.log('[READ] API 호출 room=', chatRoomNo, 'lastChatNo=', lastChatNo);
     return api.put(`/api/chat/rooms/${chatRoomNo}/read?lastChatNo=${lastChatNo}`)
       .then(response => {
         // 관련 캐시 무효화
@@ -817,7 +816,6 @@ export const chatService = {
           }
         }
         keysToInvalidate.forEach(key => chatService._cache.delete(key));
-        console.log('[READ] API 응답 완료 → 서버가 READ_UPDATE 브로드캐스트함 (서버 터미널 확인)');
         return response;
       })
       .catch(error => {

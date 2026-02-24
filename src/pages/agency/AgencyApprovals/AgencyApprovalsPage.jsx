@@ -269,8 +269,7 @@ export function AgencyApprovalsPage() {
       try {
         if (selectedRequest.category === 'join') {
           // 가입 요청 거절 API 호출
-          const response = await agencyService.rejectJoinRequest(selectedRequest.originalId, rejectionReason);
-          console.log('가입 거절 API 응답:', response);
+          await agencyService.rejectJoinRequest(selectedRequest.originalId, rejectionReason);
         } else if (selectedRequest.category === 'attendance') {
           await leaveService.rejectAttendanceRequest(selectedRequest.originalId, rejectionReason);
         }

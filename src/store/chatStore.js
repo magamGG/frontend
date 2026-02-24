@@ -358,30 +358,16 @@ const useChatStore = create(
       });
     },
 
-    // 강제 캐시 무효화 및 새로고침 (디버깅용)
     forceClearAndRefresh: async () => {
-      console.log('🔄 [채팅] 강제 캐시 무효화 및 새로고침 시작...');
-      
-      // 1. chatService 캐시 무효화
       chatService.clearCache();
-      console.log('✅ chatService 캐시 삭제');
-      
-      // 2. chatStore 캐시 무효화
       get().clearCache();
-      console.log('✅ chatStore 캐시 삭제');
-      
-      // 3. 상태 초기화
-      set({ 
+      set({
         chatRooms: [],
         lastRefreshTime: 0,
         _memoizedTotalUnreadCount: 0,
         _lastChatRoomsHash: null
       });
-      console.log('✅ 상태 초기화');
-      
-      // 4. 강제 새로고침
       await get().refreshChatRooms(true);
-      console.log('✅ 채팅방 목록 강제 새로고침 완료');
     },
   }))
 );

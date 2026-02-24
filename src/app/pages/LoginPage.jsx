@@ -160,7 +160,6 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
               className="w-full py-3 border-gray-300 hover:bg-gray-50 transition-all flex items-center justify-center gap-3"
               onClick={() => {
                 // Google login logic here
-                console.log('Google login clicked');
               }}
             >
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">

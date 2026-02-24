@@ -297,9 +297,7 @@ export function LeaveRequestModal({ open, onOpenChange }) {
 
     try {
       // API 호출
-      const response = await leaveService.requestLeave(requestData);
-      
-      console.log('근태 신청 API 응답:', response);
+      await leaveService.requestLeave(requestData);
       
       // 연차/반차/반반차 신청인 경우 로컬 스토리지의 연차 정보도 업데이트 (UI 동기화용)
       if (selectedType === '연차' || selectedType === '반차') {
