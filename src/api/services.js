@@ -137,30 +137,6 @@ export const memberService = {
   },
 };
 
-// 포트폴리오 URL/이미지 인식 (1~2번: 추출 → Spring AI 구조화, 마감지기용)
-/** 포트폴리오 추출은 스크린샷/Vision 처리로 30초 이상 걸릴 수 있음 */
-const PORTFOLIO_EXTRACT_TIMEOUT = 60000;
-
-export const portfolioExtractService = {
-  /** 포트폴리오 이미지 파일 업로드 → Vision 추출 */
-  extractFromImage: (imageFile) => {
-    const formData = new FormData();
-    formData.append('image', imageFile);
-    return api.post(API_ENDPOINTS.PORTFOLIO.EXTRACT_IMAGE, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-      timeout: PORTFOLIO_EXTRACT_TIMEOUT,
-    });
-  },
-  /** 포트폴리오 웹 페이지 URL → HTML 텍스트 추출 → LLM 구조화 */
-  extractFromPageUrl: (pageUrl) => {
-    return api.post(API_ENDPOINTS.PORTFOLIO.EXTRACT_FROM_PAGE, { pageUrl }, { timeout: PORTFOLIO_EXTRACT_TIMEOUT });
-  },
-  /** 포트폴리오 웹 페이지 URL → Playwright 전체 스크린샷 → Vision 구조화 (SPA/Notion 등) */
-  extractFromPageScreenshot: (pageUrl) => {
-    return api.post(API_ENDPOINTS.PORTFOLIO.EXTRACT_FROM_PAGE_SCREENSHOT, { pageUrl }, { timeout: PORTFOLIO_EXTRACT_TIMEOUT });
-  },
-};
-
 // 출석/근태 서비스
 export const attendanceService = {
   // 출근 체크
@@ -667,6 +643,25 @@ export const managerService = {
   getHealthSchedule: () => api.get(API_ENDPOINTS.MANAGER.HEALTH_SCHEDULE),
   getUnscreenedList: () => api.get(API_ENDPOINTS.MANAGER.UNSCREENED_LIST),
   getHealthMonitoringDetail: (type) => api.get(API_ENDPOINTS.MANAGER.HEALTH_MONITORING_DETAIL(type || 'mental')),
+};
+
+// 포트폴리오 서비스 (아티스트: 가져오기/만들기, 담당자·에이전시: 직원 포트폴리오 조회)
+const PORTFOLIO_TIMEOUT = 60_000; // 추출 API는 60초
+export const portfolioService = {
+  extractFromImage: (file) =>
+    api.post(API_ENDPOINTS.PORTFOLIO.EXTRACT_IMAGE, (() => {
+      const fd = new FormData();
+      fd.append('image', file);
+      return fd;
+    })(), { timeout: PORTFOLIO_TIMEOUT }),
+  extractFromPageScreenshot: (pageUrl) =>
+    api.post(API_ENDPOINTS.PORTFOLIO.EXTRACT_FROM_PAGE_SCREENSHOT, { pageUrl }, { timeout: PORTFOLIO_TIMEOUT }),
+  saveFromExtract: (extractData) => api.post(API_ENDPOINTS.PORTFOLIO.SAVE_FROM_EXTRACT, extractData),
+  create: (body) => api.post(API_ENDPOINTS.PORTFOLIO.CREATE, body),
+  getMyPortfolio: () => api.get(API_ENDPOINTS.PORTFOLIO.ME),
+  getMyProjectsForForm: () => api.get(API_ENDPOINTS.PORTFOLIO.MY_PROJECTS),
+  getByMemberNo: (memberNo) => api.get(API_ENDPOINTS.PORTFOLIO.BY_MEMBER(memberNo)),
+  update: (portfolioNo, body) => api.put(API_ENDPOINTS.PORTFOLIO.UPDATE(portfolioNo), body),
 };
 
 // 채팅 서비스 (최적화된 버전)

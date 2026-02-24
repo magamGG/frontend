@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, Mail, Phone, MapPin, Briefcase, Edit, ArrowLeft, Camera, MessageCircle, FileText } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Briefcase, Edit, ArrowLeft, Camera, MessageCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/app/components/ui/dialog';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
@@ -7,7 +7,7 @@ import { Label } from '@/app/components/ui/label';
 import { toast } from 'sonner';
 import { motion } from 'motion/react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { memberService, attendanceService, portfolioExtractService } from '@/api/services';
+import { memberService, attendanceService } from '@/api/services';
 import { API_BASE_URL } from '@/api/config';
 import { formatPhoneNumber } from '@/utils/phoneFormatter';
 import useAuthStore from '@/store/authStore';
@@ -103,13 +103,6 @@ export function MyPage({ onClose, onLogout }) {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isImageSelectModalOpen, setIsImageSelectModalOpen] = useState(false);
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
-  const [isPortfolioInputModalOpen, setIsPortfolioInputModalOpen] = useState(false);
-  const [portfolioInputMode, setPortfolioInputMode] = useState('pageUrl');
-  const [portfolioUrlInput, setPortfolioUrlInput] = useState('');
-  const [portfolioImageFile, setPortfolioImageFile] = useState(null);
-  const [isPortfolioExtractLoading, setIsPortfolioExtractLoading] = useState(false);
-  const [portfolioExtractedData, setPortfolioExtractedData] = useState(null);
-  const [isPortfolioResultModalOpen, setIsPortfolioResultModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [userName, setUserName] = useState('');
   const [email, setEmail] = useState('');
@@ -348,48 +341,6 @@ export function MyPage({ onClose, onLogout }) {
     }
   };
 
-  /** 포트폴리오 입력 모달에서 제출: URL 또는 이미지 하나만 선택해 API 호출 후 결과 모달 표시 */
-  const handlePortfolioSubmit = async () => {
-    if (portfolioInputMode === 'imageFile' && !portfolioImageFile) {
-      toast.error('이미지 파일을 선택해주세요.');
-      return;
-    }
-    if (portfolioInputMode === 'pageUrl' && !portfolioUrlInput?.trim()) {
-      toast.error('웹 페이지 URL을 입력해주세요.');
-      return;
-    }
-    setIsPortfolioExtractLoading(true);
-    try {
-      let data;
-      if (portfolioInputMode === 'pageUrl') {
-        data = await portfolioExtractService.extractFromPageScreenshot(portfolioUrlInput.trim());
-      } else {
-        data = await portfolioExtractService.extractFromImage(portfolioImageFile);
-      }
-      if (data && data.success === false) {
-        toast.error(data.message || '포트폴리오 정보를 추출하지 못했습니다.');
-        setPortfolioInputMode('imageFile');
-        return;
-      }
-      const payload = data?.data?.data ?? data?.data ?? data;
-      setPortfolioExtractedData(payload ?? null);
-      setIsPortfolioInputModalOpen(false);
-      setPortfolioUrlInput('');
-      setPortfolioImageFile(null);
-      setIsPortfolioResultModalOpen(true);
-      toast.success('포트폴리오 정보를 추출했습니다.');
-    } catch (err) {
-      const msg = err?.response?.data?.message || err?.message || '포트폴리오 추출에 실패했습니다.';
-      console.error('[포트폴리오 추출 실패]', err?.response?.data ?? err);
-      toast.error(msg);
-      if (portfolioInputMode === 'pageUrl' && typeof msg === 'string' && (msg.includes('이미지 파일') || msg.includes('직접 업로드'))) {
-        setPortfolioInputMode('imageFile');
-      }
-    } finally {
-      setIsPortfolioExtractLoading(false);
-    }
-  };
-
   const handleImageTypeSelect = (type) => {
     if (!memberNo) return;
     
@@ -476,12 +427,6 @@ export function MyPage({ onClose, onLogout }) {
                     <Edit className="w-4 h-4" />
                     프로필 수정
                   </ActionButton>
-                  {(memberRole === '웹툰 작가' || memberRole === '웹소설 작가') && (
-                    <ActionButton onClick={() => setIsPortfolioInputModalOpen(true)}>
-                      <FileText className="w-4 h-4" />
-                      포트폴리오
-                    </ActionButton>
-                  )}
                   <ActionButton onClick={() => setIsInquiryModalOpen(true)}>
                     <MessageCircle className="w-4 h-4" />
                     문의하기
@@ -766,209 +711,6 @@ export function MyPage({ onClose, onLogout }) {
               </div>
               <span className="text-sm font-medium text-[#1F2328]">프로필 사진</span>
             </button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* 포트폴리오 입력 모달: URL 또는 이미지 하나만 선택 후 제출 */}
-      <Dialog open={isPortfolioInputModalOpen} onOpenChange={(open) => {
-        setIsPortfolioInputModalOpen(open);
-        if (!open) {
-          setPortfolioUrlInput('');
-          setPortfolioImageFile(null);
-        }
-      }}>
-        <DialogContent className="sm:max-w-[480px] bg-white">
-          <DialogHeader>
-            <DialogTitle className="text-lg text-[#1F2328] font-bold">포트폴리오 가져오기</DialogTitle>
-            <DialogDescription className="text-sm text-[#6E8FB3]">
-              웹 페이지 URL 또는 이미지 파일 중 하나를 선택해 제출하세요.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="flex gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="portfolioMode"
-                  checked={portfolioInputMode === 'pageUrl'}
-                  onChange={() => setPortfolioInputMode('pageUrl')}
-                  className="text-[#6366F1]"
-                />
-                <span className="text-sm text-[#1F2328]">웹 페이지 URL</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="portfolioMode"
-                  checked={portfolioInputMode === 'imageFile'}
-                  onChange={() => setPortfolioInputMode('imageFile')}
-                  className="text-[#6366F1]"
-                />
-                <span className="text-sm text-[#1F2328]">이미지 파일</span>
-              </label>
-            </div>
-            {portfolioInputMode === 'pageUrl' && (
-              <div>
-                <Label className="text-sm text-[#1F2328]">웹 페이지 주소 (전체 스크린샷으로 추출)</Label>
-                <Input
-                  value={portfolioUrlInput}
-                  onChange={(e) => setPortfolioUrlInput(e.target.value)}
-                  placeholder="https://... (Notion, Behance 등)"
-                  className="mt-1 bg-white border-[#DADDE1] text-[#1F2328]"
-                />
-                <p className="text-xs text-[#6E8FB3] mt-1">페이지가 30초 내 로딩되며, 스크린샷 후 AI가 정보를 추출합니다. 로그인/접근 제한 페이지는 실패할 수 있어, 실패 시 아래 &#39;이미지 파일&#39;로 해당 페이지를 캡처해 업로드해 보세요.</p>
-              </div>
-            )}
-            {portfolioInputMode === 'imageFile' && (
-              <div>
-                <Label className="text-sm text-[#1F2328]">이미지 파일</Label>
-                <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setPortfolioImageFile(e.target.files?.[0] ?? null)}
-                  className="mt-1 bg-white border-[#DADDE1] text-[#1F2328]"
-                />
-                {portfolioImageFile && (
-                  <p className="text-xs text-[#6E8FB3] mt-1">{portfolioImageFile.name}</p>
-                )}
-              </div>
-            )}
-          </div>
-          <div className="flex gap-2 justify-end pt-4 border-t border-[#DADDE1]">
-            <Button variant="outline" onClick={() => setIsPortfolioInputModalOpen(false)}>
-              취소
-            </Button>
-            <Button
-              onClick={handlePortfolioSubmit}
-              disabled={isPortfolioExtractLoading}
-              className="bg-[#6366F1] hover:bg-[#4F46E5] text-white"
-            >
-              {isPortfolioExtractLoading ? '추출 중...' : '가져오기'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* 포트폴리오 추출 결과 모달 (마감지기/마이페이지 디자인) */}
-      <Dialog open={isPortfolioResultModalOpen} onOpenChange={(open) => {
-        setIsPortfolioResultModalOpen(open);
-        if (!open) setPortfolioExtractedData(null);
-      }}>
-        <DialogContent className="sm:max-w-[560px] max-h-[85vh] overflow-hidden flex flex-col bg-white">
-          <DialogHeader>
-            <DialogTitle className="text-lg text-[#1F2328] font-bold">포트폴리오 정보</DialogTitle>
-            <DialogDescription className="text-sm text-[#6E8FB3]">
-              추출된 정보를 확인하세요. (이름, 직무, 경력, 참여 프로젝트, 작업 스타일, 사용 기술, 연락처)
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex-1 overflow-auto space-y-4 py-4">
-            {portfolioExtractedData ? (
-              <div className="space-y-4">
-                {portfolioExtractedData.name && (
-                  <div className="flex items-start gap-3">
-                    <div className="w-1 h-5 bg-[#6366F1] rounded shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-xs text-[#6E8FB3] mb-1">이름</p>
-                      <p className="text-sm font-medium text-[#1F2328]">{portfolioExtractedData.name}</p>
-                    </div>
-                  </div>
-                )}
-                {portfolioExtractedData.role && (
-                  <div className="flex items-start gap-3">
-                    <div className="w-1 h-5 bg-[#6366F1] rounded shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-xs text-[#6E8FB3] mb-1">직무</p>
-                      <p className="text-sm text-[#1F2328]">{portfolioExtractedData.role}</p>
-                    </div>
-                  </div>
-                )}
-                {(portfolioExtractedData.careerItems?.length > 0 || portfolioExtractedData.career) && (
-                  <div className="flex items-start gap-3">
-                    <div className="w-1 h-5 bg-[#6366F1] rounded shrink-0 mt-0.5" />
-                    <div className="flex-1">
-                      <p className="text-xs text-[#6E8FB3] mb-1">경력</p>
-                      {portfolioExtractedData.careerItems?.length > 0 ? (
-                        <ul className="text-sm text-[#1F2328] space-y-1 list-disc list-inside">
-                          {portfolioExtractedData.careerItems.map((item, i) => (
-                            <li key={i}>{item}</li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="text-sm text-[#1F2328] whitespace-pre-wrap">{portfolioExtractedData.career}</p>
-                      )}
-                    </div>
-                  </div>
-                )}
-                {portfolioExtractedData.projects?.length > 0 && (
-                  <div className="flex items-start gap-3">
-                    <div className="w-1 h-5 bg-[#6366F1] rounded shrink-0 mt-0.5" />
-                    <div className="flex-1">
-                      <p className="text-xs text-[#6E8FB3] mb-1">참여 프로젝트</p>
-                      <ul className="text-sm text-[#1F2328] space-y-1 list-disc list-inside">
-                        {portfolioExtractedData.projects.map((p, i) => (
-                          <li key={i}>{p}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                )}
-                {portfolioExtractedData.workStyle?.length > 0 && (
-                  <div className="flex items-start gap-3">
-                    <div className="w-1 h-5 bg-[#6366F1] rounded shrink-0 mt-0.5" />
-                    <div className="flex-1">
-                      <p className="text-xs text-[#6E8FB3] mb-1">작업 스타일</p>
-                      <ul className="text-sm text-[#1F2328] space-y-1 list-disc list-inside">
-                        {portfolioExtractedData.workStyle.map((s, i) => (
-                          <li key={i}>{s}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                )}
-                {portfolioExtractedData.skills?.length > 0 && (
-                  <div className="flex items-start gap-3">
-                    <div className="w-1 h-5 bg-[#6366F1] rounded shrink-0 mt-0.5" />
-                    <div className="flex-1">
-                      <p className="text-xs text-[#6E8FB3] mb-1">사용 기술</p>
-                      <ul className="text-sm text-[#1F2328] space-y-1 list-disc list-inside">
-                        {portfolioExtractedData.skills.map((s, i) => (
-                          <li key={i}>{s}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                )}
-                {portfolioExtractedData.email && (
-                  <div className="flex items-start gap-3">
-                    <div className="w-1 h-5 bg-[#6366F1] rounded shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-xs text-[#6E8FB3] mb-1">메일</p>
-                      <p className="text-sm text-[#1F2328]">{portfolioExtractedData.email}</p>
-                    </div>
-                  </div>
-                )}
-                {portfolioExtractedData.phone && (
-                  <div className="flex items-start gap-3">
-                    <div className="w-1 h-5 bg-[#6366F1] rounded shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-xs text-[#6E8FB3] mb-1">전화번호</p>
-                      <p className="text-sm text-[#1F2328]">{portfolioExtractedData.phone}</p>
-                    </div>
-                  </div>
-                )}
-                {!portfolioExtractedData.name && !portfolioExtractedData.role && !portfolioExtractedData.email && !portfolioExtractedData.phone && !(portfolioExtractedData.projects?.length) && !(portfolioExtractedData.workStyle?.length) && !(portfolioExtractedData.skills?.length) && !(portfolioExtractedData.careerItems?.length) && !portfolioExtractedData.career && (
-                  <p className="text-sm text-[#6E8FB3]">추출된 내용이 없습니다.</p>
-                )}
-              </div>
-            ) : (
-              <p className="text-sm text-[#6E8FB3]">표시할 데이터가 없습니다.</p>
-            )}
-          </div>
-          <div className="flex justify-end pt-4 border-t border-[#DADDE1] shrink-0">
-            <Button variant="outline" onClick={() => setIsPortfolioResultModalOpen(false)}>
-              닫기
-            </Button>
           </div>
         </DialogContent>
       </Dialog>

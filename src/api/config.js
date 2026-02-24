@@ -71,13 +71,6 @@ export const API_ENDPOINTS = {
     EMPLOYEE_STATISTICS: (agencyNo) => `/api/members/agency/${agencyNo}/statistics`,
   },
 
-  // 포트폴리오 URL/이미지 인식 (1~2번: 추출 → Spring AI 구조화, 마감지기용)
-  PORTFOLIO: {
-    EXTRACT_IMAGE: `/api/portfolio/extract/image`,
-    EXTRACT_FROM_PAGE: `/api/portfolio/extract/from-page`,
-    EXTRACT_FROM_PAGE_SCREENSHOT: `/api/portfolio/extract/from-page-screenshot`,
-  },
-
   // 출석/근태 API
   ATTENDANCE: {
     CHECK_IN: `/api/attendance/check-in`, // POST: 출근 체크
@@ -219,6 +212,18 @@ export const API_ENDPOINTS = {
     MANAGER_WORKATION_RECOMMENDATION: `/api/v1/ai/manager/workation-recommendation`,
     MANAGER_NUDGE_MESSAGE_RECOMMENDATION: `/api/v1/ai/manager/nudge-message-recommendation`,
     MANAGER_ARTIST_DAILY_HEALTH_SUMMARY: `/api/v1/ai/manager/artist-daily-health-summary`,
+  },
+
+  // 포트폴리오 API (아티스트: 가져오기/만들기, 담당자·에이전시: 직원 포트폴리오 조회)
+  PORTFOLIO: {
+    EXTRACT_IMAGE: `/api/portfolio/extract/image`,
+    EXTRACT_FROM_PAGE_SCREENSHOT: `/api/portfolio/extract/from-page-screenshot`,
+    SAVE_FROM_EXTRACT: `/api/portfolio/from-extract`,
+    CREATE: `/api/portfolio`,
+    ME: `/api/portfolio/me`,
+    MY_PROJECTS: `/api/portfolio/my-projects`,
+    BY_MEMBER: (memberNo) => `/api/portfolio/member/${memberNo}`,
+    UPDATE: (portfolioNo) => `/api/portfolio/${portfolioNo}`,
   },
 
   // 담당자(manager) API (X-Member-No로 담당자 식별, 배정 작가만 대상)

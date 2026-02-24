@@ -9,12 +9,16 @@ import {
   ChevronRight,
   ChevronDown,
   Heart,
-  CalendarClock
+  CalendarClock,
+  FileText,
+  Loader2
 } from 'lucide-react';
 import { Card } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
+import { Button } from '@/app/components/ui/button';
+import { Dialog, DialogContent, DialogTitle } from '@/app/components/ui/dialog';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-import { memberService, projectService, leaveService, attendanceService } from '@/api';
+import { memberService, projectService, leaveService, attendanceService, portfolioService } from '@/api';
 import { API_BASE_URL } from '@/api/config';
 import useAuthStore from '@/store/authStore';
 import { toast } from 'sonner';
@@ -156,6 +160,9 @@ export function AdminTeamPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [expandedEmployeeId, setExpandedEmployeeId] = useState(null); // 목록에서 펼친 작가 (데일리 설문 등)
+  const [portfolioModalMemberNo, setPortfolioModalMemberNo] = useState(null);
+  const [portfolioModalData, setPortfolioModalData] = useState(null);
+  const [portfolioModalLoading, setPortfolioModalLoading] = useState(false);
   const [employees, setEmployees] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [employeeDetails, setEmployeeDetails] = useState({}); // 직원별 상세 정보 캐시
@@ -432,6 +439,14 @@ export function AdminTeamPage() {
     if (isExpanding && !employeeDetails[employee.id]) {
       await fetchEmployeeDetails(employee.id);
     }
+  };
+
+  const openPortfolioModal = (memberNo, e) => {
+    if (e) e.stopPropagation();
+    setPortfolioModalMemberNo(memberNo);
+    setPortfolioModalData(null);
+    setPortfolioModalLoading(true);
+    portfolioService.getByMemberNo(memberNo).then((data) => setPortfolioModalData(data)).catch(() => setPortfolioModalData(null)).finally(() => setPortfolioModalLoading(false));
   };
 
   // 해당 직원의 근태 신청 목록 (에이전시 목록에서 필터링)
@@ -809,6 +824,12 @@ export function AdminTeamPage() {
                               </div>
                             </div>
                           </div>
+                          <div className="flex justify-end pt-2">
+                            <Button variant="outline" size="sm" className="gap-2" onClick={(e) => openPortfolioModal(employee.id, e)}>
+                              <FileText className="w-4 h-4" />
+                              포트폴리오
+                            </Button>
+                          </div>
                         </>
                       )}
                     </Card>
@@ -818,6 +839,68 @@ export function AdminTeamPage() {
             })}
           </EmployeeList>
         )}
+
+        {/* 포트폴리오 모달 */}
+        <Dialog open={portfolioModalMemberNo !== null} onOpenChange={(open) => !open && setPortfolioModalMemberNo(null)}>
+          <DialogContent className="sm:max-w-[500px] max-h-[85vh] overflow-y-auto">
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              포트폴리오
+            </DialogTitle>
+            {portfolioModalLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : portfolioModalData && portfolioModalData.portfolioNo ? (
+              <div className="space-y-4">
+                {portfolioModalData.portfolioUserName && (
+                  <div className="flex items-center gap-2">
+                    <Users className="w-5 h-5 text-muted-foreground" />
+                    <span className="font-medium">이름</span>
+                    <span>{portfolioModalData.portfolioUserName}</span>
+                  </div>
+                )}
+                {portfolioModalData.portfolioUserEmail && (
+                  <div className="flex items-center gap-2">
+                    <Mail className="w-5 h-5 text-muted-foreground" />
+                    <span className="font-medium">이메일</span>
+                    <span>{portfolioModalData.portfolioUserEmail}</span>
+                  </div>
+                )}
+                {portfolioModalData.portfolioUserPhone && (
+                  <div className="flex items-center gap-2">
+                    <Phone className="w-5 h-5 text-muted-foreground" />
+                    <span className="font-medium">전화</span>
+                    <span>{portfolioModalData.portfolioUserPhone}</span>
+                  </div>
+                )}
+                {portfolioModalData.portfolioUserCareer && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Briefcase className="w-5 h-5 text-muted-foreground" />
+                      <span className="font-medium">경력</span>
+                    </div>
+                    <pre className="whitespace-pre-wrap text-sm bg-muted/50 p-3 rounded">{portfolioModalData.portfolioUserCareer}</pre>
+                  </div>
+                )}
+                {portfolioModalData.portfolioUserProject && (
+                  <div>
+                    <div className="font-medium mb-1">참여 프로젝트</div>
+                    <pre className="whitespace-pre-wrap text-sm bg-muted/50 p-3 rounded">{portfolioModalData.portfolioUserProject}</pre>
+                  </div>
+                )}
+                {portfolioModalData.portfolioUserSkill && (
+                  <div>
+                    <div className="font-medium mb-1">스킬</div>
+                    <pre className="whitespace-pre-wrap text-sm bg-muted/50 p-3 rounded">{portfolioModalData.portfolioUserSkill}</pre>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground py-6 text-center">등록된 포트폴리오가 없습니다.</p>
+            )}
+          </DialogContent>
+        </Dialog>
       </AdminTeamBody>
     </AdminTeamRoot>
   );

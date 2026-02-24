@@ -20,6 +20,7 @@ const ArtistCalendarPage = lazy(() => import('@/pages/artist/ArtistCalendar').th
 const ArtistWorkationPage = lazy(() => import('@/pages/artist/ArtistWorkation').then(m => ({ default: m.ArtistWorkationPage })));
 const ArtistTeamPage = lazy(() => import('@/pages/artist/ArtistTeam').then(m => ({ default: m.ArtistTeamPage })));
 const ArtistHealthPage = lazy(() => import('@/pages/artist/ArtistHealth').then(m => ({ default: m.ArtistHealthPage })));
+const ArtistPortfolioPage = lazy(() => import('@/pages/artist/ArtistPortfolio').then(m => ({ default: m.ArtistPortfolioPage })));
 
 // Lazy load admin pages
 const AdminDashboardPage = lazy(() => import('@/pages/admin/AdminDashboard').then(m => ({ default: m.AdminDashboardPage })));
@@ -369,6 +370,11 @@ export default function App() {
         id: 'health',
         title: '건강관리',
         content: <ArtistHealthPage />,
+      },
+      {
+        id: 'portfolio',
+        title: '포트폴리오',
+        content: <ArtistPortfolioPage />,
       },
     ]
     : userRole === 'manager'
