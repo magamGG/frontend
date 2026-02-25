@@ -389,23 +389,43 @@ export function ArtistDashboardPage() {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
+      const msPerDay = 1000 * 60 * 60 * 24;
       const mapped = list.map((item) => {
-        const endDate = item.dueDate ? new Date(item.dueDate) : null;
+        const endDate = item.dueDate ? new Date(String(item.dueDate).slice(0, 10)) : null;
+        const startDate = item.startDate ? new Date(String(item.startDate).slice(0, 10)) : null;
         if (endDate) endDate.setHours(0, 0, 0, 0);
-        const daysLeft = endDate ? Math.ceil((endDate - today) / (1000 * 60 * 60 * 24)) : null;
+        if (startDate) startDate.setHours(0, 0, 0, 0);
+        const remainingDays = endDate ? Math.ceil((endDate - today) / msPerDay) : null;
+        const totalDays = startDate && endDate ? Math.ceil((endDate - startDate) / msPerDay) : null;
 
         let badge = '일정';
         let badgeColor = 'blue';
-        if (daysLeft !== null) {
-          if (daysLeft === 0) {
-            badge = 'D-0 마감';
-            badgeColor = 'destructive';
-          } else if (daysLeft > 0) {
-            badge = `D-${daysLeft}`;
-            badgeColor = 'blue';
+        if (remainingDays !== null) {
+          if (totalDays != null) {
+            if (today < startDate) {
+              badge = `시작 전 (총 ${totalDays}일)`;
+              badgeColor = 'blue';
+            } else if (remainingDays === 0) {
+              badge = 'D-0 마감';
+              badgeColor = 'destructive';
+            } else if (remainingDays > 0) {
+              badge = `총 ${totalDays}일 중 ${remainingDays}일 남음`;
+              badgeColor = 'blue';
+            } else {
+              badge = '기한 경과';
+              badgeColor = 'destructive';
+            }
           } else {
-            badge = '기한 경과';
-            badgeColor = 'destructive';
+            if (remainingDays === 0) {
+              badge = 'D-0 마감';
+              badgeColor = 'destructive';
+            } else if (remainingDays > 0) {
+              badge = `D-${remainingDays}`;
+              badgeColor = 'blue';
+            } else {
+              badge = '기한 경과';
+              badgeColor = 'destructive';
+            }
           }
         }
 
@@ -416,17 +436,21 @@ export function ArtistDashboardPage() {
           project: item.projectName || '업무',
           title: item.title || '업무 카드',
           description: item.description || '',
-          daysLeft: daysLeft ?? 999,
+          daysLeft: remainingDays ?? 999,
           badge,
           badgeColor,
-          urgent: daysLeft !== null && daysLeft <= 0,
+          urgent: remainingDays !== null && remainingDays <= 0,
+          completed: Boolean(item.completed),
         };
       });
 
       // 기간 지난 업무(daysLeft < 0) 제외
       const filtered = mapped.filter((t) => t.daysLeft === 999 || t.daysLeft >= 0);
       setTasks(filtered);
-      setTaskStatuses({});
+      // API 완료 상태 반영 → 다른 페이지 갔다 와도 완료된 일이 취소선+완료 버튼으로 남아 있음
+      setTaskStatuses(
+        Object.fromEntries(filtered.map((t) => [t.id, t.completed ? TASK_STATUS.COMPLETED : TASK_STATUS.IN_PROGRESS]))
+      );
     } catch (error) {
       console.error('오늘 할 일 조회 실패:', error);
       setTasks([]);
@@ -728,7 +752,6 @@ export function ArtistDashboardPage() {
       setTaskStatuses((prev) => ({ ...prev, [task.id]: newCompleted ? TASK_STATUS.COMPLETED : TASK_STATUS.IN_PROGRESS }));
       if (newCompleted) toast.success('작업이 완료되었습니다. 칸반 보드에도 반영됩니다.');
       else toast.info('작업을 다시 진행 중으로 변경했습니다.');
-      await fetchTasks();
     } catch (error) {
       toast.error(error?.response?.data?.message || '완료 상태 변경에 실패했습니다.');
     } finally {
