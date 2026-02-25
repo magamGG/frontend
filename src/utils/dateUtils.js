@@ -43,7 +43,11 @@ export function formatDateToString(dateValue) {
   if (!date) {
     return '';
   }
-  return date.toISOString().split('T')[0];
+  // 로컬(KST) 기준으로 YYYY-MM-DD 문자열 생성 → UTC 변환 시 하루 밀리는 문제 방지
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 /**
