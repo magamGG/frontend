@@ -21,10 +21,14 @@ import {
   FolderOpen,
   Sparkles,
   Loader2,
-  X,
+  Pencil,
+  Trash2,
+  ExternalLink,
+  RefreshCw,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { portfolioService } from '@/api/services';
+import { getMemberProfileUrl, MEMBER_AVATAR_PLACEHOLDER } from '@/api/config';
 
 const SECTION_STYLE = 'rounded-lg border bg-card p-6 text-card-foreground shadow-sm';
 
@@ -53,6 +57,11 @@ export function ArtistPortfolioPage() {
     portfolioUserSkill: '',
   });
   const [createLoading, setCreateLoading] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [notionSyncLoading, setNotionSyncLoading] = useState(false);
+  const [hasUnsyncedChanges, setHasUnsyncedChanges] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -70,10 +79,96 @@ export function ArtistPortfolioPage() {
     return () => { cancelled = true; };
   }, []);
 
-  const refetchPortfolio = () => {
-    portfolioService.getMyPortfolio().then((data) => {
+  const refetchPortfolio = async () => {
+    try {
+      const res = await portfolioService.getMyPortfolio();
+      const data = res?.data ?? res;
       setPortfolio(data && data.portfolioNo ? data : null);
-    });
+      setHasUnsyncedChanges(false);
+    } catch {
+      setPortfolio(null);
+    }
+  };
+
+  const handleNotionConnect = async () => {
+    if (!portfolio?.portfolioNo) return;
+    setNotionSyncLoading(true);
+    try {
+      const configRes = await portfolioService.getNotionConfig();
+      const config = configRes?.data ?? configRes;
+      const { clientId, redirectUri } = config || {};
+      if (!clientId || !redirectUri) {
+        toast.error('Notion 연동 설정을 불러올 수 없습니다.');
+        setNotionSyncLoading(false);
+        return;
+      }
+      const state = JSON.stringify({ portfolioNo: portfolio.portfolioNo });
+      const authUrl =
+        `https://api.notion.com/v1/oauth/authorize?client_id=${clientId}` +
+        `&response_type=code&owner=user&redirect_uri=${encodeURIComponent(redirectUri)}` +
+        `&state=${encodeURIComponent(state)}`;
+      const popup = window.open(authUrl, 'notion-oauth', 'width=600,height=700');
+
+      let callbackHandled = false;
+
+      const handleMessage = async (event) => {
+        if (event.data?.type !== 'notion-callback') return;
+        const stateParam = event.data?.state;
+        let portfolioNoFromState = null;
+        try {
+          if (stateParam && typeof stateParam === 'string') {
+            const parsed = JSON.parse(stateParam);
+            portfolioNoFromState = parsed?.portfolioNo;
+          }
+        } catch {
+          /* ignore */
+        }
+        if (portfolioNoFromState !== portfolio.portfolioNo) return;
+        callbackHandled = true;
+        window.removeEventListener('message', handleMessage);
+        const { code } = event.data;
+        if (!code) {
+          toast.error('Notion 인증에 실패했습니다.');
+          setNotionSyncLoading(false);
+          return;
+        }
+        try {
+          const result = await portfolioService.notionCallback(portfolio.portfolioNo, code);
+          const data = result?.data ?? result;
+          const pageCreated = data?.pageCreated;
+          const notionPageUrl = data?.notionPageUrl;
+          await refetchPortfolio();
+          if (pageCreated && notionPageUrl) {
+            toast.success('Notion 연동이 완료되었습니다.');
+            window.open(notionPageUrl, '_blank');
+          } else if (data?.workspaceName) {
+            toast.success('Notion 계정이 연동되었습니다. 페이지를 생성하지 못했을 수 있습니다.');
+          } else {
+            toast.error('Notion 인증은 됐지만, 공유된 페이지가 없어 포트폴리오 페이지를 만들 수 없습니다. Notion에서 페이지를 공유한 뒤 다시 시도해 주세요.');
+          }
+        } catch (err) {
+          console.error('Notion callback error:', err);
+          toast.error(err?.response?.data?.message || err?.message || 'Notion 연동 중 오류가 발생했습니다.');
+        } finally {
+          setNotionSyncLoading(false);
+        }
+      };
+      window.addEventListener('message', handleMessage);
+
+      const checkClosed = setInterval(() => {
+        if (popup && popup.closed) {
+          clearInterval(checkClosed);
+          if (!callbackHandled) {
+            setNotionSyncLoading(false);
+            window.removeEventListener('message', handleMessage);
+            refetchPortfolio().catch(() => {});
+          }
+        }
+      }, 500);
+    } catch (err) {
+      toast.error(err?.response?.data?.message || err?.message || 'Notion 설정을 불러올 수 없습니다.');
+      setNotionSyncLoading(false);
+    }
   };
 
   const openImportModal = () => {
@@ -135,7 +230,10 @@ export function ArtistPortfolioPage() {
     }
   };
 
+  const formatProjectName = (p) => p.projectName ?? p.projectTitle ?? '';
+
   const openCreateModal = () => {
+    setIsEditMode(false);
     setCreateModalOpen(true);
     setCreateForm({
       portfolioUserName: '',
@@ -145,22 +243,85 @@ export function ArtistPortfolioPage() {
       portfolioUserProject: '',
       portfolioUserSkill: '',
     });
+    portfolioService.getMyProjectsForForm().then((res) => {
+      const list = Array.isArray(res) ? res : res?.data ?? [];
+      setMyProjects(list);
+      if (list.length > 0) {
+        const projectText = list.map(formatProjectName).filter(Boolean).join('\n');
+        setCreateForm((f) => ({ ...f, portfolioUserProject: projectText }));
+      }
+    }).catch(() => setMyProjects([]));
+  };
+
+  const handleDeletePortfolio = async () => {
+    if (!portfolio?.portfolioNo) return;
+    setDeleteLoading(true);
+    try {
+      await portfolioService.delete(portfolio.portfolioNo);
+      setPortfolio(null);
+      setDeleteConfirmOpen(false);
+      toast.success('포트폴리오가 삭제되었습니다.');
+    } catch (e) {
+      toast.error(e?.response?.data?.message || e?.message || '삭제에 실패했습니다.');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const openEditModal = () => {
+    if (!portfolio) return;
+    setIsEditMode(true);
+    setCreateModalOpen(true);
+    setCreateForm({
+      portfolioUserName: portfolio.portfolioUserName ?? '',
+      portfolioUserPhone: portfolio.portfolioUserPhone ?? '',
+      portfolioUserEmail: portfolio.portfolioUserEmail ?? '',
+      portfolioUserCareer: portfolio.portfolioUserCareer ?? '',
+      portfolioUserProject: portfolio.portfolioUserProject ?? '',
+      portfolioUserSkill: portfolio.portfolioUserSkill ?? '',
+    });
     portfolioService.getMyProjectsForForm().then((list) => {
       setMyProjects(Array.isArray(list) ? list : []);
     }).catch(() => setMyProjects([]));
   };
 
-  const submitCreate = async () => {
+  const submitCreateOrUpdate = async () => {
     setCreateLoading(true);
     try {
-      await portfolioService.create(createForm);
-      toast.success('포트폴리오가 저장되었습니다.');
+      if (isEditMode && portfolio?.portfolioNo) {
+        const updated = await portfolioService.update(portfolio.portfolioNo, createForm);
+        const data = updated?.data ?? updated;
+        if (data && data.portfolioNo) setPortfolio(data);
+        setHasUnsyncedChanges(true);
+        toast.success('포트폴리오가 수정되었습니다.');
+      } else {
+        await portfolioService.create(createForm);
+        toast.success('포트폴리오가 저장되었습니다.');
+        await refetchPortfolio();
+      }
       setCreateModalOpen(false);
-      refetchPortfolio();
     } catch (e) {
       toast.error(e?.message || '저장에 실패했습니다.');
     } finally {
       setCreateLoading(false);
+    }
+  };
+
+  const handleNotionRefresh = async () => {
+    if (!portfolio?.portfolioNo) return;
+    setNotionSyncLoading(true);
+    try {
+      const res = await portfolioService.syncNotion(portfolio.portfolioNo);
+      const data = res?.data ?? res;
+      if (data && data.portfolioNo) {
+        setPortfolio(data);
+        setHasUnsyncedChanges(false);
+        toast.success('Notion에 수정 내용이 반영되었습니다.');
+      }
+    } catch (e) {
+      toast.error(e?.response?.data?.message || e?.message || 'Notion 최신화에 실패했습니다.');
+    } finally {
+      setNotionSyncLoading(false);
     }
   };
 
@@ -174,9 +335,71 @@ export function ArtistPortfolioPage() {
 
   return (
     <div className="max-w-3xl mx-auto p-6 space-y-6">
-      <div className="flex items-center gap-2 text-2xl font-semibold">
-        <FileText className="w-8 h-8" />
-        포트폴리오
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-2xl font-semibold">
+          <FileText className="w-8 h-8" />
+          포트폴리오
+        </div>
+        {portfolio && (
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" className="gap-2" onClick={openEditModal}>
+              <Pencil className="w-4 h-4" />
+              수정
+            </Button>
+            {portfolio.notionPageUrl ? (
+              hasUnsyncedChanges ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  disabled={notionSyncLoading}
+                  onClick={handleNotionRefresh}
+                >
+                  {notionSyncLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="w-4 h-4" />
+                  )}
+                  Notion 최신화
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => window.open(portfolio.notionPageUrl, '_blank')}
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  Notion에서 보기
+                </Button>
+              )
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                disabled={notionSyncLoading}
+                onClick={handleNotionConnect}
+              >
+                {notionSyncLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Link className="w-4 h-4" />
+                )}
+                Notion 연동
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+              onClick={() => setDeleteConfirmOpen(true)}
+            >
+              <Trash2 className="w-4 h-4" />
+              삭제
+            </Button>
+          </div>
+        )}
       </div>
 
       {!portfolio ? (
@@ -196,11 +419,20 @@ export function ArtistPortfolioPage() {
       ) : (
         <Card className={SECTION_STYLE}>
           <div className="space-y-4">
-            {portfolio.portfolioUserName && (
-              <div className="flex items-center gap-2">
-                <User className="w-5 h-5 text-muted-foreground" />
-                <span className="font-medium">이름</span>
-                <span>{portfolio.portfolioUserName}</span>
+            {(portfolio.profileImage || portfolio.portfolioUserName) && (
+              <div className="flex items-center gap-4">
+                <img
+                  src={getMemberProfileUrl(portfolio.profileImage) ?? MEMBER_AVATAR_PLACEHOLDER}
+                  alt="프로필"
+                  className="w-16 h-16 rounded-full object-cover border border-border shrink-0"
+                />
+                {portfolio.portfolioUserName && (
+                  <div className="flex items-center gap-2">
+                    <User className="w-5 h-5 text-muted-foreground shrink-0" />
+                    <span className="font-medium">이름</span>
+                    <span>{portfolio.portfolioUserName}</span>
+                  </div>
+                )}
               </div>
             )}
             {portfolio.portfolioUserEmail && (
@@ -335,35 +567,15 @@ export function ArtistPortfolioPage() {
         </DialogContent>
       </Dialog>
 
-      {/* 만들기 모달 */}
+      {/* 만들기/수정 모달 */}
       <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>포트폴리오 만들기</DialogTitle>
-            <DialogDescription>참여 프로젝트와 기본 정보를 입력해 포트폴리오를 작성합니다.</DialogDescription>
+            <DialogTitle>{isEditMode ? '포트폴리오 수정' : '포트폴리오 만들기'}</DialogTitle>
+            <DialogDescription>
+              {isEditMode ? '내용을 수정한 뒤 저장하세요.' : '참여 프로젝트와 기본 정보를 입력해 포트폴리오를 작성합니다.'}
+            </DialogDescription>
           </DialogHeader>
-
-          {myProjects.length > 0 && (
-            <div className="space-y-2">
-              <Label>참여 중인 프로젝트 (시작일)</Label>
-              <ul className="text-sm list-disc list-inside text-muted-foreground">
-                {myProjects.map((p) => (
-                  <li key={p.projectNo}>
-                    {p.projectName}
-                    {(p.projectStartedAt || p.projectMemberCreatedAt) && (
-                      <span className="ml-1">
-                        ({p.projectStartedAt
-                          ? new Date(p.projectStartedAt).toLocaleDateString('ko-KR')
-                          : p.projectMemberCreatedAt
-                            ? new Date(p.projectMemberCreatedAt).toLocaleDateString('ko-KR')
-                            : ''})
-                      </span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
 
           <div className="grid gap-3 pt-2">
             <div>
@@ -422,8 +634,32 @@ export function ArtistPortfolioPage() {
 
           <div className="flex justify-end gap-2 pt-4">
             <Button variant="outline" onClick={() => setCreateModalOpen(false)}>취소</Button>
-            <Button onClick={submitCreate} disabled={createLoading}>
-              {createLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : '저장'}
+            <Button onClick={submitCreateOrUpdate} disabled={createLoading}>
+              {createLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : isEditMode ? '수정 완료' : '저장'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 삭제 확인 모달 */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>포트폴리오 삭제</DialogTitle>
+            <DialogDescription>
+              포트폴리오를 삭제하시겠습니까? 삭제 후에는 복구할 수 없습니다.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)} disabled={deleteLoading}>
+              취소
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeletePortfolio}
+              disabled={deleteLoading}
+            >
+              {deleteLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : '삭제'}
             </Button>
           </div>
         </DialogContent>

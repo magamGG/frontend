@@ -659,8 +659,13 @@ export const portfolioService = {
   create: (body) => api.post(API_ENDPOINTS.PORTFOLIO.CREATE, body),
   getMyPortfolio: () => api.get(API_ENDPOINTS.PORTFOLIO.ME),
   getMyProjectsForForm: () => api.get(API_ENDPOINTS.PORTFOLIO.MY_PROJECTS),
-  getByMemberNo: (memberNo) => api.get(API_ENDPOINTS.PORTFOLIO.BY_MEMBER(memberNo)),
+  getByMemberNo: (memberNo) =>
+    api.get(API_ENDPOINTS.PORTFOLIO.BY_MEMBER(memberNo), { params: { _t: Date.now() } }),
   update: (portfolioNo, body) => api.put(API_ENDPOINTS.PORTFOLIO.UPDATE(portfolioNo), body),
+  delete: (portfolioNo) => api.delete(API_ENDPOINTS.PORTFOLIO.DELETE(portfolioNo)),
+  syncNotion: (portfolioNo) => api.post(API_ENDPOINTS.PORTFOLIO.NOTION_SYNC(portfolioNo)),
+  getNotionConfig: () => api.get(API_ENDPOINTS.PORTFOLIO.NOTION_CONFIG),
+  notionCallback: (portfolioNo, code) => api.post(API_ENDPOINTS.PORTFOLIO.NOTION_CALLBACK(portfolioNo), { code }),
 };
 
 // 채팅 서비스 (최적화된 버전)

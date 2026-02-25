@@ -446,7 +446,18 @@ export function AdminTeamPage() {
     setPortfolioModalMemberNo(memberNo);
     setPortfolioModalData(null);
     setPortfolioModalLoading(true);
-    portfolioService.getByMemberNo(memberNo).then((data) => setPortfolioModalData(data)).catch(() => setPortfolioModalData(null)).finally(() => setPortfolioModalLoading(false));
+    portfolioService
+      .getByMemberNo(memberNo)
+      .then((res) => {
+        const data = res?.data ?? res;
+        if (!data || data.portfolioStatus === 'N' || data.portfolioNo == null) {
+          setPortfolioModalData(null);
+          return;
+        }
+        setPortfolioModalData(data);
+      })
+      .catch(() => setPortfolioModalData(null))
+      .finally(() => setPortfolioModalLoading(false));
   };
 
   // 해당 직원의 근태 신청 목록 (에이전시 목록에서 필터링)
@@ -851,7 +862,7 @@ export function AdminTeamPage() {
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
               </div>
-            ) : portfolioModalData && portfolioModalData.portfolioNo ? (
+            ) : portfolioModalData && portfolioModalData.portfolioNo && portfolioModalData.portfolioStatus !== 'N' ? (
               <div className="space-y-4">
                 {portfolioModalData.portfolioUserName && (
                   <div className="flex items-center gap-2">

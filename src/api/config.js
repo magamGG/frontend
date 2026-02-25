@@ -251,6 +251,10 @@ export const API_ENDPOINTS = {
     MY_PROJECTS: `/api/portfolio/my-projects`,
     BY_MEMBER: (memberNo) => `/api/portfolio/member/${memberNo}`,
     UPDATE: (portfolioNo) => `/api/portfolio/${portfolioNo}`,
+    DELETE: (portfolioNo) => `/api/portfolio/${portfolioNo}`,
+    NOTION_SYNC: (portfolioNo) => `/api/portfolio/${portfolioNo}/notion-sync`,
+    NOTION_CONFIG: `/api/portfolio/notion/config`,
+    NOTION_CALLBACK: (portfolioNo) => `/api/portfolio/${portfolioNo}/notion/callback`,
   },
 
   // 담당자(manager) API (X-Member-No로 담당자 식별, 배정 작가만 대상)

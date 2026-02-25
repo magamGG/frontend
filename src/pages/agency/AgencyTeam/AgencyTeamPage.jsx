@@ -306,7 +306,18 @@ export function AgencyTeamPage() {
     setPortfolioModalMemberNo(memberNo);
     setPortfolioModalData(null);
     setPortfolioModalLoading(true);
-    portfolioService.getByMemberNo(memberNo).then((data) => setPortfolioModalData(data)).catch(() => setPortfolioModalData(null)).finally(() => setPortfolioModalLoading(false));
+    portfolioService
+      .getByMemberNo(memberNo)
+      .then((res) => {
+        const data = res?.data ?? res;
+        if (!data || data.portfolioStatus === 'N' || data.portfolioNo == null) {
+          setPortfolioModalData(null);
+          return;
+        }
+        setPortfolioModalData(data);
+      })
+      .catch(() => setPortfolioModalData(null))
+      .finally(() => setPortfolioModalLoading(false));
   };
 
   // 직원 삭제 핸들러 (에이전시에서 제거 - agencyNo를 null로 설정)
@@ -906,7 +917,7 @@ export function AgencyTeamPage() {
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
             </div>
-          ) : portfolioModalData && portfolioModalData.portfolioNo ? (
+          ) : portfolioModalData && portfolioModalData.portfolioNo && portfolioModalData.portfolioStatus !== 'N' ? (
             <div className="space-y-4">
               {portfolioModalData.portfolioUserName && (
                 <div className="flex items-center gap-2">
