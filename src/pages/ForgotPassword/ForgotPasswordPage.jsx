@@ -227,7 +227,7 @@ export function ForgotPasswordPage({ onBackToLogin }) {
                           }}
                           disabled={isLoading}
                           placeholder="kim.artist@example.com"
-                          hasIcon
+                          $hasIcon
                           required
                         />
                       </InputWrapper>
@@ -243,7 +243,7 @@ export function ForgotPasswordPage({ onBackToLogin }) {
                   <FormSection onSubmit={handleVerifyCode}>
                     <InputGroup>
                       <InputLabel>인증 코드</InputLabel>
-                      <VerificationCodeInput
+                        <VerificationCodeInput
                         type="text"
                         value={verificationCodeInput}
                         onChange={(e) => {
@@ -268,8 +268,8 @@ export function ForgotPasswordPage({ onBackToLogin }) {
                         disabled={isLoading}
                         placeholder="6자리 인증 코드"
                         maxLength={6}
-                        large
-                        center
+                        $large
+                        $center
                         required
                       />
                       <p style={{ fontSize: '12px', color: 'var(--muted-foreground)', textAlign: 'center', margin: 0 }}>
@@ -310,7 +310,7 @@ export function ForgotPasswordPage({ onBackToLogin }) {
                           }}
                           disabled={isLoading}
                           placeholder="••••••••"
-                          hasIcon
+                          $hasIcon
                           required
                         />
                       </InputWrapper>
@@ -330,7 +330,7 @@ export function ForgotPasswordPage({ onBackToLogin }) {
                           }}
                           disabled={isLoading}
                           placeholder="••••••••"
-                          hasIcon
+                          $hasIcon
                           required
                         />
                       </InputWrapper>
