@@ -535,8 +535,13 @@ export const TaskCompleteButton = styled.button`
   background-color: ${props => props.$isCompleted ? '#10B981' : '#E5E7EB'};
   color: ${props => props.$isCompleted ? 'white' : '#6B7280'};
   
-  &:hover {
+  &:hover:not(:disabled) {
     background-color: ${props => props.$isCompleted ? '#059669' : '#D1D5DB'};
+  }
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
   }
 `;
 
