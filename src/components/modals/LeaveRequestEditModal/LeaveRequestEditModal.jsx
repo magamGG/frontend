@@ -6,6 +6,7 @@ import { Textarea } from '@/app/components/ui/textarea';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { leaveService } from '@/api/services';
+import { parseBackendDate } from '@/utils/dateUtils';
 import {
   ModalHeader,
   ModalContent,
@@ -19,13 +20,14 @@ import {
 
 const getCurrentDate = () => {
   const today = new Date();
-  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  return today.toISOString().split('T')[0];
 };
 
 const formatDateForInput = (dt) => {
   if (!dt) return getCurrentDate();
-  const d = typeof dt === 'string' ? new Date(dt) : dt;
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const parsed = parseBackendDate(dt) ?? (dt instanceof Date ? dt : new Date(dt));
+  if (!parsed || isNaN(parsed.getTime())) return getCurrentDate();
+  return parsed.toISOString().split('T')[0];
 };
 
 const leaveTypes = ['연차', '반차', '병가', '워케이션', '재택근무', '휴가'];

@@ -15,7 +15,10 @@ import {
   Heart,
   CalendarClock,
   FileText,
-  Loader2
+  Loader2,
+  User,
+  FolderOpen,
+  Sparkles
 } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -28,7 +31,7 @@ import { Label } from '@/app/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/app/components/ui/dialog';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/app/components/ui/pagination';
 import { memberService, leaveService, attendanceService, portfolioService } from '@/api';
-import { getMemberProfileUrl } from '@/api/config';
+import { getMemberProfileUrl, MEMBER_AVATAR_PLACEHOLDER } from '@/api/config';
 import useAuthStore from '@/store/authStore';
 import { formatDateToString } from '@/utils/dateUtils';
 
@@ -904,7 +907,7 @@ export function AgencyTeamPage() {
         </DialogContent>
       </Dialog>
 
-      {/* 포트폴리오 모달 (직원 클릭 후 포트폴리오 버튼) */}
+      {/* 포트폴리오 모달 (아티스트 포트폴리오 페이지와 동일한 디자인 + 프로필 이미지) */}
       <Dialog open={portfolioModalMemberNo !== null} onOpenChange={(open) => !open && setPortfolioModalMemberNo(null)}>
         <DialogContent className="sm:max-w-[500px] max-h-[85vh] overflow-y-auto">
           <DialogHeader>
@@ -918,12 +921,21 @@ export function AgencyTeamPage() {
               <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
             </div>
           ) : portfolioModalData && portfolioModalData.portfolioNo && portfolioModalData.portfolioStatus !== 'N' ? (
-            <div className="space-y-4">
-              {portfolioModalData.portfolioUserName && (
-                <div className="flex items-center gap-2">
-                  <Users className="w-5 h-5 text-muted-foreground" />
-                  <span className="font-medium">이름</span>
-                  <span>{portfolioModalData.portfolioUserName}</span>
+            <div className="space-y-4 rounded-lg border bg-card p-6 text-card-foreground shadow-sm">
+              {(portfolioModalData.profileImage || portfolioModalData.portfolioUserName) && (
+                <div className="flex items-center gap-4">
+                  <img
+                    src={getMemberProfileUrl(portfolioModalData.profileImage) ?? MEMBER_AVATAR_PLACEHOLDER}
+                    alt="프로필"
+                    className="w-16 h-16 rounded-full object-cover border border-border shrink-0"
+                  />
+                  {portfolioModalData.portfolioUserName && (
+                    <div className="flex items-center gap-2">
+                      <User className="w-5 h-5 text-muted-foreground shrink-0" />
+                      <span className="font-medium">이름</span>
+                      <span>{portfolioModalData.portfolioUserName}</span>
+                    </div>
+                  )}
                 </div>
               )}
               {portfolioModalData.portfolioUserEmail && (
@@ -951,13 +963,19 @@ export function AgencyTeamPage() {
               )}
               {portfolioModalData.portfolioUserProject && (
                 <div>
-                  <div className="font-medium mb-1">참여 프로젝트</div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <FolderOpen className="w-5 h-5 text-muted-foreground" />
+                    <span className="font-medium">참여 프로젝트</span>
+                  </div>
                   <pre className="whitespace-pre-wrap text-sm bg-muted/50 p-3 rounded">{portfolioModalData.portfolioUserProject}</pre>
                 </div>
               )}
               {portfolioModalData.portfolioUserSkill && (
                 <div>
-                  <div className="font-medium mb-1">스킬</div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Sparkles className="w-5 h-5 text-muted-foreground" />
+                    <span className="font-medium">스킬</span>
+                  </div>
                   <pre className="whitespace-pre-wrap text-sm bg-muted/50 p-3 rounded">{portfolioModalData.portfolioUserSkill}</pre>
                 </div>
               )}

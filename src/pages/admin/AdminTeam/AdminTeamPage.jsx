@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import {
   Users,
+  User,
   Mail,
   Phone,
   Briefcase,
+  FolderOpen,
+  Sparkles,
   Activity,
   Search,
   ChevronRight,
@@ -16,10 +19,10 @@ import {
 import { Card } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
 import { Button } from '@/app/components/ui/button';
-import { Dialog, DialogContent, DialogTitle } from '@/app/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/app/components/ui/dialog';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { memberService, projectService, leaveService, attendanceService, portfolioService } from '@/api';
-import { API_BASE_URL } from '@/api/config';
+import { API_BASE_URL, getMemberProfileUrl, MEMBER_AVATAR_PLACEHOLDER } from '@/api/config';
 import useAuthStore from '@/store/authStore';
 import { toast } from 'sonner';
 import {
@@ -851,24 +854,35 @@ export function AdminTeamPage() {
           </EmployeeList>
         )}
 
-        {/* 포트폴리오 모달 */}
+        {/* 포트폴리오 모달 (아티스트 포트폴리오 페이지와 동일한 디자인 + 프로필 이미지) */}
         <Dialog open={portfolioModalMemberNo !== null} onOpenChange={(open) => !open && setPortfolioModalMemberNo(null)}>
           <DialogContent className="sm:max-w-[500px] max-h-[85vh] overflow-y-auto">
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="w-5 h-5" />
-              포트폴리오
-            </DialogTitle>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                포트폴리오
+              </DialogTitle>
+            </DialogHeader>
             {portfolioModalLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
               </div>
             ) : portfolioModalData && portfolioModalData.portfolioNo && portfolioModalData.portfolioStatus !== 'N' ? (
-              <div className="space-y-4">
-                {portfolioModalData.portfolioUserName && (
-                  <div className="flex items-center gap-2">
-                    <Users className="w-5 h-5 text-muted-foreground" />
-                    <span className="font-medium">이름</span>
-                    <span>{portfolioModalData.portfolioUserName}</span>
+              <div className="space-y-4 rounded-lg border bg-card p-6 text-card-foreground shadow-sm">
+                {(portfolioModalData.profileImage || portfolioModalData.portfolioUserName) && (
+                  <div className="flex items-center gap-4">
+                    <img
+                      src={getMemberProfileUrl(portfolioModalData.profileImage) ?? MEMBER_AVATAR_PLACEHOLDER}
+                      alt="프로필"
+                      className="w-16 h-16 rounded-full object-cover border border-border shrink-0"
+                    />
+                    {portfolioModalData.portfolioUserName && (
+                      <div className="flex items-center gap-2">
+                        <User className="w-5 h-5 text-muted-foreground shrink-0" />
+                        <span className="font-medium">이름</span>
+                        <span>{portfolioModalData.portfolioUserName}</span>
+                      </div>
+                    )}
                   </div>
                 )}
                 {portfolioModalData.portfolioUserEmail && (
@@ -896,13 +910,19 @@ export function AdminTeamPage() {
                 )}
                 {portfolioModalData.portfolioUserProject && (
                   <div>
-                    <div className="font-medium mb-1">참여 프로젝트</div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <FolderOpen className="w-5 h-5 text-muted-foreground" />
+                      <span className="font-medium">참여 프로젝트</span>
+                    </div>
                     <pre className="whitespace-pre-wrap text-sm bg-muted/50 p-3 rounded">{portfolioModalData.portfolioUserProject}</pre>
                   </div>
                 )}
                 {portfolioModalData.portfolioUserSkill && (
                   <div>
-                    <div className="font-medium mb-1">스킬</div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Sparkles className="w-5 h-5 text-muted-foreground" />
+                      <span className="font-medium">스킬</span>
+                    </div>
                     <pre className="whitespace-pre-wrap text-sm bg-muted/50 p-3 rounded">{portfolioModalData.portfolioUserSkill}</pre>
                   </div>
                 )}

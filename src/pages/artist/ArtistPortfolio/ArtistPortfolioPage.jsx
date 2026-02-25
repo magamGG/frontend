@@ -230,7 +230,23 @@ export function ArtistPortfolioPage() {
     }
   };
 
-  const formatProjectName = (p) => p.projectName ?? p.projectTitle ?? '';
+  /** • 프로젝트명 (yyyy-MM-dd) - 역할 | 상태 | 플랫폼. 날짜는 project_started_at만 사용 */
+  const formatProjectLine = (p) => {
+    const name = p.projectName ?? p.projectTitle ?? '';
+    if (!name) return '';
+    let dateStr = '';
+    const startedAt = p.projectStartedAt;
+    if (startedAt) {
+      if (typeof startedAt === 'string') dateStr = startedAt.slice(0, 10);
+      else if (Array.isArray(startedAt) && startedAt.length >= 3)
+        dateStr = [startedAt[0], String(startedAt[1]).padStart(2, '0'), String(startedAt[2]).padStart(2, '0')].join('-');
+    }
+    const role = p.projectMemberRole ?? '담당자';
+    const status = p.projectStatus ?? '연재';
+    const platform = p.platform ?? '';
+    const rest = [role, status, platform].filter(Boolean).join(' | ');
+    return rest ? `• ${name}${dateStr ? ` (${dateStr})` : ''} - ${rest}` : `• ${name}${dateStr ? ` (${dateStr})` : ''}`;
+  };
 
   const openCreateModal = () => {
     setIsEditMode(false);
@@ -247,7 +263,7 @@ export function ArtistPortfolioPage() {
       const list = Array.isArray(res) ? res : res?.data ?? [];
       setMyProjects(list);
       if (list.length > 0) {
-        const projectText = list.map(formatProjectName).filter(Boolean).join('\n');
+        const projectText = list.map(formatProjectLine).filter(Boolean).join('\n');
         setCreateForm((f) => ({ ...f, portfolioUserProject: projectText }));
       }
     }).catch(() => setMyProjects([]));

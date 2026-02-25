@@ -537,6 +537,8 @@ export function ProjectDetailPage({
   // PROJECT_NO(project.id)로 KANBAN_BOARD, KANBAN_CARD 조회
   const [boards, setBoards] = useState([]);
   const [boardsLoading, setBoardsLoading] = useState(false);
+  /** 카드 이동 API 요청 중이면 true — ref 사용으로 빠른 연속 드롭 시에도 즉시 잠금(레이스 방지) */
+  const cardMoveInFlightRef = useRef(false);
 
   useEffect(() => {
     if (!project?.id) return;
@@ -945,13 +947,20 @@ export function ProjectDetailPage({
     }
   };
 
-  // 카드 드롭 핸들러 (KANBAN_CARD.BOARD_NO 업데이트)
+  // 카드 드롭 핸들러 (KANBAN_CARD.BOARD_NO 업데이트) — ref로 동기 잠금해 빠른 연속 드롭 시 요청 한 번만
   const handleCardDrop = async (cardId, sourceBoardId, targetBoardId) => {
     if (sourceBoardId === targetBoardId) return;
     if (!project?.id) return;
+    if (cardMoveInFlightRef.current) return;
+    const boardIdNum = Number(targetBoardId);
+    if (Number.isNaN(boardIdNum) || boardIdNum < 1) {
+      toast.error('이동할 보드를 찾을 수 없습니다.');
+      return;
+    }
 
+    cardMoveInFlightRef.current = true;
     try {
-      await projectService.updateKanbanCard(project.id, cardId, { boardId: targetBoardId });
+      await projectService.updateKanbanCard(project.id, cardId, { boardId: boardIdNum });
       setBoards((prevBoards) => {
         const newBoards = prevBoards.map((b) => ({ ...b, cards: [...(b.cards || [])] }));
         const sourceBoard = newBoards.find((b) => b.id === sourceBoardId);
@@ -968,7 +977,10 @@ export function ProjectDetailPage({
       });
       toast.success('카드가 이동되었습니다.');
     } catch (err) {
-      toast.error(err?.message || '카드 이동에 실패했습니다.');
+      const message = err?.response?.data?.message || err?.message || '카드 이동에 실패했습니다.';
+      toast.error(message);
+    } finally {
+      cardMoveInFlightRef.current = false;
     }
   };
 
@@ -1140,9 +1152,15 @@ export function ProjectDetailPage({
     if (!project?.id) return;
 
     try {
-      const result = await projectService.createKanbanBoard(project.id, newBoardTitle.trim());
+      const res = await projectService.createKanbanBoard(project.id, newBoardTitle.trim());
+      const result = res?.data !== undefined ? res.data : res;
+      const boardId = result?.id != null ? Number(result.id) : null;
+      if (boardId == null || Number.isNaN(boardId)) {
+        toast.error('보드 생성 응답을 확인할 수 없습니다.');
+        return;
+      }
       const newBoard = {
-        id: result.id,
+        id: boardId,
         title: result.title || newBoardTitle.trim(),
         cards: (result.cards || []).map((c) => ({
           id: c.id,
@@ -1150,7 +1168,7 @@ export function ProjectDetailPage({
           description: c.description || '',
           startDate: c.startDate || '',
           dueDate: c.dueDate || '',
-          boardId: c.boardId ?? result.id,
+          boardId: c.boardId ?? boardId,
           completed: !!c.completed,
           assignedTo: c.assignedTo
             ? {
