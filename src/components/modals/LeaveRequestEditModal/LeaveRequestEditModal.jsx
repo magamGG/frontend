@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { leaveService } from '@/api/services';
 import { parseBackendDate } from '@/utils/dateUtils';
+import useAuthStore from '@/store/authStore';
 import {
   ModalHeader,
   ModalContent,
@@ -41,12 +42,14 @@ const leaveTypes = ['연차', '반차', '병가', '워케이션', '재택근무'
  * @param {() => void} props.onSuccess
  */
 export function LeaveRequestEditModal({ open, onOpenChange, request, onSuccess }) {
+  const user = useAuthStore((s) => s.user);
   const [selectedType, setSelectedType] = useState('연차');
   const [startDate, setStartDate] = useState(getCurrentDate());
   const [endDate, setEndDate] = useState(getCurrentDate());
   const [reason, setReason] = useState('');
   const [location, setLocation] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [remainingLeave, setRemainingLeave] = useState(null);
 
   useEffect(() => {
     if (open && request) {
@@ -59,6 +62,25 @@ export function LeaveRequestEditModal({ open, onOpenChange, request, onSuccess }
       setLocation(request.workcationLocation || '');
     }
   }, [open, request]);
+
+  // 연차/반차 선택 시 보유 연차 조회
+  useEffect(() => {
+    if (!open || !user?.memberNo) {
+      setRemainingLeave(null);
+      return;
+    }
+    if (selectedType === '연차' || selectedType === '반차') {
+      leaveService
+        .getLeaveBalance(user.memberNo)
+        .then((res) => {
+          const remain = res?.leaveBalanceRemainDays ?? res?.data?.leaveBalanceRemainDays;
+          setRemainingLeave(remain != null ? Math.round(Number(remain)) : null);
+        })
+        .catch(() => setRemainingLeave(null));
+    } else {
+      setRemainingLeave(null);
+    }
+  }, [open, user?.memberNo, selectedType]);
 
   useEffect(() => {
     if (selectedType === '반차') {
@@ -82,9 +104,25 @@ export function LeaveRequestEditModal({ open, onOpenChange, request, onSuccess }
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const start = new Date(startDate);
+    const end = new Date(endDate);
     start.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
     if (start < today) {
       toast.error('과거 날짜는 선택할 수 없습니다.');
+      return;
+    }
+    if (end < today) {
+      toast.error('종료일은 오늘 이후로 선택해주세요.');
+      return;
+    }
+    if (end < start) {
+      toast.error('종료일은 시작일 이후로 선택해주세요.');
+      return;
+    }
+
+    const days = selectedType === '반차' ? 1 : calculateDays();
+    if ((selectedType === '연차' || selectedType === '반차') && remainingLeave !== null && days > remainingLeave) {
+      toast.error(`보유 연차(${remainingLeave}일)보다 많은 일수를 신청할 수 없습니다.`);
       return;
     }
 
@@ -92,8 +130,6 @@ export function LeaveRequestEditModal({ open, onOpenChange, request, onSuccess }
       toast.error('워케이션 장소를 입력해주세요.');
       return;
     }
-
-    const days = selectedType === '반차' ? 1 : calculateDays();
     const requestData = {
       attendanceRequestType: selectedType,
       attendanceRequestStartDate: startDate,
@@ -123,11 +159,15 @@ export function LeaveRequestEditModal({ open, onOpenChange, request, onSuccess }
     onOpenChange(false);
   };
 
+  const usingDays = selectedType === '반차' ? 1 : calculateDays();
+  const overRemaining = (selectedType === '연차' || selectedType === '반차') && remainingLeave !== null && usingDays > remainingLeave;
+  const submitDisabled = isSubmitting || overRemaining;
+
   if (!request) return null;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[960px] bg-white p-0 gap-0" aria-describedby={undefined}>
+      <DialogContent className="sm:max-w-[960px] bg-white p-0 gap-0 z-[100]" aria-describedby={undefined}>
         <ModalHeader>
           <DialogHeader className="p-0 m-0">
             <DialogTitle className="text-xl font-semibold m-0" style={{ color: 'var(--foreground)' }}>
@@ -174,7 +214,15 @@ export function LeaveRequestEditModal({ open, onOpenChange, request, onSuccess }
             </DateGrid>
             <DaysInfo>
               총 {selectedType === '반차' ? '1일' : `${calculateDays()}일`} 사용 예정
+              {(selectedType === '연차' || selectedType === '반차') && remainingLeave !== null && (
+                <span style={{ marginLeft: '12px', color: 'var(--muted-foreground)' }}>
+                  · 보유 연차 {remainingLeave}일
+                </span>
+              )}
             </DaysInfo>
+            {(selectedType === '연차' || selectedType === '반차') && remainingLeave !== null && (selectedType === '반차' ? 1 : calculateDays()) > remainingLeave && (
+              <p className="text-sm text-destructive mt-1">보유 연차를 초과하여 신청할 수 없습니다.</p>
+            )}
           </FormGroup>
 
           {selectedType === '워케이션' && (
@@ -211,7 +259,7 @@ export function LeaveRequestEditModal({ open, onOpenChange, request, onSuccess }
           <Button variant="outline" onClick={handleClose} className="px-6 border-gray-300 text-gray-700 hover:bg-gray-50">
             취소
           </Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting} className="px-6 bg-blue-600 hover:bg-blue-700 text-white">
+          <Button onClick={handleSubmit} disabled={submitDisabled} className="px-6 bg-blue-600 hover:bg-blue-700 text-white">
             {isSubmitting ? '저장 중...' : '저장'}
           </Button>
         </ModalFooter>
