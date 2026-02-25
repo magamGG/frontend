@@ -3,13 +3,15 @@ import { Card } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
 import { Modal } from '@/components/common/Modal';
-import { TeamMemberProfileModal } from '@/components/modals/TeamMemberProfileModal';
-import {
-  ArrowLeft,
-  Users,
-  Plus,
-  X,
-  Calendar,
+import { 
+  ArrowLeft, 
+  Users, 
+  Plus, 
+  X, 
+  Calendar, 
+  Mail, 
+  Phone, 
+  Briefcase,
   Trash2,
   Edit,
   Save,
@@ -19,7 +21,7 @@ import {
   CheckCircle2,
   ExternalLink,
   Link2Off,
-  RefreshCw,
+  RefreshCw
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
@@ -535,6 +537,8 @@ export function ProjectDetailPage({
   // PROJECT_NO(project.id)로 KANBAN_BOARD, KANBAN_CARD 조회
   const [boards, setBoards] = useState([]);
   const [boardsLoading, setBoardsLoading] = useState(false);
+  /** 카드 이동 API 요청 중이면 true — ref 사용으로 빠른 연속 드롭 시에도 즉시 잠금(레이스 방지) */
+  const cardMoveInFlightRef = useRef(false);
 
   useEffect(() => {
     if (!project?.id) return;
@@ -943,13 +947,20 @@ export function ProjectDetailPage({
     }
   };
 
-  // 카드 드롭 핸들러 (KANBAN_CARD.BOARD_NO 업데이트)
+  // 카드 드롭 핸들러 (KANBAN_CARD.BOARD_NO 업데이트) — ref로 동기 잠금해 빠른 연속 드롭 시 요청 한 번만
   const handleCardDrop = async (cardId, sourceBoardId, targetBoardId) => {
     if (sourceBoardId === targetBoardId) return;
     if (!project?.id) return;
+    if (cardMoveInFlightRef.current) return;
+    const boardIdNum = Number(targetBoardId);
+    if (Number.isNaN(boardIdNum) || boardIdNum < 1) {
+      toast.error('이동할 보드를 찾을 수 없습니다.');
+      return;
+    }
 
+    cardMoveInFlightRef.current = true;
     try {
-      await projectService.updateKanbanCard(project.id, cardId, { boardId: targetBoardId });
+      await projectService.updateKanbanCard(project.id, cardId, { boardId: boardIdNum });
       setBoards((prevBoards) => {
         const newBoards = prevBoards.map((b) => ({ ...b, cards: [...(b.cards || [])] }));
         const sourceBoard = newBoards.find((b) => b.id === sourceBoardId);
@@ -966,7 +977,10 @@ export function ProjectDetailPage({
       });
       toast.success('카드가 이동되었습니다.');
     } catch (err) {
-      toast.error(err?.message || '카드 이동에 실패했습니다.');
+      const message = err?.response?.data?.message || err?.message || '카드 이동에 실패했습니다.';
+      toast.error(message);
+    } finally {
+      cardMoveInFlightRef.current = false;
     }
   };
 
@@ -1138,9 +1152,15 @@ export function ProjectDetailPage({
     if (!project?.id) return;
 
     try {
-      const result = await projectService.createKanbanBoard(project.id, newBoardTitle.trim());
+      const res = await projectService.createKanbanBoard(project.id, newBoardTitle.trim());
+      const result = res?.data !== undefined ? res.data : res;
+      const boardId = result?.id != null ? Number(result.id) : null;
+      if (boardId == null || Number.isNaN(boardId)) {
+        toast.error('보드 생성 응답을 확인할 수 없습니다.');
+        return;
+      }
       const newBoard = {
-        id: result.id,
+        id: boardId,
         title: result.title || newBoardTitle.trim(),
         cards: (result.cards || []).map((c) => ({
           id: c.id,
@@ -1148,7 +1168,7 @@ export function ProjectDetailPage({
           description: c.description || '',
           startDate: c.startDate || '',
           dueDate: c.dueDate || '',
-          boardId: c.boardId ?? result.id,
+          boardId: c.boardId ?? boardId,
           completed: !!c.completed,
           assignedTo: c.assignedTo
             ? {
@@ -1857,11 +1877,57 @@ export function ProjectDetailPage({
         </div>
       </Modal>
 
-      {/* 팀원 프로필 상세 모달 - 공통 컴포넌트 사용 */}
-      <TeamMemberProfileModal
-        member={selectedMember}
+      {/* 팀원 프로필 상세 모달 */}
+      <Modal
+        isOpen={selectedMember !== null}
         onClose={() => setSelectedMember(null)}
-      />
+        title="팀원 프로필"
+        maxWidth="md"
+      >
+        {selectedMember && (
+          <div className="space-y-6">
+            <div className="flex items-center gap-4">
+              <ImageWithFallback
+                src={selectedMember.avatar || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150'}
+                alt={selectedMember.name}
+                className="w-20 h-20 rounded-full object-cover"
+              />
+              <div className="flex-1">
+                <h3 className="text-2xl font-bold text-foreground mb-2">{selectedMember.name}</h3>
+                <Badge className={getStatusBadgeColor(selectedMember.status)}>
+                  {selectedMember.status}
+                </Badge>
+              </div>
+            </div>
+
+            <div className="space-y-3 pt-4 border-t border-border">
+              <div className="flex items-center gap-3">
+                <Briefcase className="w-5 h-5 text-muted-foreground" />
+                <div>
+                  <p className="text-xs text-muted-foreground">직무</p>
+                  <p className="text-sm font-medium text-foreground">{selectedMember.memberRole || selectedMember.role}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Mail className="w-5 h-5 text-muted-foreground" />
+                <div>
+                  <p className="text-xs text-muted-foreground">이메일</p>
+                  <p className="text-sm font-medium text-foreground">{selectedMember.email}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Phone className="w-5 h-5 text-muted-foreground" />
+                <div>
+                  <p className="text-xs text-muted-foreground">전화번호</p>
+                  <p className="text-sm font-medium text-foreground">{selectedMember.phone}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {/* 카드 추가/수정 모달 - Trello/Atlassian 스타일 */}
       <Modal

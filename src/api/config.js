@@ -149,6 +149,13 @@ export const API_ENDPOINTS = {
     KANBAN_CARD_UPDATE: (projectNo, cardId) => `/api/projects/${projectNo}/kanban-card/${cardId}`, // PUT: 칸반 카드 수정
     KANBAN_CARD_COMMENTS: (projectNo, cardId) => `/api/projects/${projectNo}/kanban-card/${cardId}/comments`, // GET: 목록, POST: 추가
     KANBAN_CARD_COMMENT_UPDATE: (projectNo, cardId, commentId) => `/api/projects/${projectNo}/kanban-card/${cardId}/comments/${commentId}`, // PUT: 코멘트 수정
+    // Notion OAuth (프로젝트 칸반 보드 연동)
+    NOTION_CONFIG: `/api/projects/notion/config`,
+    NOTION_CALLBACK: (projectNo) => `/api/projects/${projectNo}/notion/callback`,
+    NOTION_STATUS: (projectNo) => `/api/projects/${projectNo}/notion/status`,
+    NOTION_DATABASE: (projectNo) => `/api/projects/${projectNo}/notion/database`,
+    NOTION_DISCONNECT: (projectNo) => `/api/projects/${projectNo}/notion`,
+    NOTION_SYNC: (projectNo) => `/api/projects/${projectNo}/notion/sync`,
   },
 
   // 캘린더 API
@@ -240,6 +247,22 @@ export const API_ENDPOINTS = {
     MANAGER_WORKATION_RECOMMENDATION: `/api/v1/ai/manager/workation-recommendation`,
     MANAGER_NUDGE_MESSAGE_RECOMMENDATION: `/api/v1/ai/manager/nudge-message-recommendation`,
     MANAGER_ARTIST_DAILY_HEALTH_SUMMARY: `/api/v1/ai/manager/artist-daily-health-summary`,
+  },
+
+  // 포트폴리오 API (아티스트: 가져오기/만들기, 담당자·에이전시: 직원 포트폴리오 조회)
+  PORTFOLIO: {
+    EXTRACT_IMAGE: `/api/portfolio/extract/image`,
+    EXTRACT_FROM_PAGE_SCREENSHOT: `/api/portfolio/extract/from-page-screenshot`,
+    SAVE_FROM_EXTRACT: `/api/portfolio/from-extract`,
+    CREATE: `/api/portfolio`,
+    ME: `/api/portfolio/me`,
+    MY_PROJECTS: `/api/portfolio/my-projects`,
+    BY_MEMBER: (memberNo) => `/api/portfolio/member/${memberNo}`,
+    UPDATE: (portfolioNo) => `/api/portfolio/${portfolioNo}`,
+    DELETE: (portfolioNo) => `/api/portfolio/${portfolioNo}`,
+    NOTION_SYNC: (portfolioNo) => `/api/portfolio/${portfolioNo}/notion-sync`,
+    NOTION_CONFIG: `/api/portfolio/notion/config`,
+    NOTION_CALLBACK: (portfolioNo) => `/api/portfolio/${portfolioNo}/notion/callback`,
   },
 
   // 담당자(manager) API (X-Member-No로 담당자 식별, 배정 작가만 대상)

@@ -653,6 +653,30 @@ export const managerService = {
   getHealthMonitoringDetail: (type) => api.get(API_ENDPOINTS.MANAGER.HEALTH_MONITORING_DETAIL(type || 'mental')),
 };
 
+// 포트폴리오 서비스 (아티스트: 가져오기/만들기, 담당자·에이전시: 직원 포트폴리오 조회)
+const PORTFOLIO_TIMEOUT = 60_000; // 추출 API는 60초
+export const portfolioService = {
+  extractFromImage: (file) =>
+    api.post(API_ENDPOINTS.PORTFOLIO.EXTRACT_IMAGE, (() => {
+      const fd = new FormData();
+      fd.append('image', file);
+      return fd;
+    })(), { timeout: PORTFOLIO_TIMEOUT }),
+  extractFromPageScreenshot: (pageUrl) =>
+    api.post(API_ENDPOINTS.PORTFOLIO.EXTRACT_FROM_PAGE_SCREENSHOT, { pageUrl }, { timeout: PORTFOLIO_TIMEOUT }),
+  saveFromExtract: (extractData) => api.post(API_ENDPOINTS.PORTFOLIO.SAVE_FROM_EXTRACT, extractData),
+  create: (body) => api.post(API_ENDPOINTS.PORTFOLIO.CREATE, body),
+  getMyPortfolio: () => api.get(API_ENDPOINTS.PORTFOLIO.ME),
+  getMyProjectsForForm: () => api.get(API_ENDPOINTS.PORTFOLIO.MY_PROJECTS),
+  getByMemberNo: (memberNo) =>
+    api.get(API_ENDPOINTS.PORTFOLIO.BY_MEMBER(memberNo), { params: { _t: Date.now() } }),
+  update: (portfolioNo, body) => api.put(API_ENDPOINTS.PORTFOLIO.UPDATE(portfolioNo), body),
+  delete: (portfolioNo) => api.delete(API_ENDPOINTS.PORTFOLIO.DELETE(portfolioNo)),
+  syncNotion: (portfolioNo) => api.post(API_ENDPOINTS.PORTFOLIO.NOTION_SYNC(portfolioNo)),
+  getNotionConfig: () => api.get(API_ENDPOINTS.PORTFOLIO.NOTION_CONFIG),
+  notionCallback: (portfolioNo, code) => api.post(API_ENDPOINTS.PORTFOLIO.NOTION_CALLBACK(portfolioNo), { code }),
+};
+
 // 채팅 서비스 (최적화된 버전)
 export const chatService = {
   // API 요청 캐시 (메모리 기반)

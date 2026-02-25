@@ -811,9 +811,10 @@ export function ArtistDashboardPage() {
     setShowDeleteMemoConfirm(true);
   };
 
-  // 근태 신청 수정 핸들러 (대기 중일 때만)
+  // 근태 신청 수정 핸들러 (대기 중일 때만) — 목록 모달을 닫고 수정 모달만 열어서 가려짐 방지
   const handleEditAttendanceRequest = (request) => {
     if (!request?.raw || request.rawStatus !== 'PENDING') return;
+    setShowAttendanceModal(false);
     setEditingAttendanceRequest(request.raw);
     setShowEditAttendanceModal(true);
   };
