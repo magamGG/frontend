@@ -3,6 +3,7 @@ import { CalendarComponent } from '@/components/common/Calendar';
 import { LeaveRequestModal } from '@/components/modals/LeaveRequestModal';
 import { projectService, leaveService, memoService } from '@/api/services';
 import useAuthStore from '@/store/authStore';
+import { formatDateToString } from '@/utils/dateUtils';
 
 /** PROJECT_COLOR → 캘린더 바 색상 (hex면 그대로, 아니면 기본) */
 function toCalendarColor(projectColor) {
@@ -52,23 +53,31 @@ function mapAttendanceRequestsToCalendar(list) {
   return list
     .filter((r) => String(r.attendanceRequestStatus || '').toUpperCase() === 'APPROVED')
     .map((r) => {
-      const start = r.attendanceRequestStartDate != null ? String(r.attendanceRequestStartDate).slice(0, 10) : null;
-      const end = r.attendanceRequestEndDate != null ? String(r.attendanceRequestEndDate).slice(0, 10) : null;
+      // LocalDateTime이 배열([YYYY,MM,DD,...])로 올 수도 있어서 공통 util로 안전하게 포맷
+      const start = r.attendanceRequestStartDate != null ? formatDateToString(r.attendanceRequestStartDate) : null;
+      const end = r.attendanceRequestEndDate != null ? formatDateToString(r.attendanceRequestEndDate) : null;
       const t = String(r.attendanceRequestType || '').trim();
       const isWorkation = t === '워케이션';
       const type = isWorkation ? 'workation' : 'break';
       const typeName = isWorkation ? '워케이션' : '휴가';
-      const days = r.attendanceRequestUsingDays != null ? r.attendanceRequestUsingDays : (start && end ? Math.ceil((new Date(end) - new Date(start)) / (24 * 60 * 60 * 1000)) + 1 : 1);
+      const days =
+        r.attendanceRequestUsingDays != null
+          ? r.attendanceRequestUsingDays
+          : start && end
+            ? Math.ceil((new Date(end) - new Date(start)) / (24 * 60 * 60 * 1000)) + 1
+            : 1;
       return {
         id: r.attendanceRequestNo,
         type,
         typeName,
-        startDate: start,
+        startDate: start, // 'YYYY-MM-DD'
         endDate: end,
         days,
         reason: r.attendanceRequestReason || (isWorkation ? r.workcationLocation : '') || '',
         status: 'approved',
-        requestDate: r.attendanceRequestCreatedAt ? String(r.attendanceRequestCreatedAt).slice(0, 10) : null,
+        requestDate: r.attendanceRequestCreatedAt
+          ? formatDateToString(r.attendanceRequestCreatedAt)
+          : null,
       };
     })
     .filter((a) => a.startDate && a.endDate);
