@@ -407,7 +407,6 @@ export function ProjectDetailPage({
     setNotionLoading(true);
     try {
       const config = await projectService.getNotionConfig();
-      console.log('[Notion] config:', config);
       const { clientId, redirectUri } = config;
       const state = JSON.stringify({ projectNo: project.id });
       const authUrl =
@@ -430,7 +429,6 @@ export function ProjectDetailPage({
         }
         try {
           const result = await projectService.notionCallback(project.id, code);
-          console.log('Notion callback result:', result);
           const dbStatus = result?.dbStatus || '';
           const syncedCards = result?.syncedCards || 0;
           if (result?.databaseId) {

@@ -3,7 +3,7 @@
 // 프로덕션 환경: 실제 배포 URL로 변경 필요
 export const API_BASE_URL = import.meta.env.PROD
   ? 'http://localhost:8888'  // 프로덕션 환경 URL (실제 배포 시 변경 필요)
-  : 'http://localhost:8888';  // 개발 환경: 백엔드 직접 연결 (CORS 설정 필요)
+  : 'http://localhost:8888';  // 개발 환경에서도 백엔드 직접 호출
 export const API_TIMEOUT = 10000;
 
 /** DB THUMBNAIL_FILE을 이미지 URL로 변환 (업로드 경로: /uploads/) */
@@ -27,6 +27,14 @@ export function getMemberProfileUrl(profileImage) {
 /** 회원 프로필 없을 때 placeholder */
 export const MEMBER_AVATAR_PLACEHOLDER =
   'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"%3E%3Ccircle fill="%23e5e7eb" cx="24" cy="24" r="24"/%3E%3Cpath fill="%239ca3af" d="M24 24c4.4 0 8-3.6 8-8s-3.6-8-8-8-8 3.6-8 8 3.6 8 8 8zm0 4c-5.3 0-16 2.7-16 8v4h32v-4c0-5.3-10.7-8-16-8z"/%3E%3C/svg%3E';
+
+/** 채팅 첨부 파일 URL 변환 */
+export function getChatAttachmentUrl(attachmentUrl) {
+  if (!attachmentUrl) return null;
+  if (attachmentUrl.startsWith('http://') || attachmentUrl.startsWith('https://')) return attachmentUrl;
+  const base = API_BASE_URL || 'http://localhost:8888';
+  return `${base}${attachmentUrl}`;
+}
 
 /** 썸네일 없을 때 사용할 placeholder (회색 박스 SVG) */
 export const PROJECT_THUMBNAIL_PLACEHOLDER =
@@ -196,6 +204,20 @@ export const API_ENDPOINTS = {
     UNSCREENED_NOTIFY: (agencyNo, memberNo) => `/api/agency/${agencyNo}/unscreened-notify/${memberNo}`, // POST: 미검진 1명 알림
     UNSCREENED_NOTIFY_BULK: (agencyNo) => `/api/agency/${agencyNo}/unscreened-notify-bulk`, // POST: 7일 이상 지연 일괄 알림
     DEADLINE_COUNTS: (agencyNo) => `/api/agency/${agencyNo}/deadline-counts`, // GET: 마감 임박 현황 (담당자 관리 프로젝트 업무, 오늘~4일 후)
+  },
+
+  // 채팅 API
+  CHAT: {
+    ROOMS_BY_AGENCY: (agencyNo, type = 'all') => `/api/chat/rooms/agency/${agencyNo}?type=${type}`, // GET: 에이전시별 채팅방 목록
+    ROOM_DETAIL: (roomId) => `/api/chat/rooms/${roomId}`, // GET: 채팅방 상세 정보
+    MESSAGES: (roomId, page = 0, size = 50) => `/api/chat/rooms/${roomId}/messages?page=${page}&size=${size}`, // GET: 채팅 메시지 목록
+    SEND_MESSAGE: (roomId) => `/api/chat/rooms/${roomId}/messages`, // POST: 메시지 전송
+    UPLOAD_FILE: (roomId) => `/api/chat/rooms/${roomId}/upload`, // POST: 파일 업로드
+    CREATE_ROOM: `/api/chat/rooms`, // POST: 채팅방 생성
+    JOIN_ROOM: (roomId) => `/api/chat/rooms/${roomId}/join`, // POST: 채팅방 참여
+    LEAVE_ROOM: (roomId) => `/api/chat/rooms/${roomId}/leave`, // POST: 채팅방 나가기
+    READ_MESSAGE: (roomId, messageId) => `/api/chat/rooms/${roomId}/messages/${messageId}/read`, // PUT: 메시지 읽음 처리
+    MESSAGE_READ_STATUS: (roomId, chatNo) => `/api/chat/rooms/${roomId}/messages/${chatNo}/read-status`, // GET: 해당 메시지를 읽지 않은 참여 멤버 수
   },
 
   // AI 챗봇 API (역할별)
