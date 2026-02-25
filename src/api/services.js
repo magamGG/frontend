@@ -273,6 +273,15 @@ export const leaveService = {
     });
     return response;
   },
+
+  // 근태 신청 첨부 파일 업로드 (병가 진단서 등)
+  uploadMedicalFile: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post(API_ENDPOINTS.LEAVE.UPLOAD_FILE, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
 };
 
 // 프로젝트 서비스

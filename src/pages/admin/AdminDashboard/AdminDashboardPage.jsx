@@ -569,9 +569,8 @@ export function AdminDashboardPage({ onNavigateToSection }) {
         };
         const statusMap = { PENDING: '대기', APPROVED: '승인', REJECTED: '반려' };
         const formatDate = (dt) => {
-          if (!dt) return '';
-          const d = typeof dt === 'string' ? new Date(dt) : dt;
-          if (isNaN(d.getTime())) return '';
+          const d = parseBackendDate(dt);
+          if (!d) return '';
           return `${d.getMonth() + 1}월 ${d.getDate()}일`;
         };
         const filtered = arr.filter((item) => String(item.attendanceRequestType || '').trim() !== '휴재');
