@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
@@ -280,8 +280,6 @@ const REQUEST_STATUS_MAP = {
   CANCELLED: REQUEST_STATUS.REJECTED,
 };
 
-const TASK_STORAGE_KEY = 'artistTaskCompletions';
-
 export function ArtistDashboardPage() {
   const [isWorking, setIsWorking] = useState(false);
   const [healthCheckCompleted, setHealthCheckCompleted] = useState(false);
@@ -302,6 +300,7 @@ export function ArtistDashboardPage() {
   const [tasks, setTasks] = useState([]);
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
   const [taskStatuses, setTaskStatuses] = useState({});
+  const [togglingCardId, setTogglingCardId] = useState(null);
   const [currentAttendanceType, setCurrentAttendanceType] = useState(null);
   const [currentAttendanceData, setCurrentAttendanceData] = useState(null);
   const [healthSurvey, setHealthSurvey] = useState({
@@ -378,85 +377,91 @@ export function ArtistDashboardPage() {
     fetchMemos();
   }, []);
 
-  // localStorage에서 오늘 할 일 완료 상태 로드
-  useEffect(() => {
-    const stored = localStorage.getItem(TASK_STORAGE_KEY);
-    if (stored) {
-      try {
-        setTaskStatuses(JSON.parse(stored));
-      } catch {
-        setTaskStatuses({});
-      }
-    }
-  }, []);
-
   // 오늘 할 일 (칸반 카드 DB 연동) - 담당 배정 + 미완료(N) 카드 전부, 마감일 가까운 순
-  useEffect(() => {
-    const fetchTasks = async () => {
-      const memberNo = useAuthStore.getState().user?.memberNo;
-      if (!memberNo) return;
+  const fetchTasks = useCallback(async () => {
+    const memberNo = useAuthStore.getState().user?.memberNo;
+    if (!memberNo) return;
 
-      setIsLoadingTasks(true);
-      try {
-        const response = await projectService.getMyTodayTasks();
-        const list = Array.isArray(response) ? response : [];
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+    setIsLoadingTasks(true);
+    try {
+      const response = await projectService.getMyTodayTasks();
+      const list = Array.isArray(response) ? response : [];
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
 
-        const mapped = list.map((item) => {
-          const endDate = item.dueDate ? new Date(item.dueDate) : null;
-          if (endDate) endDate.setHours(0, 0, 0, 0);
-          const daysLeft = endDate ? Math.ceil((endDate - today) / (1000 * 60 * 60 * 24)) : null;
+      const msPerDay = 1000 * 60 * 60 * 24;
+      const mapped = list.map((item) => {
+        const endDate = item.dueDate ? new Date(String(item.dueDate).slice(0, 10)) : null;
+        const startDate = item.startDate ? new Date(String(item.startDate).slice(0, 10)) : null;
+        if (endDate) endDate.setHours(0, 0, 0, 0);
+        if (startDate) startDate.setHours(0, 0, 0, 0);
+        const remainingDays = endDate ? Math.ceil((endDate - today) / msPerDay) : null;
+        const totalDays = startDate && endDate ? Math.ceil((endDate - startDate) / msPerDay) : null;
 
-          let badge = '일정';
-          let badgeColor = 'blue';
-          if (daysLeft !== null) {
-            if (daysLeft === 0) {
+        let badge = '일정';
+        let badgeColor = 'blue';
+        if (remainingDays !== null) {
+          if (totalDays != null) {
+            if (today < startDate) {
+              badge = `시작 전 (총 ${totalDays}일)`;
+              badgeColor = 'blue';
+            } else if (remainingDays === 0) {
               badge = 'D-0 마감';
               badgeColor = 'destructive';
-            } else if (daysLeft > 0) {
-              badge = `D-${daysLeft}`;
+            } else if (remainingDays > 0) {
+              badge = `총 ${totalDays}일 중 ${remainingDays}일 남음`;
+              badgeColor = 'blue';
+            } else {
+              badge = '기한 경과';
+              badgeColor = 'destructive';
+            }
+          } else {
+            if (remainingDays === 0) {
+              badge = 'D-0 마감';
+              badgeColor = 'destructive';
+            } else if (remainingDays > 0) {
+              badge = `D-${remainingDays}`;
               badgeColor = 'blue';
             } else {
               badge = '기한 경과';
               badgeColor = 'destructive';
             }
           }
+        }
 
-          return {
-            id: item.id,
-            projectNo: item.projectNo,
-            boardId: item.boardId,
-            project: item.projectName || '업무',
-            title: item.title || '업무 카드',
-            description: item.description || '',
-            daysLeft: daysLeft ?? 999,
-            badge,
-            badgeColor,
-            urgent: daysLeft !== null && daysLeft <= 0,
-          };
-        });
+        return {
+          id: item.id,
+          projectNo: item.projectNo,
+          boardId: item.boardId,
+          project: item.projectName || '업무',
+          title: item.title || '업무 카드',
+          description: item.description || '',
+          daysLeft: remainingDays ?? 999,
+          badge,
+          badgeColor,
+          urgent: remainingDays !== null && remainingDays <= 0,
+          completed: Boolean(item.completed),
+        };
+      });
 
-        // 기간 지난 업무(daysLeft < 0) 제외
-        const filtered = mapped.filter((t) => t.daysLeft === 999 || t.daysLeft >= 0);
-        setTasks(filtered);
-      } catch (error) {
-        console.error('오늘 할 일 조회 실패:', error);
-        setTasks([]);
-      } finally {
-        setIsLoadingTasks(false);
-      }
-    };
-
-    fetchTasks();
+      // 기간 지난 업무(daysLeft < 0) 제외
+      const filtered = mapped.filter((t) => t.daysLeft === 999 || t.daysLeft >= 0);
+      setTasks(filtered);
+      // API 완료 상태 반영 → 다른 페이지 갔다 와도 완료된 일이 취소선+완료 버튼으로 남아 있음
+      setTaskStatuses(
+        Object.fromEntries(filtered.map((t) => [t.id, t.completed ? TASK_STATUS.COMPLETED : TASK_STATUS.IN_PROGRESS]))
+      );
+    } catch (error) {
+      console.error('오늘 할 일 조회 실패:', error);
+      setTasks([]);
+    } finally {
+      setIsLoadingTasks(false);
+    }
   }, []);
 
-  // taskStatuses 변경 시 localStorage 저장
   useEffect(() => {
-    if (Object.keys(taskStatuses).length > 0) {
-      localStorage.setItem(TASK_STORAGE_KEY, JSON.stringify(taskStatuses));
-    }
-  }, [taskStatuses]);
+    fetchTasks();
+  }, [fetchTasks]);
 
   // 메모 저장 시 localStorage에도 저장
   useEffect(() => {
@@ -732,21 +737,25 @@ export function ArtistDashboardPage() {
     toast.info('건강 체크를 취소했습니다. 작업이 시작되지 않았습니다.');
   };
 
-  // 할 일 상태 토글 (로컬 완료 표시, localStorage 저장)
-  const toggleTaskStatus = (taskId) => {
-    const currentStatus = taskStatuses[taskId] || TASK_STATUS.IN_PROGRESS;
-    if (currentStatus === TASK_STATUS.IN_PROGRESS) {
-      setTaskStatuses((prev) => ({
-        ...prev,
-        [taskId]: TASK_STATUS.COMPLETED,
-      }));
-      toast.success('작업이 완료되었습니다.');
-    } else {
-      setTaskStatuses((prev) => ({
-        ...prev,
-        [taskId]: TASK_STATUS.IN_PROGRESS,
-      }));
-      toast.info('작업을 다시 진행 중으로 변경했습니다.');
+  // 할 일 상태 토글 (칸반 카드 완료 상태 API 연동 → 프로젝트 칸반보드와 동기화)
+  const toggleTaskStatus = async (task) => {
+    if (!task?.projectNo) {
+      toast.error('프로젝트 정보가 없어 완료 상태를 변경할 수 없습니다.');
+      return;
+    }
+    const currentCompleted = taskStatuses[task.id] === TASK_STATUS.COMPLETED;
+    const newCompleted = !currentCompleted;
+
+    setTogglingCardId(task.id);
+    try {
+      await projectService.updateKanbanCard(task.projectNo, task.id, { completed: newCompleted });
+      setTaskStatuses((prev) => ({ ...prev, [task.id]: newCompleted ? TASK_STATUS.COMPLETED : TASK_STATUS.IN_PROGRESS }));
+      if (newCompleted) toast.success('작업이 완료되었습니다. 칸반 보드에도 반영됩니다.');
+      else toast.info('작업을 다시 진행 중으로 변경했습니다.');
+    } catch (error) {
+      toast.error(error?.response?.data?.message || '완료 상태 변경에 실패했습니다.');
+    } finally {
+      setTogglingCardId(null);
     }
   };
 
@@ -1108,7 +1117,8 @@ export function ArtistDashboardPage() {
                           <TaskProject>{task.project}</TaskProject>
                           <TaskCompleteButton
                             $isCompleted={isCompleted}
-                            onClick={() => toggleTaskStatus(task.id)}
+                            onClick={() => toggleTaskStatus(task)}
+                            disabled={togglingCardId === task.id}
                           >
                             {isCompleted ? '완료' : '진행 중'}
                           </TaskCompleteButton>
@@ -1436,7 +1446,8 @@ export function ArtistDashboardPage() {
                     <TaskModalBadge>{task.project}</TaskModalBadge>
                     <TaskCompleteButton
                       $isCompleted={isCompleted}
-                      onClick={() => toggleTaskStatus(task.id)}
+                      onClick={() => toggleTaskStatus(task)}
+                      disabled={togglingCardId === task.id}
                     >
                       {isCompleted ? '완료' : '진행 중'}
                     </TaskCompleteButton>
