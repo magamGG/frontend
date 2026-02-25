@@ -1253,11 +1253,6 @@ export function CalendarComponent({
         )}
       </Modal>
 
-      {/* 근태 신청 모달 */}
-      {LeaveRequestModalComponent && (
-        <LeaveRequestModalComponent open={isAttendanceModalOpen} onOpenChange={setIsAttendanceModalOpen} />
-      )}
-
       {/* 메모 삭제 확인 모달 */}
       <Modal isOpen={showDeleteMemoConfirm} onClose={() => { setShowDeleteMemoConfirm(false); }} title="메모 삭제 확인" maxWidth="sm">
         <WarningBox>
