@@ -148,6 +148,13 @@ export const API_ENDPOINTS = {
     KANBAN_CARD_UPDATE: (projectNo, cardId) => `/api/projects/${projectNo}/kanban-card/${cardId}`, // PUT: 칸반 카드 수정
     KANBAN_CARD_COMMENTS: (projectNo, cardId) => `/api/projects/${projectNo}/kanban-card/${cardId}/comments`, // GET: 목록, POST: 추가
     KANBAN_CARD_COMMENT_UPDATE: (projectNo, cardId, commentId) => `/api/projects/${projectNo}/kanban-card/${cardId}/comments/${commentId}`, // PUT: 코멘트 수정
+    // Notion OAuth (프로젝트 칸반 보드 연동)
+    NOTION_CONFIG: `/api/projects/notion/config`,
+    NOTION_CALLBACK: (projectNo) => `/api/projects/${projectNo}/notion/callback`,
+    NOTION_STATUS: (projectNo) => `/api/projects/${projectNo}/notion/status`,
+    NOTION_DATABASE: (projectNo) => `/api/projects/${projectNo}/notion/database`,
+    NOTION_DISCONNECT: (projectNo) => `/api/projects/${projectNo}/notion`,
+    NOTION_SYNC: (projectNo) => `/api/projects/${projectNo}/notion/sync`,
   },
 
   // 캘린더 API
