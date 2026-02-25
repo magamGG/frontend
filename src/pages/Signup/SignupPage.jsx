@@ -271,8 +271,8 @@ export function SignupPage({ onSignup, onBackToLogin }) {
     setIsComposing(prev => ({ ...prev, [name]: false }));
     // 조합 종료 후 필터링 적용
     if (name === 'specialization') {
-      // 기타 직무 입력: 숫자, 특수문자 제거 (공백은 허용)
-      const filtered = e.target.value.replace(/[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z\s]/g, '');
+      // 기타 직무 입력: 특수문자 제거 (한글, 영어, 숫자, 공백은 허용)
+      const filtered = e.target.value.replace(/[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z0-9\s]/g, '');
       setCustomSpecializationInput(filtered);
     } else {
       handleInputChange(e);
@@ -581,8 +581,8 @@ export function SignupPage({ onSignup, onBackToLogin }) {
                                       setCustomSpecializationInput(e.target.value);
                                       return;
                                     }
-                                    // 기타 직무 입력: 숫자, 특수문자 제거 (공백은 허용)
-                                    const filtered = e.target.value.replace(/[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z\s]/g, '');
+                                    // 기타 직무 입력: 특수문자 제거 (한글, 영어, 숫자, 공백은 허용)
+                                    const filtered = e.target.value.replace(/[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z0-9\s]/g, '');
                                     setCustomSpecializationInput(filtered);
                                   }}
                                   onCompositionStart={handleCompositionStart}

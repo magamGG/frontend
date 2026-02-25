@@ -8,7 +8,7 @@ import { chatService } from '@/api/services';
 import api from '@/api/axios';
 import { getChatAttachmentUrl, getMemberProfileUrl, MEMBER_AVATAR_PLACEHOLDER } from '@/api/config';
 import websocketService from '@/services/websocketService';
-import { ChatProfileModal } from '../ChatProfileModal';
+import { TeamMemberProfileModal } from '@/components/modals/TeamMemberProfileModal';
 
 export function ChatDetailModal() {
   const { isChatOpen, selectedChat, closeChat, backToList, refreshChatRooms } = useChatStore();
@@ -641,11 +641,27 @@ export function ChatDetailModal() {
         </S.ModalOverlay>
       )}
 
-      <ChatProfileModal
-        isOpen={isProfileModalOpen}
-        onClose={() => setIsProfileModalOpen(false)}
-        memberNo={selectedMemberNo}
-        memberInfo={chatRoomMembers[selectedMemberNo]}
+      <TeamMemberProfileModal
+        member={
+          isProfileModalOpen && selectedMemberNo != null
+            ? (() => {
+                const m = chatRoomMembers[selectedMemberNo];
+                return {
+                  name: m?.memberName ?? '참여자',
+                  role: m?.memberRole ?? '',
+                  memberRole: m?.memberRole ?? '',
+                  email: m?.memberEmail ?? '',
+                  phone: m?.memberPhone ?? '',
+                  status: m?.todayDisplayStatus ?? m?.memberStatus ?? '',
+                  avatar: m?.profileImage ? getMemberProfileUrl(m.profileImage) : null,
+                };
+              })()
+            : null
+        }
+        onClose={() => {
+          setIsProfileModalOpen(false);
+          setSelectedMemberNo(null);
+        }}
       />
     </AnimatePresence>
   );

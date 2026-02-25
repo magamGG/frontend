@@ -3,15 +3,13 @@ import { Card } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
 import { Modal } from '@/components/common/Modal';
-import { 
-  ArrowLeft, 
-  Users, 
-  Plus, 
-  X, 
-  Calendar, 
-  Mail, 
-  Phone, 
-  Briefcase,
+import { TeamMemberProfileModal } from '@/components/modals/TeamMemberProfileModal';
+import {
+  ArrowLeft,
+  Users,
+  Plus,
+  X,
+  Calendar,
   Trash2,
   Edit,
   Save,
@@ -21,7 +19,7 @@ import {
   CheckCircle2,
   ExternalLink,
   Link2Off,
-  RefreshCw
+  RefreshCw,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
@@ -1877,57 +1875,11 @@ export function ProjectDetailPage({
         </div>
       </Modal>
 
-      {/* 팀원 프로필 상세 모달 */}
-      <Modal
-        isOpen={selectedMember !== null}
+      {/* 팀원 프로필 상세 모달 - 공통 컴포넌트 사용 */}
+      <TeamMemberProfileModal
+        member={selectedMember}
         onClose={() => setSelectedMember(null)}
-        title="팀원 프로필"
-        maxWidth="md"
-      >
-        {selectedMember && (
-          <div className="space-y-6">
-            <div className="flex items-center gap-4">
-              <ImageWithFallback
-                src={selectedMember.avatar || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150'}
-                alt={selectedMember.name}
-                className="w-20 h-20 rounded-full object-cover"
-              />
-              <div className="flex-1">
-                <h3 className="text-2xl font-bold text-foreground mb-2">{selectedMember.name}</h3>
-                <Badge className={getStatusBadgeColor(selectedMember.status)}>
-                  {selectedMember.status}
-                </Badge>
-              </div>
-            </div>
-
-            <div className="space-y-3 pt-4 border-t border-border">
-              <div className="flex items-center gap-3">
-                <Briefcase className="w-5 h-5 text-muted-foreground" />
-                <div>
-                  <p className="text-xs text-muted-foreground">직무</p>
-                  <p className="text-sm font-medium text-foreground">{selectedMember.memberRole || selectedMember.role}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Mail className="w-5 h-5 text-muted-foreground" />
-                <div>
-                  <p className="text-xs text-muted-foreground">이메일</p>
-                  <p className="text-sm font-medium text-foreground">{selectedMember.email}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Phone className="w-5 h-5 text-muted-foreground" />
-                <div>
-                  <p className="text-xs text-muted-foreground">전화번호</p>
-                  <p className="text-sm font-medium text-foreground">{selectedMember.phone}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </Modal>
+      />
 
       {/* 카드 추가/수정 모달 - Trello/Atlassian 스타일 */}
       <Modal
