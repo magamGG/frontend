@@ -3,7 +3,6 @@ import { subscribeWithSelector } from 'zustand/middleware';
 import apiServices from '@/api/services';
 import useAuthStore from '@/store/authStore';
 import websocketService from '@/services/websocketService';
-import chatPerformanceMonitor from '@/utils/chatPerformanceMonitor';
 
 const { chatService } = apiServices;
 
@@ -183,10 +182,6 @@ const useChatStore = create(
         set({ chatRooms: [], _memoizedTotalUnreadCount: 0, _lastChatRoomsHash: null });
       } finally {
         set({ isLoading: false, isLoadingChatList: false });
-        
-        // 성능 기록
-        const duration = performance.now() - startTime;
-        chatPerformanceMonitor.recordRenderTime('openChatList_api', duration);
       }
     },
 
@@ -196,12 +191,13 @@ const useChatStore = create(
       const roomId = room.chatRoomNo || room.roomId || room.roomNo || room.id;
 
       if (!roomId) {
-        console.error('❌ [채팅스토어] 유효하지 않은 방 ID');
+        console.error('❌ [채팅스토어] 유효하지 않은 방 ID:', room);
         return;
       }
 
       // 이미 같은 방을 보고 있다면 중복 처리 방지
       const { selectedChat } = get();
+
       if (selectedChat?.chatRoomNo === roomId) {
         set({ viewMode: 'detail' });
         return;
@@ -210,9 +206,6 @@ const useChatStore = create(
       set({ isChatOpen: true, viewMode: 'detail', selectedChat: room, isLoading: true });
 
       try {
-        // chatRoomNo를 통해 ChatRoomMember 엔티티에서 참여자 목록 조회 및 로그 출력
-        await chatService.logChatRoomMembers(roomId);
-        
         // 메시지 로드는 ChatModal에서 처리하므로 여기서는 상태만 설정
         // 필요시 미리 로드할 수도 있지만, 현재는 ChatModal에서 처리
       } catch (error) {
@@ -363,6 +356,18 @@ const useChatStore = create(
         _memoizedTotalUnreadCount: 0,
         _lastChatRoomsHash: null
       });
+    },
+
+    forceClearAndRefresh: async () => {
+      chatService.clearCache();
+      get().clearCache();
+      set({
+        chatRooms: [],
+        lastRefreshTime: 0,
+        _memoizedTotalUnreadCount: 0,
+        _lastChatRoomsHash: null
+      });
+      await get().refreshChatRooms(true);
     },
   }))
 );

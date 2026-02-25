@@ -377,7 +377,7 @@ export function AdminDashboardPage({ onNavigateToSection }) {
             artist: p.artist || '-',
             status: p.status || '정상',
             progress: p.progress ?? 0,
-            deadline,
+            deadline: deadline === '-' ? '미정' : deadline,
           };
         });
 
@@ -439,6 +439,7 @@ export function AdminDashboardPage({ onNavigateToSection }) {
         const formatReqDate = (dt) => {
           if (!dt) return '';
           const d = typeof dt === 'string' ? new Date(dt) : dt;
+          if (isNaN(d.getTime())) return '';
           return `${d.getMonth() + 1}월 ${d.getDate()}일`;
         };
         const mapped = filtered.map((item) => {
@@ -569,6 +570,7 @@ export function AdminDashboardPage({ onNavigateToSection }) {
         const formatDate = (dt) => {
           if (!dt) return '';
           const d = typeof dt === 'string' ? new Date(dt) : dt;
+          if (isNaN(d.getTime())) return '';
           return `${d.getMonth() + 1}월 ${d.getDate()}일`;
         };
         const filtered = arr.filter((item) => String(item.attendanceRequestType || '').trim() !== '휴재');
@@ -720,6 +722,7 @@ export function AdminDashboardPage({ onNavigateToSection }) {
   const formatPeriodDate = (dateString) => {
     if (!dateString) return '';
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
     return `${date.getMonth() + 1}월 ${date.getDate()}일`;
   };
 

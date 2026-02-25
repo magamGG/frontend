@@ -104,22 +104,11 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
       try {
         const myRequest = await agencyService.getMyPendingJoinRequest();
         
-        console.log('🔍 [대기 중인 요청 확인] 전체 응답:', myRequest);
-        console.log('🔍 [대기 중인 요청 확인] 응답 타입:', typeof myRequest);
-        console.log('🔍 [대기 중인 요청 확인] agencyName:', myRequest?.agencyName);
-        console.log('🔍 [대기 중인 요청 확인] newRequestStatus:', myRequest?.newRequestStatus);
-        
-        // 대기 중인 요청이 있으면 success 화면으로 전환
         if (myRequest && myRequest.newRequestStatus === '대기') {
           setStep('success');
           setAgencyName(myRequest.agencyName || '');
-          console.log('✅ [대기 중인 요청 확인] 에이전시명 설정됨:', myRequest.agencyName);
         }
       } catch (error) {
-        // 204 No Content는 정상 (대기 중인 요청 없음)
-        console.log('⚠️ [대기 중인 요청 확인] 에러 발생:', error);
-        console.log('⚠️ [대기 중인 요청 확인] 에러 status:', error?.status);
-        console.log('⚠️ [대기 중인 요청 확인] 에러 response.status:', error?.response?.status);
         if (error?.status !== 204 && error?.response?.status !== 204) {
           console.error('❌ [대기 중인 요청 확인] 가입 요청 상태 확인 실패:', error);
         }
@@ -128,15 +117,6 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
 
     checkPendingRequest();
   }, [user?.memberNo]);
-
-  // 성공 화면 렌더링 시 agencyName 상태 확인
-  useEffect(() => {
-    if (step === 'success') {
-      console.log('🔍 [성공 화면] step이 success로 변경됨');
-      console.log('🔍 [성공 화면] 현재 agencyName 상태:', agencyName);
-      console.log('🔍 [성공 화면] 표시될 텍스트:', agencyName ? `${agencyName}에 요청이 전송되었습니다!` : '요청이 전송되었습니다!');
-    }
-  }, [step, agencyName]);
 
   // IME 조합 시작
   const handleCompositionStart = (e) => {
@@ -243,23 +223,12 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
 
       const response = await agencyService.requestJoinAgency(requestData);
       
-      console.log('🔍 [가입 요청 전송] 전체 응답:', response);
-      console.log('🔍 [가입 요청 전송] 응답 타입:', typeof response);
-      console.log('🔍 [가입 요청 전송] response?.agencyName:', response?.agencyName);
-      console.log('🔍 [가입 요청 전송] response 구조:', JSON.stringify(response, null, 2));
-      
-      // 응답에서 에이전시명 가져오기
       if (response?.agencyName) {
         setAgencyName(response.agencyName);
-        console.log('✅ [가입 요청 전송] 에이전시명 설정됨:', response.agencyName);
-      } else {
-        console.warn('⚠️ [가입 요청 전송] 응답에 agencyName이 없습니다. 응답:', response);
       }
       
       toast.success('에이전시 가입 요청이 전송되었습니다!');
-      // 요청 완료 화면으로 전환. 대시보드 이동은 "완료" 버튼 클릭 시에만 handleComplete → onSuccess 로 처리.
       setStep('success');
-      console.log('✅ [가입 요청 전송] success 화면으로 전환, agencyName 상태:', agencyName);
     } catch (error) {
       const errorMessage = error?.message || '에이전시 가입 요청 전송에 실패했습니다. 다시 시도해주세요.';
       toast.error(errorMessage);
@@ -534,3 +503,5 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
     </JoinAgencyRequestRoot>
   );
 }
+
+export default JoinAgencyRequestPage;

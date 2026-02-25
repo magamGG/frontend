@@ -21,15 +21,6 @@ export function RequestDetailModal({ open, onOpenChange, request }) {
   const [isImageExpanded, setIsImageExpanded] = useState(false);
   const [expandedImages, setExpandedImages] = useState(new Set());
 
-  // 디버깅: request 객체 확인
-  useEffect(() => {
-    if (request && open) {
-      console.log('RequestDetailModal - request:', request);
-      console.log('RequestDetailModal - medicalFileUrl:', request.medicalFileUrl);
-      console.log('RequestDetailModal - attachedFile:', request.attachedFile);
-    }
-  }, [request, open]);
-
   if (!request) return null;
 
   const formatDate = (dateStr) => {
@@ -138,9 +129,7 @@ export function RequestDetailModal({ open, onOpenChange, request }) {
       ? envBaseUrl.trim() 
       : 'http://localhost:8888';
     
-    // 최종 URL 조합: BASE_URL + /uploads/attendance/ + filename
     const fullUrl = `${BASE_URL}/uploads/attendance/${cleanFileName}`;
-    console.log('buildFileUrl - fileName:', fileNameStr, 'BASE_URL:', BASE_URL, 'envBaseUrl:', envBaseUrl, '-> fullUrl:', fullUrl);
     return fullUrl;
   };
 

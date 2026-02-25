@@ -27,15 +27,11 @@ const useAuthStore = create(
       },
       
       logout: async () => {
-        const { refreshToken } = get();
-        
-        // 백엔드에 로그아웃 요청 (Refresh Token 무효화)
-        if (refreshToken) {
-          try {
-            await authService.logout(refreshToken);
-          } catch (error) {
-            console.error('로그아웃 요청 실패:', error);
-          }
+        // 백엔드에 로그아웃 요청 (쿠키 기반, Refresh Token 무효화)
+        try {
+          await authService.logout();
+        } catch (error) {
+          console.error('로그아웃 요청 실패:', error);
         }
         
         set({
@@ -49,53 +45,37 @@ const useAuthStore = create(
         localStorage.removeItem('auth-storage');
       },
       
-      // Access Token 갱신
+      // Access Token 갱신 (쿠키 기반 reissue 사용)
       refreshAccessToken: async () => {
-        const { refreshToken, isRefreshing } = get();
+        const { isRefreshing } = get();
         
-        // 이미 갱신 중이면 대기
         if (isRefreshing) {
-          console.log('⏳ [authStore] 이미 갱신 중입니다. 대기...');
-          // Promise가 완료될 때까지 대기 (최대 5초)
-          const startTime = Date.now();
-          while (get().isRefreshing && Date.now() - startTime < 5000) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-          }
-          // 대기 후에도 갱신 중이면 null 반환
-          if (get().isRefreshing) {
-            return null;
-          }
-          // 갱신 완료 후 새 토큰 반환
-          return get().token;
+          return null;
         }
         
-        // Refresh Token이 없으면 갱신 불가
-        if (!refreshToken) {
-          console.error('❌ [authStore] Refresh Token이 없습니다.');
-          throw new Error('Refresh Token이 없습니다.');
-        }
-        
-        console.log('🔄 [authStore] refreshAccessToken() 호출 시작');
         set({ isRefreshing: true });
         
         try {
-          console.log('📡 [authStore] 서버에 refresh 요청 전송...');
-          const response = await authService.refresh(refreshToken);
-          const { accessToken, refreshToken: newRefreshToken } = response;
+          // 쿠키 기반 reissue 사용 (body 없음)
+          const response = await authService.reissue();
+          const { accessToken } = response;
           
-          console.log('✅ [authStore] refresh 성공, 새 토큰 저장');
+          if (!accessToken) {
+            throw new Error('Access Token이 응답에 없습니다.');
+          }
           
-          // 새 토큰 저장
+          // 새 Access Token만 저장 (Refresh Token은 쿠키에 있음)
           set({
             token: accessToken,
-            refreshToken: newRefreshToken,
             isRefreshing: false,
           });
           
           return accessToken;
         } catch (error) {
-          // Refresh Token도 만료된 경우 로그아웃
-          console.error('❌ [authStore] refresh 실패:', error);
+          // Reissue 실패 시 (401) - Valkey에 토큰이 없거나 만료됨
+          console.error('❌ [authStore] reissue 실패:', error);
+          
+          // 상태 초기화 및 로그인 페이지로 이동
           set({
             isRefreshing: false,
             user: null,
@@ -103,7 +83,14 @@ const useAuthStore = create(
             refreshToken: null,
             isAuthenticated: false,
           });
+          
           localStorage.removeItem('auth-storage');
+          
+          // 로그인 페이지로 리다이렉트
+          if (window.location.pathname !== '/login') {
+            window.location.href = '/login';
+          }
+          
           throw error;
         }
       },
@@ -138,8 +125,10 @@ const useAuthStore = create(
       initializeAuth: async () => {
         const { refreshToken, user, isAuthenticated } = get();
         
-        // Refresh Token과 사용자 정보가 있으면 Access Token 복원 시도
-        if (refreshToken && user && isAuthenticated) {
+        // 사용자 정보가 있으면 Access Token 복원 시도
+        // Refresh Token은 쿠키(HttpOnly)에 있을 수 있으므로, localStorage에 없어도 시도
+        // 백엔드에서 쿠키를 확인하여 reissue 수행
+        if (user && isAuthenticated) {
           try {
             const newAccessToken = await get().refreshAccessToken();
             if (newAccessToken) {
@@ -154,7 +143,7 @@ const useAuthStore = create(
           }
         }
         
-        // Refresh Token이 없거나 사용자 정보가 없으면 false
+        // 사용자 정보가 없으면 false
         return false;
       },
     }),

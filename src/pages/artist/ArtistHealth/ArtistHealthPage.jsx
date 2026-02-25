@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { CheckCircle, Calendar, Clock, FileText, AlertCircle, Activity, Shield, Stethoscope, X } from 'lucide-react';
 import { toast } from 'sonner';
 import useAuthStore from '@/store/authStore';
+import { formatDateSafe } from '@/utils/dateUtils';
 import api from '@/api/axios';
 import {
   ArtistHealthRoot,
@@ -287,38 +288,25 @@ export function ArtistHealthPage() {
 
   // 설문 완료 상태 조회 함수 (재사용 가능하도록 분리)
   const fetchSurveyStatus = async () => {
-    if (!memberNo) {
-      console.log('memberNo가 없어서 설문 상태 조회를 건너뜁니다.');
-      return;
-    }
+    if (!memberNo) return;
 
     try {
-      console.log('설문 상태 조회 시작:', memberNo);
-      
       // 정신 건강 설문 상태 조회
       const mentalStatus = await api.get(`/api/health-surveys/member/${memberNo}/responses`, {
         params: { type: '월간 정신' }
       });
       
-      console.log('정신 건강 설문 상태:', mentalStatus);
-      
       // Jackson이 boolean 필드를 직렬화할 때 isCompleted -> completed로 변환될 수 있음
       const mentalIsCompleted = mentalStatus.isCompleted ?? mentalStatus.completed ?? false;
       
       if (mentalIsCompleted) {
-        const checkDate = new Date(mentalStatus.lastCheckDate);
-        const formattedDate = `${checkDate.getFullYear()}.${String(checkDate.getMonth() + 1).padStart(2, '0')}.${String(checkDate.getDate()).padStart(2, '0')}`;
-        
-        // 다음 검진일 포맷팅
+        const formattedDate = formatDateSafe(mentalStatus.lastCheckDate, 'dot', '');
         let nextCheckupDateFormatted = '';
         let daysRemaining = null;
         if (mentalStatus.nextCheckupDate) {
-          const nextDate = new Date(mentalStatus.nextCheckupDate);
-          nextCheckupDateFormatted = `${nextDate.getFullYear()}.${String(nextDate.getMonth() + 1).padStart(2, '0')}.${String(nextDate.getDate()).padStart(2, '0')}`;
+          nextCheckupDateFormatted = formatDateSafe(mentalStatus.nextCheckupDate, 'dot', '');
           daysRemaining = mentalStatus.daysRemaining ?? null;
         }
-        
-        console.log('정신 건강 설문 완료 - 날짜:', formattedDate, '점수:', mentalStatus.totalScore, '남은 일수:', daysRemaining);
         
         setDeepCheckupData(prev => ({
           ...prev,
@@ -338,8 +326,7 @@ export function ArtistHealthPage() {
         let deadlineDateFormatted = '';
         let daysRemaining = null;
         if (mentalStatus.deadlineDate) {
-          const deadline = new Date(mentalStatus.deadlineDate);
-          deadlineDateFormatted = `${deadline.getFullYear()}.${String(deadline.getMonth() + 1).padStart(2, '0')}.${String(deadline.getDate()).padStart(2, '0')}`;
+          deadlineDateFormatted = formatDateSafe(mentalStatus.deadlineDate, 'dot', '');
           daysRemaining = mentalStatus.daysRemaining ?? null;
         }
         setDeepCheckupData(prev => ({
@@ -362,25 +349,17 @@ export function ArtistHealthPage() {
         params: { type: '월간 신체' }
       });
       
-      console.log('신체 건강 설문 상태:', physicalStatus);
-      
       // Jackson이 boolean 필드를 직렬화할 때 isCompleted -> completed로 변환될 수 있음
       const physicalIsCompleted = physicalStatus.isCompleted ?? physicalStatus.completed ?? false;
       
       if (physicalIsCompleted) {
-        const checkDate = new Date(physicalStatus.lastCheckDate);
-        const formattedDate = `${checkDate.getFullYear()}.${String(checkDate.getMonth() + 1).padStart(2, '0')}.${String(checkDate.getDate()).padStart(2, '0')}`;
-        
-        // 다음 검진일 포맷팅
+        const formattedDate = formatDateSafe(physicalStatus.lastCheckDate, 'dot', '');
         let nextCheckupDateFormatted = '';
         let daysRemaining = null;
         if (physicalStatus.nextCheckupDate) {
-          const nextDate = new Date(physicalStatus.nextCheckupDate);
-          nextCheckupDateFormatted = `${nextDate.getFullYear()}.${String(nextDate.getMonth() + 1).padStart(2, '0')}.${String(nextDate.getDate()).padStart(2, '0')}`;
+          nextCheckupDateFormatted = formatDateSafe(physicalStatus.nextCheckupDate, 'dot', '');
           daysRemaining = physicalStatus.daysRemaining ?? null;
         }
-        
-        console.log('신체 건강 설문 완료 - 날짜:', formattedDate, '점수:', physicalStatus.totalScore, '남은 일수:', daysRemaining);
         
         setDeepCheckupData(prev => ({
           ...prev,
@@ -400,8 +379,7 @@ export function ArtistHealthPage() {
         let deadlineDateFormatted = '';
         let daysRemaining = null;
         if (physicalStatus.deadlineDate) {
-          const deadline = new Date(physicalStatus.deadlineDate);
-          deadlineDateFormatted = `${deadline.getFullYear()}.${String(deadline.getMonth() + 1).padStart(2, '0')}.${String(deadline.getDate()).padStart(2, '0')}`;
+          deadlineDateFormatted = formatDateSafe(physicalStatus.deadlineDate, 'dot', '');
           daysRemaining = physicalStatus.daysRemaining ?? null;
         }
         setDeepCheckupData(prev => ({

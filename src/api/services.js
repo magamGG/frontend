@@ -1,6 +1,5 @@
 import api from './axios';
 import { API_ENDPOINTS } from './config';
-import chatPerformanceMonitor from '@/utils/chatPerformanceMonitor';
 
 // 인증 서비스
 export const authService = {
@@ -24,14 +23,19 @@ export const authService = {
     return api.post(API_ENDPOINTS.AUTH.RESET_PASSWORD, { email, code, newPassword });
   },
   
-  // 토큰 갱신
+  // 토큰 갱신 (하위 호환성 - Request Body 방식)
   refresh: (refreshToken) => {
     return api.post(API_ENDPOINTS.AUTH.REFRESH, { refreshToken });
   },
   
-  // 로그아웃
-  logout: (refreshToken) => {
-    return api.post(API_ENDPOINTS.AUTH.LOGOUT, { refreshToken });
+  // 토큰 재발급 (쿠키 기반 - 권장)
+  reissue: () => {
+    return api.post(API_ENDPOINTS.AUTH.REISSUE);
+  },
+  
+  // 로그아웃 (쿠키 기반이므로 body 없이 요청)
+  logout: () => {
+    return api.post(API_ENDPOINTS.AUTH.LOGOUT);
   },
   
   // OAuth 인증 URL 조회 (범용)
@@ -195,7 +199,12 @@ export const leaveService = {
 
   // 연차 잔액 조회
   getLeaveBalance: (memberNo) => {
-    return api.get(API_ENDPOINTS.LEAVE.BALANCE(memberNo));
+    // memberNo를 숫자로 변환하여 전달 (문자열 전달로 인한 400 에러 방지)
+    const numericMemberNo = Number(memberNo);
+    if (isNaN(numericMemberNo)) {
+      return Promise.reject(new Error('회원번호는 숫자여야 합니다.'));
+    }
+    return api.get(API_ENDPOINTS.LEAVE.BALANCE(numericMemberNo));
   },
 
   // 내 근태 신청 목록 조회
@@ -702,12 +711,10 @@ export const chatService = {
   // 에이전시별 채팅방 목록 조회 (캐싱 비활성화 - 실시간 DB 조회)
   getChatRoomsByAgency: (agencyNo, type = 'all') => {
     const url = API_ENDPOINTS.CHAT.ROOMS_BY_AGENCY(agencyNo, type);
-    const callId = chatPerformanceMonitor.startApiCall('getChatRoomsByAgency', { agencyNo, type });
     
     // 캐시 사용하지 않고 항상 DB에서 최신 데이터 조회
     return api.get(url)
       .then(response => {
-        chatPerformanceMonitor.endApiCall(callId, true);
         
         // 응답 데이터 검증 및 정규화
         if (response.data && Array.isArray(response.data)) {
@@ -721,7 +728,6 @@ export const chatService = {
         return response;
       })
       .catch(error => {
-        chatPerformanceMonitor.endApiCall(callId, false, error);
         console.error('❌ [API] getChatRoomsByAgency 실패:', error);
         // 에러 시 빈 배열 반환하여 UI 깨짐 방지
         return { data: [] };
@@ -757,13 +763,11 @@ export const chatService = {
     if (cached) {
       return Promise.resolve(cached);
     }
-    
-    const callId = chatPerformanceMonitor.startApiCall('getChatMessages', { chatRoomNo, page, size });
+
     
     return chatService._withRequestDeduplication(cacheKey, () =>
-      api.get(`${API_ENDPOINTS.CHAT.MESSAGES(chatRoomNo)}?page=${page}&size=${size}`)
+      api.get(API_ENDPOINTS.CHAT.MESSAGES(chatRoomNo, page, size))
         .then(response => {
-          chatPerformanceMonitor.endApiCall(callId, true);
           
           // 메시지 데이터 정규화
           if (response.data) {
@@ -790,7 +794,6 @@ export const chatService = {
           return response;
         })
         .catch(error => {
-          chatPerformanceMonitor.endApiCall(callId, false, error);
           console.error('❌ [API] getChatMessages 실패:', error);
           // 에러 시 빈 배열 반환
           return { data: [] };
@@ -803,7 +806,6 @@ export const chatService = {
     if (!chatRoomNo || !lastChatNo) {
       return Promise.reject(new Error('채팅방 번호와 메시지 번호가 필요합니다.'));
     }
-    
     return api.put(`/api/chat/rooms/${chatRoomNo}/read?lastChatNo=${lastChatNo}`)
       .then(response => {
         // 관련 캐시 무효화
@@ -814,7 +816,6 @@ export const chatService = {
           }
         }
         keysToInvalidate.forEach(key => chatService._cache.delete(key));
-        
         return response;
       })
       .catch(error => {
@@ -850,6 +851,19 @@ export const chatService = {
     );
   },
 
+  // 특정 메시지를 읽지 않은 참여 중인 멤버 수 (카카오톡 스타일)
+  getMessageReadStatus: (chatRoomNo, chatNo, senderMemberNo = null) => {
+    if (!chatRoomNo || chatNo == null) {
+      return Promise.reject(new Error('채팅방 번호와 메시지 번호가 필요합니다.'));
+    }
+    const params = senderMemberNo != null ? { senderMemberNo } : {};
+    return api.get(`/api/chat/rooms/${chatRoomNo}/messages/${chatNo}/read-status`, { params })
+      .catch(error => {
+        console.error('❌ [API] getMessageReadStatus 실패:', error);
+        return { data: { unreadMemberCount: 0 } };
+      });
+  },
+
   // 채팅방 참여자 목록 조회
   getChatRoomMembers: (chatRoomNo) => {
     if (!chatRoomNo) {
@@ -863,22 +877,6 @@ export const chatService = {
       .catch(error => {
         console.error('❌ [API] getChatRoomMembers 실패:', error);
         return { data: [] };
-      });
-  },
-
-  // 간단한 채팅방 멤버 로그 출력
-  logChatRoomMembers: (chatRoomNo) => {
-    if (!chatRoomNo) {
-      return Promise.reject(new Error('채팅방 번호가 필요합니다.'));
-    }
-    
-    return api.get(`/api/chat/rooms/${chatRoomNo}/members/simple`)
-      .then(response => {
-        return response;
-      })
-      .catch(error => {
-        console.error('❌ [API] logChatRoomMembers 실패:', error);
-        return { data: null };
       });
   },
 
@@ -925,6 +923,79 @@ export const chatService = {
   createAllMissingChatRooms: () => {
     return api.post('/api/chat/admin/create-all-missing-rooms');
   },
+
+  // 사용자의 마지막 읽은 메시지 번호 조회
+  getLastReadChatNo: (chatRoomNo) => {
+    const cacheKey = chatService._getCacheKey('getLastReadChatNo', chatRoomNo);
+    const cached = chatService._getCachedData(cacheKey, 5000); // 5초 캐시
+    
+    if (cached) {
+      return Promise.resolve(cached);
+    }
+    
+    return chatService._withRequestDeduplication(cacheKey, () =>
+      api.get(`/api/chat/rooms/${chatRoomNo}/last-read`)
+        .then(response => {
+          chatService._setCachedData(cacheKey, response);
+          return response;
+        })
+        .catch(error => {
+          console.error('❌ [API] 마지막 읽은 메시지 조회 실패:', error);
+          throw error;
+        })
+    );
+  },
+
+  // 채팅 파일 업로드
+  uploadFile: (formData) => {
+    const chatRoomNo = formData.get('chatRoomNo');
+    const memberNo = formData.get('memberNo');
+    
+    // FormData에서 memberNo 제거 (헤더로 보낼 것이므로)
+    formData.delete('memberNo');
+    
+    return api.post(`/api/chat/rooms/${chatRoomNo}/upload`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        'X-Member-No': memberNo,
+      },
+    })
+    .then(response => {
+      // 파일 업로드 성공 시 관련 캐시 무효화
+      chatService.invalidateCache('getChatMessages');
+      return response;
+    })
+    .catch(error => {
+      console.error('❌ [API] 파일 업로드 실패:', error);
+      throw error;
+    });
+  },
+};
+
+// AI 챗봇 서비스 (OpenAI 응답 대기를 위해 타임아웃 60초, tone: 말투 선택 시 쿼리로 전달)
+const AI_TIMEOUT = 60000;
+const aiConfig = (tone) => ({
+  timeout: AI_TIMEOUT,
+  ...(tone && tone !== 'standard' ? { params: { tone } } : {}),
+});
+export const aiService = {
+  getArtistHealthFeedback: (tone) => api.get(API_ENDPOINTS.AI.ARTIST_HEALTH_FEEDBACK, aiConfig(tone)),
+  getManagerHealthSummary: (tone) => api.get(API_ENDPOINTS.AI.MANAGER_HEALTH_SUMMARY, aiConfig(tone)),
+  getAgencyHealthOverview: (tone) => api.get(API_ENDPOINTS.AI.AGENCY_HEALTH_OVERVIEW, aiConfig(tone)),
+  getAgencyRiskSummary: (tone) => api.get(API_ENDPOINTS.AI.AGENCY_RISK_SUMMARY, aiConfig(tone)),
+  getAgencyLeaveOverlapAlert: (tone) => api.get(API_ENDPOINTS.AI.AGENCY_LEAVE_OVERLAP_ALERT, aiConfig(tone)),
+  getAgencyArtistAssignmentBalance: (tone) => api.get(API_ENDPOINTS.AI.AGENCY_ARTIST_ASSIGNMENT_BALANCE, aiConfig(tone)),
+  getAgencyRejectedThenReappliedAlert: (tone) => api.get(API_ENDPOINTS.AI.AGENCY_REJECTED_THEN_REAPPLIED_ALERT, aiConfig(tone)),
+  getArtistLeaveRecommendation: (tone) => api.get(API_ENDPOINTS.AI.ARTIST_LEAVE_RECOMMENDATION, aiConfig(tone)),
+  getManagerLeaveRecommendation: (tone) => api.get(API_ENDPOINTS.AI.MANAGER_LEAVE_RECOMMENDATION, aiConfig(tone)),
+  getArtistWorkloadSummary: (tone) => api.get(API_ENDPOINTS.AI.ARTIST_WORKLOAD_SUMMARY, aiConfig(tone)),
+  getArtistProjectPriorityAdvice: (tone) => api.get(API_ENDPOINTS.AI.ARTIST_PROJECT_PRIORITY_ADVICE, aiConfig(tone)),
+  getArtistWorkationRecommendation: (tone) => api.get(API_ENDPOINTS.AI.ARTIST_WORKATION_RECOMMENDATION, aiConfig(tone)),
+  getManagerArtistWorkloadBalance: (tone) => api.get(API_ENDPOINTS.AI.MANAGER_ARTIST_WORKLOAD_BALANCE, aiConfig(tone)),
+  getManagerMyHealthFeedback: (tone) => api.get(API_ENDPOINTS.AI.MANAGER_MY_HEALTH_FEEDBACK, aiConfig(tone)),
+  getManagerWorkationRecommendation: (tone) => api.get(API_ENDPOINTS.AI.MANAGER_WORKATION_RECOMMENDATION, aiConfig(tone)),
+  getManagerNudgeMessageRecommendation: (tone) => api.get(API_ENDPOINTS.AI.MANAGER_NUDGE_MESSAGE_RECOMMENDATION, aiConfig(tone)),
+  getManagerArtistDailyHealthSummary: (tone) => api.get(API_ENDPOINTS.AI.MANAGER_ARTIST_DAILY_HEALTH_SUMMARY, aiConfig(tone)),
 };
 
 export default {
@@ -940,4 +1011,5 @@ export default {
   managerService,
   chatService,
   holidayService,
+  aiService,
 };

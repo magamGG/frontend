@@ -6,6 +6,7 @@ import useAuthStore from '../store/authStore';
 const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: API_TIMEOUT,
+  withCredentials: true, // 쿠키를 포함한 요청 허용 (CORS)
   headers: {
     'Content-Type': 'application/json',
   },
@@ -29,9 +30,6 @@ api.interceptors.request.use(
 
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
-        console.log('토큰 첨부:', token.substring(0, 20) + '...');
-      } else {
-        console.log('토큰 없음');
       }
 
       // 회원번호가 있으면 헤더에 추가
@@ -72,15 +70,24 @@ api.interceptors.response.use(
       // 401 또는 403 에러 (인증 실패) - 토큰 갱신 시도
       // 403도 Access Token 만료로 인한 경우가 많으므로 함께 처리
       if ((status === 401 || status === 403) && !originalRequest._retry) {
-        // 로그인/갱신 API는 제외
-        if (originalRequest.url.includes('/login') || originalRequest.url.includes('/refresh')) {
+        // 로그인/갱신/reissue API는 제외 (무한 루프 방지)
+        if (
+          originalRequest.url.includes('/login') || 
+          originalRequest.url.includes('/refresh') ||
+          originalRequest.url.includes('/reissue')
+        ) {
           // 로그인 실패 또는 Refresh Token도 만료된 경우
+          console.error('❌ [Axios Interceptor] 인증 실패 - 로그인 페이지로 이동');
           try {
-            useAuthStore.getState().logout();
-            alert('인증이 만료되었습니다. 다시 로그인해주세요.');
-            window.location.href = '/login';
+            const authStore = useAuthStore.getState();
+            // 상태 초기화
+            authStore.logout();
+            // 로그인 페이지로 이동
+            if (window.location.pathname !== '/login') {
+              window.location.href = '/login';
+            }
           } catch (e) {
-            console.error('Logout error:', e);
+            console.error('❌ [Axios Interceptor] Logout error:', e);
           }
           return Promise.reject(error);
         }
@@ -91,20 +98,25 @@ api.interceptors.response.use(
         try {
           // 🔒 동시 실행 방지: 이미 refresh가 진행 중이면 대기
           if (!refreshTokenPromise) {
-            console.log('🔄 [토큰 갱신] 새로운 refresh 요청 시작');
             refreshTokenPromise = useAuthStore.getState().refreshAccessToken()
               .then((token) => {
-                console.log('✅ [토큰 갱신] 성공');
                 refreshTokenPromise = null; // 완료 후 초기화
                 return token;
               })
               .catch((err) => {
-                console.error('❌ [토큰 갱신] 실패:', err);
+                console.error('❌ [Axios Interceptor] reissue 실패:', err);
                 refreshTokenPromise = null; // 실패 후 초기화
+                
+                // 401 에러 시 상태 초기화 및 로그인 페이지 이동
+                const authStore = useAuthStore.getState();
+                authStore.logout();
+                
+                if (window.location.pathname !== '/login') {
+                  window.location.href = '/login';
+                }
+                
                 throw err;
               });
-          } else {
-            console.log('⏳ [토큰 갱신] 이미 진행 중인 refresh 대기...');
           }
 
           // Access Token 갱신 시도 (동시 실행 방지)
@@ -116,15 +128,21 @@ api.interceptors.response.use(
             return api(originalRequest);
           }
         } catch (refreshError) {
-          // Refresh Token도 만료된 경우 로그아웃
-          console.error('토큰 갱신 실패:', refreshError);
+          // Reissue 실패 (401) - Valkey에 토큰이 없거나 만료됨
+          console.error('❌ [Axios Interceptor] reissue 실패:', refreshError);
+          
+          // 상태 초기화 및 로그인 페이지로 이동
           try {
-            useAuthStore.getState().logout();
-            alert('인증이 만료되었습니다. 다시 로그인해주세요.');
-            window.location.href = '/login';
+            const authStore = useAuthStore.getState();
+            authStore.logout();
+            
+            if (window.location.pathname !== '/login') {
+              window.location.href = '/login';
+            }
           } catch (e) {
-            console.error('Logout error:', e);
+            console.error('❌ [Axios Interceptor] Logout error:', e);
           }
+          
           return Promise.reject(refreshError);
         }
       }
