@@ -15,9 +15,9 @@ export function useNotificationSource(onNewNotification) {
     if (!token) return;
 
     // EventSource는 프록시를 거치지 않으므로 절대 URL 사용
-    // 개발 환경: http://localhost:8888
-    // 프로덕션: API_BASE_URL 사용
-    const baseUrl = API_BASE_URL || 'http://localhost:8888';
+    // 개발 환경: http://localhost:8888 (API_BASE_URL)
+    // 프로덕션: https://api.mgsv.co.kr 등 (API_BASE_URL)
+    const baseUrl = API_BASE_URL;
     const url = `${baseUrl}/api/notifications/subscribe?token=${encodeURIComponent(token)}`;
     const eventSource = new EventSource(url);
 

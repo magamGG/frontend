@@ -1,5 +1,6 @@
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
+import { API_BASE_URL } from '@/api/config';
 
 // setImmediate 폴리필 (브라우저 호환성)
 const setImmediate = window.setImmediate || ((fn) => setTimeout(fn, 0));
@@ -45,7 +46,7 @@ class WebSocketService {
     this.connectionPromise = new Promise((resolve, reject) => {
       try {
         // SockJS 인스턴스 생성
-        const sockjsInstance = new SockJS('http://localhost:8888/ws-stomp');
+        const sockjsInstance = new SockJS(`${API_BASE_URL}/ws-stomp`);
 
         // SockJS 에러 핸들링
         sockjsInstance.onerror = (error) => {
