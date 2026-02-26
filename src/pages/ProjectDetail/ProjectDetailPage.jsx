@@ -178,9 +178,27 @@ function DraggableCard({
         </div>
       </div>
       <p className="text-xs text-muted-foreground mb-2">{card.description}</p>
-      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-        <Calendar className="w-3 h-3" />
-        <span>{card.dueDate}</span>
+      <div className="flex items-center gap-1 text-xs text-muted-foreground flex-wrap">
+        <Calendar className="w-3 h-3 flex-shrink-0" />
+        {card.startDate ? (
+          <span>{String(card.startDate).slice(0, 10)} ~ {String(card.dueDate || '').slice(0, 10)}</span>
+        ) : (
+          <span>{card.dueDate}</span>
+        )}
+        {card.startDate && card.dueDate && (() => {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const start = new Date(String(card.startDate).slice(0, 10));
+          const end = new Date(String(card.dueDate).slice(0, 10));
+          start.setHours(0, 0, 0, 0);
+          end.setHours(0, 0, 0, 0);
+          const msPerDay = 1000 * 60 * 60 * 24;
+          const totalDays = Math.ceil((end - start) / msPerDay);
+          const remaining = Math.round((end - today) / msPerDay);
+          if (remaining < 0) return <span className="text-destructive">기한 경과</span>;
+          if (today < start) return <span className="text-muted-foreground">(시작 전, 총 {totalDays}일)</span>;
+          return <span className="text-primary font-medium">(총 {totalDays}일 중 {remaining}일 남음)</span>;
+        })()}
       </div>
       {card.assignedTo && (
         <div className="flex items-center gap-1 text-xs text-[#6E8FB3] mt-2 bg-[#6E8FB3]/10 px-2 py-1 rounded">
@@ -586,11 +604,12 @@ export function ProjectDetailPage({
     localStorage.setItem(`kanban_boards_${project?.id}`, JSON.stringify(updatedBoards));
   };
 
-  // KANBAN_CARD 마감일(kanban_card_ended_at) 내림차순 목록 + D-n 표시 (기간 지난 마감일 제외)
+  // KANBAN_CARD 마감일(kanban_card_ended_at) 내림차순 목록 + 시작일 기준 D-n / 총 N일 중 M일 남음 표시
   const dueDateSortedCards = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+    const msPerDay = 1000 * 60 * 60 * 24;
     const items = [];
     boards.forEach((board) => {
       (board.cards || []).forEach((card) => {
@@ -598,13 +617,26 @@ export function ProjectDetailPage({
         if (!dueStr) return;
         const dueDate = new Date(dueStr);
         dueDate.setHours(0, 0, 0, 0);
-        const diffMs = dueDate - today;
-        const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
-        // 기간 지난 마감일(diffDays < 0)은 목록에서 제외
-        if (diffDays < 0) return;
+        const remainingDays = Math.round((dueDate - today) / msPerDay);
+        // 기간 지난 마감일(remainingDays < 0)은 목록에서 제외
+        if (remainingDays < 0) return;
+        const startStr = card.startDate ? String(card.startDate).slice(0, 10) : null;
+        const startDate = startStr ? new Date(startStr) : null;
+        if (startDate) startDate.setHours(0, 0, 0, 0);
+        const totalDays = startDate && dueDate ? Math.ceil((dueDate - startDate) / msPerDay) : null;
         let dLabel;
-        if (diffDays === 0) dLabel = 'D-Day';
-        else dLabel = `D-${diffDays}`;
+        if (totalDays != null) {
+          if (today < startDate) {
+            dLabel = `시작 전 (총 ${totalDays}일)`;
+          } else if (remainingDays === 0) {
+            dLabel = `D-Day (총 ${totalDays}일)`;
+          } else {
+            dLabel = `총 ${totalDays}일 중 ${remainingDays}일 남음`;
+          }
+        } else {
+          if (remainingDays === 0) dLabel = 'D-Day';
+          else dLabel = `D-${remainingDays}`;
+        }
         const dateStr = `${dueDate.getMonth() + 1}/${dueDate.getDate()}`;
         const dayName = dayNames[dueDate.getDay()];
         items.push({
