@@ -1,9 +1,6 @@
 // API 기본 설정
-// 개발 환경에서는 프록시를 사용하므로 빈 문자열 (상대 경로)
-// 프로덕션 환경에서는 전체 URL 사용
-export const API_BASE_URL = import.meta.env.PROD
-  ? 'http://localhost:8888'  // 프로덕션 환경 URL (실제 배포 시 변경 필요)
-  : '';  // 개발 환경에서는 프록시 사용 (상대 경로)
+// 개발/운영 모두 동일한 외부 API 서버 사용
+export const API_BASE_URL = 'https://api.magam.cloud';
 export const API_TIMEOUT = 10000;
 
 /** DB THUMBNAIL_FILE을 이미지 URL로 변환 (업로드 경로: /uploads/) */
