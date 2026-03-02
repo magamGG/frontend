@@ -5,6 +5,7 @@ import { FileText, Download, ExternalLink, Image as ImageIcon, ChevronDown, Chev
 import { useEffect, useState } from 'react';
 import { leaveService } from '@/api/services';
 import { toast } from 'sonner';
+import { API_BASE_URL } from '@/api/config';
 import {
   ModalHeader,
   ModalContent,
@@ -122,12 +123,8 @@ export function RequestDetailModal({ open, onOpenChange, request }) {
     // 파일명에서 경로 제거 (파일명만 추출)
     const cleanFileName = fileNameStr.includes('/') ? fileNameStr.split('/').pop() : fileNameStr;
 
-    // BASE_URL 가져오기 (VITE_API_BASE_URL 우선, 없으면 fallback)
-    const envBaseUrl = import.meta.env.VITE_API_BASE_URL;
-    const BASE_URL =
-      envBaseUrl && typeof envBaseUrl === 'string' && envBaseUrl.trim() !== ''
-        ? envBaseUrl.trim()
-        : 'http://localhost:8888';
+    // API_BASE_URL 사용 (환경변수 기반, 프로덕션/개발 환경 자동 처리)
+    const BASE_URL = API_BASE_URL;
 
     // 근태 첨부 파일은 uploads/attendance 하위에 저장됨
     const fullUrl = `${BASE_URL}/uploads/attendance/${cleanFileName}`;
