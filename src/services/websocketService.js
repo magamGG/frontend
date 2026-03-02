@@ -5,6 +5,20 @@ import { API_BASE_URL } from '@/api/config';
 // setImmediate 폴리필 (브라우저 호환성)
 const setImmediate = window.setImmediate || ((fn) => setTimeout(fn, 0));
 
+/** HTTPS 페이지에서는 반드시 https URL 사용 (SecurityError 방지). 배포 시 env 미적용이어도 동작하도록 HTTPS+localhost면 프로덕션 API 호스트 사용 */
+const PRODUCTION_WS_BASE = 'https://api.magamgiki.life';
+
+function getWebSocketUrl() {
+  const isHttps = typeof window !== 'undefined' && window.location?.protocol === 'https:';
+  let base = (API_BASE_URL || 'http://localhost:8888').replace(/\/$/, '');
+
+  if (isHttps) {
+    if (base.startsWith('http:')) base = base.replace(/^http:/, 'https:');
+    if (base.includes('localhost')) base = PRODUCTION_WS_BASE;
+  }
+  return `${base}/ws-stomp`;
+}
+
 class WebSocketService {
   constructor() {
     this.client = null;
@@ -45,8 +59,14 @@ class WebSocketService {
     this.connecting = true;
     this.connectionPromise = new Promise((resolve, reject) => {
       try {
+<<<<<<< HEAD
         // SockJS 인스턴스 생성
         const sockjsInstance = new SockJS(`${API_BASE_URL}/ws-stomp`);
+=======
+        // SockJS 인스턴스 생성 (HTTPS 페이지에서는 항상 https → wss 사용)
+        const wsUrl = getWebSocketUrl();
+        const sockjsInstance = new SockJS(wsUrl);
+>>>>>>> 00fc64d5835277c54c4d7d2b511338a8d1d71726
 
         // SockJS 에러 핸들링
         sockjsInstance.onerror = (error) => {

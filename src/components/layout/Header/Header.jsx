@@ -51,11 +51,11 @@ import {
 const getNotificationType = (type) => {
   switch (type) {
     case 'JOIN_REQ': return 'info';
-    case 'LEAVE_REQ': return 'warning';
+    case 'LEAVE_REQ': return 'info';
     case 'LEAVE_APP':
     case 'APPROVED': return 'success';
     case 'LEAVE_REJ':
-    case 'REJECTED': return 'error';
+    case 'REJECTED': return 'reject';
     case 'ASSIGNMENT': return 'info';
     case 'HEALTH_WARN':
     case 'HEALTH_REM': return 'warning';
@@ -199,7 +199,7 @@ export function Header({
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
 
   // 알림 목록 조회
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     try {
       setIsLoadingNotifications(true);
       const response = await notificationService.getNotifications();
@@ -222,12 +222,51 @@ export function Header({
     } finally {
       setIsLoadingNotifications(false);
     }
-  };
+  }, []);
 
   // 시간 포맷팅 (몇 분 전, 몇 시간 전 등)
   const formatTimeAgo = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
+    if (!dateString) return '방금 전'; // 빈 값일 때 기본값 반환
+    
+    // 날짜 문자열 파싱 (ISO 8601 형식 또는 다른 형식 지원)
+    let date;
+    try {
+      // 배열 형식 처리 [2024, 1, 1, 12, 0, 0] (Jackson LocalDateTime 직렬화)
+      if (Array.isArray(dateString)) {
+        date = new Date(dateString[0], dateString[1] - 1, dateString[2], 
+                        dateString[3] || 0, dateString[4] || 0, dateString[5] || 0);
+      }
+      // ISO 8601 형식 (2024-01-01T00:00:00 또는 2024-01-01T00:00:00.000Z)
+      else if (typeof dateString === 'string' && dateString.includes('T')) {
+        date = new Date(dateString);
+      } 
+      // YYYY-MM-DD 형식인 경우 시간 추가
+      else if (typeof dateString === 'string' && dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        date = new Date(dateString + 'T00:00:00');
+      } 
+      // 문자열인 경우 일반 파싱
+      else if (typeof dateString === 'string') {
+        date = new Date(dateString);
+      }
+      // 이미 Date 객체인 경우
+      else if (dateString instanceof Date) {
+        date = dateString;
+      }
+      else {
+        console.warn('알 수 없는 날짜 형식:', dateString);
+        return '방금 전'; // 기본값 반환
+      }
+      
+      // Invalid Date 체크
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid Date:', dateString);
+        return '방금 전'; // 빈 문자열 대신 기본값 반환
+      }
+    } catch (error) {
+      console.error('날짜 파싱 오류:', dateString, error);
+      return '방금 전'; // 빈 문자열 대신 기본값 반환
+    }
+    
     const now = new Date();
     const diffMs = now - date;
     const diffMins = Math.floor(diffMs / 60000);
@@ -238,7 +277,18 @@ export function Header({
     if (diffMins < 60) return `${diffMins}분 전`;
     if (diffHours < 24) return `${diffHours}시간 전`;
     if (diffDays < 7) return `${diffDays}일 전`;
-    return date.toLocaleDateString();
+    
+    // 유효한 날짜인 경우에만 포맷팅
+    try {
+      return date.toLocaleDateString('ko-KR', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+    } catch (error) {
+      console.error('날짜 포맷팅 오류:', error);
+      return '방금 전'; // 빈 문자열 대신 기본값 반환
+    }
   };
 
   // SSE 실시간 알림 수신 콜백
@@ -247,14 +297,26 @@ export function Header({
       id: data.notificationNo,
       title: data.notificationName || '알림',
       message: data.notificationText || '',
-      time: '방금 전',
+      time: data.notificationCreatedAt ? formatTimeAgo(data.notificationCreatedAt) : '방금 전',
       isRead: data.notificationStatus === 'N',
       type: getNotificationType(data.notificationType),
       linkedPage: getLinkedPage(data.notificationType),
     };
-    setNotifications((prev) => [formatted, ...prev]);
+    
+    // 중복 알림 체크 (같은 notificationNo가 이미 있으면 추가하지 않음)
+    setNotifications((prev) => {
+      const exists = prev.some(n => n.id === formatted.id);
+      if (exists) {
+        return prev; // 이미 있으면 그대로 반환
+      }
+      return [formatted, ...prev]; // 없으면 추가
+    });
+    
     toast.success(formatted.title);
-  }, []);
+    
+    // 알림 목록을 다시 조회하여 최신 상태 유지 (비동기)
+    fetchNotifications();
+  }, [fetchNotifications]);
 
   // SSE 구독 (로그인 시 자동 연결)
   useNotificationSource(onNewNotification);
@@ -391,6 +453,8 @@ export function Header({
         return "default";
       case "error":
         return "destructive";
+      case "reject":
+        return "destructive";
       default:
         return "secondary";
     }
@@ -524,9 +588,14 @@ export function Header({
           {/* Notifications - 프로필 왼쪽에 배치 */}
           <div style={{ position: 'relative' }} ref={notificationRef}>
             <NotificationButton
-              onClick={() =>
-                setShowNotifications(!showNotifications)
-              }
+              onClick={() => {
+                const newState = !showNotifications;
+                setShowNotifications(newState);
+                // 알림 패널이 열릴 때마다 최신 알림 목록 조회
+                if (newState) {
+                  fetchNotifications();
+                }
+              }}
             >
               <Bell style={{ width: '24px', height: '24px' }} />
               {unreadCount > 0 && <NotificationBadge />}
@@ -602,8 +671,8 @@ export function Header({
                                 </NotificationItemTime>
                                 <span
                                   style={{
-                                    background: notification.type === 'warning' ? 'color-mix(in srgb, var(--destructive) 10%, transparent)' : notification.type === 'error' ? 'color-mix(in srgb, var(--destructive) 10%, transparent)' : notification.type === 'success' ? 'color-mix(in srgb, var(--chart-2) 10%, transparent)' : 'color-mix(in srgb, var(--chart-2) 10%, transparent)',
-                                    color: notification.type === 'warning' ? 'var(--destructive)' : notification.type === 'error' ? 'var(--destructive)' : notification.type === 'success' ? 'var(--chart-2)' : 'var(--chart-2)',
+                                    background: notification.type === 'warning' ? 'color-mix(in srgb, var(--destructive) 10%, transparent)' : notification.type === 'error' ? 'color-mix(in srgb, var(--destructive) 10%, transparent)' : notification.type === 'reject' ? 'color-mix(in srgb, #f97316 10%, transparent)' : notification.type === 'success' ? 'color-mix(in srgb, var(--chart-2) 10%, transparent)' : 'color-mix(in srgb, var(--chart-2) 10%, transparent)',
+                                    color: notification.type === 'warning' ? 'var(--destructive)' : notification.type === 'error' ? 'var(--destructive)' : notification.type === 'reject' ? '#f97316' : notification.type === 'success' ? 'var(--chart-2)' : 'var(--chart-2)',
                                     fontSize: '10px',
                                     padding: '2px 6px',
                                     borderRadius: '4px',
@@ -619,7 +688,10 @@ export function Header({
                                       : notification.type ===
                                         "error"
                                         ? "오류"
-                                        : "정보"}
+                                        : notification.type ===
+                                          "reject"
+                                          ? "거절"
+                                          : "정보"}
                                 </span>
                               </NotificationItemFooter>
                             </NotificationItemMain>

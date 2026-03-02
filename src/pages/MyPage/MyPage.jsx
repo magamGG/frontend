@@ -12,6 +12,7 @@ import { API_BASE_URL } from '@/api/config';
 import { formatPhoneNumber } from '@/utils/phoneFormatter';
 import useAuthStore from '@/store/authStore';
 import { InquiryModal } from '@/components/modals/InquiryModal';
+import { MapPickerModal } from '@/components/modals/MapPickerModal';
 import {
   MyPageOverlay,
   MyPageContainer,
@@ -97,6 +98,7 @@ export function MyPage({ onClose, onLogout }) {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isImageSelectModalOpen, setIsImageSelectModalOpen] = useState(false);
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
+  const [showMapPicker, setShowMapPicker] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [userName, setUserName] = useState('');
   const [email, setEmail] = useState('');
@@ -133,7 +135,7 @@ export function MyPage({ onClose, onLogout }) {
         setMemberRole(myPageData.memberRole || '');
         
         // 이미지 URL 설정
-        const imageBaseUrl = API_BASE_URL || 'http://localhost:8888';
+        const imageBaseUrl = API_BASE_URL;
         if (myPageData.memberProfileImage) {
           setProfileImage(`${imageBaseUrl}/uploads/${myPageData.memberProfileImage}`);
         }
@@ -299,7 +301,7 @@ export function MyPage({ onClose, onLogout }) {
       if (!file) return;
       
       try {
-        const imageBaseUrl = API_BASE_URL || 'http://localhost:8888';
+        const imageBaseUrl = API_BASE_URL;
         let fileName;
         if (type === 'background') {
           fileName = await memberService.uploadBackgroundImage(memberNo, file);
@@ -598,11 +600,29 @@ export function MyPage({ onClose, onLogout }) {
               <Label htmlFor="edit-location" className="text-sm text-[#1F2328]">
                 주소
               </Label>
-              <Input
-                id="edit-location"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                className="bg-white border-[#DADDE1] text-[#1F2328]"
+              <div className="flex gap-2">
+                <Input
+                  id="edit-location"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="주소를 입력하거나 지도에서 선택하세요"
+                  className="bg-white border-[#DADDE1] text-[#1F2328] flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowMapPicker(true)}
+                  className="shrink-0"
+                >
+                  <MapPin size={16} className="mr-1" />
+                  지도에서 선택
+                </Button>
+              </div>
+              <MapPickerModal
+                open={showMapPicker}
+                onOpenChange={setShowMapPicker}
+                onSelect={(addr) => setLocation(addr)}
               />
             </div>
             <div className="space-y-2">

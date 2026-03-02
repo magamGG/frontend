@@ -1,8 +1,15 @@
+<<<<<<< HEAD
 // API 기본 설정 (서버 도메인: api.도메인 사용, 로컬 미사용)
 const API_DOMAIN = 'https://api.magamgg.cloud';
 const DEV_API_BASE = 'http://localhost:8888';
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
   || (import.meta.env.PROD ? API_DOMAIN : DEV_API_BASE);
+=======
+// API 기본 설정
+// 개발 환경: 직접 백엔드로 요청 (CORS 설정 필요)
+// 프로덕션 환경: 실제 배포 URL로 변경 필요
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8888';
+>>>>>>> 00fc64d5835277c54c4d7d2b511338a8d1d71726
 export const API_TIMEOUT = 10000;
 
 /** DB THUMBNAIL_FILE을 이미지 URL로 변환 (업로드 경로: /uploads/) */
