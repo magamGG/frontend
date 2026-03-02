@@ -80,7 +80,7 @@ export function AgencyMyPage({ onClose, onLogout }) {
         setCompanyCode(myPageData.agencyCode || '');
         
         // 이미지 URL 설정
-        const imageBaseUrl = API_BASE_URL || 'http://localhost:8888';
+        const imageBaseUrl = API_BASE_URL;
         if (myPageData.memberProfileImage) {
           setProfileImage(`${imageBaseUrl}/uploads/${myPageData.memberProfileImage}`);
         }
@@ -667,7 +667,7 @@ export function AgencyMyPage({ onClose, onLogout }) {
                     if (!file || !memberNo) return;
                     
                     try {
-                      const imageBaseUrl = API_BASE_URL || 'http://localhost:8888';
+                      const imageBaseUrl = API_BASE_URL;
                       const fileName = await memberService.uploadBackgroundImage(memberNo, file);
                       setBackgroundImage(`${imageBaseUrl}/uploads/${fileName}`);
                       toast.success('배경 이미지가 변경되었습니다.');
@@ -697,7 +697,7 @@ export function AgencyMyPage({ onClose, onLogout }) {
                     if (!file || !memberNo) return;
                     
                     try {
-                      const imageBaseUrl = API_BASE_URL || 'http://localhost:8888';
+                      const imageBaseUrl = API_BASE_URL;
                       const fileName = await memberService.uploadProfileImage(memberNo, file);
                       setProfileImage(`${imageBaseUrl}/uploads/${fileName}`);
                       toast.success('프로필 사진이 변경되었습니다.');

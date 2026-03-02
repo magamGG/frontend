@@ -178,7 +178,7 @@ export function AgencyWorkcationPage() {
               // 프로필 이미지 URL 구성
               let profileImageUrl = null;
               if (memberInfo.memberProfileImage) {
-                const imageBaseUrl = API_BASE_URL || 'http://localhost:8888';
+                const imageBaseUrl = API_BASE_URL;
                 if (memberInfo.memberProfileImage.startsWith('http://') || 
                     memberInfo.memberProfileImage.startsWith('https://')) {
                   profileImageUrl = memberInfo.memberProfileImage;
