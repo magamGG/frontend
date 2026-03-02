@@ -86,7 +86,7 @@ export function AgencyAssignmentPage() {
         }
 
         // 담당자 데이터 변환 (MANAGER 테이블의 데이터 사용)
-        const imageBaseUrl = API_BASE_URL || 'http://localhost:8888';
+        const imageBaseUrl = API_BASE_URL;
         const mappedManagers = managersList.map((manager) => {
           // 작가 목록에서 해당 담당자에게 배정된 작가 수 계산
           // managerNo는 MANAGER 테이블의 MANAGER_NO를 의미

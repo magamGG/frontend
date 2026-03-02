@@ -234,7 +234,7 @@ export function AdminTeamPage() {
           : artistsResponse?.data || [];
 
         // 3. 작가 데이터를 컴포넌트 형식으로 변환
-        const imageBaseUrl = API_BASE_URL || 'http://localhost:8888';
+        const imageBaseUrl = API_BASE_URL;
         const mappedEmployees = artistsList.map((artist) => {
           let profileImageUrl = null;
           // DTO에 프로필 이미지가 없으므로 여기서는 null 처리하고 fetchEmployeeDetails에서 채움
@@ -381,7 +381,7 @@ export function AdminTeamPage() {
       // 프로필 이미지 URL 구성
       let profileImageUrl = null;
       if (data?.memberProfileImage) {
-        const imageBaseUrl = API_BASE_URL || 'http://localhost:8888';
+        const imageBaseUrl = API_BASE_URL;
         if (data.memberProfileImage.startsWith('http://') || data.memberProfileImage.startsWith('https://')) {
           profileImageUrl = data.memberProfileImage;
         } else if (data.memberProfileImage.startsWith('/uploads/')) {

@@ -133,7 +133,7 @@ export function MyPage({ onClose, onLogout }) {
         setMemberRole(myPageData.memberRole || '');
         
         // 이미지 URL 설정
-        const imageBaseUrl = API_BASE_URL || 'http://localhost:8888';
+        const imageBaseUrl = API_BASE_URL;
         if (myPageData.memberProfileImage) {
           setProfileImage(`${imageBaseUrl}/uploads/${myPageData.memberProfileImage}`);
         }
@@ -299,7 +299,7 @@ export function MyPage({ onClose, onLogout }) {
       if (!file) return;
       
       try {
-        const imageBaseUrl = API_BASE_URL || 'http://localhost:8888';
+        const imageBaseUrl = API_BASE_URL;
         let fileName;
         if (type === 'background') {
           fileName = await memberService.uploadBackgroundImage(memberNo, file);
