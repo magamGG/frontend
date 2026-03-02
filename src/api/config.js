@@ -1,16 +1,15 @@
-// API 기본 설정
-// 개발 환경: 직접 백엔드로 요청 (CORS 설정 필요)
-// 프로덕션 환경: 실제 배포 URL로 변경 필요
-export const API_BASE_URL = import.meta.env.PROD
-  ? 'http://localhost:8888'  // 프로덕션 환경 URL (실제 배포 시 변경 필요)
-  : 'http://localhost:8888';  // 개발 환경에서도 백엔드 직접 호출
+// API 기본 설정 (서버 도메인: api.도메인 사용, 로컬 미사용)
+const API_DOMAIN = 'https://api.magamgg.cloud';
+const DEV_API_BASE = 'http://localhost:8888';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+  || (import.meta.env.PROD ? API_DOMAIN : DEV_API_BASE);
 export const API_TIMEOUT = 10000;
 
 /** DB THUMBNAIL_FILE을 이미지 URL로 변환 (업로드 경로: /uploads/) */
 export function getProjectThumbnailUrl(thumbnailFile) {
   if (!thumbnailFile) return null;
   if (thumbnailFile.startsWith('http://') || thumbnailFile.startsWith('https://')) return thumbnailFile;
-  const base = API_BASE_URL || 'http://localhost:8888';
+  const base = API_BASE_URL || (import.meta.env.PROD ? API_DOMAIN : DEV_API_BASE);
   const path = thumbnailFile.startsWith('/uploads') ? thumbnailFile : `/uploads/${thumbnailFile.replace(/^\//, '')}`;
   return `${base}${path}`;
 }
@@ -19,7 +18,7 @@ export function getProjectThumbnailUrl(thumbnailFile) {
 export function getMemberProfileUrl(profileImage) {
   if (!profileImage) return null;
   if (profileImage.startsWith('http://') || profileImage.startsWith('https://')) return profileImage;
-  const base = API_BASE_URL || 'http://localhost:8888';
+  const base = API_BASE_URL || (import.meta.env.PROD ? API_DOMAIN : DEV_API_BASE);
   const path = profileImage.startsWith('/uploads') ? profileImage : `/uploads/${profileImage.replace(/^\//, '')}`;
   return `${base}${path}`;
 }
@@ -32,7 +31,7 @@ export const MEMBER_AVATAR_PLACEHOLDER =
 export function getChatAttachmentUrl(attachmentUrl) {
   if (!attachmentUrl) return null;
   if (attachmentUrl.startsWith('http://') || attachmentUrl.startsWith('https://')) return attachmentUrl;
-  const base = API_BASE_URL || 'http://localhost:8888';
+  const base = API_BASE_URL || (import.meta.env.PROD ? API_DOMAIN : DEV_API_BASE);
   return `${base}${attachmentUrl}`;
 }
 
