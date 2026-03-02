@@ -1,9 +1,7 @@
 // API 기본 설정
 // 개발 환경: 직접 백엔드로 요청 (CORS 설정 필요)
 // 프로덕션 환경: 실제 배포 URL로 변경 필요
-export const API_BASE_URL = import.meta.env.PROD
-  ? 'http://localhost:8888'  // 프로덕션 환경 URL (실제 배포 시 변경 필요)
-  : 'http://localhost:8888';  // 개발 환경에서도 백엔드 직접 호출
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8888';
 export const API_TIMEOUT = 10000;
 
 /** DB THUMBNAIL_FILE을 이미지 URL로 변환 (업로드 경로: /uploads/) */
@@ -108,6 +106,7 @@ export const API_ENDPOINTS = {
     REJECT: (attendanceRequestNo) => `/api/leave/${attendanceRequestNo}/reject`, // POST: 근태 신청 반려
     CANCEL: (attendanceRequestNo) => `/api/leave/${attendanceRequestNo}/cancel`, // POST: 근태 신청 취소
     UPDATE: (attendanceRequestNo) => `/api/leave/${attendanceRequestNo}`, // PUT: 근태 신청 수정
+    UPLOAD_FILE: `/api/leave/file/upload`, // POST: 근태 신청 첨부 파일 업로드 (uploads/attendance)
     DOWNLOAD_FILE: (fileName) => `/api/leave/file/${fileName}`, // GET: 근태 신청 첨부 파일 다운로드
     AGENCY_BALANCES: (agencyNo) => `/api/leave/agency/${agencyNo}/balances`, // GET: 에이전시 소속 회원 연차 잔액 목록
     AGENCY_HISTORY: (agencyNo) => `/api/leave/agency/${agencyNo}/history`, // GET: 에이전시 소속 연차 변경 이력
@@ -148,6 +147,13 @@ export const API_ENDPOINTS = {
     KANBAN_CARD_UPDATE: (projectNo, cardId) => `/api/projects/${projectNo}/kanban-card/${cardId}`, // PUT: 칸반 카드 수정
     KANBAN_CARD_COMMENTS: (projectNo, cardId) => `/api/projects/${projectNo}/kanban-card/${cardId}/comments`, // GET: 목록, POST: 추가
     KANBAN_CARD_COMMENT_UPDATE: (projectNo, cardId, commentId) => `/api/projects/${projectNo}/kanban-card/${cardId}/comments/${commentId}`, // PUT: 코멘트 수정
+    // Notion OAuth (프로젝트 칸반 보드 연동)
+    NOTION_CONFIG: `/api/projects/notion/config`,
+    NOTION_CALLBACK: (projectNo) => `/api/projects/${projectNo}/notion/callback`,
+    NOTION_STATUS: (projectNo) => `/api/projects/${projectNo}/notion/status`,
+    NOTION_DATABASE: (projectNo) => `/api/projects/${projectNo}/notion/database`,
+    NOTION_DISCONNECT: (projectNo) => `/api/projects/${projectNo}/notion`,
+    NOTION_SYNC: (projectNo) => `/api/projects/${projectNo}/notion/sync`,
   },
 
   // 캘린더 API
@@ -239,6 +245,22 @@ export const API_ENDPOINTS = {
     MANAGER_WORKATION_RECOMMENDATION: `/api/v1/ai/manager/workation-recommendation`,
     MANAGER_NUDGE_MESSAGE_RECOMMENDATION: `/api/v1/ai/manager/nudge-message-recommendation`,
     MANAGER_ARTIST_DAILY_HEALTH_SUMMARY: `/api/v1/ai/manager/artist-daily-health-summary`,
+  },
+
+  // 포트폴리오 API (아티스트: 가져오기/만들기, 담당자·에이전시: 직원 포트폴리오 조회)
+  PORTFOLIO: {
+    EXTRACT_IMAGE: `/api/portfolio/extract/image`,
+    EXTRACT_FROM_PAGE_SCREENSHOT: `/api/portfolio/extract/from-page-screenshot`,
+    SAVE_FROM_EXTRACT: `/api/portfolio/from-extract`,
+    CREATE: `/api/portfolio`,
+    ME: `/api/portfolio/me`,
+    MY_PROJECTS: `/api/portfolio/my-projects`,
+    BY_MEMBER: (memberNo) => `/api/portfolio/member/${memberNo}`,
+    UPDATE: (portfolioNo) => `/api/portfolio/${portfolioNo}`,
+    DELETE: (portfolioNo) => `/api/portfolio/${portfolioNo}`,
+    NOTION_SYNC: (portfolioNo) => `/api/portfolio/${portfolioNo}/notion-sync`,
+    NOTION_CONFIG: `/api/portfolio/notion/config`,
+    NOTION_CALLBACK: (portfolioNo) => `/api/portfolio/${portfolioNo}/notion/callback`,
   },
 
   // 담당자(manager) API (X-Member-No로 담당자 식별, 배정 작가만 대상)

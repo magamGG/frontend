@@ -55,6 +55,10 @@ api.interceptors.response.use(
     }
 
     // 성공 응답 처리
+    // success: false(비즈니스 실패)면 전체 객체 반환해 호출부에서 message 처리
+    if (response.data && response.data.success === false) {
+      return response.data;
+    }
     // API 문서에 따라 success 필드가 있는 경우 data 추출
     if (response.data && response.data.success !== undefined) {
       return response.data.data;
@@ -62,6 +66,20 @@ api.interceptors.response.use(
     return response.data;
   },
   async (error) => {
+    const config = error.config || {};
+    const requestUrl = config.url || '';
+
+    // [중단점] reissue 요청 자체가 실패했으면 더 이상 재시도하지 않고 즉시 종료
+    if (requestUrl.includes('/reissue')) {
+      try {
+        const authStore = useAuthStore.getState();
+        authStore.logout();
+      } catch (e) {
+        console.error('❌ [Axios Interceptor] reissue 실패 후 로그아웃 처리 오류:', e);
+      }
+      return Promise.reject(error);
+    }
+
     // 에러 응답 처리
     if (error.response) {
       const { status, data } = error.response;

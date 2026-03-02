@@ -111,24 +111,25 @@ export function RequestDetailModal({ open, onOpenChange, request }) {
     if (!fileName || (typeof fileName === 'string' && fileName.trim() === '')) {
       return null;
     }
-    
+
     const fileNameStr = String(fileName);
-    
+
     // 이미 전체 URL인 경우 그대로 반환
     if (fileNameStr.startsWith('http://') || fileNameStr.startsWith('https://')) {
       return fileNameStr;
     }
-    
+
     // 파일명에서 경로 제거 (파일명만 추출)
     const cleanFileName = fileNameStr.includes('/') ? fileNameStr.split('/').pop() : fileNameStr;
-    
+
     // BASE_URL 가져오기 (VITE_API_BASE_URL 우선, 없으면 fallback)
     const envBaseUrl = import.meta.env.VITE_API_BASE_URL;
-    // envBaseUrl이 undefined, null, 빈 문자열이면 fallback 사용 (백엔드 포트는 8888)
-    const BASE_URL = (envBaseUrl && typeof envBaseUrl === 'string' && envBaseUrl.trim() !== '') 
-      ? envBaseUrl.trim() 
-      : 'http://localhost:8888';
-    
+    const BASE_URL =
+      envBaseUrl && typeof envBaseUrl === 'string' && envBaseUrl.trim() !== ''
+        ? envBaseUrl.trim()
+        : 'http://localhost:8888';
+
+    // 근태 첨부 파일은 uploads/attendance 하위에 저장됨
     const fullUrl = `${BASE_URL}/uploads/attendance/${cleanFileName}`;
     return fullUrl;
   };

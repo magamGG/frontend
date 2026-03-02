@@ -249,13 +249,8 @@ export function LeaveRequestModal({ open, onOpenChange }) {
     let uploadedFileName = null;
     if (attachedFile) {
       try {
-        const memberName = getMemberName();
-        const employees = JSON.parse(localStorage.getItem('agencyEmployees') || '[]');
-        const employee = employees.find(emp => emp.name === memberName);
-        const memberNo = employee?.memberNo || 1; // 기본값 사용
-        
-        // 파일 업로드 (프로필 이미지 업로드 API 재사용)
-        uploadedFileName = await memberService.uploadProfileImage(memberNo, attachedFile);
+        // 근태 전용 첨부 파일 업로드 API 사용 → uploads/attendance 하위에 저장
+        uploadedFileName = await leaveService.uploadMedicalFile(attachedFile);
         toast.success('파일이 업로드되었습니다.');
       } catch (error) {
         console.error('파일 업로드 실패:', error);

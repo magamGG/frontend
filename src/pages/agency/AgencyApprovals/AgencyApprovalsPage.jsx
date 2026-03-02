@@ -350,8 +350,9 @@ export function AgencyApprovalsPage() {
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '';
-    const date = new Date(dateStr);
-    return `${date.getMonth() + 1}월 ${date.getDate()}일`;
+    // 'YYYY-MM-DD' 형식 기준으로 문자열만 파싱 → 타임존 영향 제거
+    const [year, month, day] = dateStr.split('-');
+    return `${Number(month)}월 ${Number(day)}일`;
   };
 
   // 통계 계산

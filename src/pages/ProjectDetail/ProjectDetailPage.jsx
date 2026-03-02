@@ -178,9 +178,27 @@ function DraggableCard({
         </div>
       </div>
       <p className="text-xs text-muted-foreground mb-2">{card.description}</p>
-      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-        <Calendar className="w-3 h-3" />
-        <span>{card.dueDate}</span>
+      <div className="flex items-center gap-1 text-xs text-muted-foreground flex-wrap">
+        <Calendar className="w-3 h-3 flex-shrink-0" />
+        {card.startDate ? (
+          <span>{String(card.startDate).slice(0, 10)} ~ {String(card.dueDate || '').slice(0, 10)}</span>
+        ) : (
+          <span>{card.dueDate}</span>
+        )}
+        {card.startDate && card.dueDate && (() => {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const start = new Date(String(card.startDate).slice(0, 10));
+          const end = new Date(String(card.dueDate).slice(0, 10));
+          start.setHours(0, 0, 0, 0);
+          end.setHours(0, 0, 0, 0);
+          const msPerDay = 1000 * 60 * 60 * 24;
+          const totalDays = Math.ceil((end - start) / msPerDay);
+          const remaining = Math.round((end - today) / msPerDay);
+          if (remaining < 0) return <span className="text-destructive">기한 경과</span>;
+          if (today < start) return <span className="text-muted-foreground">(시작 전, 총 {totalDays}일)</span>;
+          return <span className="text-primary font-medium">(총 {totalDays}일 중 {remaining}일 남음)</span>;
+        })()}
       </div>
       {card.assignedTo && (
         <div className="flex items-center gap-1 text-xs text-[#6E8FB3] mt-2 bg-[#6E8FB3]/10 px-2 py-1 rounded">
@@ -537,6 +555,8 @@ export function ProjectDetailPage({
   // PROJECT_NO(project.id)로 KANBAN_BOARD, KANBAN_CARD 조회
   const [boards, setBoards] = useState([]);
   const [boardsLoading, setBoardsLoading] = useState(false);
+  /** 카드 이동 API 요청 중이면 true — ref 사용으로 빠른 연속 드롭 시에도 즉시 잠금(레이스 방지) */
+  const cardMoveInFlightRef = useRef(false);
 
   useEffect(() => {
     if (!project?.id) return;
@@ -584,11 +604,12 @@ export function ProjectDetailPage({
     localStorage.setItem(`kanban_boards_${project?.id}`, JSON.stringify(updatedBoards));
   };
 
-  // KANBAN_CARD 마감일(kanban_card_ended_at) 내림차순 목록 + D-n 표시 (기간 지난 마감일 제외)
+  // KANBAN_CARD 마감일(kanban_card_ended_at) 내림차순 목록 + 시작일 기준 D-n / 총 N일 중 M일 남음 표시
   const dueDateSortedCards = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+    const msPerDay = 1000 * 60 * 60 * 24;
     const items = [];
     boards.forEach((board) => {
       (board.cards || []).forEach((card) => {
@@ -596,13 +617,26 @@ export function ProjectDetailPage({
         if (!dueStr) return;
         const dueDate = new Date(dueStr);
         dueDate.setHours(0, 0, 0, 0);
-        const diffMs = dueDate - today;
-        const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
-        // 기간 지난 마감일(diffDays < 0)은 목록에서 제외
-        if (diffDays < 0) return;
+        const remainingDays = Math.round((dueDate - today) / msPerDay);
+        // 기간 지난 마감일(remainingDays < 0)은 목록에서 제외
+        if (remainingDays < 0) return;
+        const startStr = card.startDate ? String(card.startDate).slice(0, 10) : null;
+        const startDate = startStr ? new Date(startStr) : null;
+        if (startDate) startDate.setHours(0, 0, 0, 0);
+        const totalDays = startDate && dueDate ? Math.ceil((dueDate - startDate) / msPerDay) : null;
         let dLabel;
-        if (diffDays === 0) dLabel = 'D-Day';
-        else dLabel = `D-${diffDays}`;
+        if (totalDays != null) {
+          if (today < startDate) {
+            dLabel = `시작 전 (총 ${totalDays}일)`;
+          } else if (remainingDays === 0) {
+            dLabel = `D-Day (총 ${totalDays}일)`;
+          } else {
+            dLabel = `총 ${totalDays}일 중 ${remainingDays}일 남음`;
+          }
+        } else {
+          if (remainingDays === 0) dLabel = 'D-Day';
+          else dLabel = `D-${remainingDays}`;
+        }
         const dateStr = `${dueDate.getMonth() + 1}/${dueDate.getDate()}`;
         const dayName = dayNames[dueDate.getDay()];
         items.push({
@@ -945,13 +979,20 @@ export function ProjectDetailPage({
     }
   };
 
-  // 카드 드롭 핸들러 (KANBAN_CARD.BOARD_NO 업데이트)
+  // 카드 드롭 핸들러 (KANBAN_CARD.BOARD_NO 업데이트) — ref로 동기 잠금해 빠른 연속 드롭 시 요청 한 번만
   const handleCardDrop = async (cardId, sourceBoardId, targetBoardId) => {
     if (sourceBoardId === targetBoardId) return;
     if (!project?.id) return;
+    if (cardMoveInFlightRef.current) return;
+    const boardIdNum = Number(targetBoardId);
+    if (Number.isNaN(boardIdNum) || boardIdNum < 1) {
+      toast.error('이동할 보드를 찾을 수 없습니다.');
+      return;
+    }
 
+    cardMoveInFlightRef.current = true;
     try {
-      await projectService.updateKanbanCard(project.id, cardId, { boardId: targetBoardId });
+      await projectService.updateKanbanCard(project.id, cardId, { boardId: boardIdNum });
       setBoards((prevBoards) => {
         const newBoards = prevBoards.map((b) => ({ ...b, cards: [...(b.cards || [])] }));
         const sourceBoard = newBoards.find((b) => b.id === sourceBoardId);
@@ -968,7 +1009,10 @@ export function ProjectDetailPage({
       });
       toast.success('카드가 이동되었습니다.');
     } catch (err) {
-      toast.error(err?.message || '카드 이동에 실패했습니다.');
+      const message = err?.response?.data?.message || err?.message || '카드 이동에 실패했습니다.';
+      toast.error(message);
+    } finally {
+      cardMoveInFlightRef.current = false;
     }
   };
 
@@ -1140,9 +1184,15 @@ export function ProjectDetailPage({
     if (!project?.id) return;
 
     try {
-      const result = await projectService.createKanbanBoard(project.id, newBoardTitle.trim());
+      const res = await projectService.createKanbanBoard(project.id, newBoardTitle.trim());
+      const result = res?.data !== undefined ? res.data : res;
+      const boardId = result?.id != null ? Number(result.id) : null;
+      if (boardId == null || Number.isNaN(boardId)) {
+        toast.error('보드 생성 응답을 확인할 수 없습니다.');
+        return;
+      }
       const newBoard = {
-        id: result.id,
+        id: boardId,
         title: result.title || newBoardTitle.trim(),
         cards: (result.cards || []).map((c) => ({
           id: c.id,
@@ -1150,7 +1200,7 @@ export function ProjectDetailPage({
           description: c.description || '',
           startDate: c.startDate || '',
           dueDate: c.dueDate || '',
-          boardId: c.boardId ?? result.id,
+          boardId: c.boardId ?? boardId,
           completed: !!c.completed,
           assignedTo: c.assignedTo
             ? {

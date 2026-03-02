@@ -25,6 +25,7 @@ import { toast } from 'sonner';
 import { leaveService, attendanceService, memberService, projectService, agencyService } from '@/api/services';
 import useAuthStore from '@/store/authStore';
 import { LeaveRequestEditModal } from '@/components/modals/LeaveRequestEditModal';
+import { parseBackendDate } from '@/utils/dateUtils';
 import svgPaths from '@/imports/svg-oq0e8tu4xb';
 import {
   AdminDashboardRoot,
@@ -438,8 +439,8 @@ export function AdminDashboardPage({ onNavigateToSection }) {
         const filtered = list.filter((item) => item.attendanceRequestStatus !== 'CANCELLED');
         const formatReqDate = (dt) => {
           if (!dt) return '';
-          const d = typeof dt === 'string' ? new Date(dt) : dt;
-          if (isNaN(d.getTime())) return '';
+          const d = parseBackendDate(dt);
+          if (!d) return '';
           return `${d.getMonth() + 1}월 ${d.getDate()}일`;
         };
         const mapped = filtered.map((item) => {
@@ -568,9 +569,8 @@ export function AdminDashboardPage({ onNavigateToSection }) {
         };
         const statusMap = { PENDING: '대기', APPROVED: '승인', REJECTED: '반려' };
         const formatDate = (dt) => {
-          if (!dt) return '';
-          const d = typeof dt === 'string' ? new Date(dt) : dt;
-          if (isNaN(d.getTime())) return '';
+          const d = parseBackendDate(dt);
+          if (!d) return '';
           return `${d.getMonth() + 1}월 ${d.getDate()}일`;
         };
         const filtered = arr.filter((item) => String(item.attendanceRequestType || '').trim() !== '휴재');
