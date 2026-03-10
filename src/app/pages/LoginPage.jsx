@@ -85,7 +85,17 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
                   <input
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      // 이메일은 띄어쓰기 제거
+                      const filtered = e.target.value.replace(/\s/g, '');
+                      setEmail(filtered);
+                    }}
+                    onKeyDown={(e) => {
+                      // 스페이스바 입력 자체를 막기
+                      if (e.key === ' ') {
+                        e.preventDefault();
+                      }
+                    }}
                     placeholder="kim.artist@example.com"
                     className="w-full pl-11 pr-4 py-3 bg-muted/30 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground placeholder:text-muted-foreground"
                     required
@@ -101,7 +111,11 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
                   <input
                     type="password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      // 비밀번호는 띄어쓰기 제거
+                      const filtered = e.target.value.replace(/\s/g, '');
+                      setPassword(filtered);
+                    }}
                     placeholder="••••••••"
                     className="w-full pl-11 pr-4 py-3 bg-muted/30 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground placeholder:text-muted-foreground"
                     required
@@ -146,7 +160,6 @@ export function LoginPage({ onLogin, onShowSignup, onShowForgotPassword }) {
               className="w-full py-3 border-gray-300 hover:bg-gray-50 transition-all flex items-center justify-center gap-3"
               onClick={() => {
                 // Google login logic here
-                console.log('Google login clicked');
               }}
             >
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">

@@ -1,9 +1,7 @@
 // API 기본 설정
-// 개발 환경에서는 프록시를 사용하므로 빈 문자열 (상대 경로)
-// 프로덕션 환경에서는 전체 URL 사용
-export const API_BASE_URL = import.meta.env.PROD 
-  ? 'http://localhost:8888'  // 프로덕션 환경 URL (실제 배포 시 변경 필요)
-  : '';  // 개발 환경에서는 프록시 사용 (상대 경로)
+// 개발 환경: 직접 백엔드로 요청 (CORS 설정 필요)
+// 프로덕션 환경: 실제 배포 URL로 변경 필요
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8888';
 export const API_TIMEOUT = 10000;
 
 /** DB THUMBNAIL_FILE을 이미지 URL로 변환 (업로드 경로: /uploads/) */
@@ -28,6 +26,14 @@ export function getMemberProfileUrl(profileImage) {
 export const MEMBER_AVATAR_PLACEHOLDER =
   'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"%3E%3Ccircle fill="%23e5e7eb" cx="24" cy="24" r="24"/%3E%3Cpath fill="%239ca3af" d="M24 24c4.4 0 8-3.6 8-8s-3.6-8-8-8-8 3.6-8 8 3.6 8 8 8zm0 4c-5.3 0-16 2.7-16 8v4h32v-4c0-5.3-10.7-8-16-8z"/%3E%3C/svg%3E';
 
+/** 채팅 첨부 파일 URL 변환 */
+export function getChatAttachmentUrl(attachmentUrl) {
+  if (!attachmentUrl) return null;
+  if (attachmentUrl.startsWith('http://') || attachmentUrl.startsWith('https://')) return attachmentUrl;
+  const base = API_BASE_URL || 'http://localhost:8888';
+  return `${base}${attachmentUrl}`;
+}
+
 /** 썸네일 없을 때 사용할 placeholder (회색 박스 SVG) */
 export const PROJECT_THUMBNAIL_PLACEHOLDER =
   'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="96" height="128" viewBox="0 0 96 128"%3E%3Crect fill="%23e5e7eb" width="96" height="128"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-size="12"%3E%EC%9D%B4%EB%AF%B8%EC%A7%80%20%EC%97%86%EC%9D%8C%3C/text%3E%3C/svg%3E';
@@ -37,8 +43,17 @@ export const API_ENDPOINTS = {
   // 인증 API
   AUTH: {
     LOGIN: `/api/auth/login`,
+    REFRESH: `/api/auth/refresh`,
+    REISSUE: `/api/auth/reissue`,  // 쿠키 기반 토큰 재발급
+    LOGOUT: `/api/auth/logout`,
+    FORGOT_PASSWORD: `/api/auth/forgot-password`,
+    VERIFY_RESET_CODE: `/api/auth/verify-reset-code`,
+    RESET_PASSWORD: `/api/auth/reset-password`,
+    // OAuth 범용 엔드포인트
+    OAUTH_AUTHORIZATION_URL: (provider) => `/api/auth/${provider}/authorization-url`,
+    OAUTH_CALLBACK: (provider) => `/api/auth/${provider}/callback`,
   },
-  
+
   // 회원 API
   MEMBERS: {
     BASE: `/api/members`, // POST: 회원가입
@@ -48,9 +63,9 @@ export const API_ENDPOINTS = {
     DETAILS: (memberNo) => `/api/members/${memberNo}/details`,
     MANAGERS: (agencyNo) => `/api/members/agency/${agencyNo}/managers`,
     ARTISTS: (agencyNo) => `/api/members/agency/${agencyNo}/artists`,
-    ARTISTS_BY_MANAGER: (managerNo) => `/api/members/manager/${managerNo}/artists`,
+    ARTISTS_BY_MANAGER: (managerNo) => `/api/managers/${managerNo}/artists`,
     ARTISTS_BY_MANAGER_MEMBER: (memberNo) => `/api/members/manager/by-member/${memberNo}/artists`,
-    WORKING_ARTISTS: (managerNo) => `/api/members/manager/${managerNo}/working-artists`,
+    WORKING_ARTISTS: (managerNo) => `/api/managers/${managerNo}/working-artists`,
     ASSIGN: (artistNo, managerNo) => `/api/members/${artistNo}/assign/${managerNo}`,
     UNASSIGN: (artistNo) => `/api/members/${artistNo}/assign`,
     DELETE: (memberNo) => `/api/members/${memberNo}`,
@@ -68,10 +83,12 @@ export const API_ENDPOINTS = {
     START: `/api/attendance/start`, // POST: 출근 시작 (건강 체크 + 출근 기록)
     END: `/api/attendance/end`, // POST: 출근 종료 (퇴근 기록)
     TODAY_STATUS: `/api/attendance/today-status`, // GET: 오늘 출근 상태 조회
-    HISTORY: (memberNo, startDate, endDate) => 
+    HISTORY: (memberNo, startDate, endDate) =>
       `/api/attendance/history?memberNo=${memberNo}&startDate=${startDate}&endDate=${endDate}`, // GET: 출석 이력 조회
-    STATISTICS: (memberNo, year, month) => 
+    STATISTICS: (memberNo, year, month) =>
       `/api/attendance/statistics/${memberNo}?year=${year}&month=${month}`, // GET: 근태 통계 조회
+    ADMIN_CALENDAR: (agencyNo, year, month) =>
+      `/api/attendance/admin-calendar/${agencyNo}?year=${year}&month=${month}`, // GET: 관리자 캘린더 조회
   },
 
   // 연차/휴가 API
@@ -89,6 +106,7 @@ export const API_ENDPOINTS = {
     REJECT: (attendanceRequestNo) => `/api/leave/${attendanceRequestNo}/reject`, // POST: 근태 신청 반려
     CANCEL: (attendanceRequestNo) => `/api/leave/${attendanceRequestNo}/cancel`, // POST: 근태 신청 취소
     UPDATE: (attendanceRequestNo) => `/api/leave/${attendanceRequestNo}`, // PUT: 근태 신청 수정
+    UPLOAD_FILE: `/api/leave/file/upload`, // POST: 근태 신청 첨부 파일 업로드 (uploads/attendance)
     DOWNLOAD_FILE: (fileName) => `/api/leave/file/${fileName}`, // GET: 근태 신청 첨부 파일 다운로드
     AGENCY_BALANCES: (agencyNo) => `/api/leave/agency/${agencyNo}/balances`, // GET: 에이전시 소속 회원 연차 잔액 목록
     AGENCY_HISTORY: (agencyNo) => `/api/leave/agency/${agencyNo}/history`, // GET: 에이전시 소속 연차 변경 이력
@@ -106,6 +124,8 @@ export const API_ENDPOINTS = {
     DELETE: (projectNo) => `/api/projects/${projectNo}`, // DELETE: 프로젝트 삭제
     MEMBERS: (projectNo) => `/api/projects/${projectNo}/members`, // GET: 프로젝트 멤버 목록, POST: 팀원 추가
     MEMBER_DELETE: (projectNo, projectMemberNo) => `/api/projects/${projectNo}/members/remove/${projectMemberNo}`, // DELETE: 프로젝트 팀원 삭제
+    ASSIGNABLE_MANAGERS: (projectNo) => `/api/projects/${projectNo}/assignable-managers`, // GET: 담당자 배치 가능 담당자 목록 (ARTIST_ASSIGNMENT 기준)
+    ASSIGN_MANAGER: (projectNo) => `/api/projects/${projectNo}/assign-manager`, // PUT: 담당자 배치
     ADDABLE_MEMBERS: (projectNo) => `/api/projects/${projectNo}/addable-members`, // GET: 추가 가능 팀원 (담당자/작가 제외, 미소속)
     KANBAN: (projectNo) => `/api/projects/${projectNo}/kanban`, // GET: 칸반 보드 조회
     MANAGED: `/api/projects/managed`, // GET: 담당자 대시보드 담당 프로젝트 현황
@@ -117,6 +137,7 @@ export const API_ENDPOINTS = {
     FEEDBACK: (limit = 50) => `/api/projects/feedback?limit=${limit}`, // GET: 작가 대시보드 피드백(프로젝트 코멘트 목록)
     TODAY_TASKS: `/api/projects/my-today-tasks`, // GET: 아티스트 대시보드 오늘 할 일 (담당+마감일 오늘+미완료 칸반 카드)
     MY_CALENDAR_CARDS: (year, month) => `/api/projects/my-calendar-cards?year=${year}&month=${month}`, // GET: 아티스트 캘린더 담당 칸반 카드 (월별)
+    MY_PROJECTS_CALENDAR_CARDS: (year, month) => `/api/projects/my-projects-calendar-cards?year=${year}&month=${month}`, // GET: 담당자/에이전시 캘린더 소속 프로젝트 모든 칸반 카드 (월별)
     MY_DEADLINE_CARDS: `/api/projects/my-deadline-cards`, // GET: 마감임박 업무 (ENDED_AT >= 오늘, 이전 제외)
     KANBAN_STATS: (memberNo) => `/api/projects/member/${memberNo}/kanban-stats`, // GET: 회원별 칸반 카드 통계 (진행중/완료 개수)
     NEXT_SERIAL: (limit = 10) => `/api/projects/next-serial?limit=${limit}`, // GET: 아티스트 대시보드 다음 연재 프로젝트 (PROJECT_MEMBER+PROJECT_STARTED_AT/CYCLE)
@@ -126,6 +147,13 @@ export const API_ENDPOINTS = {
     KANBAN_CARD_UPDATE: (projectNo, cardId) => `/api/projects/${projectNo}/kanban-card/${cardId}`, // PUT: 칸반 카드 수정
     KANBAN_CARD_COMMENTS: (projectNo, cardId) => `/api/projects/${projectNo}/kanban-card/${cardId}/comments`, // GET: 목록, POST: 추가
     KANBAN_CARD_COMMENT_UPDATE: (projectNo, cardId, commentId) => `/api/projects/${projectNo}/kanban-card/${cardId}/comments/${commentId}`, // PUT: 코멘트 수정
+    // Notion OAuth (프로젝트 칸반 보드 연동)
+    NOTION_CONFIG: `/api/projects/notion/config`,
+    NOTION_CALLBACK: (projectNo) => `/api/projects/${projectNo}/notion/callback`,
+    NOTION_STATUS: (projectNo) => `/api/projects/${projectNo}/notion/status`,
+    NOTION_DATABASE: (projectNo) => `/api/projects/${projectNo}/notion/database`,
+    NOTION_DISCONNECT: (projectNo) => `/api/projects/${projectNo}/notion`,
+    NOTION_SYNC: (projectNo) => `/api/projects/${projectNo}/notion/sync`,
   },
 
   // 캘린더 API
@@ -134,6 +162,11 @@ export const API_ENDPOINTS = {
     DEADLINE_COUNTS_BY_AGENCY: (agencyNo) => `/api/calendar/deadline-counts/agency/${agencyNo}`, // GET: 에이전시 대시보드 마감 임박 현황
   },
 
+   // 공휴일 API
+   HOLIDAYS: {
+    GET_BY_YEAR: (year) => `/api/holidays/${year}`,
+  },
+  
   // 알림 API
   NOTIFICATION: {
     LIST: `/api/notifications`, // GET: 알림 목록 조회
@@ -162,6 +195,7 @@ export const API_ENDPOINTS = {
     GET: (agencyNo) => `/api/agency/${agencyNo}`, // GET: 에이전시 상세 (agencyLeave 등)
     LEAVE: (agencyNo) => `/api/agency/${agencyNo}/leave`, // PUT: 기본 연차(agency_leave) 수정
     JOIN_REQUEST: `/api/agency/join-request`, // POST: 에이전시 가입 요청
+    MY_JOIN_REQUEST: `/api/agency/my-join-request`, // GET: 회원의 대기 중인 가입 요청 조회
     JOIN_REQUESTS: (agencyNo) => `/api/agency/${agencyNo}/join-requests`, // GET: 에이전시 가입 요청 목록 조회
     APPROVE_JOIN_REQUEST: (newRequestNo) => `/api/agency/join-requests/${newRequestNo}/approve`, // POST: 가입 요청 승인
     REJECT_JOIN_REQUEST: (newRequestNo) => `/api/agency/join-requests/${newRequestNo}/reject`, // POST: 가입 요청 거절
@@ -176,6 +210,57 @@ export const API_ENDPOINTS = {
     UNSCREENED_NOTIFY: (agencyNo, memberNo) => `/api/agency/${agencyNo}/unscreened-notify/${memberNo}`, // POST: 미검진 1명 알림
     UNSCREENED_NOTIFY_BULK: (agencyNo) => `/api/agency/${agencyNo}/unscreened-notify-bulk`, // POST: 7일 이상 지연 일괄 알림
     DEADLINE_COUNTS: (agencyNo) => `/api/agency/${agencyNo}/deadline-counts`, // GET: 마감 임박 현황 (담당자 관리 프로젝트 업무, 오늘~4일 후)
+  },
+
+  // 채팅 API
+  CHAT: {
+    ROOMS_BY_AGENCY: (agencyNo, type = 'all') => `/api/chat/rooms/agency/${agencyNo}?type=${type}`, // GET: 에이전시별 채팅방 목록
+    ROOM_DETAIL: (roomId) => `/api/chat/rooms/${roomId}`, // GET: 채팅방 상세 정보
+    MESSAGES: (roomId, page = 0, size = 50) => `/api/chat/rooms/${roomId}/messages?page=${page}&size=${size}`, // GET: 채팅 메시지 목록
+    SEND_MESSAGE: (roomId) => `/api/chat/rooms/${roomId}/messages`, // POST: 메시지 전송
+    UPLOAD_FILE: (roomId) => `/api/chat/rooms/${roomId}/upload`, // POST: 파일 업로드
+    CREATE_ROOM: `/api/chat/rooms`, // POST: 채팅방 생성
+    JOIN_ROOM: (roomId) => `/api/chat/rooms/${roomId}/join`, // POST: 채팅방 참여
+    LEAVE_ROOM: (roomId) => `/api/chat/rooms/${roomId}/leave`, // POST: 채팅방 나가기
+    READ_MESSAGE: (roomId, messageId) => `/api/chat/rooms/${roomId}/messages/${messageId}/read`, // PUT: 메시지 읽음 처리
+    MESSAGE_READ_STATUS: (roomId, chatNo) => `/api/chat/rooms/${roomId}/messages/${chatNo}/read-status`, // GET: 해당 메시지를 읽지 않은 참여 멤버 수
+  },
+
+  // AI 챗봇 API (역할별)
+  AI: {
+    ARTIST_HEALTH_FEEDBACK: `/api/v1/ai/artist/health-feedback`,
+    MANAGER_HEALTH_SUMMARY: `/api/v1/ai/manager/artist-health-summary`,
+    AGENCY_HEALTH_OVERVIEW: `/api/v1/ai/agency/health-overview`,
+    AGENCY_RISK_SUMMARY: `/api/v1/ai/agency/risk-summary`,
+    AGENCY_LEAVE_OVERLAP_ALERT: `/api/v1/ai/agency/leave-overlap-alert`,
+    AGENCY_ARTIST_ASSIGNMENT_BALANCE: `/api/v1/ai/agency/artist-assignment-balance`,
+    AGENCY_REJECTED_THEN_REAPPLIED_ALERT: `/api/v1/ai/agency/rejected-then-reapplied-alert`,
+    ARTIST_LEAVE_RECOMMENDATION: `/api/v1/ai/artist/leave-recommendation`,
+    MANAGER_LEAVE_RECOMMENDATION: `/api/v1/ai/manager/leave-recommendation`,
+    ARTIST_WORKLOAD_SUMMARY: `/api/v1/ai/artist/workload-summary`,
+    ARTIST_PROJECT_PRIORITY_ADVICE: `/api/v1/ai/artist/project-priority-advice`,
+    ARTIST_WORKATION_RECOMMENDATION: `/api/v1/ai/artist/workation-recommendation`,
+    MANAGER_ARTIST_WORKLOAD_BALANCE: `/api/v1/ai/manager/artist-workload-balance`,
+    MANAGER_MY_HEALTH_FEEDBACK: `/api/v1/ai/manager/my-health-feedback`,
+    MANAGER_WORKATION_RECOMMENDATION: `/api/v1/ai/manager/workation-recommendation`,
+    MANAGER_NUDGE_MESSAGE_RECOMMENDATION: `/api/v1/ai/manager/nudge-message-recommendation`,
+    MANAGER_ARTIST_DAILY_HEALTH_SUMMARY: `/api/v1/ai/manager/artist-daily-health-summary`,
+  },
+
+  // 포트폴리오 API (아티스트: 가져오기/만들기, 담당자·에이전시: 직원 포트폴리오 조회)
+  PORTFOLIO: {
+    EXTRACT_IMAGE: `/api/portfolio/extract/image`,
+    EXTRACT_FROM_PAGE_SCREENSHOT: `/api/portfolio/extract/from-page-screenshot`,
+    SAVE_FROM_EXTRACT: `/api/portfolio/from-extract`,
+    CREATE: `/api/portfolio`,
+    ME: `/api/portfolio/me`,
+    MY_PROJECTS: `/api/portfolio/my-projects`,
+    BY_MEMBER: (memberNo) => `/api/portfolio/member/${memberNo}`,
+    UPDATE: (portfolioNo) => `/api/portfolio/${portfolioNo}`,
+    DELETE: (portfolioNo) => `/api/portfolio/${portfolioNo}`,
+    NOTION_SYNC: (portfolioNo) => `/api/portfolio/${portfolioNo}/notion-sync`,
+    NOTION_CONFIG: `/api/portfolio/notion/config`,
+    NOTION_CALLBACK: (portfolioNo) => `/api/portfolio/${portfolioNo}/notion/callback`,
   },
 
   // 담당자(manager) API (X-Member-No로 담당자 식별, 배정 작가만 대상)

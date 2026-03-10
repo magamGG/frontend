@@ -5,10 +5,11 @@ import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/app/components/ui/dialog';
-import { Building2, User, Mail, Phone, Key, Send, ArrowLeft, CheckCircle2, Edit } from 'lucide-react';
+import { Building2, User, Phone, Key, Send, ArrowLeft, CheckCircle2, Edit } from 'lucide-react';
 import { toast } from 'sonner';
 import { agencyService, memberService } from '@/api';
 import useAuthStore from '@/store/authStore';
+import { formatPhoneNumber, normalizePhoneNumber } from '@/utils/phoneFormatter';
 import {
   JoinAgencyRequestRoot,
   BackgroundPattern,
@@ -54,6 +55,8 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editFormData, setEditFormData] = useState({ ...userData });
   const [agencyCodeInput, setAgencyCodeInput] = useState('');
+  const [agencyName, setAgencyName] = useState('');
+  const [isComposing, setIsComposing] = useState({ name: false, phone: false }); // IME 조합 상태 추적
   
   // 사용자 정보 초기화 - DB에서 가져오기
   useEffect(() => {
@@ -93,19 +96,88 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
     fetchMemberInfo();
   }, [user?.memberNo]);
 
+  // 대기 중인 가입 요청 확인
+  useEffect(() => {
+    const checkPendingRequest = async () => {
+      if (!user?.memberNo) return;
+
+      try {
+        const myRequest = await agencyService.getMyPendingJoinRequest();
+        
+        if (myRequest && myRequest.newRequestStatus === '대기') {
+          setStep('success');
+          setAgencyName(myRequest.agencyName || '');
+        }
+      } catch (error) {
+        if (error?.status !== 204 && error?.response?.status !== 204) {
+          console.error('❌ [대기 중인 요청 확인] 가입 요청 상태 확인 실패:', error);
+        }
+      }
+    };
+
+    checkPendingRequest();
+  }, [user?.memberNo]);
+
+  // IME 조합 시작
+  const handleCompositionStart = (e) => {
+    const field = e.target.id === 'edit-name' ? 'name' : e.target.id === 'edit-phone' ? 'phone' : null;
+    if (field) {
+      setIsComposing(prev => ({ ...prev, [field]: true }));
+    }
+  };
+
+  // IME 조합 종료
+  const handleCompositionEnd = (e) => {
+    const field = e.target.id === 'edit-name' ? 'name' : e.target.id === 'edit-phone' ? 'phone' : null;
+    if (field) {
+      setIsComposing(prev => ({ ...prev, [field]: false }));
+      // 조합 종료 후 필터링 적용
+      handleEditInputChange(field, e.target.value);
+    }
+  };
+
+  // 초성이 포함되어 있는지 검증
+  const hasHangulJamo = (text) => {
+    if (!text) return false;
+    return /[ㄱ-ㅎㅏ-ㅣ]/.test(text);
+  };
+
   const handleEditInputChange = (field, value) => {
-    setEditFormData(prev => ({ ...prev, [field]: value }));
+    // IME 조합 중일 때는 필터링하지 않음
+    if (field === 'name' && isComposing.name) {
+      setEditFormData(prev => ({ ...prev, [field]: value }));
+      return;
+    }
+    
+    if (field === 'phone' && isComposing.phone) {
+      setEditFormData(prev => ({ ...prev, [field]: value }));
+      return;
+    }
+    
+    // 연락처 입력 시 자동 포맷팅
+    if (field === 'phone') {
+      // 숫자만 허용
+      const numericOnly = value.replace(/[^0-9]/g, '');
+      const formatted = formatPhoneNumber(numericOnly);
+      setEditFormData(prev => ({ ...prev, [field]: formatted }));
+    } else if (field === 'name') {
+      // 이름은 한글(완성형 + 자모), 영문만 허용 (공백 제외)
+      const filtered = value.replace(/[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z]/g, '');
+      setEditFormData(prev => ({ ...prev, [field]: filtered }));
+    } else {
+      setEditFormData(prev => ({ ...prev, [field]: value }));
+    }
   };
 
   const handleSaveProfile = async () => {
-    if (!editFormData.name || !editFormData.email || !editFormData.phone) {
+    if (!editFormData.name || !editFormData.phone) {
       toast.error('필수 항목을 모두 입력해주세요.');
       return;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(editFormData.email)) {
-      toast.error('올바른 이메일 형식을 입력해주세요.');
+    // 이름에 초성이 포함되어 있는지 검증
+    if (hasHangulJamo(editFormData.name)) {
+      toast.error('이름을 완성해주세요. 초성을 포함할 수 없습니다.');
       return;
     }
 
@@ -119,7 +191,7 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
     try {
       await memberService.updateProfile(user.memberNo, {
         memberName: editFormData.name,
-        memberPhone: editFormData.phone,
+        memberPhone: normalizePhoneNumber(editFormData.phone), // DB 저장용 포맷
         memberAddress: '', // 주소는 필요시 추가
       });
       
@@ -149,9 +221,13 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
         memberPhone: userData.phone,
       };
 
-      await agencyService.requestJoinAgency(requestData);
+      const response = await agencyService.requestJoinAgency(requestData);
+      
+      if (response?.agencyName) {
+        setAgencyName(response.agencyName);
+      }
+      
       toast.success('에이전시 가입 요청이 전송되었습니다!');
-      // 요청 완료 화면으로 전환. 대시보드 이동은 "완료" 버튼 클릭 시에만 handleComplete → onSuccess 로 처리.
       setStep('success');
     } catch (error) {
       const errorMessage = error?.message || '에이전시 가입 요청 전송에 실패했습니다. 다시 시도해주세요.';
@@ -205,9 +281,11 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
                   </SuccessIconWrapper>
                 </motion.div>
 
-                <SuccessTitle>요청이 전송되었습니다!</SuccessTitle>
+                <SuccessTitle>
+                  {agencyName ? `${agencyName}에 요청이 전송되었습니다!` : '요청이 전송되었습니다!'}
+                </SuccessTitle>
                 <SuccessDescription>
-                  에이전시 담당자가 검토 후 승인하면 알림을 받으실 수 있습니다.
+                  에이전시 관리자가 검토 후 승인하면 알림을 받으실 수 있습니다.
                   <br />
                   승인 후 다시 로그인하시면 대시보드로 이동합니다.
                 </SuccessDescription>
@@ -224,10 +302,6 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
                   <InfoRow>
                     <InfoLabel>연락처</InfoLabel>
                     <InfoValue>{userData.phone}</InfoValue>
-                  </InfoRow>
-                  <InfoRow>
-                    <InfoLabel>회사 코드</InfoLabel>
-                    <InfoValue>{agencyCodeInput || '미입력'}</InfoValue>
                   </InfoRow>
                 </SuccessInfoBox>
 
@@ -326,9 +400,17 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
                       <InputField
                         id="agencyCode"
                         type="text"
-                        placeholder="예: AGENCY-2026-001"
+                        inputMode="numeric"
+                        placeholder="예: 12345678901"
                         value={agencyCodeInput}
-                        onChange={(e) => setAgencyCodeInput(e.target.value)}
+                        onChange={(e) => {
+                          // 숫자만 허용
+                          const numbers = e.target.value.replace(/[^\d]/g, '');
+                          // 11자리 제한
+                          const limitedValue = numbers.slice(0, 11);
+                          setAgencyCodeInput(limitedValue);
+                        }}
+                        maxLength={11}
                         disabled={isLoading}
                         required
                         $mono
@@ -336,7 +418,7 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
                       />
                     </InputWrapper>
                     <p style={{ fontSize: '12px', color: 'var(--muted-foreground)', margin: 0 }}>
-                      에이전시 담당자에게 전용 코드를 문의하세요
+                      에이전시 관리자에게 전용 코드를 문의하세요
                     </p>
                   </InputGroup>
                 </div>
@@ -349,7 +431,7 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
 
               <InfoAlert>
                 <p style={{ fontSize: '14px', color: 'var(--chart-2)', margin: 0 }}>
-                  <strong>💡 안내:</strong> 가입 요청 후 에이전시 담당자의 승인이 필요합니다. 
+                  <strong>💡 안내:</strong> 가입 요청 후 에이전시 관리자의 승인이 필요합니다. 
                   승인 완료 시 등록하신 이메일로 알림이 전송됩니다.
                 </p>
               </InfoAlert>
@@ -373,16 +455,15 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
                 id="edit-name"
                 value={editFormData.name}
                 onChange={(e) => handleEditInputChange('name', e.target.value)}
-                style={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
-              />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <Label htmlFor="edit-email" style={{ fontSize: '14px', color: 'var(--foreground)' }}>이메일 *</Label>
-              <Input
-                id="edit-email"
-                type="email"
-                value={editFormData.email}
-                onChange={(e) => handleEditInputChange('email', e.target.value)}
+                onCompositionStart={handleCompositionStart}
+                onCompositionEnd={handleCompositionEnd}
+                onKeyDown={(e) => {
+                  // 스페이스바 입력 차단
+                  if (e.key === ' ' || e.key === 'Space') {
+                    e.preventDefault();
+                  }
+                }}
+                maxLength={20}
                 style={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
               />
             </div>
@@ -390,14 +471,23 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
               <Label htmlFor="edit-phone" style={{ fontSize: '14px', color: 'var(--foreground)' }}>연락처 *</Label>
               <Input
                 id="edit-phone"
+                type="tel"
                 value={editFormData.phone}
                 onChange={(e) => handleEditInputChange('phone', e.target.value)}
-                placeholder="010-0000-0000"
+                onCompositionStart={handleCompositionStart}
+                onCompositionEnd={handleCompositionEnd}
+                onKeyDown={(e) => {
+                  // 숫자, 백스페이스, Delete, 화살표 키만 허용
+                  if (!/[0-9]/.test(e.key) && 
+                      !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Tab', 'Home', 'End'].includes(e.key) &&
+                      !(e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                  }
+                }}
+                placeholder="010-1234-5678"
+                maxLength={13}
                 style={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
               />
-              <p style={{ fontSize: '12px', color: 'var(--muted-foreground)', margin: 0 }}>
-                하이픈(-)을 포함하여 입력해주세요
-              </p>
             </div>
           </div>
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
@@ -413,3 +503,5 @@ export function JoinAgencyRequestPage({ onBack, onSuccess }) {
     </JoinAgencyRequestRoot>
   );
 }
+
+export default JoinAgencyRequestPage;

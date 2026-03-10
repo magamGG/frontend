@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, Mail, Phone, MapPin, Briefcase, Edit, ArrowLeft, Camera } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Briefcase, Edit, ArrowLeft, Camera, MessageCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/app/components/ui/dialog';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
@@ -10,6 +10,8 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { memberService, attendanceService } from '@/api/services';
 import { API_BASE_URL } from '@/api/config';
 import useAuthStore from '@/store/authStore';
+import { InquiryModal } from '@/components/modals/InquiryModal';
+import { MapPickerModal } from '@/components/modals/MapPickerModal';
 import {
   AdminMyPageOverlay,
   AdminMyPageContainer,
@@ -80,17 +82,19 @@ const ATTENDANCE_TYPE_COLORS = {
   '휴재': '#6B7280',
 };
 
-// API typeCounts에서 반차/반반차 제외, 연차·병가 → '휴가'로 합쳐 표시
+// API typeCounts에서 반차/반반차 제외, 연차·병가·VACATION → '휴가'로 합쳐 표시
 function formatAttendanceTypeCounts(typeCounts) {
   if (!Array.isArray(typeCounts)) return [];
   const filtered = typeCounts.filter(
     (item) => item.type !== '반차' && item.type !== '반반차' && item.type !== '휴재'
   );
   const leaveLabel = '휴가';
-  const leaveTypes = ['연차', '병가'];
+  const leaveTypes = ['연차', '병가', 'VACATION'];
   const byDisplayName = {};
   filtered.forEach((item) => {
-    const displayName = leaveTypes.includes(item.type) ? leaveLabel : item.type;
+    const rawType = (item.type && String(item.type).trim()) || '';
+    const displayName = leaveTypes.includes(rawType) ? leaveLabel : rawType || item.type;
+    if (!displayName) return;
     if (!byDisplayName[displayName]) {
       byDisplayName[displayName] = {
         count: 0,
@@ -128,15 +132,11 @@ export function AdminMyPage({ onClose, onLogout }) {
   const { user } = useAuthStore();
   const memberNo = user?.memberNo;
   
-  console.log('🔍 AdminMyPage 컴포넌트 렌더링:', { 
-    user, 
-    memberNo, 
-    userMemberName: user?.memberName 
-  });
-  
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isImageSelectModalOpen, setIsImageSelectModalOpen] = useState(false);
+  const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
+  const [showMapPicker, setShowMapPicker] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [userName, setUserName] = useState('');
   const [email, setEmail] = useState('');
@@ -157,29 +157,12 @@ export function AdminMyPage({ onClose, onLogout }) {
 
   // Load user data from API
   useEffect(() => {
-    console.log('🚀 AdminMyPage useEffect 실행:', { memberNo, user });
-    
-    if (!memberNo) {
-      console.log('❌ memberNo가 없어서 종료');
-      return;
-    }
+    if (!memberNo) return;
     
     const loadMyPageData = async () => {
       try {
         setIsLoading(true);
-        
-        console.log('📡 API 호출 시작: getMyPageInfo', { memberNo });
-        // 마이페이지 정보 조회
         const myPageData = await memberService.getMyPageInfo(memberNo);
-        console.log('✅ API 응답 받음:', {
-          memberName: myPageData.memberName,
-          memberEmail: myPageData.memberEmail,
-          memberPhone: myPageData.memberPhone,
-          memberAddress: myPageData.memberAddress,
-          agencyName: myPageData.agencyName,
-          memberRole: myPageData.memberRole,
-          전체데이터: myPageData
-        });
         
         setUserName(myPageData.memberName || '');
         setEmail(myPageData.memberEmail || '');
@@ -188,17 +171,8 @@ export function AdminMyPage({ onClose, onLogout }) {
         setStudio(myPageData.agencyName || '');
         setMemberRole(myPageData.memberRole || '');
         
-        console.log('✅ State 업데이트 완료:', {
-          userName: myPageData.memberName || '',
-          email: myPageData.memberEmail || '',
-          phone: myPageData.memberPhone || '',
-          location: myPageData.memberAddress || '',
-          studio: myPageData.agencyName || '',
-          memberRole: myPageData.memberRole || ''
-        });
-        
         // 이미지 URL 설정
-        const imageBaseUrl = API_BASE_URL || 'http://localhost:8888';
+        const imageBaseUrl = API_BASE_URL;
         if (myPageData.memberProfileImage) {
           setProfileImage(`${imageBaseUrl}/uploads/${myPageData.memberProfileImage}`);
         }
@@ -244,44 +218,21 @@ export function AdminMyPage({ onClose, onLogout }) {
       return;
     }
     
-    console.log('💾 프로필 저장 시작:', {
-      memberNo,
-      updateData: {
-        memberName: userName,
-        memberPhone: phone,
-        memberAddress: location,
-        memberPassword: password ? '***' : undefined
-      }
-    });
-    
     try {
       const updateData = {
         memberName: userName,
         memberPhone: phone,
         memberAddress: location,
-        memberPassword: password || undefined, // 비밀번호가 있으면 전송
-        // 담당자는 소속 수정 불가 (agencyName 제외)
+        memberPassword: password || undefined,
       };
       
-      console.log('📤 API 호출: updateProfile', { memberNo, updateData });
       await memberService.updateProfile(memberNo, updateData);
-      console.log('✅ 프로필 업데이트 성공');
       toast.success('프로필이 성공적으로 업데이트되었습니다.');
       setIsEditModalOpen(false);
       setPassword('');
       setConfirmPassword('');
       
-      // 데이터 다시 로드
-      console.log('🔄 DB에서 최신 데이터 다시 조회:', { memberNo });
       const myPageData = await memberService.getMyPageInfo(memberNo);
-      console.log('✅ 최신 데이터 조회 완료:', {
-        memberName: myPageData.memberName,
-        memberEmail: myPageData.memberEmail,
-        memberPhone: myPageData.memberPhone,
-        memberAddress: myPageData.memberAddress,
-        agencyName: myPageData.agencyName,
-        memberRole: myPageData.memberRole
-      });
       
       setUserName(myPageData.memberName || '');
       setEmail(myPageData.memberEmail || '');
@@ -346,7 +297,7 @@ export function AdminMyPage({ onClose, onLogout }) {
       if (!file) return;
       
       try {
-        const imageBaseUrl = API_BASE_URL || 'http://localhost:8888';
+        const imageBaseUrl = API_BASE_URL;
         let fileName;
         if (type === 'background') {
           fileName = await memberService.uploadBackgroundImage(memberNo, file);
@@ -417,6 +368,10 @@ export function AdminMyPage({ onClose, onLogout }) {
                   <ActionButton $variant="primary" onClick={() => setIsEditModalOpen(true)}>
                     <Edit className="w-4 h-4" />
                     프로필 수정
+                  </ActionButton>
+                  <ActionButton $variant="secondary" onClick={() => setIsInquiryModalOpen(true)}>
+                    <MessageCircle className="w-4 h-4" />
+                    문의하기
                   </ActionButton>
                   <ActionButton $variant="secondary" onClick={handleLogout}>
                     로그아웃
@@ -547,19 +502,8 @@ export function AdminMyPage({ onClose, onLogout }) {
         onOpenChange={async (open) => {
           setIsEditModalOpen(open);
           if (open && memberNo) {
-            // 모달이 열릴 때 DB에서 최신 데이터 조회
-            console.log('📂 모달 열기 - DB에서 최신 데이터 조회 시작:', { memberNo });
             try {
               const myPageData = await memberService.getMyPageInfo(memberNo);
-              console.log('✅ 모달 열기 - 최신 데이터 조회 완료:', {
-                memberName: myPageData.memberName,
-                memberPhone: myPageData.memberPhone,
-                memberAddress: myPageData.memberAddress,
-                agencyName: myPageData.agencyName,
-                memberEmail: myPageData.memberEmail,
-                memberRole: myPageData.memberRole
-              });
-              
               setUserName(myPageData.memberName || '');
               setPhone(myPageData.memberPhone || '');
               setLocation(myPageData.memberAddress || '');
@@ -632,10 +576,28 @@ export function AdminMyPage({ onClose, onLogout }) {
             </FormRow>
             <FormRow>
               <FormLabel htmlFor="edit-location">주소</FormLabel>
-              <FormInput
-                id="edit-location"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
+              <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                <FormInput
+                  id="edit-location"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="주소를 입력하거나 지도에서 선택하세요"
+                  style={{ flex: 1 }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowMapPicker(true)}
+                >
+                  <MapPin size={16} style={{ marginRight: 4 }} />
+                  지도에서 선택
+                </Button>
+              </div>
+              <MapPickerModal
+                open={showMapPicker}
+                onOpenChange={setShowMapPicker}
+                onSelect={(addr) => setLocation(addr)}
               />
             </FormRow>
             <FormRow>
@@ -749,6 +711,12 @@ export function AdminMyPage({ onClose, onLogout }) {
           </ImageSelectGrid>
         </DialogContent>
       </Dialog>
+
+      {/* Inquiry Modal */}
+      <InquiryModal 
+        open={isInquiryModalOpen} 
+        onOpenChange={setIsInquiryModalOpen} 
+      />
     </AdminMyPageOverlay>
   );
 }

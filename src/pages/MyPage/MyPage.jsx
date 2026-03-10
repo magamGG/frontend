@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, Mail, Phone, MapPin, Briefcase, Edit, ArrowLeft, Camera } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Briefcase, Edit, ArrowLeft, Camera, MessageCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/app/components/ui/dialog';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
@@ -9,7 +9,10 @@ import { motion } from 'motion/react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { memberService, attendanceService } from '@/api/services';
 import { API_BASE_URL } from '@/api/config';
+import { formatPhoneNumber } from '@/utils/phoneFormatter';
 import useAuthStore from '@/store/authStore';
+import { InquiryModal } from '@/components/modals/InquiryModal';
+import { MapPickerModal } from '@/components/modals/MapPickerModal';
 import {
   MyPageOverlay,
   MyPageContainer,
@@ -91,15 +94,11 @@ export function MyPage({ onClose, onLogout }) {
   const { user } = useAuthStore();
   const memberNo = user?.memberNo;
   
-  console.log('🔍 MyPage 컴포넌트 렌더링:', { 
-    user, 
-    memberNo, 
-    userMemberName: user?.memberName 
-  });
-  
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isImageSelectModalOpen, setIsImageSelectModalOpen] = useState(false);
+  const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
+  const [showMapPicker, setShowMapPicker] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [userName, setUserName] = useState('');
   const [email, setEmail] = useState('');
@@ -115,34 +114,18 @@ export function MyPage({ onClose, onLogout }) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteError, setDeleteError] = useState('');
+  const [isComposing, setIsComposing] = useState({ name: false, phone: false }); // IME 조합 상태 추적
   
   const currentMonth = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' });
 
   // Load user data from API
   useEffect(() => {
-    console.log('🚀 MyPage useEffect 실행:', { memberNo, user });
-    
-    if (!memberNo) {
-      console.log('❌ memberNo가 없어서 종료');
-      return;
-    }
+    if (!memberNo) return;
     
     const loadMyPageData = async () => {
       try {
         setIsLoading(true);
-        
-        console.log('📡 API 호출 시작: getMyPageInfo', { memberNo });
-        // 마이페이지 정보 조회
         const myPageData = await memberService.getMyPageInfo(memberNo);
-        console.log('✅ API 응답 받음:', {
-          memberName: myPageData.memberName,
-          memberEmail: myPageData.memberEmail,
-          memberPhone: myPageData.memberPhone,
-          memberAddress: myPageData.memberAddress,
-          agencyName: myPageData.agencyName,
-          memberRole: myPageData.memberRole,
-          전체데이터: myPageData
-        });
         
         setUserName(myPageData.memberName || '');
         setEmail(myPageData.memberEmail || '');
@@ -151,17 +134,8 @@ export function MyPage({ onClose, onLogout }) {
         setStudio(myPageData.agencyName || '');
         setMemberRole(myPageData.memberRole || '');
         
-        console.log('✅ State 업데이트 완료:', {
-          userName: myPageData.memberName || '',
-          email: myPageData.memberEmail || '',
-          phone: myPageData.memberPhone || '',
-          location: myPageData.memberAddress || '',
-          studio: myPageData.agencyName || '',
-          memberRole: myPageData.memberRole || ''
-        });
-        
         // 이미지 URL 설정
-        const imageBaseUrl = API_BASE_URL || 'http://localhost:8888';
+        const imageBaseUrl = API_BASE_URL;
         if (myPageData.memberProfileImage) {
           setProfileImage(`${imageBaseUrl}/uploads/${myPageData.memberProfileImage}`);
         }
@@ -200,9 +174,46 @@ export function MyPage({ onClose, onLogout }) {
     loadMyPageData();
   }, [memberNo]);
 
+  // IME 조합 시작
+  const handleCompositionStart = (e) => {
+    const field = e.target.id === 'edit-name' ? 'name' : e.target.id === 'edit-phone' ? 'phone' : null;
+    if (field) {
+      setIsComposing(prev => ({ ...prev, [field]: true }));
+    }
+  };
+
+  // IME 조합 종료
+  const handleCompositionEnd = (e) => {
+    const field = e.target.id === 'edit-name' ? 'name' : e.target.id === 'edit-phone' ? 'phone' : null;
+    if (field) {
+      setIsComposing(prev => ({ ...prev, [field]: false }));
+      // 조합 종료 후 필터링 적용
+      if (field === 'name') {
+        const filtered = e.target.value.replace(/[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z]/g, '');
+        setUserName(filtered);
+      } else if (field === 'phone') {
+        const numericOnly = e.target.value.replace(/[^0-9]/g, '');
+        const formatted = formatPhoneNumber(numericOnly);
+        setPhone(formatted);
+      }
+    }
+  };
+
+  // 초성이 포함되어 있는지 검증
+  const hasHangulJamo = (text) => {
+    if (!text) return false;
+    return /[ㄱ-ㅎㅏ-ㅣ]/.test(text);
+  };
+
   const handleSaveProfile = async () => {
     if (!memberNo) {
       console.error('❌ memberNo가 없습니다.');
+      return;
+    }
+    
+    // 이름에 초성이 포함되어 있는지 검증
+    if (hasHangulJamo(userName)) {
+      toast.error('이름을 완성해주세요. 초성을 포함할 수 없습니다.');
       return;
     }
     
@@ -211,44 +222,21 @@ export function MyPage({ onClose, onLogout }) {
       return;
     }
     
-    console.log('💾 프로필 저장 시작:', {
-      memberNo,
-      updateData: {
-        memberName: userName,
-        memberPhone: phone,
-        memberAddress: location,
-        memberPassword: password ? '***' : undefined
-      }
-    });
-    
     try {
       const updateData = {
         memberName: userName,
         memberPhone: phone,
         memberAddress: location,
-        memberPassword: password || undefined, // 비밀번호가 있으면 전송
-        // 작가는 소속 수정 불가 (agencyName 제외)
+        memberPassword: password || undefined,
       };
       
-      console.log('📤 API 호출: updateProfile', { memberNo, updateData });
       await memberService.updateProfile(memberNo, updateData);
-      console.log('✅ 프로필 업데이트 성공');
       toast.success('프로필이 성공적으로 업데이트되었습니다.');
       setIsEditModalOpen(false);
       setPassword('');
       setConfirmPassword('');
       
-      // 데이터 다시 로드
-      console.log('🔄 DB에서 최신 데이터 다시 조회:', { memberNo });
       const myPageData = await memberService.getMyPageInfo(memberNo);
-      console.log('✅ 최신 데이터 조회 완료:', {
-        memberName: myPageData.memberName,
-        memberEmail: myPageData.memberEmail,
-        memberPhone: myPageData.memberPhone,
-        memberAddress: myPageData.memberAddress,
-        agencyName: myPageData.agencyName,
-        memberRole: myPageData.memberRole
-      });
       
       setUserName(myPageData.memberName || '');
       setEmail(myPageData.memberEmail || '');
@@ -313,7 +301,7 @@ export function MyPage({ onClose, onLogout }) {
       if (!file) return;
       
       try {
-        const imageBaseUrl = API_BASE_URL || 'http://localhost:8888';
+        const imageBaseUrl = API_BASE_URL;
         let fileName;
         if (type === 'background') {
           fileName = await memberService.uploadBackgroundImage(memberNo, file);
@@ -385,6 +373,10 @@ export function MyPage({ onClose, onLogout }) {
                   <ActionButton $variant="primary" onClick={() => setIsEditModalOpen(true)}>
                     <Edit className="w-4 h-4" />
                     프로필 수정
+                  </ActionButton>
+                  <ActionButton onClick={() => setIsInquiryModalOpen(true)}>
+                    <MessageCircle className="w-4 h-4" />
+                    문의하기
                   </ActionButton>
                   <ActionButton onClick={handleLogout}>로그아웃</ActionButton>
                   <ActionButton $variant="danger" onClick={() => setIsDeleteModalOpen(true)}>
@@ -516,7 +508,25 @@ export function MyPage({ onClose, onLogout }) {
               <Input
                 id="edit-name"
                 value={userName}
-                onChange={(e) => setUserName(e.target.value)}
+                onChange={(e) => {
+                  // IME 조합 중일 때는 필터링하지 않음
+                  if (isComposing.name) {
+                    setUserName(e.target.value);
+                    return;
+                  }
+                  // 이름은 한글(완성형 + 자모), 영문만 허용 (공백 제외)
+                  const filtered = e.target.value.replace(/[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z]/g, '');
+                  setUserName(filtered);
+                }}
+                onCompositionStart={handleCompositionStart}
+                onCompositionEnd={handleCompositionEnd}
+                onKeyDown={(e) => {
+                  // 스페이스바 입력 차단
+                  if (e.key === ' ' || e.key === 'Space') {
+                    e.preventDefault();
+                  }
+                }}
+                maxLength={20}
                 className="bg-white border-[#DADDE1] text-[#1F2328]"
               />
             </div>
@@ -528,7 +538,11 @@ export function MyPage({ onClose, onLogout }) {
                 id="edit-password"
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  // 비밀번호는 띄어쓰기 제거
+                  const filtered = e.target.value.replace(/\s/g, '');
+                  setPassword(filtered);
+                }}
                 placeholder="변경할 비밀번호 (변경하지 않으려면 비워두세요)"
                 className="bg-white border-[#DADDE1] text-[#1F2328]"
               />
@@ -541,7 +555,11 @@ export function MyPage({ onClose, onLogout }) {
                 id="edit-confirm-password"
                 type="password"
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                onChange={(e) => {
+                  // 비밀번호는 띄어쓰기 제거
+                  const filtered = e.target.value.replace(/\s/g, '');
+                  setConfirmPassword(filtered);
+                }}
                 placeholder="비밀번호 확인"
                 className="bg-white border-[#DADDE1] text-[#1F2328]"
               />
@@ -553,7 +571,28 @@ export function MyPage({ onClose, onLogout }) {
               <Input
                 id="edit-phone"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => {
+                  // IME 조합 중일 때는 필터링하지 않음
+                  if (isComposing.phone) {
+                    setPhone(e.target.value);
+                    return;
+                  }
+                  // 숫자만 허용
+                  const numericOnly = e.target.value.replace(/[^0-9]/g, '');
+                  const formatted = formatPhoneNumber(numericOnly);
+                  setPhone(formatted);
+                }}
+                onCompositionStart={handleCompositionStart}
+                onCompositionEnd={handleCompositionEnd}
+                onKeyDown={(e) => {
+                  // 숫자, 백스페이스, Delete, 화살표 키만 허용
+                  if (!/[0-9]/.test(e.key) && 
+                      !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Tab', 'Home', 'End'].includes(e.key) &&
+                      !(e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                  }
+                }}
+                maxLength={13}
                 className="bg-white border-[#DADDE1] text-[#1F2328]"
               />
             </div>
@@ -561,11 +600,29 @@ export function MyPage({ onClose, onLogout }) {
               <Label htmlFor="edit-location" className="text-sm text-[#1F2328]">
                 주소
               </Label>
-              <Input
-                id="edit-location"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                className="bg-white border-[#DADDE1] text-[#1F2328]"
+              <div className="flex gap-2">
+                <Input
+                  id="edit-location"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="주소를 입력하거나 지도에서 선택하세요"
+                  className="bg-white border-[#DADDE1] text-[#1F2328] flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowMapPicker(true)}
+                  className="shrink-0"
+                >
+                  <MapPin size={16} className="mr-1" />
+                  지도에서 선택
+                </Button>
+              </div>
+              <MapPickerModal
+                open={showMapPicker}
+                onOpenChange={setShowMapPicker}
+                onSelect={(addr) => setLocation(addr)}
               />
             </div>
             <div className="space-y-2">
@@ -677,6 +734,12 @@ export function MyPage({ onClose, onLogout }) {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Inquiry Modal */}
+      <InquiryModal 
+        open={isInquiryModalOpen} 
+        onOpenChange={setIsInquiryModalOpen} 
+      />
     </MyPageOverlay>
   );
 }

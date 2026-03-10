@@ -183,55 +183,34 @@ export const DateCell = styled.div`
   min-height: 7.5rem;
   height: auto;
   padding: 0.5rem;
+  // 오늘 날짜: 파란 테두리 (배경색은 휴가/워케이션 구분 유지)
+  border: 2px solid ${props => (props.$isToday ? '#3b82f6' : 'transparent')};
+  box-sizing: border-box;
+  // 날짜 배경색 (break=휴가, hiatus=휴재·작품 일정만)
   background-color: ${props => {
-    // 다른 달 날짜도 하얀색 배경
-    if (props.$isOtherMonth) return 'var(--card)';
-    
-    // 휴무나 워케이션이 있으면 우선 표시 - 진하고 예쁜 색상으로
-    if (props.$attendanceType === 'workation') {
-      // 워케이션: 진한 보라색
-      if (props.$isToday) return 'color-mix(in srgb, var(--status-workation) 40%, var(--card))';
-      return 'color-mix(in srgb, var(--status-workation) 28%, var(--card))';
-    }
-    if (props.$attendanceType === 'break') {
-      // 휴가: 진한 회색
-      if (props.$isToday) return 'color-mix(in srgb, var(--status-hiatus) 40%, var(--card))';
-      return 'color-mix(in srgb, var(--status-hiatus) 28%, var(--card))';
-    }
-    // 일반 오늘 날짜
-    if (props.$isToday) return 'color-mix(in srgb, var(--status-completed) 20%, var(--card))';
-    return 'var(--card)';
+    if (props.$isOtherMonth) return 'rgba(249, 249, 249, 0.8)';         // 다른 달 날짜: 밝은 회색 80%
+    if (props.$attendanceType === 'workation') return 'rgba(139, 92, 246, 0.7)'; // 워케이션: 진한 보라 70%
+    if (props.$attendanceType === 'remote') return 'rgba(251, 146, 60, 0.7)';    // 재택근무: 주황 70%
+    if (props.$attendanceType === 'break') return 'rgba(156, 163, 175, 0.6)';    // 휴가: 회색 60%
+    if (props.$attendanceType === 'hiatus') return 'rgba(120, 113, 108, 0.5)';   // 휴재: 스톤 50%
+    return 'rgba(255, 255, 255, 0.9)';                                           // 기본 날짜: 흰색 90%
   }};
-  border: ${props => props.$isToday ? '2px solid var(--status-completed)' : 'none'};
-  transition: var(--transition-base, all 0.2s);
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
+
   position: relative;
   overflow: visible;
-
+  // hover 시 배경색
   &:hover {
     background-color: ${props => {
-      // 다른 달 날짜도 hover 시 하얀색 배경 유지
-      if (props.$isOtherMonth) return 'color-mix(in srgb, var(--muted) 30%, var(--card))';
-      
-      // 휴무나 워케이션이 있으면 우선 표시 - 진하고 예쁜 색상으로
-      if (props.$attendanceType === 'workation') {
-        // 워케이션: 진한 보라색
-        if (props.$isToday) return 'color-mix(in srgb, var(--status-workation) 50%, var(--card))';
-        return 'color-mix(in srgb, var(--status-workation) 38%, var(--card))';
-      }
-      if (props.$attendanceType === 'break') {
-        // 휴가: 진한 회색
-        if (props.$isToday) return 'color-mix(in srgb, var(--status-hiatus) 50%, var(--card))';
-        return 'color-mix(in srgb, var(--status-hiatus) 38%, var(--card))';
-      }
-      // 일반 오늘 날짜
-      if (props.$isToday) return 'color-mix(in srgb, var(--status-completed) 30%, var(--card))';
-      return 'color-mix(in srgb, var(--muted) 50%, transparent)';
+      if (props.$isOtherMonth) return 'rgba(229, 229, 229, 0.8)';
+      if (props.$attendanceType === 'workation') return 'rgba(124, 58, 237, 0.8)';
+      if (props.$attendanceType === 'remote') return 'rgba(249, 115, 22, 0.8)';
+      if (props.$attendanceType === 'break') return 'rgba(107, 114, 128, 0.7)';
+      if (props.$attendanceType === 'hiatus') return 'rgba(120, 113, 108, 0.65)';
+      return 'rgba(243, 243, 243, 0.8)';
     }};
   }
-`;
+`
+
 
 export const DateNumberWrapper = styled.div`
   display: flex;
@@ -244,13 +223,15 @@ export const DateNumberWrapper = styled.div`
 
 export const DateNumber = styled.div`
   font-size: 1rem;
-  font-weight: ${props => (props.$isToday ? '700' : 'var(--font-weight-medium)')};
+  font-weight: ${props => (props.$isToday ? '700' : (props.$isHoliday ? '600' : 'var(--font-weight-medium)'))};
   color: ${props => {
     // 다른 달 날짜는 흐릿하게 표시 (회색)
     if (props.$isOtherMonth) {
       if (props.$isSunday) return 'color-mix(in srgb, var(--destructive) 40%, transparent)';
       return 'color-mix(in srgb, var(--muted-foreground) 40%, transparent)';
     }
+    // 공휴일은 빨간색 (일요일 제외)
+    if (props.$isHoliday && !props.$isSunday) return '#ef4444';
     if (props.$isSunday && !props.$isToday) return 'var(--destructive)';
     if (props.$isToday) return 'var(--primary)';
     return 'var(--foreground)';
@@ -265,57 +246,50 @@ export const AttendanceBadge = styled.span`
   border-radius: 0.25rem;
   background-color: ${props => {
     if (props.$attendanceType === 'workation') {
-      // 오늘 날짜와 겹칠 경우 더 진하게
       if (props.$isToday) return 'color-mix(in srgb, var(--status-workation) 60%, transparent)';
       return 'color-mix(in srgb, var(--status-workation) 40%, transparent)';
     }
+    if (props.$attendanceType === 'remote') {
+      if (props.$isToday) return 'color-mix(in srgb, #f97316 60%, transparent)';
+      return 'color-mix(in srgb, #f97316 40%, transparent)';
+    }
     if (props.$attendanceType === 'break') {
-      // 오늘 날짜와 겹칠 경우 더 진하게
       if (props.$isToday) return 'color-mix(in srgb, var(--status-hiatus) 70%, transparent)';
       return 'color-mix(in srgb, var(--status-hiatus) 50%, transparent)';
+    }
+    if (props.$attendanceType === 'hiatus') {
+      if (props.$isToday) return 'color-mix(in srgb, #78716c 60%, transparent)';
+      return 'color-mix(in srgb, #78716c 40%, transparent)';
     }
     return 'transparent';
   }};
   color: ${props => {
-    if (props.$attendanceType === 'workation') {
-      return 'var(--status-workation)';
-    }
-    if (props.$attendanceType === 'break') {
-      return 'var(--status-hiatus)';
-    }
+    if (props.$attendanceType === 'workation') return 'var(--status-workation)';
+    if (props.$attendanceType === 'remote') return '#f97316';
+    if (props.$attendanceType === 'break') return 'var(--status-hiatus)';
+    if (props.$attendanceType === 'hiatus') return '#78716c';
     return 'var(--foreground)';
   }};
   border: 1px solid ${props => {
-    if (props.$attendanceType === 'workation') {
-      return 'color-mix(in srgb, var(--status-workation) 60%, transparent)';
-    }
-    if (props.$attendanceType === 'break') {
-      return 'color-mix(in srgb, var(--status-hiatus) 60%, transparent)';
-    }
+    if (props.$attendanceType === 'workation') return 'color-mix(in srgb, var(--status-workation) 60%, transparent)';
+    if (props.$attendanceType === 'remote') return 'color-mix(in srgb, #f97316 60%, transparent)';
+    if (props.$attendanceType === 'break') return 'color-mix(in srgb, var(--status-hiatus) 60%, transparent)';
+    if (props.$attendanceType === 'hiatus') return 'color-mix(in srgb, #78716c 60%, transparent)';
     return 'transparent';
   }};
   white-space: nowrap;
   flex-shrink: 0;
 `;
 
-// 일정 표시 영역
+// 일정 표시 영역 — absolute 배치 바의 컨테이너 (min-height 인라인으로 동적 설정)
 export const DateEventsArea = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
   margin-top: 0.25rem;
-  min-height: 0;
   overflow: visible;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
   width: 100%;
-  overflow: visible;
   position: relative;
-  margin-bottom: 1.75rem;
 `;
 
-// 일정 바 (여러 날짜에 걸친 작업) — $topOffset(행 인덱스)만큼 margin-top으로 겹침 방지
+// 일정 바 (여러 날짜에 걸친 작업) — absolute 배치로 행(row) 위치 반영
 export const EventBar = styled.div`
   font-size: 0.75rem;
   padding: 0.25rem 0.5rem;
@@ -327,13 +301,15 @@ export const EventBar = styled.div`
   text-overflow: ellipsis;
   background-color: ${props => props.$color || 'var(--accent)'};
   width: ${props => props.$width || '100%'};
-  position: relative;
+  position: absolute;
+  top: ${props => (props.$topOffset ?? 0) * 1.75}rem;
+  left: 0;
   z-index: 1;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-  flex-shrink: 0;
   height: 1.5rem;
-  margin-top: ${props => (props.$topOffset != null && props.$topOffset > 0 ? `calc(${props.$topOffset} * (1.5rem + 2px))` : '0')};
   cursor: ${props => (props.$isGrouped ? 'pointer' : 'default')};
+  transition: ${props => props.$isGrouped ? 'all 0.2s' : 'none'};
+  opacity: ${props => props.$isOtherMonth ? 0.45 : 1};
   
   &:hover {
     ${props => props.$isGrouped && `
@@ -360,7 +336,6 @@ export const GroupedEventBar = styled.div`
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   flex-shrink: 0;
   height: 1.5rem;
-  margin-top: ${props => (props.$topOffset != null && props.$topOffset > 0 ? `calc(${props.$topOffset} * (1.5rem + 2px))` : '0')};
   cursor: pointer;
   transition: all 0.2s;
   
@@ -840,6 +815,8 @@ export const EventsListContainer = styled.div`
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  max-height: 400px;
+  overflow-y: auto;
 `;
 
 export const EventsSectionLabel = styled(FormLabel)`
@@ -881,7 +858,7 @@ export const IconWithMargin = styled.span`
 `;
 
 export const UpcomingEventsContent = styled.div`
-  display: flex;
+  display: flex;  
   flex-direction: column;
   gap: 1rem;
   flex: 1;

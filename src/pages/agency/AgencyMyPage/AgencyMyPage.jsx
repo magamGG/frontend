@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, Mail, Phone, MapPin, Briefcase, Edit, KeyRound, Camera, ArrowLeft } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Briefcase, Edit, KeyRound, Camera, ArrowLeft, MessageCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/app/components/ui/dialog';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
@@ -10,6 +10,8 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { memberService } from '@/api/services';
 import { API_BASE_URL } from '@/api/config';
 import useAuthStore from '@/store/authStore';
+import { InquiryModal } from '@/components/modals/InquiryModal';
+import { MapPickerModal } from '@/components/modals/MapPickerModal';
 
 
 
@@ -19,17 +21,15 @@ import useAuthStore from '@/store/authStore';
  * @param {Function} props.onLogout
  */
 export function AgencyMyPage({ onClose, onLogout }) {
-  console.log('🎯 AgencyMyPage 컴포넌트 렌더링');
-  
   const { user } = useAuthStore();
   const memberNo = user?.memberNo;
   const agencyNo = user?.agencyNo;
   
-  console.log('🔍 AgencyMyPage - user 정보:', { user, memberNo, agencyNo });
-  
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isImageSelectModalOpen, setIsImageSelectModalOpen] = useState(false);
+  const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
+  const [showMapPicker, setShowMapPicker] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [userName, setUserName] = useState('');
   const [email, setEmail] = useState('');
@@ -63,12 +63,7 @@ export function AgencyMyPage({ onClose, onLogout }) {
 
   // Load user data from API
   useEffect(() => {
-    console.log('🚀 useEffect 실행:', { memberNo, agencyNo });
-    
-    if (!memberNo) {
-      console.log('❌ memberNo가 없어서 종료');
-      return;
-    }
+    if (!memberNo) return;
     
     const loadMyPageData = async () => {
       try {
@@ -85,7 +80,7 @@ export function AgencyMyPage({ onClose, onLogout }) {
         setCompanyCode(myPageData.agencyCode || '');
         
         // 이미지 URL 설정
-        const imageBaseUrl = API_BASE_URL || 'http://localhost:8888';
+        const imageBaseUrl = API_BASE_URL;
         if (myPageData.memberProfileImage) {
           setProfileImage(`${imageBaseUrl}/uploads/${myPageData.memberProfileImage}`);
         }
@@ -113,32 +108,18 @@ export function AgencyMyPage({ onClose, onLogout }) {
               item => item.role !== '에이전시 관리자'
             );
             
-            console.log('📊 필터링 전 roleCounts:', statistics.roleCounts);
-            console.log('📊 필터링 후 roleCounts:', filteredRoleCounts);
-            
             const formattedData = filteredRoleCounts.map((item, index) => {
-              // roleColorMap에서 색상 찾기 (대소문자 구분 없이)
               const roleKey = Object.keys(roleColorMap).find(
                 key => key === item.role || key.toLowerCase() === item.role?.toLowerCase()
               );
               const color = roleKey ? roleColorMap[roleKey] : 
                            ['#00ACC1', '#9C27B0', '#FF9800', '#4CAF50', '#E91E63', '#9C27B0'][index % 6];
-              
-              console.log('🎨 색상 매핑:', { 
-                role: item.role, 
-                roleKey, 
-                color,
-                index 
-              });
-              
               return {
                 name: item.role,
-                value: Number(item.count), // Long을 Number로 변환
+                value: Number(item.count),
                 color: color,
               };
             });
-            
-            console.log('📊 최종 포맷팅된 데이터:', formattedData);
             
             // 필터링된 데이터의 총합 계산
             const filteredTotalCount = formattedData.reduce(
@@ -333,6 +314,13 @@ export function AgencyMyPage({ onClose, onLogout }) {
                   프로필 수정
                 </button>
                 <button
+                  onClick={() => setIsInquiryModalOpen(true)}
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 border border-[#DADDE1] text-[#1F2328] rounded-lg hover:bg-gray-50 transition-all text-sm font-medium"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  문의하기
+                </button>
+                <button
                   onClick={handleLogout}
                   className="px-4 py-2.5 border border-[#DADDE1] text-[#1F2328] rounded-lg hover:bg-gray-50 transition-all text-sm font-medium"
                 >
@@ -382,17 +370,14 @@ export function AgencyMyPage({ onClose, onLogout }) {
                               paddingAngle={2}
                               dataKey="value"
                             >
-                              {employeeData.map((entry, index) => {
-                                console.log('🎨 Cell 색상:', { index, name: entry.name, color: entry.color });
-                                return (
+                              {employeeData.map((entry, index) => (
                                   <Cell 
                                     key={`cell-${index}`} 
                                     fill={entry.color || '#6E8FB3'}
                                     stroke={entry.color || '#6E8FB3'}
                                     strokeWidth={1}
                                   />
-                                );
-                              })}
+                              ))}
                             </Pie>
                             <Tooltip content={<CustomTooltip />} />
                           </PieChart>
@@ -534,12 +519,30 @@ export function AgencyMyPage({ onClose, onLogout }) {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-location" className="text-sm text-[#1F2328]">위치</Label>
-                <Input
-                  id="edit-location"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  className="bg-white border-[#DADDE1] text-[#1F2328]"
+                <Label htmlFor="edit-location" className="text-sm text-[#1F2328]">위치(주소)</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="edit-location"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    placeholder="주소를 입력하거나 지도에서 선택하세요"
+                    className="bg-white border-[#DADDE1] text-[#1F2328] flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowMapPicker(true)}
+                    className="shrink-0"
+                  >
+                    <MapPin size={16} className="mr-1" />
+                    지도에서 선택
+                  </Button>
+                </div>
+                <MapPickerModal
+                  open={showMapPicker}
+                  onOpenChange={setShowMapPicker}
+                  onSelect={(addr) => setLocation(addr)}
                 />
               </div>
               <div className="space-y-2">
@@ -664,7 +667,7 @@ export function AgencyMyPage({ onClose, onLogout }) {
                     if (!file || !memberNo) return;
                     
                     try {
-                      const imageBaseUrl = API_BASE_URL || 'http://localhost:8888';
+                      const imageBaseUrl = API_BASE_URL;
                       const fileName = await memberService.uploadBackgroundImage(memberNo, file);
                       setBackgroundImage(`${imageBaseUrl}/uploads/${fileName}`);
                       toast.success('배경 이미지가 변경되었습니다.');
@@ -694,7 +697,7 @@ export function AgencyMyPage({ onClose, onLogout }) {
                     if (!file || !memberNo) return;
                     
                     try {
-                      const imageBaseUrl = API_BASE_URL || 'http://localhost:8888';
+                      const imageBaseUrl = API_BASE_URL;
                       const fileName = await memberService.uploadProfileImage(memberNo, file);
                       setProfileImage(`${imageBaseUrl}/uploads/${fileName}`);
                       toast.success('프로필 사진이 변경되었습니다.');
@@ -716,6 +719,12 @@ export function AgencyMyPage({ onClose, onLogout }) {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Inquiry Modal */}
+        <InquiryModal 
+          open={isInquiryModalOpen} 
+          onOpenChange={setIsInquiryModalOpen} 
+        />
       </motion.div>
     </div>
   );

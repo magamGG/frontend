@@ -61,7 +61,6 @@ export function AgencyAssignmentPage() {
       try {
         // 담당자 목록 조회 (MANAGER 테이블에서 조회)
         const managersResponse = await memberService.getManagersByAgency(user.agencyNo);
-        console.log('담당자 목록 응답:', managersResponse);
         
         // 응답 데이터 처리 (응답이 객체로 감싸져 있을 수 있음)
         let managersList = [];
@@ -73,11 +72,8 @@ export function AgencyAssignmentPage() {
           managersList = managersResponse.data.data;
         }
         
-        console.log('처리된 담당자 목록:', managersList);
-        
         // 작가 목록 조회
         const artistsResponse = await memberService.getArtistsByAgency(user.agencyNo);
-        console.log('작가 목록 응답:', artistsResponse);
         
         // 작가 응답 데이터 처리
         let artistsList = [];
@@ -88,11 +84,9 @@ export function AgencyAssignmentPage() {
         } else if (artistsResponse?.data?.data && Array.isArray(artistsResponse.data.data)) {
           artistsList = artistsResponse.data.data;
         }
-        
-        console.log('처리된 작가 목록:', artistsList);
 
         // 담당자 데이터 변환 (MANAGER 테이블의 데이터 사용)
-        const imageBaseUrl = API_BASE_URL || 'http://localhost:8888';
+        const imageBaseUrl = API_BASE_URL;
         const mappedManagers = managersList.map((manager) => {
           // 작가 목록에서 해당 담당자에게 배정된 작가 수 계산
           // managerNo는 MANAGER 테이블의 MANAGER_NO를 의미
@@ -122,8 +116,6 @@ export function AgencyAssignmentPage() {
             profileImage: profileImageUrl, // 프로필 이미지 URL
           };
         });
-        
-        console.log('매핑된 담당자 목록:', mappedManagers);
 
         // 작가 데이터 변환
         const mappedArtists = artistsList.map((artist) => {
@@ -142,7 +134,6 @@ export function AgencyAssignmentPage() {
             ? mappedManagers.find(m => m.id === managerNo) 
             : undefined;
 
-          // 프로필 이미지 URL 구성
           let profileImageUrl = null;
           if (artist.memberProfileImage) {
             if (artist.memberProfileImage.startsWith('http://') || artist.memberProfileImage.startsWith('https://')) {
@@ -166,9 +157,6 @@ export function AgencyAssignmentPage() {
             profileImage: profileImageUrl, // 프로필 이미지 URL
           };
         });
-        
-        console.log('매핑된 작가 목록:', mappedArtists);
-        console.log('미배정 작가 수:', mappedArtists.filter(a => !a.assignedManager).length);
 
         setManagers(mappedManagers);
         setArtists(mappedArtists);
@@ -209,20 +197,7 @@ export function AgencyAssignmentPage() {
     }
 
     try {
-      console.log('작가 배정 시작:', {
-        artistId,
-        managerNo: selectedManager.id, // MANAGER 테이블의 MANAGER_NO
-        managerName: selectedManager.name
-      });
-
-      // 백엔드 API 호출: ARTIST_ASSIGNMENT 테이블에 등록
-      // managerNo는 MANAGER 테이블의 MANAGER_NO를 전달
       await memberService.assignArtistToManager(artistId, selectedManager.id);
-      
-      console.log('작가 배정 성공:', {
-        artistId,
-        managerNo: selectedManager.id
-      });
 
       // 상태 업데이트: 작가의 managerNo와 assignedManager 설정
       setArtists(prev => prev.map(artist =>
@@ -258,16 +233,7 @@ export function AgencyAssignmentPage() {
     }
 
     try {
-      console.log('작가 배정 해제 시작:', {
-        artistId,
-        artistName: artist.name,
-        currentManagerNo: artist.managerNo
-      });
-
-      // 백엔드 API 호출: ARTIST_ASSIGNMENT 테이블에서 삭제
       await memberService.unassignArtistFromManager(artistId);
-      
-      console.log('작가 배정 해제 성공:', artistId);
 
       // 상태 업데이트: managerNo를 null로 설정하고 assignedManager를 undefined로 설정
       const previousManager = artist.assignedManager;
@@ -323,15 +289,6 @@ export function AgencyAssignmentPage() {
     
     return isUnassigned;
   });
-  
-  console.log('전체 작가 수:', artists.length);
-  console.log('미배정 작가 수:', unassignedArtists.length);
-  console.log('미배정 작가 목록:', unassignedArtists.map(a => ({ 
-    id: a.id, 
-    name: a.name, 
-    managerNo: a.managerNo, 
-    assignedManager: a.assignedManager 
-  })));
 
   return (
     <AgencyAssignmentRoot>

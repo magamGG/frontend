@@ -9,7 +9,8 @@ import {
   BookOpen,
   AlertCircle,
   Plus,
-  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
   Calendar
 } from 'lucide-react';
 import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
@@ -18,6 +19,12 @@ import { toast } from 'sonner';
 import useAuthStore from '@/store/authStore';
 import { memberService, projectService } from '@/api/services';
 import { getProjectThumbnailUrl, PROJECT_THUMBNAIL_PLACEHOLDER } from '@/api/config';
+import {
+  SERIAL_STATUS_FILTER_OPTIONS,
+  getProjectStatusBadgeClass,
+} from '@/constants/projectSerialStatus';
+import { ProjectStatusBadge } from '@/components/common/ProjectStatusBadge';
+import { ProjectSerialCard } from '@/components/common/ProjectSerialCard';
 import {
   AgencyProjectsRoot,
   AgencyProjectsBody,
@@ -41,20 +48,6 @@ import {
   AgencyProjectsFilterLeft,
   AgencyProjectsSortButtons,
   AgencyProjectsList,
-  AgencyProjectCard,
-  AgencyProjectCardContent,
-  AgencyProjectThumbnail,
-  AgencyProjectInfo,
-  AgencyProjectInfoHeader,
-  AgencyProjectTitle,
-  AgencyProjectGenre,
-  AgencyProjectMeta,
-  AgencyProjectMetaItem,
-  AgencyProjectMetaDivider,
-  AgencyProjectMetaGroup,
-  AgencyProjectStatus,
-  AgencyProjectStatusText,
-  AgencyProjectEpisodeText,
   AgencyProjectsEmpty,
   AgencyProjectsEmptyText,
   AgencyProjectModal,
@@ -124,6 +117,7 @@ export function AgencyProjectsPage() {
   const formatDate = (date) => {
     if (!date) return null;
     const d = new Date(date);
+    if (isNaN(d.getTime())) return null;
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
@@ -147,6 +141,7 @@ export function AgencyProjectsPage() {
   const getDeadlineDn = (date) => {
     if (!date) return '미정';
     const next = new Date(date);
+    if (isNaN(next.getTime())) return '미정';
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     next.setHours(0, 0, 0, 0);
@@ -158,10 +153,22 @@ export function AgencyProjectsPage() {
 
   const mapApiProjectToFrontend = (p) => {
     const startDateStr = p.projectStartedAt
-      ? (typeof p.projectStartedAt === 'string' ? p.projectStartedAt.slice(0, 10) : null)
+      ? (typeof p.projectStartedAt === 'string'
+        ? p.projectStartedAt.slice(0, 10)
+        : Array.isArray(p.projectStartedAt) && p.projectStartedAt.length >= 3
+          ? `${p.projectStartedAt[0]}-${String(p.projectStartedAt[1]).padStart(2, '0')}-${String(p.projectStartedAt[2]).padStart(2, '0')}`
+          : null)
       : null;
-    const nextDate = calculateNextScheduleDate(startDateStr, p.projectCycle);
-    const deadlineDn = nextDate ? getDeadlineDn(nextDate) : '미정';
+    const nextDeadlineFromApi = p.nextDeadline ?? p.next_deadline;
+    const deadlineDn = nextDeadlineFromApi
+      ? getDeadlineDn(nextDeadlineFromApi)
+      : (() => {
+          const nextDate = calculateNextScheduleDate(startDateStr, p.projectCycle);
+          return nextDate ? getDeadlineDn(nextDate) : '미정';
+        })();
+    const nextDateForSchedule = nextDeadlineFromApi
+      ? new Date(nextDeadlineFromApi)
+      : calculateNextScheduleDate(startDateStr, p.projectCycle);
     return {
       id: p.projectNo,
       title: p.projectName,
@@ -174,7 +181,7 @@ export function AgencyProjectsPage() {
       schedule: p.projectCycle ? `${p.projectCycle}일` : '미정',
       scheduleDays: p.projectCycle ?? null,
       startDate: startDateStr,
-      nextScheduleDate: nextDate ? formatDate(nextDate) : null,
+      nextScheduleDate: nextDateForSchedule ? formatDate(nextDateForSchedule) : null,
       thumbnail: p.thumbnailFile || null,
       artistName: p.artistName || '',
       artistId: p.artistMemberNo,
@@ -309,6 +316,7 @@ export function AgencyProjectsPage() {
   const formatDateKorean = (date) => {
     if (!date) return null;
     const d = new Date(date);
+    if (isNaN(d.getTime())) return null;
     const month = d.getMonth() + 1;
     const day = d.getDate();
     const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
@@ -428,20 +436,6 @@ export function AgencyProjectsPage() {
     todayDeadlines: projects.filter(p => 
       p.deadline.includes('D-0') || p.deadline.includes('D-1') || p.deadline.includes('D-2')
     ).slice(0, 3).length,
-  };
-
-  // 상태별 배지 색상
-  const getStatusBadgeColor = (status) => {
-    switch (status) {
-      case '연재':
-        return 'bg-green-500 hover:bg-green-600';
-      case '휴재':
-        return 'bg-orange-500 hover:bg-orange-600';
-      case '완결':
-        return 'bg-gray-500 hover:bg-gray-600';
-      default:
-        return 'bg-blue-500 hover:bg-blue-600';
-    }
   };
 
   // 에이전시의 모든 프로젝트 조회는 MEMBER_ROLE이 '에이전시 관리자'일 때만 이용 가능
@@ -572,13 +566,13 @@ export function AgencyProjectsPage() {
               <AgencyProjectsFilterLeft>
                 <AgencyProjectsFilterLabel>상태:</AgencyProjectsFilterLabel>
                 <AgencyProjectsFilterButtons>
-                  {['전체', '연재', '휴재', '완결'].map((filter) => (
+                  {SERIAL_STATUS_FILTER_OPTIONS.map((filter) => (
                     <Button
                       key={filter}
                       variant={statusFilter === filter ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => handleFilterChange(filter)}
-                      className={statusFilter === filter ? getStatusBadgeColor(filter === '전체' ? '' : filter) : ''}
+                      className={statusFilter === filter ? getProjectStatusBadgeClass(filter === '전체' ? '' : filter) : ''}
                     >
                       {filter}
                     </Button>
@@ -597,12 +591,7 @@ export function AgencyProjectsPage() {
                     style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
                   >
                     가나다순
-                    {sortType === 'name' && (
-                      <>
-                        <ArrowUpDown className="w-3 h-3" />
-                        <span style={{ fontSize: '12px' }}>{sortOrder === 'asc' ? '↑' : '↓'}</span>
-                      </>
-                    )}
+                    {sortType === 'name' && (sortOrder === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
                   </Button>
                   <Button
                     variant={sortType === 'deadline' ? 'default' : 'outline'}
@@ -611,12 +600,7 @@ export function AgencyProjectsPage() {
                     style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
                   >
                     마감일순
-                    {sortType === 'deadline' && (
-                      <>
-                        <ArrowUpDown className="w-3 h-3" />
-                        <span style={{ fontSize: '12px' }}>{sortOrder === 'asc' ? '↑' : '↓'}</span>
-                      </>
-                    )}
+                    {sortType === 'deadline' && (sortOrder === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
                   </Button>
                 </AgencyProjectsSortButtons>
               </div>
@@ -636,53 +620,20 @@ export function AgencyProjectsPage() {
           ) : (
           <>
           {sortedProjects.map((project) => (
-            <AgencyProjectCard key={project.id} onClick={() => handleProjectClick(project)}>
-              <AgencyProjectCardContent>
-                {/* 왼쪽: 썸네일 */}
-                <AgencyProjectThumbnail>
-                  <ImageWithFallback
-                    src={getProjectThumbnailUrl(project.thumbnail) || PROJECT_THUMBNAIL_PLACEHOLDER}
-                    alt={project.title}
-                    className="w-24 h-32 object-cover rounded-md border-2 border-border"
-                  />
-                </AgencyProjectThumbnail>
-
-                {/* 가운데: 작품 정보 */}
-                <AgencyProjectInfo>
-                  <AgencyProjectInfoHeader>
-                    <AgencyProjectTitle>{project.title}</AgencyProjectTitle>
-                    <Badge variant="outline" className="text-xs">
-                      {project.artistName}
-                    </Badge>
-                    <Badge variant="outline" className="text-xs bg-primary/10">
-                      {project.managerName}
-                    </Badge>
-                  </AgencyProjectInfoHeader>
-                  <AgencyProjectGenre>{project.genre}</AgencyProjectGenre>
-                  <AgencyProjectMeta>
-                    <AgencyProjectMetaItem>
-                      <BookOpen className="w-3 h-3" />
-                      <span>{project.platform}</span>
-                    </AgencyProjectMetaItem>
-                    <AgencyProjectMetaGroup>
-                      <AgencyProjectMetaDivider>•</AgencyProjectMetaDivider>
-                      <AgencyProjectMetaItem>
-                        <Calendar className="w-3 h-3" />
-                        <span>{project.schedule && !isNaN(project.schedule) ? `${project.schedule}일` : project.schedule || '미정'}</span>
-                      </AgencyProjectMetaItem>
-                    </AgencyProjectMetaGroup>
-                  </AgencyProjectMeta>
-                </AgencyProjectInfo>
-
-                {/* 오른쪽: 상태 정보 */}
-                <AgencyProjectStatus>
-                  <Badge className={getStatusBadgeColor(project.serialStatus)}>
-                    {project.serialStatus}
-                  </Badge>
-                  <AgencyProjectEpisodeText>마감: {project.deadline}</AgencyProjectEpisodeText>
-                </AgencyProjectStatus>
-              </AgencyProjectCardContent>
-            </AgencyProjectCard>
+            <ProjectSerialCard
+              key={project.id}
+              onClick={() => handleProjectClick(project)}
+              title={project.title}
+              artistName={project.artistName}
+              managerName={project.managerName}
+              platform={project.platform}
+              schedule={project.schedule}
+              deadline={project.deadline}
+              genre={project.genre}
+              serialStatus={project.serialStatus}
+              thumbnail={project.thumbnail}
+              showThumbnail={true}
+            />
           ))}
 
           {sortedProjects.length === 0 && (

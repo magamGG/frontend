@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Home, Briefcase, Calendar, Users, Palmtree, Heart, Plane, Bell, User, ClipboardCheck, Activity, UserCog, HeartPulse } from 'lucide-react';
+import { Home, Briefcase, Calendar, Users, Palmtree, Heart, Plane, Bell, User, ClipboardCheck, Activity, UserCog, HeartPulse, FileText } from 'lucide-react';
 import { Header } from '../Header';
 import { MyPage } from '@/pages/MyPage';
 import { AdminMyPage } from '@/pages/admin/AdminMyPage';
@@ -60,6 +60,7 @@ const getIconForSection = (sectionId, index) => {
   if (sectionId === 'individual-dashboard') return Home;
   if (sectionId === 'individual-projects') return Briefcase;
   if (sectionId === 'individual-calendar') return Calendar;
+  if (sectionId === 'portfolio') return FileText;
   if (sectionId.includes('vacation')) return Plane;
   
   // 기본 아이콘 (이전 방식)

@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
 import { Modal } from '@/components/common/Modal';
 import { ChevronLeft, ChevronRight, Plus, AlignLeft, Palette, Save, Trash2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { holidayService } from '@/api/services';
 import {
   CalendarRoot,
   CalendarBody,
@@ -161,6 +162,43 @@ function buildCalendarCells(year, month) {
   return cells;
 }
 
+// 이벤트 목록 → 기간별 그룹화 + 행 배정 (유틸리티)
+function computeEventGroups(eventList) {
+  const groupMap = new Map();
+  eventList.forEach(event => {
+    if (event.category === 'leave') return;
+    const startDay = Number(event.startDate ?? event.date);
+    const endDay = Number(event.endDate ?? event.date);
+    if (isNaN(startDay) || isNaN(endDay)) return;
+    const key = `${startDay}~${endDay}`;
+    if (!groupMap.has(key)) {
+      groupMap.set(key, { startDay, endDay, cards: [] });
+    }
+    groupMap.get(key).cards.push(event);
+  });
+  const groups = Array.from(groupMap.values());
+  groups.sort((a, b) => {
+    if (a.startDay !== b.startDay) return a.startDay - b.startDay;
+    if (a.endDay !== b.endDay) return a.endDay - b.endDay;
+    return b.cards.length - a.cards.length;
+  });
+  const rows = [];
+  groups.forEach(group => {
+    let targetRow = 0;
+    while (targetRow < rows.length) {
+      const hasConflict = rows[targetRow].some(existing =>
+        existing.startDay <= group.endDay && group.startDay <= existing.endDay
+      );
+      if (!hasConflict) break;
+      targetRow++;
+    }
+    if (targetRow >= rows.length) rows.push([]);
+    rows[targetRow].push(group);
+    group.row = targetRow;
+  });
+  return groups;
+}
+
 export function CalendarComponent({
   // Props
   /** 초기 표시 월. 미지정 시 오늘 날짜 기준 월 ("2026년 1월" 형태로 지정 가능) */
@@ -196,6 +234,14 @@ export function CalendarComponent({
   deadlineEvents = [],
   /** true이면 작품 관련 섹션을 마감임박 업무로만 사용 (빈 경우 "마감 임박 업무가 없습니다" 표시) */
   useDeadlineSection = false,
+  /** 이전 달 이벤트 (흐린 영역 표시용, day number 기준) */
+  prevMonthEvents = [],
+  /** 다음 달 이벤트 (흐린 영역 표시용, day number 기준) */
+  nextMonthEvents = [],
+  /** 이전 달 메모 (흐린 영역 표시용) */
+  prevMonthDayNotes = [],
+  /** 다음 달 메모 (흐린 영역 표시용) */
+  nextMonthDayNotes = [],
 }) {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(openAttendanceModal || false);
@@ -217,11 +263,60 @@ export function CalendarComponent({
     onViewMonthChange?.(viewYear, viewMonth);
   }, [viewYear, viewMonth, onViewMonthChange]);
 
+  // 공휴일 캐시 (useRef로 관리하여 리렌더링 방지)
+  const holidayCacheRef = useRef({});
+  const [holidayCache, setHolidayCache] = useState({});
+
+  // 연도별 공휴일 조회
+  useEffect(() => {
+    // 이미 캐시에 있으면 조회하지 않음
+    if (holidayCacheRef.current[viewYear]) {
+      return;
+    }
+    
+    const fetchHolidays = async () => {
+      try {
+        const response = await holidayService.getHolidaysByYear(viewYear);
+        // response가 이미 HolidayResponse 형태 { year, holidays } 또는 직접 holidays 배열일 수 있음
+        const holidays = response?.holidays || (Array.isArray(response) ? response : []);
+        
+        // ref에 저장
+        holidayCacheRef.current[viewYear] = holidays;
+        
+        // state 업데이트 (리렌더링용)
+        setHolidayCache(prev => ({
+          ...prev,
+          [viewYear]: holidays
+        }));
+      } catch (error) {
+        console.error('공휴일 조회 실패:', error);
+        holidayCacheRef.current[viewYear] = [];
+        setHolidayCache(prev => ({
+          ...prev,
+          [viewYear]: []
+        }));
+      }
+    };
+    
+    fetchHolidays();
+  }, [viewYear]);
+
+  // 공휴일 여부 확인 (ref 사용)
+  const isHoliday = (year, month, day) => {
+    const yearHolidays = holidayCacheRef.current[year] || [];
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    return yearHolidays.some(h => 
+      h.date === dateStr && 
+      !h.isSaturday && 
+      !h.isSunday
+    );
+  };
+
   const today = new Date();
   const currentDay = today.getDate();
   const currentYear = today.getFullYear();
   const currentMonthNum = today.getMonth() + 1;
-  
+
   const [newEvent, setNewEvent] = useState({
     title: '',
     startDate: '',
@@ -271,14 +366,15 @@ export function CalendarComponent({
     const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
     for (const attendance of attendanceData) {
-      const status = String(attendance.status || '').toLowerCase();
+      // status가 있으면 확인, 없으면 승인된 것으로 간주 (관리자 캘린더 데이터)
+      const status = String(attendance.status || 'approved').toLowerCase();
       if (status !== 'approved') continue;
 
-      const start = new Date(attendance.startDate);
-      const end = new Date(attendance.endDate);
-      const current = new Date(dateStr);
+      // YYYY-MM-DD 형식의 문자열 비교 (타임존 방지)
+      const start = attendance.startDate ? attendance.startDate.slice(0, 10) : '';
+      const end = attendance.endDate ? attendance.endDate.slice(0, 10) : '';
 
-      if (current >= start && current <= end) {
+      if (dateStr >= start && dateStr <= end) {
         return attendance.type;
       }
     }
@@ -298,54 +394,53 @@ export function CalendarComponent({
     return event.category === filterCategory;
   });
 
+  // ── 이벤트 그룹화 및 행 배정 ──
+  const eventGroups = useMemo(() => computeEventGroups(filteredEvents), [filteredEvents]);
+
+  // 이전/다음 달 이벤트 그룹 (같은 필터 적용)
+  const prevEventGroups = useMemo(() => {
+    if (!prevMonthEvents || prevMonthEvents.length === 0) return [];
+    const filtered = prevMonthEvents.filter((event) => {
+      if (useProjectFilter) {
+        if (!selectedProjectFilter) return true;
+        const proj = projectListForFilter.find((p) => String(p.projectNo) === String(selectedProjectFilter));
+        if (!proj) return true;
+        return (event.projectNo != null && Number(event.projectNo) === Number(selectedProjectFilter))
+          || (event.project != null && event.project === proj.projectName);
+      }
+      if (filterCategory === 'all') return true;
+      return event.category === filterCategory;
+    });
+    return computeEventGroups(filtered);
+  }, [prevMonthEvents, useProjectFilter, selectedProjectFilter, filterCategory, projectListForFilter]);
+
+  const nextEventGroups = useMemo(() => {
+    if (!nextMonthEvents || nextMonthEvents.length === 0) return [];
+    const filtered = nextMonthEvents.filter((event) => {
+      if (useProjectFilter) {
+        if (!selectedProjectFilter) return true;
+        const proj = projectListForFilter.find((p) => String(p.projectNo) === String(selectedProjectFilter));
+        if (!proj) return true;
+        return (event.projectNo != null && Number(event.projectNo) === Number(selectedProjectFilter))
+          || (event.project != null && event.project === proj.projectName);
+      }
+      if (filterCategory === 'all') return true;
+      return event.category === filterCategory;
+    });
+    return computeEventGroups(filtered);
+  }, [nextMonthEvents, useProjectFilter, selectedProjectFilter, filterCategory, projectListForFilter]);
+
   const displayMonth = selectedCellMonth ?? viewMonth;
   const displayYear = selectedCellYear ?? viewYear;
 
   // 선택된 날짜의 일정들 (해당 날짜가 기간에 포함되면 표시 — 시작일이 아니어도 포함)
   const selectedDateEvents = selectedDate
     ? filteredEvents.filter((e) => {
-        const start = e.startDate ?? e.date;
-        const end = e.endDate ?? e.date;
-        return start != null && end != null && selectedDate >= start && selectedDate <= end;
-      })
+      const start = e.startDate ?? e.date;
+      const end = e.endDate ?? e.date;
+      return start != null && end != null && selectedDate >= start && selectedDate <= end;
+    })
     : [];
-
-  // 전체 이벤트 기준 행 배정 (겹치면 다른 행) — 월 전체에서 한 번만 계산
-  // id 없으면 index 기반 키 사용, start/end는 숫자로 정규화
-  const eventRows = useMemo(() => {
-    const overlap = (s1, e1, s2, e2) => s1 <= e2 && s2 <= e1;
-    const toNum = (v) => {
-      if (v == null) return undefined;
-      const n = Number(v);
-      if (!Number.isNaN(n)) return n;
-      if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) return parseInt(v.slice(8, 10), 10);
-      return undefined;
-    };
-    const list = filteredEvents.map((e, idx) => {
-      const start = toNum(e.startDate ?? e.date);
-      const end = toNum(e.endDate ?? e.date);
-      const id = e.id != null ? String(e.id) : `ev-${idx}`;
-      return { id, start, end };
-    }).filter((b) => b.start != null && b.end != null);
-    list.sort((a, b) => (a.end - b.end) || (a.start - b.start));
-    const rows = [];
-    const idToRow = new Map();
-    list.forEach((bar) => {
-      const s = bar.start;
-      const e = bar.end;
-      let r = 0;
-      while (rows[r] && rows[r].some(({ start: s2, end: e2 }) => overlap(s, e, s2, e2))) r++;
-      if (!rows[r]) rows[r] = [];
-      rows[r].push({ start: s, end: e });
-      idToRow.set(bar.id, r);
-    });
-    const getRow = (ev) => {
-      if (!ev) return 0;
-      const key = ev.id != null ? String(ev.id) : `ev-${filteredEvents.indexOf(ev)}`;
-      return idToRow.get(key) ?? 0;
-    };
-    return { getRow, idToRow };
-  }, [filteredEvents]);
 
   // 다가오는 일정 (오늘 기준 이후, 정렬됨)
   const upcomingEvents = filteredEvents
@@ -370,27 +465,38 @@ export function CalendarComponent({
     setSelectedDate(day);
     setSelectedCellYear(y);
     setSelectedCellMonth(m);
-    const dayNote = dayNotes.find((n) => n.date === day);
+    const dayNote = dayNotes.find((n) =>
+      (n.year != null && n.month != null
+        ? n.year === y && n.month === m && n.date === day
+        : n.date === day)
+    );
     setCurrentNote(dayNote?.note || '');
     setIsDayDetailModalOpen(true);
   };
 
-  const handleSaveNote = () => {
-    if (selectedDate === null) return;
+  const handleSaveNote = async () => {
+    if (selectedDate === null) return false;
 
-    const existingNoteIndex = dayNotes.findIndex((n) => n.date === selectedDate);
-    if (currentNote.trim()) {
-      if (existingNoteIndex >= 0) {
-        onNoteSave && onNoteSave(selectedDate, currentNote);
-      } else {
-        onNoteSave && onNoteSave(selectedDate, currentNote);
-      }
-      toast.success('메모가 저장되었습니다.');
-    } else {
-      if (existingNoteIndex >= 0) {
-        onNoteDelete && onNoteDelete(selectedDate);
+    const y = selectedCellYear ?? viewYear;
+    const m = selectedCellMonth ?? viewMonth;
+    const dateStr = `${y}-${String(m).padStart(2, '0')}-${String(selectedDate).padStart(2, '0')}`;
+    const existing = dayNotes.find((n) =>
+      (n.dateStr && n.dateStr === dateStr) ||
+      (n.year === y && n.month === m && n.date === selectedDate)
+    );
+
+    try {
+      if (currentNote.trim()) {
+        onNoteSave && (await onNoteSave(dateStr, currentNote));
+        toast.success('메모가 저장되었습니다.');
+      } else if (existing) {
+        onNoteDelete && (await onNoteDelete(dateStr));
         toast.success('메모가 삭제되었습니다.');
       }
+      return true;
+    } catch (err) {
+      toast.error('메모 저장에 실패했습니다.');
+      return false;
     }
   };
 
@@ -430,13 +536,20 @@ export function CalendarComponent({
     toast.success('캘린더가 삭제되었습니다.');
   };
 
-  // 메모 클릭 핸들러 - 날짜 클릭과 동일하게 동작
-  const handleMemoClick = (date) => {
-    setSelectedDate(date);
-    setSelectedCellYear(viewYear);
-    setSelectedCellMonth(viewMonth);
-    const dayNote = dayNotes.find((n) => n.date === date);
-    setCurrentNote(dayNote?.note || '');
+  // 메모 클릭 핸들러 - 날짜 클릭과 동일하게 동작 (note: { date, year?, month?, note, ... })
+  const handleMemoClick = (note) => {
+    const day = typeof note === 'number' ? note : note.date;
+    const y = note.year != null ? note.year : viewYear;
+    const m = note.month != null ? note.month : viewMonth;
+    setSelectedDate(day);
+    setSelectedCellYear(y);
+    setSelectedCellMonth(m);
+    const dayNote = dayNotes.find((n) =>
+      (n.year != null && n.month != null)
+        ? n.year === y && n.month === m && n.date === day
+        : n.date === day
+    );
+    setCurrentNote((dayNote || note).note || '');
     setIsDayDetailModalOpen(true);
   };
 
@@ -447,15 +560,23 @@ export function CalendarComponent({
   };
 
   // 메모 삭제 실행 핸들러
-  const handleDeleteMemoConfirm = () => {
+  const handleDeleteMemoConfirm = async () => {
     if (selectedDate === null) return;
 
-    onNoteDelete && onNoteDelete(selectedDate);
-    setCurrentNote('');
-    toast.success('메모가 삭제되었습니다.');
-    setIsDayDetailModalOpen(false);
-    setSelectedDate(null);
-    setShowDeleteMemoConfirm(false);
+    const y = selectedCellYear ?? viewYear;
+    const m = selectedCellMonth ?? viewMonth;
+    const dateStr = `${y}-${String(m).padStart(2, '0')}-${String(selectedDate).padStart(2, '0')}`;
+    try {
+      onNoteDelete && (await onNoteDelete(dateStr));
+      setCurrentNote('');
+      toast.success('메모가 삭제되었습니다.');
+    } catch (err) {
+      toast.error('메모 삭제에 실패했습니다.');
+    } finally {
+      setIsDayDetailModalOpen(false);
+      setSelectedDate(null);
+      setShowDeleteMemoConfirm(false);
+    }
   };
 
   // 그룹화된 일정 클릭 핸들러
@@ -536,11 +657,15 @@ export function CalendarComponent({
                 <CalendarHeaderRight>
                   <AttendanceLegend>
                     <LegendItem>
-                      <LegendColorBox $backgroundColor="color-mix(in srgb, var(--status-workation) 28%, transparent)" $borderColor="color-mix(in srgb, var(--status-workation) 50%, transparent)" />
+                      <LegendColorBox $backgroundColor="color-mix(in srgb, #9333ea 28%, transparent)" $borderColor="color-mix(in srgb, #9333ea 50%, transparent)" />
                       <LegendLabel>워케이션</LegendLabel>
                     </LegendItem>
                     <LegendItem>
-                      <LegendColorBox $backgroundColor="color-mix(in srgb, var(--status-hiatus) 28%, transparent)" $borderColor="color-mix(in srgb, var(--status-hiatus) 50%, transparent)" />
+                      <LegendColorBox $backgroundColor="color-mix(in srgb, #f97316 28%, transparent)" $borderColor="color-mix(in srgb, #f97316 50%, transparent)" />
+                      <LegendLabel>재택근무</LegendLabel>
+                    </LegendItem>
+                    <LegendItem>
+                      <LegendColorBox $backgroundColor="color-mix(in srgb, #6b7280 28%, transparent)" $borderColor="color-mix(in srgb, #6b7280 50%, transparent)" />
                       <LegendLabel>휴가</LegendLabel>
                     </LegendItem>
                   </AttendanceLegend>
@@ -589,14 +714,14 @@ export function CalendarComponent({
                     const isSunday = dayOfWeek === 0;
                     const isToday = !isOtherMonth && viewYear === currentYear && viewMonth === currentMonthNum && cell.day === currentDay;
                     const attendanceType = getAttendanceForDate(cell.day, cellYear, cellMonth);
-                    const dayEvents = cell.type === 'current'
-                      ? filteredEvents.filter((e) => {
-                          const start = e.startDate ?? e.date;
-                          const end = e.endDate ?? e.date;
-                          return start != null && end != null && cell.day >= start && cell.day <= end;
-                        })
-                      : [];
-                    const dayNote = cell.type === 'current' ? dayNotes.find((n) => n.date === cell.day) : null;
+                    const isHolidayDate = isHoliday(cellYear, cellMonth, cell.day);
+                    const dayNote = cell.type === 'current'
+                      ? dayNotes.find((n) =>
+                          (n.year != null && n.month != null)
+                            ? n.year === cellYear && n.month === cellMonth && n.date === cell.day
+                            : n.date === cell.day
+                        )
+                      : null;
 
                     return (
                       <DateCell
@@ -605,176 +730,162 @@ export function CalendarComponent({
                         $isToday={isToday}
                         $attendanceType={attendanceType}
                         $isSunday={isSunday}
+                        $isHoliday={isHolidayDate}
                         $isOtherMonth={isOtherMonth}
                       >
                         <DateNumberWrapper>
-                          <DateNumber $isToday={isToday} $isSunday={isSunday} $isOtherMonth={isOtherMonth}>{cell.day}</DateNumber>
+                          <DateNumber $isToday={isToday} $isSunday={isSunday} $isHoliday={isHolidayDate} $isOtherMonth={isOtherMonth}>{cell.day}</DateNumber>
                         </DateNumberWrapper>
 
-                        {cell.type === 'current' && (
-                        <>
-                        <DateEventsArea>
-                          {(() => {
-                            const viewMonthDays = getMonthInfo(viewYear, viewMonth).daysInMonth;
-                            const ROW_HEIGHT = 1.5 + 2; // height(1.5rem) + gap(2px)
+                        {cell.type === 'current' && (() => {
+                          const viewMonthDays = getMonthInfo(viewYear, viewMonth).daysInMonth;
 
-                            const eventsByDay = [];
-                            const eventsByDuration = {};
-                            const sortedDayEvents = [...dayEvents].sort((a, b) => (a.endDate ?? a.startDate ?? 0) - (b.endDate ?? b.startDate ?? 0));
+                          // 이 셀에 활성인 그룹 필터링 (셀 날짜가 그룹 기간에 포함)
+                          const cellGroups = eventGroups.filter(group =>
+                            cell.day >= group.startDay && cell.day <= group.endDay
+                          );
 
-                            sortedDayEvents.forEach((event, idx) => {
-                              const isMultiDay = event.startDate && event.endDate && event.startDate !== event.endDate;
-                              const isStarting = !event.startDate || event.startDate === cell.day;
+                          // 이 셀에서 최대 행 수 계산 (DateEventsArea 높이용)
+                          const maxRow = cellGroups.length > 0
+                            ? Math.max(...cellGroups.map(g => g.row)) + 1
+                            : 0;
 
-                              if (isStarting) {
-                                const daysUntilSaturday = 6 - dayOfWeek;
-                                const lastDayOfWeek = cell.day + daysUntilSaturday;
-                                const displayEndDate = isMultiDay ? Math.min(event.endDate, lastDayOfWeek, viewMonthDays) : cell.day;
-                                const daySpan = displayEndDate - cell.day + 1;
-                                const startD = cell.day;
-                                const endD = event.endDate ?? cell.day;
+                          // 이 셀에서 바를 시작해야 하는 그룹만 렌더링
+                          // 1. 그룹의 시작일이 이 셀인 경우
+                          // 2. 일요일(주 첫날)이면서 이전 주에서 이어지는 그룹
+                          const barsToRender = cellGroups.filter(group => {
+                            if (group.startDay === cell.day) return true;
+                            if (dayOfWeek === 0 && group.startDay < cell.day) return true;
+                            return false;
+                          });
 
-                                if (daySpan === 1) {
-                                  eventsByDay.push({ ...event, daySpan, idx, startD, endD });
-                                } else {
-                                  if (!eventsByDuration[daySpan]) {
-                                    eventsByDuration[daySpan] = [];
-                                  }
-                                  eventsByDuration[daySpan].push({ ...event, daySpan, idx, startD, endD });
-                                }
-                              }
-                            });
+                          return (
+                            <>
+                              <DateEventsArea style={{ minHeight: maxRow > 0 ? `${maxRow * 1.75}rem` : undefined }}>
+                                {barsToRender.map((group) => {
+                                  const { startDay, endDay, cards, row } = group;
 
-                            const bars = [];
-                            Object.keys(eventsByDuration)
-                              .sort((a, b) => parseInt(a) - parseInt(b))
-                              .forEach((duration) => {
-                                const events = eventsByDuration[duration];
-                                const firstEvent = events[0];
-                                const startD = firstEvent.startD ?? cell.day;
-                                const endD = firstEvent.endDate ?? (cell.day + parseInt(duration) - 1);
-                                if (events.length > 1) {
-                                  bars.push({ type: 'group', events, startD, endD, duration: parseInt(duration) });
-                                } else {
-                                  bars.push({ type: 'single', event: events[0], startD, endD, duration: parseInt(duration) });
-                                }
-                              });
-                            if (eventsByDay.length > 1) {
-                              bars.push({ type: 'dayGroup', events: eventsByDay, startD: cell.day, endD: cell.day });
-                            } else if (eventsByDay.length === 1) {
-                              bars.push({ type: 'daySingle', event: eventsByDay[0], startD: cell.day, endD: cell.day });
-                            }
+                                  // 바 가로 폭 계산: 이번 주 토요일 또는 월말까지
+                                  const daysUntilSaturday = 6 - dayOfWeek;
+                                  const lastDayOfWeek = cell.day + daysUntilSaturday;
+                                  const displayEndDay = Math.min(endDay, lastDayOfWeek, viewMonthDays);
+                                  const daySpan = displayEndDay - cell.day + 1;
+                                  const barWidth = daySpan > 1
+                                    ? `calc(${daySpan * 100}% + ${(daySpan - 1) * 2}px)`
+                                    : '100%';
 
-                            const result = [];
-                            const daysUntilSaturday = 6 - dayOfWeek;
-                            const lastDayOfWeek = cell.day + daysUntilSaturday;
+                                  // 표시 내용 결정: 2개 이상이면 "n개의 업무", 1개면 카드 제목
+                                  const isGrouped = cards.length > 1;
+                                  const displayColor = getWorkStageColor(cards[0].workStage) || cards[0].color || 'var(--accent)';
+                                  const displayTitle = isGrouped
+                                    ? `${cards.length}개의 업무`
+                                    : (cards[0].title || '업무');
 
-                            bars.forEach((bar) => {
-                              const row = bar.type === 'group'
-                                ? Math.min(...bar.events.map((e) => eventRows.getRow(e)))
-                                : bar.type === 'dayGroup'
-                                ? Math.min(...bar.events.map((e) => eventRows.getRow(e)))
-                                : eventRows.getRow(bar.event);
-                              bar._row = typeof row === 'number' && !Number.isNaN(row) ? row : 0;
-                            });
-                            bars.sort((a, b) => (a._row - b._row) || (a.endD - b.endD) || (a.startD - b.startD));
+                                  return (
+                                    <EventBar
+                                      key={`group-${startDay}-${endDay}-${cell.day}`}
+                                      $color={displayColor}
+                                      $width={barWidth}
+                                      $isMultiDay={daySpan > 1}
+                                      $topOffset={row}
+                                      $isGrouped={isGrouped}
+                                      onClick={isGrouped ? (e) => {
+                                        e.stopPropagation();
+                                        handleGroupedEventsClick({
+                                          events: cards,
+                                          label: `${cards.length}개의 업무`,
+                                          day: cell.day,
+                                          duration: endDay - startDay + 1,
+                                        });
+                                      } : undefined}
+                                    >
+                                      {displayTitle}
+                                    </EventBar>
+                                  );
+                                })}
+                              </DateEventsArea>
 
-                            bars.forEach((bar) => {
-                              const row = bar._row;
-                              if (bar.type === 'group') {
-                                const events = bar.events;
-                                const firstEvent = events[0];
-                                const displayColor = getWorkStageColor(firstEvent.workStage) || firstEvent.color || 'var(--accent)';
-                                const actualEndDate = firstEvent.endDate || (cell.day + bar.duration - 1);
-                                const displayEndDate = bar.duration > 1 ? Math.min(actualEndDate, lastDayOfWeek, viewMonthDays) : cell.day;
-                                const displayDaySpan = displayEndDate - cell.day + 1;
-                                const barWidth = displayDaySpan > 1 ? `calc(${displayDaySpan * 100}% + ${(displayDaySpan - 1) * 2}px)` : '100%';
-                                result.push(
-                                  <GroupedEventBar
-                                    key={`grouped-${bar.duration}-${cell.day}-${row}`}
-                                    $color={displayColor}
-                                    $width={barWidth}
-                                    $isMultiDay={displayDaySpan > 1}
-                                    $topOffset={row}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleGroupedEventsClick({ day: cell.day, duration: bar.duration, events });
-                                    }}
-                                  >
-                                    {events.length}개의 일정...
-                                  </GroupedEventBar>
-                                );
-                              } else if (bar.type === 'single') {
-                                const event = bar.event;
-                                const displayColor = getWorkStageColor(event.workStage) || event.color || 'var(--accent)';
-                                const actualEndDate = event.endDate || (cell.day + bar.duration - 1);
-                                const displayEndDate = bar.duration > 1 ? Math.min(actualEndDate, lastDayOfWeek, viewMonthDays) : cell.day;
-                                const displayDaySpan = displayEndDate - cell.day + 1;
-                                const barWidth = displayDaySpan > 1 ? `calc(${displayDaySpan * 100}% + ${(displayDaySpan - 1) * 2}px)` : '100%';
-                                const displayTitle = event.title || '업무';
-                                result.push(
-                                  <EventBar
-                                    key={`${event.id ?? event.idx}-${cell.day}-${row}`}
-                                    $color={displayColor}
-                                    $width={barWidth}
-                                    $isMultiDay={displayDaySpan > 1}
-                                    $topOffset={row}
-                                  >
-                                    {displayTitle}
-                                  </EventBar>
-                                );
-                              } else if (bar.type === 'dayGroup') {
-                                const firstEvent = bar.events[0];
-                                const displayColor = getWorkStageColor(firstEvent.workStage) || firstEvent.color || 'var(--accent)';
-                                result.push(
-                                  <GroupedEventBar
-                                    key={`grouped-day-${cell.day}-${row}`}
-                                    $color={displayColor}
-                                    $width="100%"
-                                    $isMultiDay={false}
-                                    $topOffset={row}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleGroupedEventsClick({ day: cell.day, duration: 1, events: bar.events, label: '당일일정' });
-                                    }}
-                                  >
-                                    {bar.events.length}개의 일정...
-                                  </GroupedEventBar>
-                                );
-                              } else if (bar.type === 'daySingle') {
-                                const event = bar.event;
-                                const displayColor = getWorkStageColor(event.workStage) || event.color || 'var(--accent)';
-                                const displayTitle = event.title || '업무';
-                                result.push(
-                                  <EventBar
-                                    key={`${event.id ?? event.idx}-${cell.day}-${row}`}
-                                    $color={displayColor}
-                                    $width="100%"
-                                    $isMultiDay={false}
-                                    $topOffset={row}
-                                  >
-                                    {displayTitle}
-                                  </EventBar>
-                                );
-                              }
-                            });
+                              {dayNote && (
+                                <DateMemo
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDateClick(cell);
+                                  }}
+                                >
+                                  📝 {dayNote.note}
+                                </DateMemo>
+                              )}
+                            </>
+                          );
+                        })()}
 
-                            return result;
-                          })()}
-                        </DateEventsArea>
+                        {(cell.type === 'prev' || cell.type === 'next') && (() => {
+                          const otherGroups = cell.type === 'prev' ? prevEventGroups : nextEventGroups;
+                          const otherNotes = cell.type === 'prev' ? prevMonthDayNotes : nextMonthDayNotes;
+                          const otherMonthDays = getMonthInfo(cellYear, cellMonth).daysInMonth;
 
-                        {dayNote && (
-                          <DateMemo
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDateClick(cell);
-                            }}
-                          >
-                            📝 {dayNote.note}
-                          </DateMemo>
-                        )}
-                        </>
-                        )}
+                          const cellGroups = otherGroups.filter(group =>
+                            cell.day >= group.startDay && cell.day <= group.endDay
+                          );
+                          const maxRow = cellGroups.length > 0
+                            ? Math.max(...cellGroups.map(g => g.row)) + 1
+                            : 0;
+                          const barsToRender = cellGroups.filter(group => {
+                            if (group.startDay === cell.day) return true;
+                            if (dayOfWeek === 0 && group.startDay < cell.day) return true;
+                            return false;
+                          });
+                          const otherDayNote = otherNotes.find((n) =>
+                            (n.year != null && n.month != null)
+                              ? n.year === cellYear && n.month === cellMonth && n.date === cell.day
+                              : n.date === cell.day
+                          );
+
+                          if (barsToRender.length === 0 && !otherDayNote) return null;
+
+                          return (
+                            <>
+                              {barsToRender.length > 0 && (
+                                <DateEventsArea style={{ minHeight: maxRow > 0 ? `${maxRow * 1.75}rem` : undefined }}>
+                                  {barsToRender.map((group) => {
+                                    const { startDay, endDay, cards, row } = group;
+                                    const daysUntilSaturday = 6 - dayOfWeek;
+                                    const lastDayOfWeek = cell.day + daysUntilSaturday;
+                                    const displayEndDay = Math.min(endDay, lastDayOfWeek, otherMonthDays);
+                                    const daySpan = displayEndDay - cell.day + 1;
+                                    const barWidth = daySpan > 1
+                                      ? `calc(${daySpan * 100}% + ${(daySpan - 1) * 2}px)`
+                                      : '100%';
+                                    const isGrouped = cards.length > 1;
+                                    const displayColor = getWorkStageColor(cards[0].workStage) || cards[0].color || 'var(--accent)';
+                                    const displayTitle = isGrouped
+                                      ? `${cards.length}개의 업무`
+                                      : (cards[0].title || '업무');
+
+                                    return (
+                                      <EventBar
+                                        key={`other-${startDay}-${endDay}-${cell.day}`}
+                                        $color={displayColor}
+                                        $width={barWidth}
+                                        $isMultiDay={daySpan > 1}
+                                        $topOffset={row}
+                                        $isGrouped={false}
+                                        $isOtherMonth
+                                      >
+                                        {displayTitle}
+                                      </EventBar>
+                                    );
+                                  })}
+                                </DateEventsArea>
+                              )}
+                              {otherDayNote && (
+                                <DateMemo style={{ opacity: 0.45 }}>
+                                  📝 {otherDayNote.note}
+                                </DateMemo>
+                              )}
+                            </>
+                          );
+                        })()}
                       </DateCell>
                     );
                   })}
@@ -867,24 +978,30 @@ export function CalendarComponent({
                   </SectionHeader>
                   <UpcomingEventsList>
                     {dayNotes
-                      .map((note) => ({
-                        ...note,
-                        daysFromToday: Math.abs(note.date - currentDay),
-                      }))
+                      .map((note) => {
+                        const noteDate = (note.year != null && note.month != null)
+                          ? new Date(note.year, note.month - 1, note.date)
+                          : new Date(viewYear, viewMonth - 1, note.date);
+                        const todayDate = new Date(currentYear, currentMonthNum - 1, currentDay);
+                        const daysDiff = Math.round((noteDate - todayDate) / (24 * 60 * 60 * 1000));
+                        return { ...note, daysFromToday: Math.abs(daysDiff) };
+                      })
                       .sort((a, b) => {
-                        if (a.daysFromToday !== b.daysFromToday) {
-                          return a.daysFromToday - b.daysFromToday;
-                        }
+                        if (a.daysFromToday !== b.daysFromToday) return a.daysFromToday - b.daysFromToday;
+                        const ay = a.year ?? viewYear; const am = a.month ?? viewMonth;
+                        const by = b.year ?? viewYear; const bm = b.month ?? viewMonth;
+                        if (ay !== by) return ay - by;
+                        if (am !== bm) return am - bm;
                         return b.date - a.date;
                       })
                       .slice(0, 3)
                       .map((note, idx) => (
-                        <MemoItem key={idx} onClick={() => handleMemoClick(note.date)}>
+                        <MemoItem key={note.dateStr || idx} onClick={() => handleMemoClick(note)}>
                           <MemoContent>
                             <MemoIcon>📝</MemoIcon>
                             <MemoDetails>
                               <MemoText>{note.note}</MemoText>
-                              <MemoDate>{viewMonth}월 {note.date}일</MemoDate>
+                              <MemoDate>{(note.month ?? viewMonth)}월 {note.date}일</MemoDate>
                             </MemoDetails>
                           </MemoContent>
                         </MemoItem>
@@ -935,7 +1052,6 @@ export function CalendarComponent({
             >
               <option value="serialization">연재</option>
               <option value="break">휴가</option>
-              <option value="other">기타</option>
             </FormSelect>
           </FormRow>
 
@@ -1029,14 +1145,7 @@ export function CalendarComponent({
           selectedDate !== null ? (
             <ModalDateHeader>
               <ModalDateTitle>{displayMonth}월 {selectedDate}일</ModalDateTitle>
-              {getAttendanceForDate(selectedDate, displayYear, displayMonth) && (
-                <AttendanceBadge 
-                  $attendanceType={getAttendanceForDate(selectedDate, displayYear, displayMonth)} 
-                  $isToday={displayYear === currentYear && displayMonth === currentMonthNum && selectedDate === currentDay}
-                >
-                  {getAttendanceForDate(selectedDate, displayYear, displayMonth) === 'workation' ? '워케이션' : '휴가'}
-                </AttendanceBadge>
-              )}
+
             </ModalDateHeader>
           ) : ''
         }
@@ -1054,26 +1163,36 @@ export function CalendarComponent({
                       <EventDetailInfo>
                         <EventDetailText>
                           <strong>유형:</strong>{' '}
-                          <Badge
-                            className="text-xs"
-                            variant={
-                              event.workType === 'serialization'
-                                ? 'destructive'
-                                : event.workType === 'break'
-                                ? 'default'
-                                : 'secondary'
-                            }
-                          >
-                            {event.workType === 'serialization'
-                              ? '연재'
-                              : event.workType === 'break'
-                              ? '휴가'
-                              : '기타'}
-                          </Badge>
+                          {event.workType === 'serialization' ? (
+                            <Badge className="text-xs" variant="destructive">연재</Badge>
+                          ) : event.workType === 'hiatus' ? (
+                            <Badge className="text-xs" variant="secondary">휴재</Badge>
+                          ) : event.workType === 'break' ? (
+                            <Badge className="text-xs" variant="default">휴가</Badge>
+                          ) : event.workType === '워케이션' ? (
+                            <Badge className="text-xs" style={{ backgroundColor: '#9333ea', color: 'white' }}>워케이션</Badge>
+                          ) : event.workType === '재택근무' ? (
+                            <Badge className="text-xs" style={{ backgroundColor: '#f97316', color: 'white' }}>재택근무</Badge>
+                          ) : event.workType === '휴가' ? (
+                            <Badge className="text-xs" variant="default">휴가</Badge>
+                          ) : event.projectStatus === '연재' ? (
+                            <Badge className="text-xs" variant="destructive">연재</Badge>
+                          ) : event.projectStatus === '휴재' ? (
+                            <Badge className="text-xs" variant="secondary">휴재</Badge>
+                          ) : event.projectStatus === '워케이션' ? (
+                            <Badge className="text-xs" style={{ backgroundColor: '#9333ea', color: 'white' }}>워케이션</Badge>
+                          ) : event.projectStatus === '재택근무' ? (
+                            <Badge className="text-xs" style={{ backgroundColor: '#f97316', color: 'white' }}>재택근무</Badge>
+                          ) : ''}
                         </EventDetailText>
                         {event.project && (
                           <EventDetailText>
                             <strong>작품:</strong> {event.project}
+                          </EventDetailText>
+                        )}
+                        {event.assigneeName && (
+                          <EventDetailText>
+                            <strong>담당자:</strong> {event.assigneeName}
                           </EventDetailText>
                         )}
                         {event.description && (
@@ -1100,7 +1219,11 @@ export function CalendarComponent({
 
             <MemoActionsContainer>
               <MemoActionsLeft>
-                {dayNotes.find((n) => n.date === selectedDate) && (
+                {dayNotes.find((n) =>
+                  (n.year != null && n.month != null && selectedCellYear != null && selectedCellMonth != null)
+                    ? n.year === selectedCellYear && n.month === selectedCellMonth && n.date === selectedDate
+                    : n.date === selectedDate
+                ) && (
                   <MemoDeleteButton onClick={handleDeleteMemoClick}>
                     <IconWithMargin>
                       <Trash2 className="w-4 h-4" />
@@ -1114,9 +1237,9 @@ export function CalendarComponent({
                   취소
                 </Button>
                 <Button
-                  onClick={() => {
-                    handleSaveNote();
-                    setIsDayDetailModalOpen(false);
+                  onClick={async () => {
+                    const ok = await handleSaveNote();
+                    if (ok) setIsDayDetailModalOpen(false);
                   }}
                 >
                   <IconWithMargin>
@@ -1129,11 +1252,6 @@ export function CalendarComponent({
           </EventDetailContainer>
         )}
       </Modal>
-
-      {/* 근태 신청 모달 */}
-      {LeaveRequestModalComponent && (
-        <LeaveRequestModalComponent open={isAttendanceModalOpen} onOpenChange={setIsAttendanceModalOpen} />
-      )}
 
       {/* 메모 삭제 확인 모달 */}
       <Modal isOpen={showDeleteMemoConfirm} onClose={() => { setShowDeleteMemoConfirm(false); }} title="메모 삭제 확인" maxWidth="sm">
@@ -1192,22 +1310,25 @@ export function CalendarComponent({
                     <EventDetailInfo>
                       <EventDetailText>
                         <strong>유형:</strong>{' '}
-                        <Badge
-                          className="text-xs"
-                          variant={
-                            event.workType === 'serialization'
-                              ? 'destructive'
-                              : event.workType === 'break'
-                              ? 'default'
-                              : 'secondary'
-                          }
-                        >
-                          {event.workType === 'serialization'
-                            ? '연재'
-                            : event.workType === 'break'
-                            ? '휴가'
-                            : '기타'}
-                        </Badge>
+                        {event.workType === 'serialization' ? (
+                          <Badge className="text-xs" variant="destructive">연재</Badge>
+                        ) : event.workType === 'hiatus' ? (
+                          <Badge className="text-xs" variant="secondary">휴재</Badge>
+                        ) : event.workType === 'break' ? (
+                          <Badge className="text-xs" variant="default">휴가</Badge>
+                        ) : event.workType === 'workation' ? (
+                          <Badge className="text-xs" style={{ backgroundColor: '#9333ea', color: 'white' }}>워케이션</Badge>
+                        ) : event.workType === 'remote' ? (
+                          <Badge className="text-xs" style={{ backgroundColor: '#f97316', color: 'white' }}>재택근무</Badge>
+                        ) : event.projectStatus === '연재' ? (
+                          <Badge className="text-xs" variant="destructive">연재</Badge>
+                        ) : event.projectStatus === '휴재' ? (
+                          <Badge className="text-xs" variant="secondary">휴재</Badge>
+                        ) : event.projectStatus === '워케이션' ? (
+                          <Badge className="text-xs" style={{ backgroundColor: '#9333ea', color: 'white' }}>워케이션</Badge>
+                        ) : event.projectStatus === '재택근무' ? (
+                          <Badge className="text-xs" style={{ backgroundColor: '#f97316', color: 'white' }}>재택근무</Badge>
+                        ) : ''}
                       </EventDetailText>
                       {event.project && (
                         <EventDetailText>
@@ -1218,6 +1339,11 @@ export function CalendarComponent({
                         <EventDetailText>
                           <strong>기간:</strong> {viewMonth}월 {event.startDate}일
                           {event.startDate !== event.endDate ? ` ~ ${viewMonth}월 ${event.endDate}일 (${event.endDate - event.startDate + 1}일)` : ''}
+                        </EventDetailText>
+                      )}
+                      {event.assigneeName && (
+                        <EventDetailText>
+                          <strong>담당자:</strong> {event.assigneeName}
                         </EventDetailText>
                       )}
                       {event.description && (

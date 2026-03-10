@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { agencyService, leaveService } from '@/api';
 import useAuthStore from '@/store/authStore';
 import { RequestDetailModal } from '@/components/modals/RequestDetailModal/RequestDetailModal';
+import { formatDateToString } from '@/utils/dateUtils';
 import {
   AgencyApprovalsRoot,
   AgencyApprovalsBody,
@@ -86,8 +87,8 @@ export function AgencyApprovalsPage() {
           phone: req.memberPhone,
           reason: `${req.memberRole} 가입 신청`,
           status: req.newRequestStatus === '대기' ? '대기' : req.newRequestStatus === '승인' ? '승인' : '반려',
-          submittedDate: req.newRequestDate ? new Date(req.newRequestDate).toISOString().split('T')[0] : '',
-          processedDate: req.newRequestStatus !== '대기' ? req.newRequestDate ? new Date(req.newRequestDate).toISOString().split('T')[0] : '' : null,
+          submittedDate: formatDateToString(req.newRequestDate),
+          processedDate: req.newRequestStatus !== '대기' ? formatDateToString(req.newRequestDate) : null,
         }));
         
         // 근태 신청 변환 (취소된 건 제외 - 작가가 삭제한 신청은 목록에서 제거)
@@ -100,8 +101,8 @@ export function AgencyApprovalsPage() {
           category: 'attendance',
           requester: req.memberName,
           role: '작가', // 기본값
-          startDate: req.attendanceRequestStartDate ? new Date(req.attendanceRequestStartDate).toISOString().split('T')[0] : '',
-          endDate: req.attendanceRequestEndDate ? new Date(req.attendanceRequestEndDate).toISOString().split('T')[0] : '',
+          startDate: formatDateToString(req.attendanceRequestStartDate),
+          endDate: formatDateToString(req.attendanceRequestEndDate),
           days: req.attendanceRequestUsingDays,
           reason: req.attendanceRequestReason || '',
           workcationLocation: req.workcationLocation,
@@ -112,8 +113,8 @@ export function AgencyApprovalsPage() {
                 : req.attendanceRequestStatus === 'APPROVED' ? '승인' 
                 : req.attendanceRequestStatus === 'REJECTED' ? '반려' : '대기',
           rejectionReason: req.attendanceRequestRejectReason,
-          submittedDate: req.attendanceRequestCreatedAt ? new Date(req.attendanceRequestCreatedAt).toISOString().split('T')[0] : '',
-          processedDate: req.attendanceRequestUpdatedAt ? new Date(req.attendanceRequestUpdatedAt).toISOString().split('T')[0] : null,
+          submittedDate: formatDateToString(req.attendanceRequestCreatedAt),
+          processedDate: formatDateToString(req.attendanceRequestUpdatedAt),
         }));
         
         // 모든 요청 합치기
@@ -268,8 +269,7 @@ export function AgencyApprovalsPage() {
       try {
         if (selectedRequest.category === 'join') {
           // 가입 요청 거절 API 호출
-          const response = await agencyService.rejectJoinRequest(selectedRequest.originalId, rejectionReason);
-          console.log('가입 거절 API 응답:', response);
+          await agencyService.rejectJoinRequest(selectedRequest.originalId, rejectionReason);
         } else if (selectedRequest.category === 'attendance') {
           await leaveService.rejectAttendanceRequest(selectedRequest.originalId, rejectionReason);
         }
@@ -350,8 +350,9 @@ export function AgencyApprovalsPage() {
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '';
-    const date = new Date(dateStr);
-    return `${date.getMonth() + 1}월 ${date.getDate()}일`;
+    // 'YYYY-MM-DD' 형식 기준으로 문자열만 파싱 → 타임존 영향 제거
+    const [year, month, day] = dateStr.split('-');
+    return `${Number(month)}월 ${Number(day)}일`;
   };
 
   // 통계 계산

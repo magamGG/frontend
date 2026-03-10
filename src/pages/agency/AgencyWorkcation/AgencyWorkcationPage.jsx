@@ -15,12 +15,14 @@ import {
   CheckCircle2,
   TrendingUp,
   FileText,
-  ArrowUpDown
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 import { memberService, leaveService, projectService } from '@/api/services';
 import { API_BASE_URL } from '@/api/config';
 import useAuthStore from '@/store/authStore';
 import { toast } from 'sonner';
+import { parseBackendDate } from '@/utils/dateUtils';
 import {
   AgencyWorkcationRoot,
   AgencyWorkcationBody,
@@ -94,15 +96,12 @@ export function AgencyWorkcationPage() {
   useEffect(() => {
     const fetchWorkcationMembers = async () => {
       if (!isManager && !agencyNo) {
-        console.log('❌ 에이전시 소속이 아니어서 종료');
         setIsLoading(false);
         return;
       }
 
       setIsLoading(true);
       try {
-        console.log('📡 워케이션/재택근무 직원 조회 시작:', { isManager, agencyNo });
-        
         // 1. 담당자면 배정 작가 근태 신청만, 에이전시면 소속 전체 근태 신청 조회
         const response = isManager
           ? await leaveService.getManagerRequests()
@@ -112,8 +111,6 @@ export function AgencyWorkcationPage() {
           : Array.isArray(response) 
             ? response 
             : [];
-        
-        console.log('📋 근태 신청 목록:', requestsList);
         
         // 2. 승인된 워케이션/재택근무 신청 필터링 (현재 날짜가 기간 내에 있는 것만)
         const today = new Date();
@@ -144,11 +141,11 @@ export function AgencyWorkcationPage() {
             return false;
           }
           
-          // LocalDateTime 문자열 파싱 (예: "2026-01-15T00:00:00" 또는 "2026-01-15")
-          const startDate = new Date(startDateStr);
-          const endDate = new Date(endDateStr);
+          // 배열 형태의 날짜 파싱 (LocalDateTime이 배열로 직렬화됨)
+          const startDate = parseBackendDate(startDateStr);
+          const endDate = parseBackendDate(endDateStr);
           
-          if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+          if (!startDate || !endDate) {
             console.warn('날짜 파싱 실패:', { startDateStr, endDateStr });
             return false;
           }
@@ -158,8 +155,6 @@ export function AgencyWorkcationPage() {
           
           return today >= startDate && today <= endDate;
         });
-        
-        console.log('✅ 활성 워케이션/재택근무 신청:', activeRequests);
         
         // 3. 각 회원의 상세 정보 조회
         const membersData = await Promise.all(
@@ -183,7 +178,7 @@ export function AgencyWorkcationPage() {
               // 프로필 이미지 URL 구성
               let profileImageUrl = null;
               if (memberInfo.memberProfileImage) {
-                const imageBaseUrl = API_BASE_URL || 'http://localhost:8888';
+                const imageBaseUrl = API_BASE_URL;
                 if (memberInfo.memberProfileImage.startsWith('http://') || 
                     memberInfo.memberProfileImage.startsWith('https://')) {
                   profileImageUrl = memberInfo.memberProfileImage;
@@ -246,8 +241,6 @@ export function AgencyWorkcationPage() {
         
         // null 제거
         const validMembers = membersData.filter(m => m !== null);
-        
-        console.log('✅ 워케이션/재택근무 직원 목록:', validMembers);
         setMembers(validMembers);
       } catch (error) {
         console.error('워케이션/재택근무 직원 조회 실패:', error);
@@ -367,12 +360,7 @@ export function AgencyWorkcationPage() {
                 style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
               >
                 가나다순
-                {sortType === 'alphabetical' && (
-                  <>
-                    <ArrowUpDown className="w-3 h-3" />
-                    <span style={{ fontSize: '12px' }}>{sortOrder === 'asc' ? '↑' : '↓'}</span>
-                  </>
-                )}
+                {sortType === 'alphabetical' && (sortOrder === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
               </Button>
               <Button
                 variant={sortType === 'imminent' ? 'default' : 'outline'}
@@ -381,12 +369,7 @@ export function AgencyWorkcationPage() {
                 style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
               >
                 연재 임박
-                {sortType === 'imminent' && (
-                  <>
-                    <ArrowUpDown className="w-3 h-3" />
-                    <span style={{ fontSize: '12px' }}>{sortOrder === 'asc' ? '↑' : '↓'}</span>
-                  </>
-                )}
+                {sortType === 'imminent' && (sortOrder === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
               </Button>
             </FilterButtonGroup>
           </div>
@@ -578,7 +561,10 @@ export function AgencyWorkcationPage() {
 
               <DetailModalContent>
                 {/* Member Info Card */}
-                <div className="bg-gradient-to-br from-purple-600 to-purple-800 rounded-lg p-6 text-white">
+                <div
+                  className="rounded-lg p-6 text-white"
+                  style={{ background: 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)' }}
+                >
                   <DetailMemberHeader>
                     <DetailMemberInfo>
                       <DetailMemberAvatar>

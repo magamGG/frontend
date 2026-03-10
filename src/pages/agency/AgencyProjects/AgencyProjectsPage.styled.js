@@ -9,7 +9,6 @@ export const AgencyProjectsRoot = styled.div`
   padding: 32px 32px 96px;
   background-color: var(--background);
   overflow-y: auto;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 `;
 
 // 중앙 정렬 및 최대 폭 설정 (데스크탑 레이아웃 기준)

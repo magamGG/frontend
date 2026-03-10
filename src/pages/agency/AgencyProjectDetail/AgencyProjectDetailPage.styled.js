@@ -6,7 +6,6 @@ export const AgencyProjectDetailRoot = styled.div`
   min-height: 100vh;
   overflow-y: auto;
   background-color: var(--background);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 `;
 
 // 중앙 정렬 및 최대 폭 설정 (데스크탑 레이아웃 기준)
@@ -325,6 +324,33 @@ export const WeeklyScheduleList = styled.div`
   display: flex;
   flex-direction: column;
   gap: 12px;
+`;
+
+export const WeeklyScheduleListScroll = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 4px;
+`;
+
+/** 업무카드와 동일한 스타일의 주간 업무 내역 카드 */
+export const WeeklyWorkCard = styled.div`
+  background-color: white;
+  border-left: 4px solid var(--primary);
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+export const WeeklyWorkCardMeta = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 `;
 
 export const WeeklyScheduleItem = styled.div`

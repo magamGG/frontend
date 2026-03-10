@@ -22,9 +22,10 @@ import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, 
 import { ProjectListModal } from '@/components/modals/ProjectListModal';
 import { AttendanceListModal } from '@/components/modals/AttendanceListModal';
 import { toast } from 'sonner';
-import { leaveService, attendanceService, memberService, projectService } from '@/api/services';
+import { leaveService, attendanceService, memberService, projectService, agencyService } from '@/api/services';
 import useAuthStore from '@/store/authStore';
 import { LeaveRequestEditModal } from '@/components/modals/LeaveRequestEditModal';
+import { parseBackendDate } from '@/utils/dateUtils';
 import svgPaths from '@/imports/svg-oq0e8tu4xb';
 import {
   AdminDashboardRoot,
@@ -126,13 +127,12 @@ import {
   EmptyStateText,
 } from './AdminDashboardPage.styled';
 
-// 근태 신청 타입 매핑 (백엔드 → 프론트 표시, GUIDE 변수명 준수)
+// 근태 신청 타입 매핑 (백엔드 → 프론트 표시). 휴재는 대시보드/캘린더에 표시하지 않음(작품 일정만 영향)
 const ATTENDANCE_TYPE_MAP = {
   연차: { type: '휴가', typeName: '연차' },
   반차: { type: '휴가', typeName: '반차' },
   반반차: { type: '휴가', typeName: '반반차' },
   병가: { type: '휴가', typeName: '병가' },
-  휴재: { type: '휴가', typeName: '휴재' },
   휴가: { type: '휴가', typeName: '휴가' },
   재택: { type: '재택근무', typeName: '재택근무' },
   재택근무: { type: '재택근무', typeName: '재택근무' },
@@ -161,6 +161,7 @@ export function AdminDashboardPage({ onNavigateToSection }) {
   const [currentAttendanceType, setCurrentAttendanceType] = useState(null);
   const [currentAttendanceData, setCurrentAttendanceData] = useState(null);
   const [showStopConfirm, setShowStopConfirm] = useState(false);
+  const [agencyName, setAgencyName] = useState('');
 
   const [healthSurvey, setHealthSurvey] = useState({
     condition: 'normal',
@@ -184,9 +185,9 @@ export function AdminDashboardPage({ onNavigateToSection }) {
             '재택근무': '재택근무',
             '재택': '재택근무',
             '휴가': '휴가',
-            '휴재': '휴가',
           };
-          const displayType = typeMap[data.attendanceRequestType] || data.attendanceRequestType;
+          const raw = data.attendanceRequestType;
+          const displayType = raw === '휴재' ? '출근' : (typeMap[raw] || raw);
           setCurrentAttendanceType(displayType);
           setCurrentAttendanceData(data);
         } else {
@@ -204,6 +205,7 @@ export function AdminDashboardPage({ onNavigateToSection }) {
     const interval = setInterval(fetchCurrentAttendanceStatus, 300000);
     return () => clearInterval(interval);
   }, []);
+
 
   // 오늘 출근 상태 조회 (페이지 로드 시 및 리다이렉션 시), 탭 포커스 시 신청 현황 새로고침
   useEffect(() => {
@@ -264,6 +266,23 @@ export function AdminDashboardPage({ onNavigateToSection }) {
     };
     fetchWorkingArtists();
   }, [user?.memberNo, user?.agencyNo]);
+
+  // 에이전시 정보 조회
+  useEffect(() => {
+    const fetchAgencyInfo = async () => {
+      if (user?.agencyNo) {
+        try {
+          const response = await agencyService.getAgency(user.agencyNo);
+          if (response && response.agencyName) {
+            setAgencyName(response.agencyName);
+          }
+        } catch (error) {
+          console.error('에이전시 정보 조회 실패:', error);
+        }
+      }
+    };
+    fetchAgencyInfo();
+  }, [user?.agencyNo]);
 
   // 담당 프로젝트 현황 (DB 연동 - 마감 기한 대비 진행률 → 정상/주의)
   const [managedProjects, setManagedProjects] = useState([]);
@@ -359,15 +378,15 @@ export function AdminDashboardPage({ onNavigateToSection }) {
             artist: p.artist || '-',
             status: p.status || '정상',
             progress: p.progress ?? 0,
-            deadline,
+            deadline: deadline === '-' ? '미정' : deadline,
           };
         });
-        
+
         // 마감일 기준으로 정렬 (오늘이 연재일인 항목이 제일 위, 그 다음 가까운 순서대로)
         mapped.sort((a, b) => {
           const dateA = parseDeadlineToDate(a.deadline);
           const dateB = parseDeadlineToDate(b.deadline);
-          
+
           // 둘 다 마감일이 없으면 프로젝트 번호순
           if (!dateA && !dateB) {
             return a.id - b.id;
@@ -375,20 +394,20 @@ export function AdminDashboardPage({ onNavigateToSection }) {
           // 마감일이 없는 항목은 뒤로
           if (!dateA) return 1;
           if (!dateB) return -1;
-          
+
           const today = new Date();
           today.setHours(0, 0, 0, 0);
-          
+
           // 오늘이 연재일인 항목을 최우선으로
           const aIsToday = dateA && dateA.getTime() === today.getTime();
           const bIsToday = dateB && dateB.getTime() === today.getTime();
           if (aIsToday && !bIsToday) return -1;  // a가 오늘이면 앞으로
           if (!aIsToday && bIsToday) return 1;   // b가 오늘이면 앞으로
-          
+
           // 둘 다 오늘이거나 둘 다 오늘이 아니면 날짜 오름차순 (가까운 순서)
           return dateA - dateB;
         });
-        
+
         setManagedProjects(mapped);
       } catch (err) {
         console.error('담당 프로젝트 현황 조회 실패:', err);
@@ -420,7 +439,8 @@ export function AdminDashboardPage({ onNavigateToSection }) {
         const filtered = list.filter((item) => item.attendanceRequestStatus !== 'CANCELLED');
         const formatReqDate = (dt) => {
           if (!dt) return '';
-          const d = typeof dt === 'string' ? new Date(dt) : dt;
+          const d = parseBackendDate(dt);
+          if (!d) return '';
           return `${d.getMonth() + 1}월 ${d.getDate()}일`;
         };
         const mapped = filtered.map((item) => {
@@ -542,7 +562,6 @@ export function AdminDashboardPage({ onNavigateToSection }) {
           반차: '휴가',
           반반차: '휴가',
           병가: '휴가',
-          휴재: '휴가',
           휴가: '휴가',
           재택: '재택근무',
           재택근무: '재택근무',
@@ -550,11 +569,12 @@ export function AdminDashboardPage({ onNavigateToSection }) {
         };
         const statusMap = { PENDING: '대기', APPROVED: '승인', REJECTED: '반려' };
         const formatDate = (dt) => {
-          if (!dt) return '';
-          const d = typeof dt === 'string' ? new Date(dt) : dt;
+          const d = parseBackendDate(dt);
+          if (!d) return '';
           return `${d.getMonth() + 1}월 ${d.getDate()}일`;
         };
-        const mapped = arr.map((item) => {
+        const filtered = arr.filter((item) => String(item.attendanceRequestType || '').trim() !== '휴재');
+        const mapped = filtered.map((item) => {
           const startStr = formatDate(item.attendanceRequestStartDate);
           const endStr = formatDate(item.attendanceRequestEndDate);
           const dateStr = startStr === endStr ? startStr : `${startStr} ~ ${endStr}`;
@@ -687,6 +707,14 @@ export function AdminDashboardPage({ onNavigateToSection }) {
   const todayFullDate = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일 ${weekdays[today.getDay()]}`;
 
   const getCurrentStatusText = () => {
+    // 에이전시 정보가 있으면 최우선으로 표시
+    if (agencyName) {
+      return agencyName;
+    }
+
+    if (!isWorking && (!currentAttendanceType || currentAttendanceType === '출근')) {
+      return '출근 대기중';
+    }
     const displayType = currentAttendanceType || '출근';
     return `${displayType} 중`;
   };
@@ -694,6 +722,7 @@ export function AdminDashboardPage({ onNavigateToSection }) {
   const formatPeriodDate = (dateString) => {
     if (!dateString) return '';
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
     return `${date.getMonth() + 1}월 ${date.getDate()}일`;
   };
 
@@ -710,6 +739,17 @@ export function AdminDashboardPage({ onNavigateToSection }) {
 
     switch (type) {
       case '출근':
+        if (!isWorking) {
+          return {
+            bgColor: '#F5F5F5',
+            borderColor: 'rgba(117, 117, 117, 0.2)',
+            iconBgColor: 'rgba(117, 117, 117, 0.1)',
+            iconColor: '#757575',
+            Icon: Building2,
+            title: '출근 대기중',
+            description: '오늘 하루도 힘내세요!',
+          };
+        }
         return {
           bgColor: '#E8F6F8',
           borderColor: 'rgba(0, 172, 193, 0.2)',
@@ -717,7 +757,7 @@ export function AdminDashboardPage({ onNavigateToSection }) {
           iconColor: '#00ACC1',
           Icon: Building2,
           title: '출근 중',
-          description: '사무실에서 작업 중입니다',
+          description: agencyName ? `${agencyName}에서 작업 중입니다` : '사무실에서 작업 중입니다',
         };
       case '재택근무':
         return {
@@ -732,10 +772,10 @@ export function AdminDashboardPage({ onNavigateToSection }) {
         };
       case '휴가':
         return {
-          bgColor: '#F5F5F5',
-          borderColor: 'rgba(117, 117, 117, 0.2)',
-          iconBgColor: 'rgba(117, 117, 117, 0.1)',
-          iconColor: '#757575',
+          bgColor: '#E0F2F1',
+          borderColor: 'rgba(0, 150, 136, 0.2)',
+          iconBgColor: 'rgba(0, 150, 136, 0.1)',
+          iconColor: '#009688',
           Icon: Calendar,
           title: '휴가 중',
           description: '휴식 중입니다',
@@ -793,8 +833,8 @@ export function AdminDashboardPage({ onNavigateToSection }) {
                     </>
                   )}
                 </Button>
-            </AttendanceStartActions>
-          </AttendanceStartHeader>
+              </AttendanceStartActions>
+            </AttendanceStartHeader>
 
             {(() => {
               const displayType = currentAttendanceType || '출근';
@@ -843,8 +883,8 @@ export function AdminDashboardPage({ onNavigateToSection }) {
                     </AttendanceStatusBoxInfo>
                   </AttendanceStatusBoxContent>
                   {(displayType === '휴가' || displayType === '워케이션') && currentAttendanceData && displayProps.period && (
-                    <AttendanceStatusBoxPeriod $borderColor={displayProps.borderColor}>
-                      <AttendanceStatusBoxPeriodLabel>{displayType === '휴가' ? '휴가 기간' : '워케이션 기간'}</AttendanceStatusBoxPeriodLabel>
+                      <AttendanceStatusBoxPeriod $borderColor={displayProps.borderColor}>
+                        <AttendanceStatusBoxPeriodLabel>{displayType === '휴가' ? '휴가 기간' : '워케이션 기간'}</AttendanceStatusBoxPeriodLabel>
                       <AttendanceStatusBoxPeriodValue>{displayProps.period}</AttendanceStatusBoxPeriodValue>
                     </AttendanceStatusBoxPeriod>
                   )}
@@ -868,21 +908,21 @@ export function AdminDashboardPage({ onNavigateToSection }) {
                 <p className="text-sm text-muted-foreground py-4">현재 출근 중인 배정 작가가 없습니다.</p>
               ) : (
                 workingArtists.map((artist) => (
-                  <WorkingArtistCard key={artist.memberNo}>
+                  <WorkingArtistCard key={artist.artistNo || artist.memberNo}>
                     <WorkingArtistHeader>
                       <WorkingArtistStatusDot />
-                      <WorkingArtistName>{artist.memberName}</WorkingArtistName>
+                      <WorkingArtistName>{artist.artistName || artist.memberName}</WorkingArtistName>
                     </WorkingArtistHeader>
-                    <WorkingArtistProject>-</WorkingArtistProject>
+                    <WorkingArtistProject>{artist.currentProjectName || '-'}</WorkingArtistProject>
                     <WorkingArtistMeta>
                       <WorkingArtistMetaLabel>시작</WorkingArtistMetaLabel>
                       <WorkingArtistMetaValue>
-                        {artist.clockInTime
-                          ? new Date(artist.clockInTime).toLocaleTimeString('ko-KR', {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                              hour12: false,
-                            })
+                        {artist.attendanceTime
+                          ? new Date(artist.attendanceTime).toLocaleTimeString('ko-KR', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: false,
+                          })
                           : '-'}
                       </WorkingArtistMetaValue>
                     </WorkingArtistMeta>
@@ -935,8 +975,8 @@ export function AdminDashboardPage({ onNavigateToSection }) {
                 {attendanceRequests.slice(0, 2).map((request) => {
                   const statusColor =
                     request.status === REQUEST_STATUS.PENDING ? '#F59E0B' :
-                    request.status === REQUEST_STATUS.APPROVED ? '#10B981' :
-                    '#EF4444';
+                      request.status === REQUEST_STATUS.APPROVED ? '#10B981' :
+                        '#EF4444';
 
                   return (
                     <AttendanceRequestCardItem key={request.id}>
@@ -986,25 +1026,25 @@ export function AdminDashboardPage({ onNavigateToSection }) {
                 };
 
                 return (
-                  <ProjectItem 
+                  <ProjectItem
                     key={project.id}
                     onClick={handleProjectClick}
                   >
-                  <ProjectItemHeader>
-                    <ProjectItemInfo>
-                      <ProjectItemTitleRow>
-                        <ProjectItemTitle>{project.name}</ProjectItemTitle>
-                        <Badge className={`${getStatusColor(project.status)} text-xs text-white`}>
-                          {getDeadlineDnLabel(project.deadline)}
-                        </Badge>
-                      </ProjectItemTitleRow>
-                    </ProjectItemInfo>
-                  </ProjectItemHeader>
-                  <ProjectItemMeta>
-                    <ProjectItemArtist>담당: {project.artist}</ProjectItemArtist>
-                    <span>연재일 : {project.deadline}</span>
-                  </ProjectItemMeta>
-                </ProjectItem>
+                    <ProjectItemHeader>
+                      <ProjectItemInfo>
+                        <ProjectItemTitleRow>
+                          <ProjectItemTitle>{project.name}</ProjectItemTitle>
+                          <Badge className={`${getStatusColor(project.status)} text-xs text-white`}>
+                            {getDeadlineDnLabel(project.deadline)}
+                          </Badge>
+                        </ProjectItemTitleRow>
+                      </ProjectItemInfo>
+                    </ProjectItemHeader>
+                    <ProjectItemMeta>
+                      <ProjectItemArtist>담당: {project.artist}</ProjectItemArtist>
+                      <span>연재일 : {project.deadline}</span>
+                    </ProjectItemMeta>
+                  </ProjectItem>
                 );
               })}
             </ProjectsList>
@@ -1053,9 +1093,9 @@ export function AdminDashboardPage({ onNavigateToSection }) {
       </AdminDashboardBody>
 
       {/* Project List Modal */}
-      <ProjectListModal 
-        open={isProjectListOpen} 
-        onOpenChange={setIsProjectListOpen} 
+      <ProjectListModal
+        open={isProjectListOpen}
+        onOpenChange={setIsProjectListOpen}
         projects={managedProjects}
         onProjectClick={(project) => {
           // 프로젝트 관리 섹션으로 이동 (manager-projects는 인덱스 1)
@@ -1091,9 +1131,8 @@ export function AdminDashboardPage({ onNavigateToSection }) {
                   key={option.value}
                   type="button"
                   onClick={() => setHealthSurvey({ ...healthSurvey, condition: option.value })}
-                  className={`py-3 px-4 rounded-lg border-2 text-sm font-medium transition-all ${
-                    healthSurvey.condition === option.value ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:border-primary/50'
-                  }`}
+                  className={`py-3 px-4 rounded-lg border-2 text-sm font-medium transition-all ${healthSurvey.condition === option.value ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:border-primary/50'
+                    }`}
                 >
                   {option.label}
                 </button>
@@ -1178,9 +1217,9 @@ export function AdminDashboardPage({ onNavigateToSection }) {
       </Modal>
 
       {/* 신청 현황 모달 - 작가와 동일 (대기: 수정/삭제, 반려: 삭제만, 승인: 버튼 없음) */}
-      <Modal 
-        isOpen={showAttendanceModal} 
-        onClose={() => setShowAttendanceModal(false)} 
+      <Modal
+        isOpen={showAttendanceModal}
+        onClose={() => setShowAttendanceModal(false)}
         title={
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <FileText className="w-5 h-5" style={{ color: 'var(--foreground)' }} />
@@ -1206,8 +1245,8 @@ export function AdminDashboardPage({ onNavigateToSection }) {
               attendanceRequests.map((request) => {
                 const statusColor =
                   request.status === REQUEST_STATUS.PENDING ? '#F59E0B' :
-                  request.status === REQUEST_STATUS.APPROVED ? '#10B981' :
-                  '#EF4444';
+                    request.status === REQUEST_STATUS.APPROVED ? '#10B981' :
+                      '#EF4444';
 
                 return (
                   <AttendanceRequestCard key={request.id}>

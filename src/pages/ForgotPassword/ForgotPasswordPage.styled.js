@@ -69,9 +69,8 @@ export const LogoIconWrapper = styled.div`
   justify-content: center;
   width: 80px;
   height: 80px;
-  background-color: var(--primary);
+  background-color: transparent;
   border-radius: 16px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   margin-bottom: 24px;
 `;
 
@@ -148,14 +147,15 @@ export const InputWrapper = styled.div`
 export const InputField = styled.input`
   width: 100%;
   padding: 12px 16px;
+  padding-left: ${props => props.$hasIcon ? '44px' : '16px'};
   background-color: color-mix(in srgb, var(--muted) 30%, transparent);
   border: 1px solid var(--border);
   border-radius: 8px;
   color: var(--foreground);
-  font-size: ${props => props.large ? '24px' : '14px'};
-  text-align: ${props => props.center ? 'center' : 'left'};
-  letter-spacing: ${props => props.large ? '0.1em' : 'normal'};
-  font-family: ${props => props.large ? 'monospace' : 'inherit'};
+  font-size: ${props => props.$large ? '24px' : '14px'};
+  text-align: ${props => props.$center ? 'center' : 'left'};
+  letter-spacing: ${props => props.$large ? '0.1em' : 'normal'};
+  font-family: ${props => props.$large ? 'monospace' : 'inherit'};
   transition: all 0.2s;
 
   &:focus {

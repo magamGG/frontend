@@ -12,7 +12,8 @@ import {
   Briefcase,
   MessageSquare,
   Circle,
-  CheckCircle2
+  CheckCircle2,
+  UserPlus
 } from 'lucide-react';
 import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
 import { getProjectThumbnailUrl, getMemberProfileUrl, PROJECT_THUMBNAIL_PLACEHOLDER, MEMBER_AVATAR_PLACEHOLDER } from '@/api/config';
@@ -36,14 +37,7 @@ import {
   KanbanBoardsContainer,
   WeeklyScheduleSection,
   WeeklyScheduleTitle,
-  WeeklyScheduleList,
-  WeeklyScheduleItem,
-  WeeklyScheduleDate,
-  WeeklyScheduleDay,
-  WeeklyScheduleEvents,
-  WeeklyScheduleEvent,
-  WeeklyScheduleDateContainer,
-  WeeklyScheduleEmptyText,
+  WeeklyScheduleListScroll,
   ReadOnlyCard,
   ReadOnlyCardHeader,
   ReadOnlyCardHeaderContent,
@@ -137,7 +131,7 @@ export function AgencyProjectDetailPage({ project, onBack }) {
             role: m.projectMemberRole || '-',
             email: m.memberEmail || '',
             phone: m.memberPhone || '',
-            status: m.memberStatus === '휴면' ? '휴면' : '출근',
+            status: m.todayAttendanceStatus || (m.memberStatus === '휴면' ? '휴면' : '작업 시작 전'),
             avatar: getMemberProfileUrl(m.memberProfileImage),
           }))
         );
@@ -195,55 +189,150 @@ export function AgencyProjectDetailPage({ project, onBack }) {
     fetchBoards();
   }, [project?.id]);
 
-  // 주간 캘린더: KANBAN_CARD(startDate, dueDate, title, assignedTo) 기반으로 이번 주 일정 표시
-  const weeklySchedule = useMemo(() => {
+  // 주간 업무 내역: 담당자 프로젝트 상세(ProjectDetail) '남은 마감일' 카드와 동일 구조. 마감일 임박 순, D-n 표시, 기간 지난 것은 제외
+  const weeklyWorkList = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
-    const schedule = [];
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() + i);
-      const dateStr = `${d.getMonth() + 1}/${d.getDate()}`;
-      const dayName = i === 0 ? `오늘 (${dayNames[d.getDay()]})` : dayNames[d.getDay()];
-      const yyyyMmDd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      const events = [];
-      boards.forEach((board) => {
-        (board.cards || []).forEach((card) => {
-          const startStr = card.startDate ? String(card.startDate).slice(0, 10) : null;
-          const dueStr = card.dueDate ? String(card.dueDate).slice(0, 10) : null;
-          const assigneeName = card.assignedTo?.name || '';
-          if (startStr && dueStr) {
-            if (yyyyMmDd >= startStr && yyyyMmDd <= dueStr) {
-              events.push({ title: card.title, assigneeName });
-            }
-          } else if (startStr && startStr === yyyyMmDd) {
-            events.push({ title: card.title, assigneeName });
-          } else if (dueStr && dueStr === yyyyMmDd) {
-            events.push({ title: card.title, assigneeName });
-          }
+    const items = [];
+    boards.forEach((board) => {
+      (board.cards || []).forEach((card) => {
+        const dueStr = card.dueDate ? String(card.dueDate).slice(0, 10) : null;
+        if (!dueStr) return;
+        const dueDate = new Date(dueStr);
+        dueDate.setHours(0, 0, 0, 0);
+        const diffMs = dueDate - today;
+        const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+        if (diffDays < 0) return;
+        const dLabel = diffDays === 0 ? 'D-Day' : `D-${diffDays}`;
+        const dateStr = `${dueDate.getMonth() + 1}/${dueDate.getDate()}`;
+        const assigneeName = card.assignedTo?.name || '';
+        items.push({
+          id: `${board.id}-${card.id}`,
+          title: card.title,
+          assigneeName,
+          dueDate: dueStr,
+          dateStr,
+          dLabel,
         });
       });
-      schedule.push({ date: dateStr, day: dayName, events });
-    }
-    return schedule;
+    });
+    items.sort((a, b) => (a.dueDate < b.dueDate ? -1 : a.dueDate > b.dueDate ? 1 : 0));
+    return items;
   }, [boards]);
 
   // 모달 상태
   const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
 
-  // 상태별 배지 색상
+  // 담당자 배치 모달
+  const [isAssignManagerModalOpen, setIsAssignManagerModalOpen] = useState(false);
+  const [assignableManagers, setAssignableManagers] = useState([]);
+  const [assignableManagersLoading, setAssignableManagersLoading] = useState(false);
+  const [selectedAssignableManager, setSelectedAssignableManager] = useState(null);
+  const [assigningManager, setAssigningManager] = useState(false);
+
+  const refreshProjectData = async () => {
+    if (!project?.id) return;
+    try {
+      const [membersRes, boardsRes] = await Promise.all([
+        projectService.getProjectMembers(project.id),
+        projectService.getKanbanBoard(project.id),
+      ]);
+      const memberList = Array.isArray(membersRes) ? membersRes : membersRes?.content ?? membersRes?.data ?? [];
+      setTeamMembers(
+        memberList.map((m) => ({
+          id: m.memberNo,
+          name: m.memberName || m.memberEmail || '-',
+          role: m.projectMemberRole || '-',
+          email: m.memberEmail || '',
+          phone: m.memberPhone || '',
+          status: m.todayAttendanceStatus || (m.memberStatus === '휴면' ? '휴면' : '작업 시작 전'),
+          avatar: getMemberProfileUrl(m.memberProfileImage),
+        }))
+      );
+      const boardList = Array.isArray(boardsRes) ? boardsRes : boardsRes?.content ?? boardsRes?.data ?? [];
+      setBoards(
+        boardList.map((b) => ({
+          id: b.id,
+          title: b.title || '',
+          cards: (b.cards || []).map((c) => ({
+            id: c.id,
+            title: c.title || '',
+            description: c.description || '',
+            startDate: c.startDate || '',
+            dueDate: c.dueDate || '',
+            boardId: c.boardId ?? b.id,
+            completed: !!c.completed,
+            assignedTo: c.assignedTo
+              ? {
+                  id: c.assignedTo.id,
+                  name: c.assignedTo.name,
+                  role: c.assignedTo.role,
+                  email: c.assignedTo.email,
+                  avatar: getMemberProfileUrl(c.assignedTo.avatar),
+                }
+              : null,
+          })),
+        }))
+      );
+    } catch (e) {
+      toast.error('데이터를 새로고침하는데 실패했습니다.');
+    }
+  };
+
+  const openAssignManagerModal = async () => {
+    setIsAssignManagerModalOpen(true);
+    setAssignableManagers([]);
+    setSelectedAssignableManager(null);
+    setAssignableManagersLoading(true);
+    try {
+      const result = await projectService.getAssignableManagers(project.id);
+      const list = Array.isArray(result) ? result : result?.content ?? result?.data ?? [];
+      setAssignableManagers(list);
+    } catch (err) {
+      toast.error('배치 가능 담당자 목록을 불러오는데 실패했습니다.');
+      setAssignableManagers([]);
+    } finally {
+      setAssignableManagersLoading(false);
+    }
+  };
+
+  const handleAssignManager = async () => {
+    if (!selectedAssignableManager?.managerNo) {
+      toast.error('담당자를 선택해주세요.');
+      return;
+    }
+    setAssigningManager(true);
+    try {
+      await projectService.assignManagerToProject(project.id, selectedAssignableManager.managerNo);
+      toast.success('담당자가 성공적으로 배치되었습니다.');
+      setIsAssignManagerModalOpen(false);
+      setSelectedAssignableManager(null);
+      await refreshProjectData();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || '담당자 배치에 실패했습니다.');
+    } finally {
+      setAssigningManager(false);
+    }
+  };
+
+  // 상태별 배지 색상 (작업중/작업 종료/작업 시작 전 + 휴면 등)
   const getStatusBadgeColor = (status) => {
     switch (status) {
-      case '출근':
+      case '작업중':
         return 'bg-green-500 hover:bg-green-600';
+      case '작업 종료':
+        return 'bg-blue-500 hover:bg-blue-600';
+      case '작업 시작 전':
+        return 'bg-amber-500 hover:bg-amber-600';
+      case '휴면':
+        return 'bg-gray-500 hover:bg-gray-600';
       case '워케이션':
         return 'bg-red-500 hover:bg-red-600';
       case '재택근무':
         return 'bg-blue-500 hover:bg-blue-600';
-      case '휴면':
-        return 'bg-gray-500 hover:bg-gray-600';
+      case '출근':
+        return 'bg-green-500 hover:bg-green-600';
       default:
         return 'bg-blue-500 hover:bg-blue-600';
     }
@@ -310,6 +399,22 @@ export function AgencyProjectDetailPage({ project, onBack }) {
                   >
                     팀원 보기
                   </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={openAssignManagerModal}
+                    disabled={teamMembersLoading || teamMembers.some((m) => m.role === '담당자')}
+                    title={teamMembers.some((m) => m.role === '담당자') ? '이미 담당자가 배정된 프로젝트입니다' : '담당자 배치'}
+                    style={{ 
+                      marginLeft: '8px',
+                      backgroundColor: teamMembers.some((m) => m.role === '담당자') ? 'var(--muted)' : 'var(--primary)',
+                      color: teamMembers.some((m) => m.role === '담당자') ? 'var(--muted-foreground)' : 'var(--primary-foreground)',
+                      borderColor: teamMembers.some((m) => m.role === '담당자') ? 'var(--border)' : 'var(--primary)'
+                    }}
+                  >
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    담당자 배치
+                  </Button>
                 </ProjectTeamHeader>
               </ProjectTeamSection>
             </ProjectInfo>
@@ -336,36 +441,31 @@ export function AgencyProjectDetailPage({ project, onBack }) {
             </ProjectManagementSection>
           </ContentGridLeft>
 
-          {/* 오른쪽 열: 주간 캘린더 (KANBAN_CARD 기반) */}
+          {/* 오른쪽 열: 주간 업무 내역 (마감일 임박 순) */}
           <ContentGridRight>
             <WeeklyScheduleSection>
-              <WeeklyScheduleTitle>주간 캘린더</WeeklyScheduleTitle>
+              <WeeklyScheduleTitle>주간 업무 내역</WeeklyScheduleTitle>
 
-              <WeeklyScheduleList>
-                {weeklySchedule.map((schedule, index) => (
-                  <WeeklyScheduleItem key={index}>
-                    <WeeklyScheduleDateContainer>
-                      <WeeklyScheduleDate>{schedule.date}</WeeklyScheduleDate>
-                      <WeeklyScheduleDay>{schedule.day}</WeeklyScheduleDay>
-                    </WeeklyScheduleDateContainer>
-                    {schedule.events.length > 0 ? (
-                      <WeeklyScheduleEvents>
-                        {schedule.events.map((event, eventIndex) => (
-                          <WeeklyScheduleEvent key={eventIndex}>
-                            <Circle className="w-2 h-2 fill-primary text-primary flex-shrink-0" />
-                            <span className="text-xs text-muted-foreground">
-                              {event.title}
-                              {event.assigneeName && ` (${event.assigneeName})`}
-                            </span>
-                          </WeeklyScheduleEvent>
-                        ))}
-                      </WeeklyScheduleEvents>
-                    ) : (
-                      <WeeklyScheduleEmptyText>캘린더 없음</WeeklyScheduleEmptyText>
-                    )}
-                  </WeeklyScheduleItem>
-                ))}
-              </WeeklyScheduleList>
+              <WeeklyScheduleListScroll>
+                {weeklyWorkList.length === 0 ? null : (
+                  weeklyWorkList.map((item) => (
+                    <div
+                      key={item.id}
+                      className="p-3 rounded-lg border-l-4 bg-muted/20"
+                      style={{ borderLeftColor: 'var(--primary)' }}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-semibold text-sm text-foreground">마감일 {item.dateStr}</span>
+                        <span className="text-xs font-medium text-primary">{item.dLabel}</span>
+                      </div>
+                      <p className="text-xs text-foreground">
+                        • {item.title}
+                        {item.assigneeName && <span className="text-muted-foreground"> ({item.assigneeName})</span>}
+                      </p>
+                    </div>
+                  ))
+                )}
+              </WeeklyScheduleListScroll>
             </WeeklyScheduleSection>
           </ContentGridRight>
         </ContentGrid>
@@ -467,6 +567,59 @@ export function AgencyProjectDetailPage({ project, onBack }) {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* 담당자 배치 모달 */}
+      <Modal
+        isOpen={isAssignManagerModalOpen}
+        onClose={() => {
+          setIsAssignManagerModalOpen(false);
+          setSelectedAssignableManager(null);
+        }}
+        title="담당자 배치"
+        maxWidth="md"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            프로젝트 작가와 연결된 담당자만 배치 가능합니다. 새 담당자를 선택하면 기존 담당자의 업무가 자동으로 이관됩니다.
+          </p>
+          {assignableManagersLoading ? (
+            <p className="text-sm text-muted-foreground">배치 가능 담당자 목록을 불러오는 중...</p>
+          ) : assignableManagers.length === 0 ? (
+            <p className="text-sm text-muted-foreground">배치 가능한 담당자가 없습니다. 작가에게 배정된 담당자가 있는지 확인해주세요.</p>
+          ) : (
+            <>
+              <div className="space-y-0 divide-y divide-border max-h-64 overflow-y-auto">
+                {assignableManagers.map((m) => (
+                  <div
+                    key={m.managerNo}
+                    onClick={() => setSelectedAssignableManager(m)}
+                    className={`py-3 px-3 flex items-center gap-3 cursor-pointer transition-colors ${selectedAssignableManager?.managerNo === m.managerNo ? 'bg-primary/10 border-l-4 border-l-primary' : 'hover:bg-muted/30'}`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-foreground">{m.memberName || '-'}</p>
+                      <p className="text-xs text-muted-foreground">담당자 No. {m.managerNo}</p>
+                    </div>
+                    {selectedAssignableManager?.managerNo === m.managerNo && (
+                      <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-end gap-2 pt-4">
+                <Button variant="outline" onClick={() => setIsAssignManagerModalOpen(false)}>
+                  취소
+                </Button>
+                <Button
+                  onClick={handleAssignManager}
+                  disabled={!selectedAssignableManager || assigningManager}
+                >
+                  {assigningManager ? '배치 중...' : '담당자 배치'}
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
       </Modal>
     </AgencyProjectDetailRoot>
   );

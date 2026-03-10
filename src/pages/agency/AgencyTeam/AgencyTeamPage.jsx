@@ -13,7 +13,12 @@ import {
   Trash2,
   BookOpen,
   Heart,
-  CalendarClock
+  CalendarClock,
+  FileText,
+  Loader2,
+  User,
+  FolderOpen,
+  Sparkles
 } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -25,9 +30,10 @@ import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/app/components/ui/dialog';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/app/components/ui/pagination';
-import { memberService, leaveService, attendanceService } from '@/api';
-import { getMemberProfileUrl } from '@/api/config';
+import { memberService, leaveService, attendanceService, portfolioService } from '@/api';
+import { getMemberProfileUrl, MEMBER_AVATAR_PLACEHOLDER } from '@/api/config';
 import useAuthStore from '@/store/authStore';
+import { formatDateToString } from '@/utils/dateUtils';
 
 // 상대 경로
 import {
@@ -109,6 +115,9 @@ export function AgencyTeamPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedArtist, setSelectedArtist] = useState(null);
+  const [portfolioModalMemberNo, setPortfolioModalMemberNo] = useState(null);
+  const [portfolioModalData, setPortfolioModalData] = useState(null);
+  const [portfolioModalLoading, setPortfolioModalLoading] = useState(false);
   const [employees, setEmployees] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [employeeDetails, setEmployeeDetails] = useState({}); // 직원별 상세 정보 캐시
@@ -149,7 +158,7 @@ export function AgencyTeamPage() {
           email: member.memberEmail,
           phone: member.memberPhone || '',
           status: member.todayWorkStatus ?? (member.memberStatus === 'ACTIVE' ? '근무중' : member.memberStatus === 'ON_LEAVE' ? '휴가' : member.memberStatus === 'SICK_LEAVE' ? '병가' : '작업 시작전'),
-          joinDate: member.memberCreatedAt ? new Date(member.memberCreatedAt).toISOString().split('T')[0] : '',
+          joinDate: formatDateToString(member.memberCreatedAt),
           avatar: getMemberProfileUrl(member.memberProfileImage) || null,
         }));
 
@@ -293,6 +302,25 @@ export function AgencyTeamPage() {
     }
     setEmployeeToDelete(employee);
     setIsDeleteModalOpen(true);
+  };
+
+  const openPortfolioModal = (memberNo, e) => {
+    if (e) e.stopPropagation();
+    setPortfolioModalMemberNo(memberNo);
+    setPortfolioModalData(null);
+    setPortfolioModalLoading(true);
+    portfolioService
+      .getByMemberNo(memberNo)
+      .then((res) => {
+        const data = res?.data ?? res;
+        if (!data || data.portfolioStatus === 'N' || data.portfolioNo == null) {
+          setPortfolioModalData(null);
+          return;
+        }
+        setPortfolioModalData(data);
+      })
+      .catch(() => setPortfolioModalData(null))
+      .finally(() => setPortfolioModalLoading(false));
   };
 
   // 직원 삭제 핸들러 (에이전시에서 제거 - agencyNo를 null로 설정)
@@ -713,7 +741,7 @@ export function AgencyTeamPage() {
                               </Card>
                             ) : (
                               <Card className="p-4 border border-border flex-1 flex flex-col min-h-[220px]">
-                                <div className="text-center py-6 text-sm text-muted-foreground flex-1 flex items-center justify-center">검진을 하지 않았습니다</div>
+                                <div className="text-center py-6 text-sm text-muted-foreground flex-1 flex items-center justify-center">오늘 체크하지 않았습니다</div>
                               </Card>
                             )}
                           </div>
@@ -796,6 +824,12 @@ export function AgencyTeamPage() {
                             </Card>
                           </div>
                         </div>
+                        <div className="flex justify-end pt-2">
+                          <Button variant="outline" size="sm" className="gap-2" onClick={(e) => openPortfolioModal(employee.id, e)}>
+                            <FileText className="w-4 h-4" />
+                            포트폴리오
+                          </Button>
+                        </div>
                       </>
                     )}
                   </ExpandedCard>
@@ -870,6 +904,85 @@ export function AgencyTeamPage() {
               초대 보내기
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 포트폴리오 모달 (아티스트 포트폴리오 페이지와 동일한 디자인 + 프로필 이미지) */}
+      <Dialog open={portfolioModalMemberNo !== null} onOpenChange={(open) => !open && setPortfolioModalMemberNo(null)}>
+        <DialogContent className="sm:max-w-[500px] max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              포트폴리오
+            </DialogTitle>
+          </DialogHeader>
+          {portfolioModalLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : portfolioModalData && portfolioModalData.portfolioNo && portfolioModalData.portfolioStatus !== 'N' ? (
+            <div className="space-y-4 rounded-lg border bg-card p-6 text-card-foreground shadow-sm">
+              {(portfolioModalData.profileImage || portfolioModalData.portfolioUserName) && (
+                <div className="flex items-center gap-4">
+                  <img
+                    src={getMemberProfileUrl(portfolioModalData.profileImage) ?? MEMBER_AVATAR_PLACEHOLDER}
+                    alt="프로필"
+                    className="w-16 h-16 rounded-full object-cover border border-border shrink-0"
+                  />
+                  {portfolioModalData.portfolioUserName && (
+                    <div className="flex items-center gap-2">
+                      <User className="w-5 h-5 text-muted-foreground shrink-0" />
+                      <span className="font-medium">이름</span>
+                      <span>{portfolioModalData.portfolioUserName}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+              {portfolioModalData.portfolioUserEmail && (
+                <div className="flex items-center gap-2">
+                  <Mail className="w-5 h-5 text-muted-foreground" />
+                  <span className="font-medium">이메일</span>
+                  <span>{portfolioModalData.portfolioUserEmail}</span>
+                </div>
+              )}
+              {portfolioModalData.portfolioUserPhone && (
+                <div className="flex items-center gap-2">
+                  <Phone className="w-5 h-5 text-muted-foreground" />
+                  <span className="font-medium">전화</span>
+                  <span>{portfolioModalData.portfolioUserPhone}</span>
+                </div>
+              )}
+              {portfolioModalData.portfolioUserCareer && (
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Briefcase className="w-5 h-5 text-muted-foreground" />
+                    <span className="font-medium">경력</span>
+                  </div>
+                  <pre className="whitespace-pre-wrap text-sm bg-muted/50 p-3 rounded">{portfolioModalData.portfolioUserCareer}</pre>
+                </div>
+              )}
+              {portfolioModalData.portfolioUserProject && (
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <FolderOpen className="w-5 h-5 text-muted-foreground" />
+                    <span className="font-medium">참여 프로젝트</span>
+                  </div>
+                  <pre className="whitespace-pre-wrap text-sm bg-muted/50 p-3 rounded">{portfolioModalData.portfolioUserProject}</pre>
+                </div>
+              )}
+              {portfolioModalData.portfolioUserSkill && (
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Sparkles className="w-5 h-5 text-muted-foreground" />
+                    <span className="font-medium">스킬</span>
+                  </div>
+                  <pre className="whitespace-pre-wrap text-sm bg-muted/50 p-3 rounded">{portfolioModalData.portfolioUserSkill}</pre>
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground py-6 text-center">등록된 포트폴리오가 없습니다.</p>
+          )}
         </DialogContent>
       </Dialog>
 

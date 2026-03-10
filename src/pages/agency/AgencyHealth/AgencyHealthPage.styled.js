@@ -6,7 +6,6 @@ export const AgencyHealthRoot = styled.div`
   min-height: 100vh;
   overflow-y: auto;
   background-color: var(--background);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 `;
 
 // 중앙 정렬 및 최대 폭 설정 (데스크탑 레이아웃 기준)
@@ -383,7 +382,8 @@ export const MonitoringGrid = styled.div`
   }
 `;
 
-export const MonitoringCard = styled.div`
+/** 검진 모니터링 · 미검진 인원 공통 카드 영역 (동일 컴포넌트) */
+export const HealthGridCard = styled.div`
   padding: 16px;
   background-color: white;
   border: none;
@@ -393,16 +393,24 @@ export const MonitoringCard = styled.div`
   transition: opacity 0.2s;
 
   &:hover {
-    opacity: 0.7;
+    opacity: 0.92;
+  }
+
+  * {
+    cursor: pointer;
   }
 `;
 
-export const MonitoringHeader = styled.div`
+/** 검진 모니터링 · 미검진 인원 공통 헤더 영역 (동일 컴포넌트) */
+export const HealthGridCardHeader = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 12px;
 `;
+
+export const MonitoringCard = HealthGridCard;
+export const MonitoringHeader = HealthGridCardHeader;
 
 export const MonitoringTabWrap = styled.div`
   display: flex;
@@ -441,27 +449,9 @@ export const MonitoringFooter = styled.div`
   text-align: center;
 `;
 
-// 미검진 인원 카드
-export const UnscreenedCard = styled.div`
-  padding: 16px;
-  background-color: white;
-  border: none;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  border-radius: 16px;
-  cursor: pointer;
-  transition: opacity 0.2s;
-
-  &:hover {
-    opacity: 0.7;
-  }
-`;
-
-export const UnscreenedHeader = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-`;
+// 미검진 인원 카드 — HealthGridCard / HealthGridCardHeader 와 동일 영역 컴포넌트 사용
+export const UnscreenedCard = HealthGridCard;
+export const UnscreenedHeader = HealthGridCardHeader;
 
 export const UnscreenedList = styled.div`
   display: flex;

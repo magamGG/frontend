@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
@@ -20,9 +20,11 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { leaveService, attendanceService, calendarService, projectService, memoService } from '@/api/services';
+import { leaveService, attendanceService, calendarService, projectService, memoService, memberService } from '@/api/services';
 import useAuthStore from '@/store/authStore';
 import { LeaveRequestEditModal } from '@/components/modals/LeaveRequestEditModal';
+import { ProjectListModal } from '@/components/modals/ProjectListModal';
+import { parseBackendDate } from '@/utils/dateUtils';
 import {
   ArtistDashboardRoot,
   ArtistDashboardBody,
@@ -175,10 +177,10 @@ const ATTENDANCE_STATUS_CONFIG = {
     icon: Home,
   },
   [ATTENDANCE_TYPE.LEAVE]: {
-    bgColor: '#F5F5F5', // 회색 배경
-    borderColor: 'rgba(107, 114, 128, 0.3)',
-    iconBgColor: 'rgba(107, 114, 128, 0.15)',
-    iconColor: '#6B7280', // 회색
+    bgColor: '#E6FFFA', // 민트색 배경
+    borderColor: 'rgba(45, 212, 191, 0.3)',
+    iconBgColor: 'rgba(45, 212, 191, 0.15)',
+    iconColor: '#14B8A6', // 민트색
     icon: Calendar,
   },
   [ATTENDANCE_TYPE.WORKATION]: {
@@ -278,8 +280,6 @@ const REQUEST_STATUS_MAP = {
   CANCELLED: REQUEST_STATUS.REJECTED,
 };
 
-const TASK_STORAGE_KEY = 'artistTaskCompletions';
-
 export function ArtistDashboardPage() {
   const [isWorking, setIsWorking] = useState(false);
   const [healthCheckCompleted, setHealthCheckCompleted] = useState(false);
@@ -300,6 +300,7 @@ export function ArtistDashboardPage() {
   const [tasks, setTasks] = useState([]);
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
   const [taskStatuses, setTaskStatuses] = useState({});
+  const [togglingCardId, setTogglingCardId] = useState(null);
   const [currentAttendanceType, setCurrentAttendanceType] = useState(null);
   const [currentAttendanceData, setCurrentAttendanceData] = useState(null);
   const [healthSurvey, setHealthSurvey] = useState({
@@ -316,6 +317,9 @@ export function ArtistDashboardPage() {
   const [attendanceRequestsRefreshTrigger, setAttendanceRequestsRefreshTrigger] = useState(0);
   const [editingAttendanceRequest, setEditingAttendanceRequest] = useState(null);
   const [showEditAttendanceModal, setShowEditAttendanceModal] = useState(false);
+  const [agencyName, setAgencyName] = useState('');
+
+  const authUser = useAuthStore((state) => state.user);
 
   const today = new Date();
   const todayString = `${today.getMonth() + 1}월 ${today.getDate()}일`;
@@ -324,8 +328,30 @@ export function ArtistDashboardPage() {
 
   const getCurrentStatusText = () => {
     const displayType = currentAttendanceType || ATTENDANCE_TYPE.OFFICE;
+    // 출근(OFFICE) 상태에서는 에이전시명을 제목으로 사용
+    if (displayType === ATTENDANCE_TYPE.OFFICE && agencyName) {
+      return agencyName;
+    }
     return `${displayType} 중`;
   };
+
+  // 소속 에이전시 이름 조회 (마이페이지 정보 재사용)
+  useEffect(() => {
+    const fetchAgencyName = async () => {
+      try {
+        const memberNo = authUser?.memberNo;
+        if (!memberNo) return;
+
+        const myPageData = await memberService.getMyPageInfo(memberNo);
+        setAgencyName(myPageData.agencyName || '');
+      } catch (error) {
+        console.error('에이전시명 조회 실패:', error);
+        setAgencyName('');
+      }
+    };
+
+    fetchAgencyName();
+  }, [authUser?.memberNo]);
 
   // 개인 메모 목록 조회 (MEMO 테이블, 타입 '개인')
   useEffect(() => {
@@ -351,85 +377,91 @@ export function ArtistDashboardPage() {
     fetchMemos();
   }, []);
 
-  // localStorage에서 오늘 할 일 완료 상태 로드
-  useEffect(() => {
-    const stored = localStorage.getItem(TASK_STORAGE_KEY);
-    if (stored) {
-      try {
-        setTaskStatuses(JSON.parse(stored));
-      } catch {
-        setTaskStatuses({});
-      }
-    }
-  }, []);
-
   // 오늘 할 일 (칸반 카드 DB 연동) - 담당 배정 + 미완료(N) 카드 전부, 마감일 가까운 순
-  useEffect(() => {
-    const fetchTasks = async () => {
-      const memberNo = useAuthStore.getState().user?.memberNo;
-      if (!memberNo) return;
+  const fetchTasks = useCallback(async () => {
+    const memberNo = useAuthStore.getState().user?.memberNo;
+    if (!memberNo) return;
 
-      setIsLoadingTasks(true);
-      try {
-        const response = await projectService.getMyTodayTasks();
-        const list = Array.isArray(response) ? response : [];
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+    setIsLoadingTasks(true);
+    try {
+      const response = await projectService.getMyTodayTasks();
+      const list = Array.isArray(response) ? response : [];
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
 
-        const mapped = list.map((item) => {
-          const endDate = item.dueDate ? new Date(item.dueDate) : null;
-          if (endDate) endDate.setHours(0, 0, 0, 0);
-          const daysLeft = endDate ? Math.ceil((endDate - today) / (1000 * 60 * 60 * 24)) : null;
+      const msPerDay = 1000 * 60 * 60 * 24;
+      const mapped = list.map((item) => {
+        const endDate = item.dueDate ? new Date(String(item.dueDate).slice(0, 10)) : null;
+        const startDate = item.startDate ? new Date(String(item.startDate).slice(0, 10)) : null;
+        if (endDate) endDate.setHours(0, 0, 0, 0);
+        if (startDate) startDate.setHours(0, 0, 0, 0);
+        const remainingDays = endDate ? Math.ceil((endDate - today) / msPerDay) : null;
+        const totalDays = startDate && endDate ? Math.ceil((endDate - startDate) / msPerDay) : null;
 
-          let badge = '일정';
-          let badgeColor = 'blue';
-          if (daysLeft !== null) {
-            if (daysLeft === 0) {
+        let badge = '일정';
+        let badgeColor = 'blue';
+        if (remainingDays !== null) {
+          if (totalDays != null) {
+            if (today < startDate) {
+              badge = `시작 전 (총 ${totalDays}일)`;
+              badgeColor = 'blue';
+            } else if (remainingDays === 0) {
               badge = 'D-0 마감';
               badgeColor = 'destructive';
-            } else if (daysLeft > 0) {
-              badge = `D-${daysLeft}`;
+            } else if (remainingDays > 0) {
+              badge = `총 ${totalDays}일 중 ${remainingDays}일 남음`;
+              badgeColor = 'blue';
+            } else {
+              badge = '기한 경과';
+              badgeColor = 'destructive';
+            }
+          } else {
+            if (remainingDays === 0) {
+              badge = 'D-0 마감';
+              badgeColor = 'destructive';
+            } else if (remainingDays > 0) {
+              badge = `D-${remainingDays}`;
               badgeColor = 'blue';
             } else {
               badge = '기한 경과';
               badgeColor = 'destructive';
             }
           }
+        }
 
-          return {
-            id: item.id,
-            projectNo: item.projectNo,
-            boardId: item.boardId,
-            project: item.projectName || '업무',
-            title: item.title || '업무 카드',
-            description: item.description || '',
-            daysLeft: daysLeft ?? 999,
-            badge,
-            badgeColor,
-            urgent: daysLeft !== null && daysLeft <= 0,
-          };
-        });
+        return {
+          id: item.id,
+          projectNo: item.projectNo,
+          boardId: item.boardId,
+          project: item.projectName || '업무',
+          title: item.title || '업무 카드',
+          description: item.description || '',
+          daysLeft: remainingDays ?? 999,
+          badge,
+          badgeColor,
+          urgent: remainingDays !== null && remainingDays <= 0,
+          completed: Boolean(item.completed),
+        };
+      });
 
-        // 기간 지난 업무(daysLeft < 0) 제외
-        const filtered = mapped.filter((t) => t.daysLeft === 999 || t.daysLeft >= 0);
-        setTasks(filtered);
-      } catch (error) {
-        console.error('오늘 할 일 조회 실패:', error);
-        setTasks([]);
-      } finally {
-        setIsLoadingTasks(false);
-      }
-    };
-
-    fetchTasks();
+      // 기간 지난 업무(daysLeft < 0) 제외
+      const filtered = mapped.filter((t) => t.daysLeft === 999 || t.daysLeft >= 0);
+      setTasks(filtered);
+      // API 완료 상태 반영 → 다른 페이지 갔다 와도 완료된 일이 취소선+완료 버튼으로 남아 있음
+      setTaskStatuses(
+        Object.fromEntries(filtered.map((t) => [t.id, t.completed ? TASK_STATUS.COMPLETED : TASK_STATUS.IN_PROGRESS]))
+      );
+    } catch (error) {
+      console.error('오늘 할 일 조회 실패:', error);
+      setTasks([]);
+    } finally {
+      setIsLoadingTasks(false);
+    }
   }, []);
 
-  // taskStatuses 변경 시 localStorage 저장
   useEffect(() => {
-    if (Object.keys(taskStatuses).length > 0) {
-      localStorage.setItem(TASK_STORAGE_KEY, JSON.stringify(taskStatuses));
-    }
-  }, [taskStatuses]);
+    fetchTasks();
+  }, [fetchTasks]);
 
   // 메모 저장 시 localStorage에도 저장
   useEffect(() => {
@@ -525,7 +557,8 @@ export function ArtistDashboardPage() {
           const status = REQUEST_STATUS_MAP[item.attendanceRequestStatus] || REQUEST_STATUS.PENDING;
           const formatReqDate = (dt) => {
             if (!dt) return '';
-            const d = typeof dt === 'string' ? new Date(dt) : dt;
+            const d = parseBackendDate(dt);
+            if (!d) return '';
             return `${d.getMonth() + 1}월 ${d.getDate()}일`;
           };
           return {
@@ -704,21 +737,25 @@ export function ArtistDashboardPage() {
     toast.info('건강 체크를 취소했습니다. 작업이 시작되지 않았습니다.');
   };
 
-  // 할 일 상태 토글 (로컬 완료 표시, localStorage 저장)
-  const toggleTaskStatus = (taskId) => {
-    const currentStatus = taskStatuses[taskId] || TASK_STATUS.IN_PROGRESS;
-    if (currentStatus === TASK_STATUS.IN_PROGRESS) {
-      setTaskStatuses((prev) => ({
-        ...prev,
-        [taskId]: TASK_STATUS.COMPLETED,
-      }));
-      toast.success('작업이 완료되었습니다.');
-    } else {
-      setTaskStatuses((prev) => ({
-        ...prev,
-        [taskId]: TASK_STATUS.IN_PROGRESS,
-      }));
-      toast.info('작업을 다시 진행 중으로 변경했습니다.');
+  // 할 일 상태 토글 (칸반 카드 완료 상태 API 연동 → 프로젝트 칸반보드와 동기화)
+  const toggleTaskStatus = async (task) => {
+    if (!task?.projectNo) {
+      toast.error('프로젝트 정보가 없어 완료 상태를 변경할 수 없습니다.');
+      return;
+    }
+    const currentCompleted = taskStatuses[task.id] === TASK_STATUS.COMPLETED;
+    const newCompleted = !currentCompleted;
+
+    setTogglingCardId(task.id);
+    try {
+      await projectService.updateKanbanCard(task.projectNo, task.id, { completed: newCompleted });
+      setTaskStatuses((prev) => ({ ...prev, [task.id]: newCompleted ? TASK_STATUS.COMPLETED : TASK_STATUS.IN_PROGRESS }));
+      if (newCompleted) toast.success('작업이 완료되었습니다. 칸반 보드에도 반영됩니다.');
+      else toast.info('작업을 다시 진행 중으로 변경했습니다.');
+    } catch (error) {
+      toast.error(error?.response?.data?.message || '완료 상태 변경에 실패했습니다.');
+    } finally {
+      setTogglingCardId(null);
     }
   };
 
@@ -783,9 +820,10 @@ export function ArtistDashboardPage() {
     setShowDeleteMemoConfirm(true);
   };
 
-  // 근태 신청 수정 핸들러 (대기 중일 때만)
+  // 근태 신청 수정 핸들러 (대기 중일 때만) — 목록 모달을 닫고 수정 모달만 열어서 가려짐 방지
   const handleEditAttendanceRequest = (request) => {
     if (!request?.raw || request.rawStatus !== 'PENDING') return;
+    setShowAttendanceModal(false);
     setEditingAttendanceRequest(request.raw);
     setShowEditAttendanceModal(true);
   };
@@ -820,7 +858,8 @@ export function ArtistDashboardPage() {
 
   const formatPeriodDate = (dateString) => {
     if (!dateString) return '';
-    const date = new Date(dateString);
+    const date = parseBackendDate(dateString);
+    if (!date) return '';
     return `${date.getMonth() + 1}월 ${date.getDate()}일`;
   };
 
@@ -881,20 +920,51 @@ export function ArtistDashboardPage() {
 
               {/* 근태 상태 표시 - API(leaveService.getCurrentStatus, attendanceService.getTodayStatus) 연동 */}
               {(() => {
-                const displayType = currentAttendanceType || ATTENDANCE_TYPE.OFFICE;
-                const displayConfig = ATTENDANCE_STATUS_CONFIG[displayType] || ATTENDANCE_STATUS_CONFIG[ATTENDANCE_TYPE.OFFICE];
-                const DisplayIcon = displayConfig.icon;
+                const rawType = currentAttendanceType || ATTENDANCE_TYPE.OFFICE;
+
+                // 작업 시작 전(출근 전) 상태: 근태 신청도 없고 아직 출근 버튼도 누르지 않은 상태
+                const isPreWork =
+                  !isWorking &&
+                  !currentAttendanceData &&
+                  rawType === ATTENDANCE_TYPE.OFFICE;
+
+                const displayType = rawType;
+                const baseConfig =
+                  ATTENDANCE_STATUS_CONFIG[rawType] || ATTENDANCE_STATUS_CONFIG[ATTENDANCE_TYPE.OFFICE];
+
+                const cardBg = isPreWork
+                  ? '#F3F4F6' // 회색 배경
+                  : baseConfig.bgColor;
+
+                const cardBorder = isPreWork
+                  ? 'rgba(107, 114, 128, 0.3)' // 회색 테두리
+                  : baseConfig.borderColor;
+
+                const iconBgColor = isPreWork
+                  ? 'rgba(107, 114, 128, 0.15)'
+                  : baseConfig.iconBgColor;
+
+                const iconColor = isPreWork
+                  ? '#6B7280'
+                  : baseConfig.iconColor;
+
+                const DisplayIcon = isPreWork ? Clock : baseConfig.icon;
+
                 return (
-                  <AttendanceStatusCard $bgColor={displayConfig.bgColor} $borderColor={displayConfig.borderColor}>
+                  <AttendanceStatusCard $bgColor={cardBg} $borderColor={cardBorder}>
                     <AttendanceStatusContent>
                       <AttendanceStatusLeft>
-                        <AttendanceStatusIconContainer $iconBgColor={displayConfig.iconBgColor}>
-                          <DisplayIcon className="w-6 h-6" style={{ color: displayConfig.iconColor }} />
+                        <AttendanceStatusIconContainer $iconBgColor={iconBgColor}>
+                          <DisplayIcon className="w-6 h-6" style={{ color: iconColor }} />
                         </AttendanceStatusIconContainer>
                         <AttendanceStatusText>
-                          <AttendanceStatusTitle>{displayType} 중</AttendanceStatusTitle>
+                          <AttendanceStatusTitle>
+                            {isPreWork ? '출근 대기중' : `${displayType} 중`}
+                          </AttendanceStatusTitle>
                           <AttendanceStatusDescription>
-                            {displayType === ATTENDANCE_TYPE.OFFICE
+                            {isPreWork
+                              ? '작업 시작 전입니다. 상단 버튼으로 출근을 시작하세요.'
+                              : displayType === ATTENDANCE_TYPE.OFFICE
                               ? '사무실에서 작업 중입니다'
                               : displayType === ATTENDANCE_TYPE.REMOTE
                               ? '자택에서 작업 중입니다'
@@ -907,14 +977,16 @@ export function ArtistDashboardPage() {
                         </AttendanceStatusText>
                       </AttendanceStatusLeft>
                     </AttendanceStatusContent>
-                    {(displayType === ATTENDANCE_TYPE.LEAVE || displayType === ATTENDANCE_TYPE.WORKATION) && currentAttendanceData && (
-                      <AttendancePeriodBox $borderColor={displayConfig.borderColor}>
-                        <AttendancePeriodLabel>
-                          {displayType === ATTENDANCE_TYPE.LEAVE ? '휴가 기간' : '워케이션 기간'}
-                        </AttendancePeriodLabel>
-                        <AttendancePeriodValue>{getAttendancePeriod()}</AttendancePeriodValue>
-                      </AttendancePeriodBox>
-                    )}
+                    {(displayType === ATTENDANCE_TYPE.LEAVE ||
+                      displayType === ATTENDANCE_TYPE.WORKATION) &&
+                      currentAttendanceData && (
+                        <AttendancePeriodBox $borderColor={cardBorder}>
+                          <AttendancePeriodLabel>
+                            {displayType === ATTENDANCE_TYPE.LEAVE ? '휴가 기간' : '워케이션 기간'}
+                          </AttendancePeriodLabel>
+                          <AttendancePeriodValue>{getAttendancePeriod()}</AttendancePeriodValue>
+                        </AttendancePeriodBox>
+                      )}
                   </AttendanceStatusCard>
                 );
               })()}
@@ -975,28 +1047,32 @@ export function ArtistDashboardPage() {
 
               {/* 신청 현황 */}
               <QuickInfoCard>
-                <AttendanceRequestCardHeader onClick={() => setShowAttendanceModal(true)}>
-                  <div>
-                    <FileText className="w-4 h-4" />
-                    <QuickInfoTitle>신청 현황</QuickInfoTitle>
-                  </div>
+                <QuickInfoHeader onClick={() => setShowAttendanceModal(true)} style={{ cursor: 'pointer' }}>
+                  <FileText className="w-4 h-4 text-primary" />
+                  <QuickInfoTitle>신청 현황</QuickInfoTitle>
                   {attendanceRequests.length >= 1 && (
-                    <ChevronRight className="w-4 h-4" />
+                    <ChevronRight className="w-4 h-4 text-muted-foreground ml-auto" />
                   )}
-                </AttendanceRequestCardHeader>
+                </QuickInfoHeader>
                 {attendanceRequests.length >= 1 && (
                   <AttendanceRequestCardList>
                     {attendanceRequests.slice(0, 2).map((request) => {
-                      const statusColor = 
-                        request.status === REQUEST_STATUS.PENDING ? '#F59E0B' :
-                        request.status === REQUEST_STATUS.APPROVED ? '#10B981' :
-                        '#EF4444';
-                      
+                      const statusColor =
+                        request.status === REQUEST_STATUS.PENDING
+                          ? '#F59E0B'
+                          : request.status === REQUEST_STATUS.APPROVED
+                          ? '#10B981'
+                          : '#EF4444';
+
                       return (
                         <AttendanceRequestCardItem key={request.id}>
                           <AttendanceRequestCardItemContent>
-                            <AttendanceRequestCardItemTitle>{request.typeName || request.type}</AttendanceRequestCardItemTitle>
-                            <AttendanceRequestCardItemDate>{request.startDate} ~ {request.endDate}</AttendanceRequestCardItemDate>
+                            <AttendanceRequestCardItemTitle>
+                              {request.typeName || request.type}
+                            </AttendanceRequestCardItemTitle>
+                            <AttendanceRequestCardItemDate>
+                              {request.startDate} ~ {request.endDate}
+                            </AttendanceRequestCardItemDate>
                           </AttendanceRequestCardItemContent>
                           <AttendanceRequestCardItemBadge $statusColor={statusColor}>
                             {request.status}
@@ -1041,7 +1117,8 @@ export function ArtistDashboardPage() {
                           <TaskProject>{task.project}</TaskProject>
                           <TaskCompleteButton
                             $isCompleted={isCompleted}
-                            onClick={() => toggleTaskStatus(task.id)}
+                            onClick={() => toggleTaskStatus(task)}
+                            disabled={togglingCardId === task.id}
                           >
                             {isCompleted ? '완료' : '진행 중'}
                           </TaskCompleteButton>
@@ -1127,9 +1204,30 @@ export function ArtistDashboardPage() {
             </FormLabel>
             <FormInput
               type="text"
-              placeholder="예: 7시간"
+              inputMode="numeric"
+              placeholder="예: 7"
               value={healthSurvey.sleepHours}
-              onChange={(e) => setHealthSurvey({ ...healthSurvey, sleepHours: e.target.value })}
+              onChange={(e) => {
+                // 숫자만 허용, 공백 및 기타 문자 제거, 0~24 범위로 제한, 최대 2자리
+                const numbers = e.target.value.replace(/[^\d]/g, '');
+
+                if (!numbers) {
+                  setHealthSurvey({ ...healthSurvey, sleepHours: '' });
+                  return;
+                }
+
+                let numeric = parseInt(numbers, 10);
+                if (Number.isNaN(numeric)) {
+                  numeric = 0;
+                }
+
+                if (numeric < 0) numeric = 0;
+                if (numeric > 24) numeric = 24;
+
+                const limited = numeric.toString().slice(0, 2);
+                setHealthSurvey({ ...healthSurvey, sleepHours: limited });
+              }}
+              maxLength={2}
             />
           </FormRow>
 
@@ -1348,7 +1446,8 @@ export function ArtistDashboardPage() {
                     <TaskModalBadge>{task.project}</TaskModalBadge>
                     <TaskCompleteButton
                       $isCompleted={isCompleted}
-                      onClick={() => toggleTaskStatus(task.id)}
+                      onClick={() => toggleTaskStatus(task)}
+                      disabled={togglingCardId === task.id}
                     >
                       {isCompleted ? '완료' : '진행 중'}
                     </TaskCompleteButton>
@@ -1367,41 +1466,21 @@ export function ArtistDashboardPage() {
         </TaskModalList>
       </Modal>
 
-      {/* 마감일 모달 */}
-      <Modal isOpen={showDeadlineModal} onClose={() => setShowDeadlineModal(false)} title="다음 연재 프로젝트" maxWidth="lg">
-        <ModalList>
-          {deadlineProjects.length === 0 ? (
-            <EmptyState>
-              <EmptyStateIcon>
-                <MessageSquare className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
-              </EmptyStateIcon>
-              <EmptyStateText>아직 다음 연재 프로젝트가 없습니다.</EmptyStateText>
-            </EmptyState>
-          ) : (
-            deadlineProjects.map((project) => (
-              <ModalListItem
-                key={project.id}
-                $borderColor={project.urgent ? '#ef4444' : 'var(--border)'}
-                $bgColor={project.urgent ? 'color-mix(in srgb, #ef4444 10%, transparent)' : 'color-mix(in srgb, var(--muted) 30%, transparent)'}
-                $hasShadow={project.urgent}
-              >
-                <ModalListItemHeader>
-                  <ModalListItemContent>
-                    <ModalListItemBadges>
-                      <Badge variant="outline" className="text-xs">
-                        프로젝트
-                      </Badge>
-                      {project.urgent && <Badge className="bg-red-500 text-xs">긴급</Badge>}
-                    </ModalListItemBadges>
-                    <ModalListItemTitle>{project.name}</ModalListItemTitle>
-                    <ModalListItemText>마감일: {project.deadline}</ModalListItemText>
-                  </ModalListItemContent>
-                </ModalListItemHeader>
-              </ModalListItem>
-            ))
-          )}
-        </ModalList>
-      </Modal>
+      {/* 다음 연재 프로젝트 전체보기 모달 (아티스트 컴포넌트 그대로) */}
+      <ProjectListModal
+        open={showDeadlineModal}
+        onOpenChange={setShowDeadlineModal}
+        title="다음 연재 프로젝트"
+        projects={deadlineProjects.map((p) => ({
+          id: p.id,
+          name: p.name,
+          artist: '내 프로젝트',
+          status: p.urgent ? '긴급' : '정상',
+          progress: 0,
+          deadline: p.deadline,
+        }))}
+        onProjectClick={() => {}}
+      />
 
       {/* 근태 신청 모달 */}
       <Modal 

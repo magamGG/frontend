@@ -1,21 +1,28 @@
 import { useState, useEffect } from 'react';
-import { 
-  Users, 
-  Mail, 
-  Phone, 
+import {
+  Users,
+  User,
+  Mail,
+  Phone,
   Briefcase,
+  FolderOpen,
+  Sparkles,
   Activity,
   Search,
   ChevronRight,
   ChevronDown,
   Heart,
-  CalendarClock
+  CalendarClock,
+  FileText,
+  Loader2
 } from 'lucide-react';
 import { Card } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
+import { Button } from '@/app/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/app/components/ui/dialog';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-import { memberService, projectService, leaveService, attendanceService } from '@/api';
-import { API_BASE_URL } from '@/api/config';
+import { memberService, projectService, leaveService, attendanceService, portfolioService } from '@/api';
+import { API_BASE_URL, getMemberProfileUrl, MEMBER_AVATAR_PLACEHOLDER } from '@/api/config';
 import useAuthStore from '@/store/authStore';
 import { toast } from 'sonner';
 import {
@@ -156,6 +163,9 @@ export function AdminTeamPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [expandedEmployeeId, setExpandedEmployeeId] = useState(null); // 목록에서 펼친 작가 (데일리 설문 등)
+  const [portfolioModalMemberNo, setPortfolioModalMemberNo] = useState(null);
+  const [portfolioModalData, setPortfolioModalData] = useState(null);
+  const [portfolioModalLoading, setPortfolioModalLoading] = useState(false);
   const [employees, setEmployees] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [employeeDetails, setEmployeeDetails] = useState({}); // 직원별 상세 정보 캐시
@@ -204,11 +214,11 @@ export function AdminTeamPage() {
       try {
         // 1. 현재 사용자의 managerNo 조회 (담당자 목록에서 찾기)
         const managersResponse = await memberService.getManagersByAgency(user.agencyNo);
-        const managersList = Array.isArray(managersResponse) 
-          ? managersResponse 
+        const managersList = Array.isArray(managersResponse)
+          ? managersResponse
           : managersResponse?.data || [];
-        
-        const currentManager = managersList.find(m => m.memberNo === user.memberNo);
+
+        const currentManager = managersList.find(m => Number(m.memberNo) === Number(user.memberNo));
         if (!currentManager || !currentManager.managerNo) {
           toast.error('담당자 정보를 찾을 수 없습니다.');
           setIsLoading(false);
@@ -224,9 +234,10 @@ export function AdminTeamPage() {
           : artistsResponse?.data || [];
 
         // 3. 작가 데이터를 컴포넌트 형식으로 변환
-        const imageBaseUrl = API_BASE_URL || 'http://localhost:8888';
+        const imageBaseUrl = API_BASE_URL;
         const mappedEmployees = artistsList.map((artist) => {
           let profileImageUrl = null;
+          // DTO에 프로필 이미지가 없으므로 여기서는 null 처리하고 fetchEmployeeDetails에서 채움
           if (artist.memberProfileImage) {
             if (artist.memberProfileImage.startsWith('http://') || artist.memberProfileImage.startsWith('https://')) {
               profileImageUrl = artist.memberProfileImage;
@@ -237,16 +248,17 @@ export function AdminTeamPage() {
             }
           }
           return {
-            id: artist.memberNo,
-            name: artist.memberName,
-            email: artist.memberEmail,
+            id: artist.artistNo || artist.memberNo, // DTO 필드명 대응
+            name: artist.artistName || artist.memberName,
+            email: artist.email || artist.memberEmail,
             phone: artist.memberPhone || '',
-            role: artist.memberRole,
+            role: artist.memberRole || 'ARTIST', // 기본값 설정
             originalRole: artist.memberRole,
-            status: artist.memberStatus === 'ACTIVE' ? '근무중'
-              : artist.memberStatus === 'ON_LEAVE' ? '휴가'
-              : artist.memberStatus === 'SICK_LEAVE' ? '병가'
-              : '근무중',
+            status: (artist.memberStatus === 'WORKCATION' || artist.memberStatus === '워케이션') ? '워케이션'
+              : (artist.memberStatus === 'REMOTE_WORK' || artist.memberStatus === '재택근무') ? '재택근무'
+                : artist.memberStatus === 'ON_LEAVE' ? '휴가'
+                  : artist.memberStatus === 'SICK_LEAVE' ? '병가'
+                    : '근무중',
             projectCount: 0,
             profileImage: profileImageUrl,
           };
@@ -369,7 +381,7 @@ export function AdminTeamPage() {
       // 프로필 이미지 URL 구성
       let profileImageUrl = null;
       if (data?.memberProfileImage) {
-        const imageBaseUrl = API_BASE_URL || 'http://localhost:8888';
+        const imageBaseUrl = API_BASE_URL;
         if (data.memberProfileImage.startsWith('http://') || data.memberProfileImage.startsWith('https://')) {
           profileImageUrl = data.memberProfileImage;
         } else if (data.memberProfileImage.startsWith('/uploads/')) {
@@ -379,10 +391,25 @@ export function AdminTeamPage() {
         }
       }
 
-      // employees 상태도 업데이트
-      setEmployees(prev => prev.map(emp => 
-        emp.id === employeeId 
-          ? { ...emp, projectCount, profileImage: profileImageUrl || emp.profileImage }
+      // employees 상태도 업데이트 (상세 정보 반영)
+      setEmployees(prev => prev.map(emp =>
+        emp.id === employeeId
+          ? {
+            ...emp,
+            projectCount,
+            profileImage: profileImageUrl || emp.profileImage,
+            // 상세 정보에서 누락된 필드 업데이트
+            name: data.memberName || emp.name,
+            email: data.memberEmail || emp.email,
+            phone: data.memberPhone || emp.phone,
+            role: data.memberRole || emp.role,
+            originalRole: data.memberRole || emp.originalRole,
+            status: (data.memberStatus === 'WORKCATION' || data.memberStatus === '워케이션') ? '워케이션'
+              : (data.memberStatus === 'REMOTE_WORK' || data.memberStatus === '재택근무') ? '재택근무'
+                : data.memberStatus === 'ON_LEAVE' ? '휴가'
+                  : data.memberStatus === 'SICK_LEAVE' ? '병가'
+                    : '근무중',
+          }
           : emp
       ));
     } catch (error) {
@@ -415,6 +442,25 @@ export function AdminTeamPage() {
     if (isExpanding && !employeeDetails[employee.id]) {
       await fetchEmployeeDetails(employee.id);
     }
+  };
+
+  const openPortfolioModal = (memberNo, e) => {
+    if (e) e.stopPropagation();
+    setPortfolioModalMemberNo(memberNo);
+    setPortfolioModalData(null);
+    setPortfolioModalLoading(true);
+    portfolioService
+      .getByMemberNo(memberNo)
+      .then((res) => {
+        const data = res?.data ?? res;
+        if (!data || data.portfolioStatus === 'N' || data.portfolioNo == null) {
+          setPortfolioModalData(null);
+          return;
+        }
+        setPortfolioModalData(data);
+      })
+      .catch(() => setPortfolioModalData(null))
+      .finally(() => setPortfolioModalLoading(false));
   };
 
   // 해당 직원의 근태 신청 목록 (에이전시 목록에서 필터링)
@@ -453,7 +499,7 @@ export function AdminTeamPage() {
                 <StatCardValue>{totalArtists}명</StatCardValue>
               </StatCardContent>
             </StatCard>
-            
+
             <StatCard>
               <StatCardIcon $bgColor="rgba(59, 130, 246, 0.1)" $iconColor="#3B82F6">
                 <Briefcase className="w-6 h-6" />
@@ -463,7 +509,7 @@ export function AdminTeamPage() {
                 <StatCardValue>{myProjectCount ?? 0}개</StatCardValue>
               </StatCardContent>
             </StatCard>
-            
+
             <StatCard>
               <StatCardIcon $bgColor="rgba(34, 197, 94, 0.1)" $iconColor="#22C55E">
                 <Activity className="w-6 h-6" />
@@ -495,8 +541,8 @@ export function AdminTeamPage() {
               <EmployeeDetailHeader>
                 <EmployeeDetailAvatar>
                   {selectedEmployee.profileImage ? (
-                    <img 
-                      src={selectedEmployee.profileImage} 
+                    <img
+                      src={selectedEmployee.profileImage}
                       alt={selectedEmployee.name}
                       style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
                       onError={(e) => {
@@ -568,7 +614,7 @@ export function AdminTeamPage() {
               <StatCardValue>{totalArtists}명</StatCardValue>
             </StatCardContent>
           </StatCard>
-          
+
           <StatCard>
             <StatCardIcon $bgColor="rgba(59, 130, 246, 0.1)" $iconColor="#3B82F6">
               <Briefcase className="w-6 h-6" />
@@ -578,7 +624,7 @@ export function AdminTeamPage() {
               <StatCardValue>{myProjectCount ?? 0}개</StatCardValue>
             </StatCardContent>
           </StatCard>
-          
+
           <StatCard>
             <StatCardIcon $bgColor="rgba(34, 197, 94, 0.1)" $iconColor="#22C55E">
               <Activity className="w-6 h-6" />
@@ -595,15 +641,15 @@ export function AdminTeamPage() {
           <SearchIcon>
             <Search className="w-5 h-5" />
           </SearchIcon>
-            <SearchInput
-              type="text"
-              placeholder="이름 또는 이메일로 검색..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+          <SearchInput
+            type="text"
+            placeholder="이름 또는 이메일로 검색..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </SearchContainer>
 
-          {/* 직원 목록 */}
+        {/* 직원 목록 */}
         {isLoading ? (
           <div style={{ textAlign: 'center', padding: '2rem' }}>
             <p>작가 목록을 불러오는 중...</p>
@@ -620,12 +666,12 @@ export function AdminTeamPage() {
               const hc = details?.healthCheck;
               return (
                 <div key={employee.id}>
-                  <EmployeeCard onClick={() => handleEmployeeClick(employee)}>
+                  <EmployeeCard onClick={() => handleEmployeeClick(employee)} $status={employee.status}>
                     <EmployeeLeft>
                       <EmployeeAvatar>
                         {employee.profileImage ? (
-                          <img 
-                            src={employee.profileImage} 
+                          <img
+                            src={employee.profileImage}
                             alt={employee.name}
                             style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
                             onError={(e) => {
@@ -753,8 +799,8 @@ export function AdminTeamPage() {
                               <div className="p-4 border border-border rounded-lg flex-1 flex flex-col min-h-[220px]">
                                 {details?.attendanceStats?.data?.length > 0 ? (
                                   <div className="flex items-center gap-4 flex-1 min-h-[180px]">
-<div className="w-[140px] h-[140px] flex-shrink-0">
-                                        <ResponsiveContainer width="100%" height="100%">
+                                    <div className="w-[140px] h-[140px] flex-shrink-0">
+                                      <ResponsiveContainer width="100%" height="100%">
                                         <PieChart>
                                           <Pie
                                             data={details.attendanceStats.data}
@@ -792,6 +838,12 @@ export function AdminTeamPage() {
                               </div>
                             </div>
                           </div>
+                          <div className="flex justify-end pt-2">
+                            <Button variant="outline" size="sm" className="gap-2" onClick={(e) => openPortfolioModal(employee.id, e)}>
+                              <FileText className="w-4 h-4" />
+                              포트폴리오
+                            </Button>
+                          </div>
                         </>
                       )}
                     </Card>
@@ -801,6 +853,85 @@ export function AdminTeamPage() {
             })}
           </EmployeeList>
         )}
+
+        {/* 포트폴리오 모달 (아티스트 포트폴리오 페이지와 동일한 디자인 + 프로필 이미지) */}
+        <Dialog open={portfolioModalMemberNo !== null} onOpenChange={(open) => !open && setPortfolioModalMemberNo(null)}>
+          <DialogContent className="sm:max-w-[500px] max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                포트폴리오
+              </DialogTitle>
+            </DialogHeader>
+            {portfolioModalLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : portfolioModalData && portfolioModalData.portfolioNo && portfolioModalData.portfolioStatus !== 'N' ? (
+              <div className="space-y-4 rounded-lg border bg-card p-6 text-card-foreground shadow-sm">
+                {(portfolioModalData.profileImage || portfolioModalData.portfolioUserName) && (
+                  <div className="flex items-center gap-4">
+                    <img
+                      src={getMemberProfileUrl(portfolioModalData.profileImage) ?? MEMBER_AVATAR_PLACEHOLDER}
+                      alt="프로필"
+                      className="w-16 h-16 rounded-full object-cover border border-border shrink-0"
+                    />
+                    {portfolioModalData.portfolioUserName && (
+                      <div className="flex items-center gap-2">
+                        <User className="w-5 h-5 text-muted-foreground shrink-0" />
+                        <span className="font-medium">이름</span>
+                        <span>{portfolioModalData.portfolioUserName}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {portfolioModalData.portfolioUserEmail && (
+                  <div className="flex items-center gap-2">
+                    <Mail className="w-5 h-5 text-muted-foreground" />
+                    <span className="font-medium">이메일</span>
+                    <span>{portfolioModalData.portfolioUserEmail}</span>
+                  </div>
+                )}
+                {portfolioModalData.portfolioUserPhone && (
+                  <div className="flex items-center gap-2">
+                    <Phone className="w-5 h-5 text-muted-foreground" />
+                    <span className="font-medium">전화</span>
+                    <span>{portfolioModalData.portfolioUserPhone}</span>
+                  </div>
+                )}
+                {portfolioModalData.portfolioUserCareer && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Briefcase className="w-5 h-5 text-muted-foreground" />
+                      <span className="font-medium">경력</span>
+                    </div>
+                    <pre className="whitespace-pre-wrap text-sm bg-muted/50 p-3 rounded">{portfolioModalData.portfolioUserCareer}</pre>
+                  </div>
+                )}
+                {portfolioModalData.portfolioUserProject && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <FolderOpen className="w-5 h-5 text-muted-foreground" />
+                      <span className="font-medium">참여 프로젝트</span>
+                    </div>
+                    <pre className="whitespace-pre-wrap text-sm bg-muted/50 p-3 rounded">{portfolioModalData.portfolioUserProject}</pre>
+                  </div>
+                )}
+                {portfolioModalData.portfolioUserSkill && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Sparkles className="w-5 h-5 text-muted-foreground" />
+                      <span className="font-medium">스킬</span>
+                    </div>
+                    <pre className="whitespace-pre-wrap text-sm bg-muted/50 p-3 rounded">{portfolioModalData.portfolioUserSkill}</pre>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground py-6 text-center">등록된 포트폴리오가 없습니다.</p>
+            )}
+          </DialogContent>
+        </Dialog>
       </AdminTeamBody>
     </AdminTeamRoot>
   );

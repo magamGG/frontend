@@ -5,7 +5,8 @@ import { Label } from '@/app/components/ui/label';
 import { Textarea } from '@/app/components/ui/textarea';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Upload, FileText, Calendar, AlertCircle } from 'lucide-react';
+import { Upload, FileText, Calendar, AlertCircle, MapPin } from 'lucide-react';
+import { MapPickerModal } from '@/components/modals/MapPickerModal';
 import useAuthStore from '@/store/authStore';
 import { leaveService, memberService, projectService } from '@/api/services';
 import {
@@ -61,6 +62,7 @@ export function LeaveRequestModal({ open, onOpenChange }) {
   const [attachedFile, setAttachedFile] = useState(null);
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
   const [showHalfDayTypeDropdown, setShowHalfDayTypeDropdown] = useState(false);
+  const [showMapPicker, setShowMapPicker] = useState(false);
   const [remainingLeave, setRemainingLeave] = useState(null);
 
   const { getMemberName, user } = useAuthStore();
@@ -247,13 +249,8 @@ export function LeaveRequestModal({ open, onOpenChange }) {
     let uploadedFileName = null;
     if (attachedFile) {
       try {
-        const memberName = getMemberName();
-        const employees = JSON.parse(localStorage.getItem('agencyEmployees') || '[]');
-        const employee = employees.find(emp => emp.name === memberName);
-        const memberNo = employee?.memberNo || 1; // 기본값 사용
-        
-        // 파일 업로드 (프로필 이미지 업로드 API 재사용)
-        uploadedFileName = await memberService.uploadProfileImage(memberNo, attachedFile);
+        // 근태 전용 첨부 파일 업로드 API 사용 → uploads/attendance 하위에 저장
+        uploadedFileName = await leaveService.uploadMedicalFile(attachedFile);
         toast.success('파일이 업로드되었습니다.');
       } catch (error) {
         console.error('파일 업로드 실패:', error);
@@ -295,9 +292,7 @@ export function LeaveRequestModal({ open, onOpenChange }) {
 
     try {
       // API 호출
-      const response = await leaveService.requestLeave(requestData);
-      
-      console.log('근태 신청 API 응답:', response);
+      await leaveService.requestLeave(requestData);
       
       // 연차/반차/반반차 신청인 경우 로컬 스토리지의 연차 정보도 업데이트 (UI 동기화용)
       if (selectedType === '연차' || selectedType === '반차') {
@@ -350,6 +345,7 @@ export function LeaveRequestModal({ open, onOpenChange }) {
     setLocation('');
     setSelectedProject('선택 안 함');
     setAttachedFile(null);
+    setShowMapPicker(false);
   };
 
   // Handle modal close with reset
@@ -558,14 +554,32 @@ export function LeaveRequestModal({ open, onOpenChange }) {
           {selectedType === '워케이션' && (
             <FormGroup>
               <Label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>워케이션 장소</Label>
-              <Input
-                placeholder="예: 제주, 부산, 해외 등"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                className="bg-white border-gray-300"
-                style={{ color: 'var(--foreground)' }}
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <Input
+                  placeholder="예: 제주, 부산, 해외 등"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  className="bg-white border-gray-300 flex-1"
+                  style={{ color: 'var(--foreground)' }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowMapPicker(true)}
+                  className="shrink-0"
+                  style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                >
+                  <MapPin size={16} />
+                  지도에서 선택
+                </Button>
+              </div>
+              <DaysInfo>직접 입력하거나 지도에서 클릭하여 장소를 선택하세요. 선택한 위치의 실제 주소가 자동으로 입력됩니다.</DaysInfo>
+              <MapPickerModal
+                open={showMapPicker}
+                onOpenChange={setShowMapPicker}
+                onSelect={(addr) => setLocation(addr)}
               />
-              <DaysInfo>워케이션을 떠날 입력</DaysInfo>
             </FormGroup>
           )}
 

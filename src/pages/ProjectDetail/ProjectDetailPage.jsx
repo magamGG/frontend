@@ -18,7 +18,10 @@ import {
   XCircle,
   MessageSquare,
   Circle,
-  CheckCircle2
+  CheckCircle2,
+  ExternalLink,
+  Link2Off,
+  RefreshCw
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
@@ -175,9 +178,27 @@ function DraggableCard({
         </div>
       </div>
       <p className="text-xs text-muted-foreground mb-2">{card.description}</p>
-      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-        <Calendar className="w-3 h-3" />
-        <span>{card.dueDate}</span>
+      <div className="flex items-center gap-1 text-xs text-muted-foreground flex-wrap">
+        <Calendar className="w-3 h-3 flex-shrink-0" />
+        {card.startDate ? (
+          <span>{String(card.startDate).slice(0, 10)} ~ {String(card.dueDate || '').slice(0, 10)}</span>
+        ) : (
+          <span>{card.dueDate}</span>
+        )}
+        {card.startDate && card.dueDate && (() => {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const start = new Date(String(card.startDate).slice(0, 10));
+          const end = new Date(String(card.dueDate).slice(0, 10));
+          start.setHours(0, 0, 0, 0);
+          end.setHours(0, 0, 0, 0);
+          const msPerDay = 1000 * 60 * 60 * 24;
+          const totalDays = Math.ceil((end - start) / msPerDay);
+          const remaining = Math.round((end - today) / msPerDay);
+          if (remaining < 0) return <span className="text-destructive">기한 경과</span>;
+          if (today < start) return <span className="text-muted-foreground">(시작 전, 총 {totalDays}일)</span>;
+          return <span className="text-primary font-medium">(총 {totalDays}일 중 {remaining}일 남음)</span>;
+        })()}
       </div>
       {card.assignedTo && (
         <div className="flex items-center gap-1 text-xs text-[#6E8FB3] mt-2 bg-[#6E8FB3]/10 px-2 py-1 rounded">
@@ -340,7 +361,7 @@ export function ProjectDetailPage({
             memberRole: m.memberRole || '',
             email: m.memberEmail || '',
             phone: m.memberPhone || '',
-            status: m.memberStatus === '휴면' ? '휴면' : '출근',
+            status: m.todayAttendanceStatus || (m.memberStatus === '휴면' ? '휴면' : '작업 시작 전'),
             avatar: getMemberProfileUrl(m.memberProfileImage),
           }))
         );
@@ -382,6 +403,122 @@ export function ProjectDetailPage({
     fetchArtists();
   }, [user?.memberNo]);
 
+  // Notion 연동 상태
+  const [notionStatus, setNotionStatus] = useState({ connected: false, workspaceName: '', databaseId: '' });
+  const [notionLoading, setNotionLoading] = useState(false);
+  const [notionSyncing, setNotionSyncing] = useState(false);
+
+  useEffect(() => {
+    if (!project?.id) return;
+    const fetchNotionStatus = async () => {
+      try {
+        const res = await projectService.getNotionStatus(project.id);
+        setNotionStatus(res || { connected: false, workspaceName: '', databaseId: '' });
+      } catch {
+        setNotionStatus({ connected: false, workspaceName: '', databaseId: '' });
+      }
+    };
+    fetchNotionStatus();
+  }, [project?.id]);
+
+  const handleNotionConnect = async () => {
+    setNotionLoading(true);
+    try {
+      const config = await projectService.getNotionConfig();
+      const { clientId, redirectUri } = config;
+      const state = JSON.stringify({ projectNo: project.id });
+      const authUrl =
+        `https://api.notion.com/v1/oauth/authorize?client_id=${clientId}` +
+        `&response_type=code&owner=user&redirect_uri=${encodeURIComponent(redirectUri)}` +
+        `&state=${encodeURIComponent(state)}`;
+      const popup = window.open(authUrl, 'notion-oauth', 'width=600,height=700');
+
+      let callbackHandled = false;
+
+      const handleMessage = async (event) => {
+        if (event.data?.type !== 'notion-callback') return;
+        callbackHandled = true;
+        window.removeEventListener('message', handleMessage);
+        const { code } = event.data;
+        if (!code) {
+          toast.error('Notion 인증에 실패했습니다.');
+          setNotionLoading(false);
+          return;
+        }
+        try {
+          const result = await projectService.notionCallback(project.id, code);
+          const dbStatus = result?.dbStatus || '';
+          const syncedCards = result?.syncedCards || 0;
+          if (result?.databaseId) {
+            setNotionStatus({ connected: true, workspaceName: result?.workspaceName || '', databaseId: result?.databaseId || '' });
+            toast.success(`Notion 연동 완료! (DB: ${dbStatus}, 동기화: ${syncedCards}건)`);
+          } else if (dbStatus === 'no_pages_shared') {
+            setNotionStatus({ connected: true, workspaceName: result?.workspaceName || '', databaseId: '' });
+            toast.error('Notion 인증은 됐지만, 공유된 페이지가 없어 데이터베이스를 생성할 수 없습니다. Notion에서 페이지를 공유한 뒤 다시 연결해주세요.');
+          } else {
+            setNotionStatus({ connected: true, workspaceName: result?.workspaceName || '', databaseId: '' });
+            toast.error(`Notion 인증 완료, 데이터베이스 연결 실패 (${dbStatus}). 연동 해제 후 다시 시도해주세요.`);
+          }
+        } catch (err) {
+          console.error('Notion callback error:', err);
+          toast.error('Notion 연동 중 오류가 발생했습니다.');
+        } finally {
+          setNotionLoading(false);
+        }
+      };
+      window.addEventListener('message', handleMessage);
+
+      const checkClosed = setInterval(() => {
+        if (popup && popup.closed) {
+          clearInterval(checkClosed);
+          if (!callbackHandled) {
+            setNotionLoading(false);
+            window.removeEventListener('message', handleMessage);
+            // 팝업이 닫혔지만 callback이 안 왔으면 status를 다시 확인
+            projectService.getNotionStatus(project.id).then(res => {
+              if (res?.connected) {
+                setNotionStatus(res);
+                toast.success('Notion 연동이 완료되었습니다!');
+              }
+            }).catch(() => {});
+          }
+        }
+      }, 1000);
+    } catch (err) {
+      toast.error('Notion 설정을 불러올 수 없습니다.');
+      setNotionLoading(false);
+    }
+  };
+
+  const handleNotionSync = async () => {
+    setNotionSyncing(true);
+    try {
+      const res = await projectService.syncNotion(project.id);
+      const count = res?.synced ?? 0;
+      if (count > 0) {
+        toast.success(`Notion에 ${count}건의 카드를 동기화했습니다.`);
+      } else {
+        toast.info('동기화할 새 카드가 없습니다. (이미 동기화된 카드는 건너뜁니다)');
+      }
+    } catch (err) {
+      console.error('Notion sync error:', err);
+      toast.error('Notion 동기화 중 오류가 발생했습니다.');
+    } finally {
+      setNotionSyncing(false);
+    }
+  };
+
+  const handleNotionDisconnect = async () => {
+    if (!window.confirm('Notion 연동을 해제하시겠습니까?')) return;
+    try {
+      await projectService.disconnectNotion(project.id);
+      setNotionStatus({ connected: false, workspaceName: '', databaseId: '' });
+      toast.success('Notion 연동이 해제되었습니다.');
+    } catch {
+      toast.error('Notion 연동 해제에 실패했습니다.');
+    }
+  };
+
   // 추가 가능한 팀원 (DB: MEMBER_ROLE != 담당자/작가, 프로젝트 미소속)
   const [availableMembers, setAvailableMembers] = useState([]);
   const [addableMembersLoading, setAddableMembersLoading] = useState(false);
@@ -418,6 +555,8 @@ export function ProjectDetailPage({
   // PROJECT_NO(project.id)로 KANBAN_BOARD, KANBAN_CARD 조회
   const [boards, setBoards] = useState([]);
   const [boardsLoading, setBoardsLoading] = useState(false);
+  /** 카드 이동 API 요청 중이면 true — ref 사용으로 빠른 연속 드롭 시에도 즉시 잠금(레이스 방지) */
+  const cardMoveInFlightRef = useRef(false);
 
   useEffect(() => {
     if (!project?.id) return;
@@ -465,11 +604,12 @@ export function ProjectDetailPage({
     localStorage.setItem(`kanban_boards_${project?.id}`, JSON.stringify(updatedBoards));
   };
 
-  // KANBAN_CARD 마감일(kanban_card_ended_at) 내림차순 목록 + D-n 표시 (기간 지난 마감일 제외)
+  // KANBAN_CARD 마감일(kanban_card_ended_at) 내림차순 목록 + 시작일 기준 D-n / 총 N일 중 M일 남음 표시
   const dueDateSortedCards = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+    const msPerDay = 1000 * 60 * 60 * 24;
     const items = [];
     boards.forEach((board) => {
       (board.cards || []).forEach((card) => {
@@ -477,13 +617,26 @@ export function ProjectDetailPage({
         if (!dueStr) return;
         const dueDate = new Date(dueStr);
         dueDate.setHours(0, 0, 0, 0);
-        const diffMs = dueDate - today;
-        const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
-        // 기간 지난 마감일(diffDays < 0)은 목록에서 제외
-        if (diffDays < 0) return;
+        const remainingDays = Math.round((dueDate - today) / msPerDay);
+        // 기간 지난 마감일(remainingDays < 0)은 목록에서 제외
+        if (remainingDays < 0) return;
+        const startStr = card.startDate ? String(card.startDate).slice(0, 10) : null;
+        const startDate = startStr ? new Date(startStr) : null;
+        if (startDate) startDate.setHours(0, 0, 0, 0);
+        const totalDays = startDate && dueDate ? Math.ceil((dueDate - startDate) / msPerDay) : null;
         let dLabel;
-        if (diffDays === 0) dLabel = 'D-Day';
-        else dLabel = `D-${diffDays}`;
+        if (totalDays != null) {
+          if (today < startDate) {
+            dLabel = `시작 전 (총 ${totalDays}일)`;
+          } else if (remainingDays === 0) {
+            dLabel = `D-Day (총 ${totalDays}일)`;
+          } else {
+            dLabel = `총 ${totalDays}일 중 ${remainingDays}일 남음`;
+          }
+        } else {
+          if (remainingDays === 0) dLabel = 'D-Day';
+          else dLabel = `D-${remainingDays}`;
+        }
         const dateStr = `${dueDate.getMonth() + 1}/${dueDate.getDate()}`;
         const dayName = dayNames[dueDate.getDay()];
         items.push({
@@ -681,7 +834,7 @@ export function ProjectDetailPage({
           memberRole: m.memberRole || '',
           email: m.memberEmail || '',
           phone: m.memberPhone || '',
-          status: m.memberStatus === '휴면' ? '휴면' : '출근',
+          status: m.todayAttendanceStatus || (m.memberStatus === '휴면' ? '휴면' : '작업 시작 전'),
           avatar: getMemberProfileUrl(m.memberProfileImage),
         }))
       );
@@ -717,7 +870,7 @@ export function ProjectDetailPage({
         memberRole: m.memberRole || '',
         email: m.memberEmail || '',
         phone: m.memberPhone || '',
-        status: m.memberStatus === '휴면' ? '휴면' : '출근',
+        status: m.todayAttendanceStatus || (m.memberStatus === '휴면' ? '휴면' : '작업 시작 전'),
         avatar: getMemberProfileUrl(m.memberProfileImage),
       }));
       setTeamMembers(refreshed);
@@ -762,11 +915,16 @@ export function ProjectDetailPage({
     am => !currentTeam.some(tm => tm.id === am.id)
   );
 
-  // 상태별 테두리 색상
+  // 상태별 테두리 색상 (작업중/작업 종료/작업 시작 전)
   const getStatusBorderColor = (status) => {
     switch (status) {
+      case '작업중':
       case '출근':
         return 'border-green-500';
+      case '작업 종료':
+        return 'border-blue-500';
+      case '작업 시작 전':
+        return 'border-amber-500';
       case '워케이션':
         return 'border-red-500';
       case '재택근무':
@@ -781,12 +939,17 @@ export function ProjectDetailPage({
   // 상태별 배지 색상
   const getStatusBadgeColor = (status) => {
     switch (status) {
+      case '작업중':
       case '출근':
         return 'bg-green-500 hover:bg-green-600';
-      case '워케이션':
-        return 'bg-red-500 hover:bg-red-600';
+      case '작업 종료':
+        return 'bg-blue-500 hover:bg-blue-600';
+      case '작업 시작 전':
+        return 'bg-amber-500 hover:bg-amber-600';
       case '휴면':
         return 'bg-gray-500 hover:bg-gray-600';
+      case '워케이션':
+        return 'bg-red-500 hover:bg-red-600';
       case '재택근무':
         return 'bg-blue-500 hover:bg-blue-600';
       default:
@@ -816,13 +979,20 @@ export function ProjectDetailPage({
     }
   };
 
-  // 카드 드롭 핸들러 (KANBAN_CARD.BOARD_NO 업데이트)
+  // 카드 드롭 핸들러 (KANBAN_CARD.BOARD_NO 업데이트) — ref로 동기 잠금해 빠른 연속 드롭 시 요청 한 번만
   const handleCardDrop = async (cardId, sourceBoardId, targetBoardId) => {
     if (sourceBoardId === targetBoardId) return;
     if (!project?.id) return;
+    if (cardMoveInFlightRef.current) return;
+    const boardIdNum = Number(targetBoardId);
+    if (Number.isNaN(boardIdNum) || boardIdNum < 1) {
+      toast.error('이동할 보드를 찾을 수 없습니다.');
+      return;
+    }
 
+    cardMoveInFlightRef.current = true;
     try {
-      await projectService.updateKanbanCard(project.id, cardId, { boardId: targetBoardId });
+      await projectService.updateKanbanCard(project.id, cardId, { boardId: boardIdNum });
       setBoards((prevBoards) => {
         const newBoards = prevBoards.map((b) => ({ ...b, cards: [...(b.cards || [])] }));
         const sourceBoard = newBoards.find((b) => b.id === sourceBoardId);
@@ -839,7 +1009,10 @@ export function ProjectDetailPage({
       });
       toast.success('카드가 이동되었습니다.');
     } catch (err) {
-      toast.error(err?.message || '카드 이동에 실패했습니다.');
+      const message = err?.response?.data?.message || err?.message || '카드 이동에 실패했습니다.';
+      toast.error(message);
+    } finally {
+      cardMoveInFlightRef.current = false;
     }
   };
 
@@ -1011,9 +1184,15 @@ export function ProjectDetailPage({
     if (!project?.id) return;
 
     try {
-      const result = await projectService.createKanbanBoard(project.id, newBoardTitle.trim());
+      const res = await projectService.createKanbanBoard(project.id, newBoardTitle.trim());
+      const result = res?.data !== undefined ? res.data : res;
+      const boardId = result?.id != null ? Number(result.id) : null;
+      if (boardId == null || Number.isNaN(boardId)) {
+        toast.error('보드 생성 응답을 확인할 수 없습니다.');
+        return;
+      }
       const newBoard = {
-        id: result.id,
+        id: boardId,
         title: result.title || newBoardTitle.trim(),
         cards: (result.cards || []).map((c) => ({
           id: c.id,
@@ -1021,7 +1200,7 @@ export function ProjectDetailPage({
           description: c.description || '',
           startDate: c.startDate || '',
           dueDate: c.dueDate || '',
-          boardId: c.boardId ?? result.id,
+          boardId: c.boardId ?? boardId,
           completed: !!c.completed,
           assignedTo: c.assignedTo
             ? {
@@ -1400,7 +1579,46 @@ export function ProjectDetailPage({
             <div className="flex-1 min-w-0">
               <Card className="p-6 h-[calc(100vh-320px)] flex flex-col">
                 <div className="flex items-center justify-between mb-6 flex-shrink-0">
-                  <h2 className="text-xl font-bold text-foreground">업무 일정 보드</h2>
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-xl font-bold text-foreground">업무 일정 보드</h2>
+                    {notionStatus.connected ? (
+                      <div className="flex items-center gap-1.5">
+                        <Badge className="bg-emerald-100 text-emerald-700 text-xs px-2.5 py-1 flex items-center gap-1">
+                          <svg className="w-3 h-3" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6.017 4.313l55.333-4.087c6.797-.583 8.543-.19 12.817 2.917l17.663 12.443c2.913 2.14 3.883 2.723 3.883 5.053v68.243c0 4.277-1.553 6.807-6.99 7.193L24.467 99.967c-4.08.193-6.023-.39-8.16-3.113L3.3 79.94c-2.333-3.113-3.3-5.443-3.3-8.167V11.113c0-3.497 1.553-6.413 6.017-6.8z" fill="#fff"/>
+                            <path d="M61.35.227l-55.333 4.087C.583 4.7-1 7.617-1 11.113v60.66c0 2.724.967 5.054 3.3 8.167l12.987 16.913c2.137 2.723 4.08 3.307 8.16 3.113L87.573 96.08c5.437-.387 6.99-2.917 6.99-7.193V17.64c0-2.207-.86-2.867-3.46-4.74L73.767 0.84C69.893-.377 68.147-.767 61.35.227zM25.505 16.064c-6.24.39-7.66.477-11.233-2.527L7.49 8.223c-.97-.78-.58-1.753 1.36-1.947l52.053-3.693c5.437-.39 8.16 1.167 10.3 2.917l8.16 5.833c.39.193 1.36 1.36.193 1.36l-53.86 3.178-.19.193zm-4.663 75.937V29.09c0-2.917 1.94-4.47 1.94-4.47.58-1.553 2.137-2.333 4.857-2.527l56.053-3.303c2.527-.193 3.883 1.36 3.883 3.887v62.52c0 2.723-.39 5.053-3.887 5.247l-53.66 3.11c-3.5.193-5.187-1.167-5.187-3.693v.14zm52.827-59.607c.39 1.753 0 3.5-1.75 3.693l-2.72.583v46.177c-2.333 1.167-4.47 1.943-6.217 1.943-2.917 0-3.693-.97-5.833-3.497L37.895 46.73v31.267l5.637 1.167s0 3.5-4.857 3.5l-13.377.78c-.39-.78 0-2.723 1.36-3.11l3.497-.97V37.09l-4.857-.39c-.39-1.753.583-4.277 3.3-4.47l14.35-.97 22.857 34.96V37.48l-4.667-.583c-.39-2.137 1.167-3.69 3.11-3.883l13.377-.78z" fill="currentColor"/>
+                          </svg>
+                          Notion {notionStatus.workspaceName && `(${notionStatus.workspaceName})`}
+                        </Badge>
+                        <button
+                          onClick={handleNotionSync}
+                          disabled={notionSyncing}
+                          className="text-muted-foreground hover:text-primary p-1 disabled:opacity-50"
+                          title="Notion에 카드 동기화"
+                        >
+                          <RefreshCw className={`w-3.5 h-3.5 ${notionSyncing ? 'animate-spin' : ''}`} />
+                        </button>
+                        <button
+                          onClick={handleNotionDisconnect}
+                          className="text-muted-foreground hover:text-destructive p-1"
+                          title="Notion 연동 해제"
+                        >
+                          <Link2Off className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleNotionConnect}
+                        disabled={notionLoading}
+                        className="border-dashed text-xs h-7"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5 mr-1" />
+                        {notionLoading ? '연동 중...' : '노션 연결'}
+                      </Button>
+                    )}
+                  </div>
                   <Button
                     size="sm"
                     onClick={() => setIsBoardModalOpen(true)}

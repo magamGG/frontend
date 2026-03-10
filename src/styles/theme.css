@@ -3,6 +3,11 @@
 :root {
   --font-size: 16px;
   
+  /* Font Family */
+  --font-family-base: 'Pretendard', -apple-system, BlinkMacSystemFont, 
+    'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', 
+    'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
+  
   /* Marajiki Theme - 세련되고 프로페셔널한 웹툰 스튜디오 테마 */
   /* Updated Color Palette - Navy & Steel Blue Tones */
   
@@ -145,10 +150,14 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    font-family: var(--font-family-base);
   }
 
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-family-base);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   /* Hide scrollbar but keep functionality */
